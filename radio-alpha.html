@@ -3,799 +3,278 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>UNIT ALPHA — Field Radio</title>
+<title>ALPHA</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Oswald:wght@700&family=Courier+Prime:wght@400;700&display=swap');
-
-  :root {
-    --olive: #3a3d2e;
-    --olive-dark: #252718;
-    --olive-light: #5a5f42;
-    --amber: #d4820a;
-    --amber-bright: #ffaa00;
-    --amber-dim: #7a4a05;
-    --green-signal: #4cff6e;
-    --red-signal: #ff3c3c;
-    --cream: #e8dfc0;
-    --metal: #8a8a7a;
-    --metal-dark: #5a5a4e;
-    --screw: #b0a880;
-  }
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&display=swap');
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-    background: #1a1b12;
+    background: #0f0f0f;
+    color: #e0e0e0;
+    font-family: 'IBM Plex Mono', monospace;
     min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    padding: 24px;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .unit-name {
+    font-size: 13px;
+    letter-spacing: 6px;
+    color: #666;
+    text-transform: uppercase;
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #333;
+    transition: background 0.2s, box-shadow 0.2s;
+  }
+  .status-dot.standby { background: #f0a500; box-shadow: 0 0 6px #f0a500; }
+  .status-dot.linked  { background: #22cc66; box-shadow: 0 0 6px #22cc66; }
+  .status-dot.calling { background: #f0a500; box-shadow: 0 0 6px #f0a500; animation: pulse 1s infinite; }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  #statusText {
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: #555;
+    text-transform: uppercase;
+  }
+  #statusText.linked { color: #22cc66; }
+
+  .log {
+    width: 100%;
+    max-width: 420px;
+    height: 200px;
+    background: #141414;
+    border: 1px solid #222;
+    border-radius: 4px;
+    padding: 12px 14px;
+    overflow-y: auto;
+    font-size: 11px;
+    line-height: 1.8;
+    color: #555;
+    scrollbar-width: thin;
+    scrollbar-color: #333 transparent;
+  }
+  .log .sys  { color: #444; }
+  .log .info { color: #aaa; }
+  .log .ok   { color: #22cc66; }
+  .log .err  { color: #cc4444; }
+  .log .tx   { color: #f0a500; }
+
+  .ptt {
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    border: 3px solid #333;
+    background: #1a1a1a;
+    color: #666;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    cursor: not-allowed;
+    text-transform: uppercase;
+    transition: all 0.08s;
+    user-select: none;
+    -webkit-user-select: none;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: 'Share Tech Mono', monospace;
-    overflow: hidden;
   }
-
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(0,0,0,0.15) 2px,
-      rgba(0,0,0,0.15) 4px
-    );
-    pointer-events: none;
-    z-index: 100;
-  }
-
-  .radio-unit {
-    width: 480px;
-    background: linear-gradient(160deg, var(--olive-light) 0%, var(--olive) 40%, var(--olive-dark) 100%);
-    border-radius: 12px 12px 8px 8px;
-    padding: 28px 24px 32px;
-    box-shadow:
-      0 0 0 3px var(--metal-dark),
-      0 0 0 5px #1a1b12,
-      0 20px 60px rgba(0,0,0,0.8),
-      inset 0 1px 0 rgba(255,255,255,0.1);
-    position: relative;
-  }
-
-  /* Screw corners */
-  .screw {
-    position: absolute;
-    width: 14px; height: 14px;
-    background: radial-gradient(circle at 35% 35%, var(--screw), var(--metal-dark));
-    border-radius: 50%;
-    box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
-  }
-  .screw::after {
-    content: '';
-    position: absolute;
-    top: 50%; left: 15%;
-    width: 70%; height: 2px;
-    background: rgba(0,0,0,0.4);
-    transform: translateY(-50%) rotate(45deg);
-    border-radius: 1px;
-  }
-  .screw.tl { top: 10px; left: 10px; }
-  .screw.tr { top: 10px; right: 10px; }
-  .screw.bl { bottom: 10px; left: 10px; }
-  .screw.br { bottom: 10px; right: 10px; }
-
-  .unit-label {
-    text-align: center;
-    margin-bottom: 16px;
-  }
-  .unit-label h1 {
-    font-family: 'Oswald', sans-serif;
-    font-size: 13px;
-    letter-spacing: 6px;
-    color: var(--metal);
-    text-transform: uppercase;
-  }
-  .unit-label .callsign {
-    font-family: 'Oswald', sans-serif;
-    font-size: 28px;
-    letter-spacing: 4px;
-    color: var(--cream);
-    text-shadow: 0 0 20px rgba(212,130,10,0.4);
-    margin-top: 2px;
-  }
-
-  /* Main display screen */
-  .display {
-    background: #0a0c07;
-    border: 2px solid var(--metal-dark);
-    border-radius: 6px;
-    padding: 14px 16px;
-    margin-bottom: 20px;
-    box-shadow:
-      inset 0 0 20px rgba(0,0,0,0.8),
-      0 2px 0 rgba(255,255,255,0.05);
-    position: relative;
-    overflow: hidden;
-  }
-
-  .display::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 3px,
-      rgba(76,255,110,0.03) 3px,
-      rgba(76,255,110,0.03) 4px
-    );
-    pointer-events: none;
-  }
-
-  .display-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-  }
-  .display-row:last-child { margin-bottom: 0; }
-
-  .display-label {
-    font-size: 9px;
-    letter-spacing: 3px;
-    color: var(--amber-dim);
-    text-transform: uppercase;
-  }
-  .display-value {
-    font-size: 13px;
-    color: var(--amber-bright);
-    text-shadow: 0 0 8px var(--amber);
-    letter-spacing: 2px;
-  }
-
-  .freq-display {
-    text-align: center;
-    padding: 8px 0 4px;
-  }
-  .freq-display .freq-num {
-    font-family: 'Oswald', sans-serif;
-    font-size: 42px;
-    color: var(--amber-bright);
-    text-shadow: 0 0 20px var(--amber), 0 0 40px rgba(212,130,10,0.3);
-    letter-spacing: 2px;
-    line-height: 1;
-  }
-  .freq-display .freq-unit {
-    font-size: 11px;
-    color: var(--amber-dim);
-    letter-spacing: 4px;
-    margin-top: 2px;
-  }
-
-  /* Status row */
-  .status-bar {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    padding-top: 8px;
-    border-top: 1px solid rgba(255,255,255,0.05);
-  }
-
-  .indicator {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 9px;
-    letter-spacing: 2px;
-    color: var(--metal);
-    text-transform: uppercase;
-  }
-  .led {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--metal-dark);
-    box-shadow: none;
-    transition: all 0.1s;
-  }
-  .led.on-green {
-    background: var(--green-signal);
-    box-shadow: 0 0 6px var(--green-signal), 0 0 12px rgba(76,255,110,0.5);
-  }
-  .led.on-red {
-    background: var(--red-signal);
-    box-shadow: 0 0 6px var(--red-signal), 0 0 12px rgba(255,60,60,0.5);
-    animation: blink 0.5s infinite;
-  }
-  .led.on-amber {
-    background: var(--amber-bright);
-    box-shadow: 0 0 6px var(--amber-bright), 0 0 12px rgba(255,170,0,0.5);
-  }
-
-  @keyframes blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.2; }
-  }
-
-  /* Signal meter */
-  .signal-meter {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    gap: 3px;
-    justify-content: flex-end;
-  }
-  .sig-bar {
-    width: 6px;
-    background: var(--metal-dark);
-    border-radius: 1px;
-    transition: background 0.1s, box-shadow 0.1s;
-  }
-  .sig-bar.active-green {
-    background: var(--green-signal);
-    box-shadow: 0 0 4px var(--green-signal);
-  }
-  .sig-bar.active-amber {
-    background: var(--amber-bright);
-    box-shadow: 0 0 4px var(--amber-bright);
-  }
-  .sig-bar.active-red {
-    background: var(--red-signal);
-    box-shadow: 0 0 4px var(--red-signal);
-  }
-
-  /* Log */
-  .log-area {
-    background: #060804;
-    border: 1px solid var(--metal-dark);
-    border-radius: 4px;
-    height: 90px;
-    padding: 8px 10px;
-    overflow-y: auto;
-    margin-bottom: 20px;
-    font-size: 11px;
-    color: var(--amber-dim);
-    line-height: 1.6;
-    scrollbar-width: thin;
-    scrollbar-color: var(--amber-dim) transparent;
-  }
-  .log-area .log-entry { color: var(--amber); }
-  .log-area .log-entry.incoming { color: var(--green-signal); }
-  .log-area .log-entry.system { color: var(--metal); font-style: italic; }
-
-  /* Controls */
-  .controls-row {
-    display: flex;
-    gap: 12px;
-    align-items: flex-end;
-    margin-bottom: 16px;
-  }
-
-  .knob-group {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-  }
-  .knob-label {
-    font-size: 9px;
-    letter-spacing: 2px;
-    color: var(--metal);
-    text-transform: uppercase;
-  }
-  .knob {
-    width: 44px; height: 44px;
-    background: radial-gradient(circle at 35% 30%, var(--metal) 0%, var(--metal-dark) 60%, #333328 100%);
-    border-radius: 50%;
-    border: 2px solid var(--metal-dark);
-    box-shadow:
-      0 4px 8px rgba(0,0,0,0.5),
-      inset 0 1px 0 rgba(255,255,255,0.15);
+  .ptt.ready {
+    border-color: #444;
+    color: #aaa;
     cursor: pointer;
-    position: relative;
-    transition: transform 0.1s;
   }
-  .knob:active { transform: scale(0.95); }
-  .knob::after {
-    content: '';
-    position: absolute;
-    top: 6px; left: 50%;
-    width: 3px; height: 10px;
-    background: var(--cream);
-    border-radius: 2px;
-    transform: translateX(-50%);
+  .ptt.ready:hover {
+    border-color: #666;
+    background: #202020;
   }
-
-  .input-group {
-    flex: 1;
-  }
-  .input-label {
-    font-size: 9px;
-    letter-spacing: 3px;
-    color: var(--metal);
-    text-transform: uppercase;
-    margin-bottom: 5px;
-  }
-  .signal-input {
-    width: 100%;
-    background: #0a0c07;
-    border: 1px solid var(--metal-dark);
-    border-radius: 4px;
-    color: var(--amber-bright);
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 12px;
-    padding: 8px 10px;
-    outline: none;
-    letter-spacing: 1px;
-    transition: border-color 0.2s;
-  }
-  .signal-input::placeholder { color: var(--amber-dim); }
-  .signal-input:focus { border-color: var(--amber); box-shadow: 0 0 8px rgba(212,130,10,0.2); }
-
-  /* PTT Button */
-  .ptt-section {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .ptt-btn {
-    width: 100%;
-    height: 70px;
-    background: linear-gradient(180deg, #6b3a3a 0%, #4a1e1e 50%, #3a1414 100%);
-    border: 3px solid #7a2a2a;
-    border-radius: 8px;
-    color: var(--cream);
-    font-family: 'Oswald', sans-serif;
-    font-size: 18px;
-    letter-spacing: 4px;
+  .ptt.active {
+    border-color: #f0a500;
+    background: #1f1600;
+    color: #f0a500;
+    box-shadow: 0 0 30px rgba(240,165,0,0.2);
     cursor: pointer;
-    text-transform: uppercase;
-    transition: all 0.05s;
-    box-shadow:
-      0 6px 0 #2a0e0e,
-      0 8px 15px rgba(0,0,0,0.5),
-      inset 0 1px 0 rgba(255,255,255,0.1);
-    user-select: none;
-    -webkit-user-select: none;
-    position: relative;
   }
-  .ptt-btn:hover { background: linear-gradient(180deg, #7a4040 0%, #5a2424 50%, #4a1a1a 100%); }
-  .ptt-btn:active,
-  .ptt-btn.active {
-    background: linear-gradient(180deg, #ff4444 0%, #cc2222 50%, #aa1111 100%);
-    border-color: #ff6666;
-    transform: translateY(4px);
-    box-shadow:
-      0 2px 0 #2a0e0e,
-      0 4px 10px rgba(0,0,0,0.5),
-      inset 0 1px 0 rgba(255,255,255,0.2),
-      0 0 20px rgba(255,60,60,0.4);
+  .ptt.transmitting {
+    border-color: #f0a500;
+    background: #1f1600;
+    color: #f0a500;
+    box-shadow: 0 0 40px rgba(240,165,0,0.3);
+    transform: scale(0.97);
   }
-
-  .connect-btn {
-    width: 100%;
-    padding: 10px;
-    background: linear-gradient(180deg, var(--olive-light) 0%, var(--olive) 100%);
-    border: 2px solid var(--metal-dark);
-    border-radius: 6px;
-    color: var(--amber-bright);
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 11px;
-    letter-spacing: 3px;
-    cursor: pointer;
-    text-transform: uppercase;
-    transition: all 0.2s;
-    box-shadow: 0 3px 0 var(--olive-dark), inset 0 1px 0 rgba(255,255,255,0.1);
-  }
-  .connect-btn:hover { background: linear-gradient(180deg, var(--metal) 0%, var(--metal-dark) 100%); color: var(--cream); }
-  .connect-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-  .channel-row {
-    display: flex;
-    gap: 8px;
-  }
-  .channel-btn {
-    flex: 1;
-    padding: 7px;
-    background: var(--olive-dark);
-    border: 1px solid var(--metal-dark);
-    border-radius: 4px;
-    color: var(--metal);
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 10px;
-    letter-spacing: 2px;
-    cursor: pointer;
-    text-transform: uppercase;
-    transition: all 0.15s;
-  }
-  .channel-btn:hover { background: var(--olive); color: var(--cream); }
-  .channel-btn.active { background: var(--amber-dim); color: var(--amber-bright); border-color: var(--amber); }
-
-  .divider {
-    height: 1px;
-    background: linear-gradient(90deg, transparent, var(--metal-dark), transparent);
-    margin: 16px 0;
-  }
-
-  /* Peer ID display */
-  .peer-id-display {
-    font-size: 10px;
-    color: var(--amber-dim);
-    text-align: center;
-    letter-spacing: 1px;
-    word-break: break-all;
-    margin-top: 8px;
-  }
-  .peer-id-display span { color: var(--amber); }
-
-  /* Waveform canvas */
-  .waveform-wrap {
-    height: 30px;
-    background: #060804;
-    border: 1px solid var(--metal-dark);
-    border-radius: 3px;
-    margin-bottom: 12px;
-    overflow: hidden;
-    position: relative;
-  }
-  #waveCanvas { width: 100%; height: 100%; }
 </style>
 </head>
 <body>
 
-<div class="radio-unit">
-  <div class="screw tl"></div>
-  <div class="screw tr"></div>
-  <div class="screw bl"></div>
-  <div class="screw br"></div>
+<header>
+  <div class="status-dot" id="dot"></div>
+  <div class="unit-name">Unit Alpha</div>
+</header>
 
-  <div class="unit-label">
-    <div class="callsign">UNIT ALPHA</div>
-    <h1>Field Communication Device</h1>
-  </div>
+<div id="statusText">Offline</div>
 
-  <div class="display">
-    <div class="display-row">
-      <span class="display-label">Channel</span>
-      <span class="display-value" id="chDisplay">CH-01</span>
-    </div>
-    <div class="freq-display">
-      <div class="freq-num">462.550</div>
-      <div class="freq-unit">MHz</div>
-    </div>
-    <div class="status-bar">
-      <div class="indicator">
-        <div class="led" id="connLed"></div>
-        <span id="connStatus">OFFLINE</span>
-      </div>
-      <div class="indicator">
-        <div class="led" id="txLed"></div>
-        <span>TX</span>
-      </div>
-      <div class="indicator">
-        <div class="led" id="rxLed"></div>
-        <span>RX</span>
-      </div>
-      <div class="signal-meter" id="sigMeter">
-        <span style="font-size:9px;letter-spacing:2px;color:var(--metal);margin-right:4px;">SIG</span>
-        <div class="sig-bar" style="height:6px" data-i="0"></div>
-        <div class="sig-bar" style="height:8px" data-i="1"></div>
-        <div class="sig-bar" style="height:10px" data-i="2"></div>
-        <div class="sig-bar" style="height:13px" data-i="3"></div>
-        <div class="sig-bar" style="height:16px" data-i="4"></div>
-        <div class="sig-bar" style="height:20px" data-i="5"></div>
-        <div class="sig-bar" style="height:22px" data-i="6"></div>
-      </div>
-    </div>
-  </div>
+<div class="log" id="log"></div>
 
-  <div class="waveform-wrap">
-    <canvas id="waveCanvas"></canvas>
-  </div>
-
-  <div class="log-area" id="logArea">
-    <div class="log-entry system">// UNIT ALPHA FIELD RADIO v2.4</div>
-    <div class="log-entry system">// AWAITING OPERATOR INPUT...</div>
-  </div>
-
-  <div class="controls-row">
-    <div class="knob-group">
-      <div class="knob-label">VOL</div>
-      <div class="knob" id="volKnob"></div>
-    </div>
-    <div class="knob-group">
-      <div class="knob-label">SQ</div>
-      <div class="knob" id="sqKnob" style="transform:rotate(120deg)"></div>
-    </div>
-    <div class="input-group">
-      <div class="input-label">Calling</div>
-      <div class="signal-input" style="cursor:default;opacity:0.7;">UNIT-BRAVO</div>
-    </div>
-  </div>
-
-  <div class="channel-row" style="margin-bottom:12px;">
-    <button class="channel-btn active" onclick="setChannel(this,'CH-01','462.550')">CH-01</button>
-    <button class="channel-btn" onclick="setChannel(this,'CH-02','462.575')">CH-02</button>
-    <button class="channel-btn" onclick="setChannel(this,'CH-03','462.600')">CH-03</button>
-    <button class="channel-btn" onclick="setChannel(this,'CH-04','462.625')">CH-04</button>
-  </div>
-
-  <button class="connect-btn" id="connectBtn" onclick="connectToPeer()">▶ CALL BRAVO</button>
-
-  <div class="peer-id-display">ID: <span style="color:var(--amber)">UNIT-ALPHA</span> &nbsp;→&nbsp; <span style="color:var(--amber-dim)">UNIT-BRAVO</span></div>
-
-  <div class="divider"></div>
-
-  <div class="ptt-section">
-    <button class="ptt-btn" id="pttBtn"
-      onmousedown="startTransmit()"
-      onmouseup="stopTransmit()"
-      onmouseleave="stopTransmit()"
-      ontouchstart="startTransmit()"
-      ontouchend="stopTransmit()">
-      ◉ PUSH TO TALK
-    </button>
-  </div>
-</div>
+<button class="ptt" id="ptt"
+  onmousedown="startTx()"
+  onmouseup="stopTx()"
+  onmouseleave="stopTx()"
+  ontouchstart="startTx(event)"
+  ontouchend="stopTx()">PTT</button>
 
 <audio id="remoteAudio" autoplay></audio>
 
 <script>
-// ─── PeerJS via CDN ───
 const script = document.createElement('script');
 script.src = 'https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js';
 document.head.appendChild(script);
-script.onload = initRadio;
+script.onload = init;
 
-// ─── State ───
-let peer, conn, localStream, remoteStream;
-let isTransmitting = false;
-let audioCtx, analyser, sourceNode;
-let animFrame;
-let volume = 0.8;
+const MY_ID     = 'unit-alpha-2w';
+const REMOTE_ID = 'unit-bravo-2w';
 
-const logArea = document.getElementById('logArea');
-const connLed = document.getElementById('connLed');
-const txLed = document.getElementById('txLed');
-const rxLed = document.getElementById('rxLed');
-const myPeerId = document.getElementById('myPeerId');
-const pttBtn = document.getElementById('pttBtn');
-const connectBtn = document.getElementById('connectBtn');
-const canvas = document.getElementById('waveCanvas');
-const ctx2d = canvas.getContext('2d');
-const sigBars = document.querySelectorAll('.sig-bar');
+let peer, call, localStream, linked = false, retryTimer;
 
-function log(msg, type='') {
-  const d = document.createElement('div');
-  d.className = 'log-entry ' + type;
+const dot    = document.getElementById('dot');
+const status = document.getElementById('statusText');
+const ptt    = document.getElementById('ptt');
+const log    = document.getElementById('log');
+
+function entry(msg, cls='sys') {
   const ts = new Date().toTimeString().slice(0,8);
-  d.textContent = `[${ts}] ${msg}`;
-  logArea.appendChild(d);
-  logArea.scrollTop = logArea.scrollHeight;
+  const d = document.createElement('div');
+  d.className = cls;
+  d.textContent = `${ts}  ${msg}`;
+  log.appendChild(d);
+  log.scrollTop = log.scrollHeight;
 }
 
-function setLed(el, state) {
-  el.className = 'led' + (state ? ' on-' + state : '');
+function setStatus(state) {
+  dot.className = 'status-dot ' + state;
+  const labels = { '': 'Offline', standby: 'Standby', calling: 'Calling…', linked: 'Linked' };
+  status.textContent = labels[state] || state;
+  status.className = state === 'linked' ? 'linked' : '';
 }
 
-function setSigBars(level) { // 0-7
-  sigBars.forEach((b, i) => {
-    b.className = 'sig-bar';
-    if (i < level) {
-      if (level <= 3) b.classList.add('active-green');
-      else if (level <= 5) b.classList.add('active-amber');
-      else b.classList.add('active-red');
-    }
-  });
-}
-
-function setChannel(btn, ch, freq) {
-  document.querySelectorAll('.channel-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById('chDisplay').textContent = ch;
-  document.querySelector('.freq-num').textContent = freq;
-  log(`CHANNEL SET: ${ch} — ${freq} MHz`, 'system');
-}
-
-// ─── Waveform ───
-function resizeCanvas() {
-  canvas.width = canvas.parentElement.clientWidth;
-  canvas.height = canvas.parentElement.clientHeight;
-}
-
-function drawIdle() {
-  resizeCanvas();
-  ctx2d.clearRect(0, 0, canvas.width, canvas.height);
-  ctx2d.strokeStyle = '#1a2a1a';
-  ctx2d.lineWidth = 1;
-  ctx2d.beginPath();
-  ctx2d.moveTo(0, canvas.height / 2);
-  ctx2d.lineTo(canvas.width, canvas.height / 2);
-  ctx2d.stroke();
-}
-
-function drawWaveform() {
-  if (!analyser) { drawIdle(); return; }
-  resizeCanvas();
-  const buf = new Uint8Array(analyser.frequencyBinCount);
-  analyser.getByteTimeDomainData(buf);
-  ctx2d.clearRect(0, 0, canvas.width, canvas.height);
-  ctx2d.strokeStyle = isTransmitting ? '#ff4444' : '#4cff6e';
-  ctx2d.lineWidth = 1.5;
-  ctx2d.shadowColor = isTransmitting ? '#ff4444' : '#4cff6e';
-  ctx2d.shadowBlur = 4;
-  ctx2d.beginPath();
-  const slice = canvas.width / buf.length;
-  let x = 0;
-  for (let i = 0; i < buf.length; i++) {
-    const v = buf[i] / 128.0;
-    const y = (v * canvas.height) / 2;
-    i === 0 ? ctx2d.moveTo(x, y) : ctx2d.lineTo(x, y);
-    x += slice;
-  }
-  ctx2d.stroke();
-  ctx2d.shadowBlur = 0;
-  animFrame = requestAnimationFrame(drawWaveform);
-}
-
-function startWaveform(stream) {
-  cancelAnimationFrame(animFrame);
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  analyser = audioCtx.createAnalyser();
-  analyser.fftSize = 256;
-  sourceNode = audioCtx.createMediaStreamSource(stream);
-  sourceNode.connect(analyser);
-  drawWaveform();
-}
-
-// ─── Signal meter animation ───
-let sigInterval;
-function animateSig(active) {
-  clearInterval(sigInterval);
-  if (!active) { setSigBars(0); return; }
-  sigInterval = setInterval(() => {
-    const level = Math.floor(Math.random() * 3) + 3;
-    setSigBars(level);
-  }, 120);
-}
-
-// ─── Radio Init ───
-const MY_ID = 'unit-alpha';
-const REMOTE_ID = 'unit-bravo';
-
-function initRadio() {
+function init() {
   peer = new Peer(MY_ID, {
-    config: {
-      iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' }
-      ]
-    }
+    config: { iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' }
+    ]}
   });
 
   peer.on('open', () => {
-    log('RADIO ONLINE — ID: UNIT-ALPHA', 'system');
-    log('CALLING BRAVO...', 'system');
-    setLed(connLed, 'amber');
-    document.getElementById('connStatus').textContent = 'CALLING';
-    connectToPeer();
+    entry('Radio online', 'ok');
+    setStatus('calling');
+    dial();
   });
 
-  peer.on('call', call => {
-    // Alpha is the caller, but handle re-connects gracefully
-    log('INCOMING LINK FROM BRAVO', 'incoming');
-    navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false })
-      .then(stream => {
-        localStream = stream;
-        muteLocalStream();
-        call.answer(stream);
-        setupCall(call);
-      })
-      .catch(err => log('MIC ACCESS DENIED: ' + err.message, 'system'));
+  // Handle inbound re-calls from Bravo (e.g. after a drop)
+  peer.on('call', incoming => {
+    entry('Inbound call from Bravo', 'info');
+    answerCall(incoming);
   });
 
-  peer.on('error', err => {
-    log('ERROR: ' + err.message, 'system');
-    // Retry connection after delay if bravo not yet online
-    if (err.type === 'peer-unavailable') {
-      log('BRAVO OFFLINE — RETRYING IN 5s...', 'system');
-      setTimeout(connectToPeer, 5000);
+  peer.on('error', e => {
+    entry('Error: ' + e.message, 'err');
+    if (e.type === 'peer-unavailable') {
+      entry('Bravo offline — retry in 5s', 'sys');
+      retryTimer = setTimeout(dial, 5000);
     }
-    if (err.type === 'unavailable-id') {
-      log('ID CONFLICT — RELOAD TO RETRY', 'system');
+    if (e.type === 'unavailable-id') {
+      entry('ID in use — reload to retry', 'err');
     }
   });
-
-  drawIdle();
 }
 
-function connectToPeer() {
-  if (conn) return;
-  log(`DIALLING ${REMOTE_ID}...`, '');
-  connectBtn.disabled = true;
-
-  navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false })
-    .then(stream => {
-      localStream = stream;
-      muteLocalStream();
-      const call = peer.call(REMOTE_ID, stream);
-      setupCall(call);
-      log('LINK REQUEST SENT...', '');
-    })
-    .catch(err => {
-      log('MIC ACCESS DENIED: ' + err.message, 'system');
-      connectBtn.disabled = false;
-    });
+function dial() {
+  clearTimeout(retryTimer);
+  if (linked) return;
+  entry('Calling Bravo…', 'info');
+  navigator.mediaDevices.getUserMedia({ audio: {
+    echoCancellation: true, noiseSuppression: true, autoGainControl: true
+  }, video: false })
+  .then(stream => {
+    localStream = stream;
+    muteLocal();
+    const c = peer.call(REMOTE_ID, stream);
+    attachCall(c);
+  })
+  .catch(e => entry('Mic denied: ' + e.message, 'err'));
 }
 
-function setupCall(call) {
-  conn = call;
-  call.on('stream', stream => {
+function answerCall(c) {
+  clearTimeout(retryTimer);
+  navigator.mediaDevices.getUserMedia({ audio: {
+    echoCancellation: true, noiseSuppression: true, autoGainControl: true
+  }, video: false })
+  .then(stream => {
+    localStream = stream;
+    muteLocal();
+    c.answer(stream);
+    attachCall(c);
+  })
+  .catch(e => entry('Mic denied: ' + e.message, 'err'));
+}
+
+function attachCall(c) {
+  call = c;
+  c.on('stream', stream => {
     document.getElementById('remoteAudio').srcObject = stream;
-    startWaveform(stream);
-    setLed(connLed, 'green');
-    document.getElementById('connStatus').textContent = 'LINKED';
-    log('AUDIO STREAM ACTIVE', 'incoming');
-    animateSig(true);
+    linked = true;
+    setStatus('linked');
+    entry('Linked to Bravo', 'ok');
+    ptt.className = 'ptt ready';
   });
-  call.on('close', () => {
-    conn = null;
-    setLed(connLed, 'amber');
-    document.getElementById('connStatus').textContent = 'LOST';
-    log('LINK LOST — RETRYING IN 5s...', 'system');
-    connectBtn.disabled = false;
-    animateSig(false);
-    cancelAnimationFrame(animFrame);
-    drawIdle();
-    setTimeout(connectToPeer, 5000);
-  });
+  c.on('close', onDrop);
+  c.on('error', e => { entry('Call error: ' + e.message, 'err'); onDrop(); });
 }
 
-function muteLocalStream() {
-  if (localStream) {
-    localStream.getAudioTracks().forEach(t => t.enabled = false);
-  }
+function onDrop() {
+  linked = false;
+  call = null;
+  ptt.className = 'ptt';
+  setStatus('calling');
+  entry('Link lost — retrying in 5s', 'sys');
+  retryTimer = setTimeout(dial, 5000);
 }
 
-function startTransmit() {
-  if (!localStream) { log('NO LINK ESTABLISHED', 'system'); return; }
-  isTransmitting = true;
-  localStream.getAudioTracks().forEach(t => t.enabled = true);
-  pttBtn.classList.add('active');
-  setLed(txLed, 'red');
-  startWaveform(localStream);
-  log('▶ TRANSMITTING...', '');
+function muteLocal() {
+  localStream?.getAudioTracks().forEach(t => t.enabled = false);
 }
 
-function stopTransmit() {
-  if (!isTransmitting) return;
-  isTransmitting = false;
-  muteLocalStream();
-  pttBtn.classList.remove('active');
-  setLed(txLed, null);
-  if (conn && conn.remoteStream) startWaveform(conn.remoteStream);
-  else { cancelAnimationFrame(animFrame); drawIdle(); }
-  log('◼ TRANSMISSION END', '');
+function startTx(e) {
+  if (e) e.preventDefault();
+  if (!linked) return;
+  localStream?.getAudioTracks().forEach(t => t.enabled = true);
+  ptt.className = 'ptt transmitting';
+  entry('Transmitting…', 'tx');
 }
 
-// Knob rotation on drag
-document.querySelectorAll('.knob').forEach(knob => {
-  let dragging = false, startY = 0, rot = parseInt(knob.style.transform?.replace(/[^-\d]/g,'') || '0');
-  knob.addEventListener('mousedown', e => { dragging = true; startY = e.clientY; });
-  window.addEventListener('mousemove', e => {
-    if (!dragging) return;
-    const delta = (startY - e.clientY) * 1.5;
-    rot = Math.max(-150, Math.min(150, rot + delta));
-    knob.style.transform = `rotate(${rot}deg)`;
-    startY = e.clientY;
-  });
-  window.addEventListener('mouseup', () => dragging = false);
-});
-
-window.addEventListener('resize', () => {
-  if (!isTransmitting && !analyser) drawIdle();
-});
+function stopTx() {
+  if (!linked) return;
+  muteLocal();
+  ptt.className = 'ptt ready';
+  entry('End transmission', 'sys');
+}
 </script>
 </body>
 </html>

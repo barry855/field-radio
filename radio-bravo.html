@@ -3,445 +3,133 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>UNIT BRAVO — Field Radio</title>
+<title>BRAVO</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Oswald:wght@700&family=Courier+Prime:wght@400;700&display=swap');
-
-  :root {
-    --steel: #2e3340;
-    --steel-dark: #1a1e28;
-    --steel-light: #404858;
-    --cyan: #00c8d4;
-    --cyan-bright: #00eeff;
-    --cyan-dim: #006870;
-    --green-signal: #4cff6e;
-    --red-signal: #ff3c3c;
-    --cream: #d8e8f0;
-    --metal: #7a8898;
-    --metal-dark: #444e5e;
-    --screw: #909aaa;
-  }
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&display=swap');
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-    background: #111520;
+    background: #0f0f0f;
+    color: #e0e0e0;
+    font-family: 'IBM Plex Mono', monospace;
     min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    padding: 24px;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .unit-name {
+    font-size: 13px;
+    letter-spacing: 6px;
+    color: #666;
+    text-transform: uppercase;
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #333;
+    transition: background 0.2s, box-shadow 0.2s;
+  }
+  .status-dot.standby { background: #f0a500; box-shadow: 0 0 6px #f0a500; }
+  .status-dot.linked  { background: #22cc66; box-shadow: 0 0 6px #22cc66; }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  #statusText {
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: #555;
+    text-transform: uppercase;
+  }
+  #statusText.linked { color: #22cc66; }
+
+  .log {
+    width: 100%;
+    max-width: 420px;
+    height: 200px;
+    background: #141414;
+    border: 1px solid #222;
+    border-radius: 4px;
+    padding: 12px 14px;
+    overflow-y: auto;
+    font-size: 11px;
+    line-height: 1.8;
+    color: #555;
+    scrollbar-width: thin;
+    scrollbar-color: #333 transparent;
+  }
+  .log .sys  { color: #444; }
+  .log .info { color: #aaa; }
+  .log .ok   { color: #22cc66; }
+  .log .err  { color: #cc4444; }
+  .log .tx   { color: #4ab8ff; }
+
+  .ptt {
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    border: 3px solid #333;
+    background: #1a1a1a;
+    color: #666;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    cursor: not-allowed;
+    text-transform: uppercase;
+    transition: all 0.08s;
+    user-select: none;
+    -webkit-user-select: none;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: 'Share Tech Mono', monospace;
-    overflow: hidden;
   }
-
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(0,0,0,0.12) 2px,
-      rgba(0,0,0,0.12) 4px
-    );
-    pointer-events: none;
-    z-index: 100;
-  }
-
-  .radio-unit {
-    width: 480px;
-    background: linear-gradient(160deg, var(--steel-light) 0%, var(--steel) 40%, var(--steel-dark) 100%);
-    border-radius: 8px 8px 12px 12px;
-    padding: 28px 24px 32px;
-    box-shadow:
-      0 0 0 3px var(--metal-dark),
-      0 0 0 5px #111520,
-      0 20px 60px rgba(0,0,0,0.8),
-      inset 0 1px 0 rgba(255,255,255,0.08);
-    position: relative;
-  }
-
-  /* Screw corners */
-  .screw {
-    position: absolute;
-    width: 14px; height: 14px;
-    background: radial-gradient(circle at 35% 35%, var(--screw), var(--metal-dark));
-    border-radius: 50%;
-    box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
-  }
-  .screw::after {
-    content: '';
-    position: absolute;
-    top: 50%; left: 15%;
-    width: 70%; height: 2px;
-    background: rgba(0,0,0,0.4);
-    transform: translateY(-50%) rotate(-45deg);
-    border-radius: 1px;
-  }
-  .screw.tl { top: 10px; left: 10px; }
-  .screw.tr { top: 10px; right: 10px; }
-  .screw.bl { bottom: 10px; left: 10px; }
-  .screw.br { bottom: 10px; right: 10px; }
-
-  .unit-label {
-    text-align: center;
-    margin-bottom: 16px;
-  }
-  .unit-label h1 {
-    font-family: 'Oswald', sans-serif;
-    font-size: 13px;
-    letter-spacing: 6px;
-    color: var(--metal);
-    text-transform: uppercase;
-  }
-  .unit-label .callsign {
-    font-family: 'Oswald', sans-serif;
-    font-size: 28px;
-    letter-spacing: 4px;
-    color: var(--cream);
-    text-shadow: 0 0 20px rgba(0,200,212,0.4);
-    margin-top: 2px;
-  }
-
-  .display {
-    background: #070a0f;
-    border: 2px solid var(--metal-dark);
-    border-radius: 6px;
-    padding: 14px 16px;
-    margin-bottom: 20px;
-    box-shadow:
-      inset 0 0 20px rgba(0,0,0,0.8),
-      0 2px 0 rgba(255,255,255,0.04);
-    position: relative;
-    overflow: hidden;
-  }
-  .display::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 3px,
-      rgba(0,200,212,0.03) 3px,
-      rgba(0,200,212,0.03) 4px
-    );
-    pointer-events: none;
-  }
-
-  .display-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-  }
-  .display-row:last-child { margin-bottom: 0; }
-  .display-label {
-    font-size: 9px;
-    letter-spacing: 3px;
-    color: var(--cyan-dim);
-    text-transform: uppercase;
-  }
-  .display-value {
-    font-size: 13px;
-    color: var(--cyan-bright);
-    text-shadow: 0 0 8px var(--cyan);
-    letter-spacing: 2px;
-  }
-
-  .freq-display {
-    text-align: center;
-    padding: 8px 0 4px;
-  }
-  .freq-display .freq-num {
-    font-family: 'Oswald', sans-serif;
-    font-size: 42px;
-    color: var(--cyan-bright);
-    text-shadow: 0 0 20px var(--cyan), 0 0 40px rgba(0,200,212,0.3);
-    letter-spacing: 2px;
-    line-height: 1;
-  }
-  .freq-display .freq-unit {
-    font-size: 11px;
-    color: var(--cyan-dim);
-    letter-spacing: 4px;
-    margin-top: 2px;
-  }
-
-  .status-bar {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    padding-top: 8px;
-    border-top: 1px solid rgba(255,255,255,0.04);
-  }
-  .indicator {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 9px;
-    letter-spacing: 2px;
-    color: var(--metal);
-    text-transform: uppercase;
-  }
-  .led {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--metal-dark);
-    box-shadow: none;
-    transition: all 0.1s;
-  }
-  .led.on-green { background: var(--green-signal); box-shadow: 0 0 6px var(--green-signal), 0 0 12px rgba(76,255,110,0.5); }
-  .led.on-red { background: var(--red-signal); box-shadow: 0 0 6px var(--red-signal), 0 0 12px rgba(255,60,60,0.5); animation: blink 0.5s infinite; }
-  .led.on-amber { background: #ffaa00; box-shadow: 0 0 6px #ffaa00, 0 0 12px rgba(255,170,0,0.5); }
-  .led.on-cyan { background: var(--cyan-bright); box-shadow: 0 0 6px var(--cyan-bright), 0 0 12px rgba(0,238,255,0.5); }
-
-  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
-
-  .signal-meter {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    gap: 3px;
-    justify-content: flex-end;
-  }
-  .sig-bar { width: 6px; background: var(--metal-dark); border-radius: 1px; transition: background 0.1s, box-shadow 0.1s; }
-  .sig-bar.active-green { background: var(--green-signal); box-shadow: 0 0 4px var(--green-signal); }
-  .sig-bar.active-cyan { background: var(--cyan-bright); box-shadow: 0 0 4px var(--cyan-bright); }
-  .sig-bar.active-red { background: var(--red-signal); box-shadow: 0 0 4px var(--red-signal); }
-
-  .log-area {
-    background: #050708;
-    border: 1px solid var(--metal-dark);
-    border-radius: 4px;
-    height: 90px;
-    padding: 8px 10px;
-    overflow-y: auto;
-    margin-bottom: 20px;
-    font-size: 11px;
-    color: var(--cyan-dim);
-    line-height: 1.6;
-    scrollbar-width: thin;
-    scrollbar-color: var(--cyan-dim) transparent;
-  }
-  .log-area .log-entry { color: var(--cyan); }
-  .log-area .log-entry.incoming { color: var(--green-signal); }
-  .log-area .log-entry.system { color: var(--metal); font-style: italic; }
-
-  .controls-row {
-    display: flex;
-    gap: 12px;
-    align-items: flex-end;
-    margin-bottom: 16px;
-  }
-  .knob-group { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-  .knob-label { font-size: 9px; letter-spacing: 2px; color: var(--metal); text-transform: uppercase; }
-  .knob {
-    width: 44px; height: 44px;
-    background: radial-gradient(circle at 35% 30%, var(--metal) 0%, var(--metal-dark) 60%, #242830 100%);
-    border-radius: 50%;
-    border: 2px solid var(--metal-dark);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.15);
+  .ptt.ready {
+    border-color: #444;
+    color: #aaa;
     cursor: pointer;
-    position: relative;
-    transition: transform 0.1s;
   }
-  .knob:active { transform: scale(0.95); }
-  .knob::after {
-    content: '';
-    position: absolute;
-    top: 6px; left: 50%;
-    width: 3px; height: 10px;
-    background: var(--cream);
-    border-radius: 2px;
-    transform: translateX(-50%);
+  .ptt.ready:hover {
+    border-color: #666;
+    background: #202020;
   }
-  .input-group { flex: 1; }
-  .input-label { font-size: 9px; letter-spacing: 3px; color: var(--metal); text-transform: uppercase; margin-bottom: 5px; }
-  .signal-input {
-    width: 100%;
-    background: #070a0f;
-    border: 1px solid var(--metal-dark);
-    border-radius: 4px;
-    color: var(--cyan-bright);
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 12px;
-    padding: 8px 10px;
-    outline: none;
-    letter-spacing: 1px;
-    transition: border-color 0.2s;
+  .ptt.transmitting {
+    border-color: #4ab8ff;
+    background: #00111f;
+    color: #4ab8ff;
+    box-shadow: 0 0 40px rgba(74,184,255,0.25);
+    transform: scale(0.97);
   }
-  .signal-input::placeholder { color: var(--cyan-dim); }
-  .signal-input:focus { border-color: var(--cyan); box-shadow: 0 0 8px rgba(0,200,212,0.2); }
-
-  .ptt-section { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-  .ptt-btn {
-    width: 100%;
-    height: 70px;
-    background: linear-gradient(180deg, #1a3a4a 0%, #0e2230 50%, #081820 100%);
-    border: 3px solid #1a4a60;
-    border-radius: 8px;
-    color: var(--cream);
-    font-family: 'Oswald', sans-serif;
-    font-size: 18px;
-    letter-spacing: 4px;
-    cursor: pointer;
-    text-transform: uppercase;
-    transition: all 0.05s;
-    box-shadow: 0 6px 0 #040e16, 0 8px 15px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
-    user-select: none;
-    -webkit-user-select: none;
-  }
-  .ptt-btn:hover { background: linear-gradient(180deg, #204050 0%, #142840 50%, #0e2030 100%); }
-  .ptt-btn:active, .ptt-btn.active {
-    background: linear-gradient(180deg, var(--cyan) 0%, var(--cyan-dim) 50%, #004050 100%);
-    border-color: var(--cyan-bright);
-    transform: translateY(4px);
-    box-shadow: 0 2px 0 #040e16, 0 4px 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.15), 0 0 20px rgba(0,200,212,0.4);
-  }
-
-  .connect-btn {
-    width: 100%;
-    padding: 10px;
-    background: linear-gradient(180deg, var(--steel-light) 0%, var(--steel) 100%);
-    border: 2px solid var(--metal-dark);
-    border-radius: 6px;
-    color: var(--cyan-bright);
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 11px;
-    letter-spacing: 3px;
-    cursor: pointer;
-    text-transform: uppercase;
-    transition: all 0.2s;
-    box-shadow: 0 3px 0 var(--steel-dark), inset 0 1px 0 rgba(255,255,255,0.08);
-  }
-  .connect-btn:hover { background: linear-gradient(180deg, var(--metal) 0%, var(--metal-dark) 100%); color: var(--cream); }
-  .connect-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-  .channel-row { display: flex; gap: 8px; }
-  .channel-btn {
-    flex: 1;
-    padding: 7px;
-    background: var(--steel-dark);
-    border: 1px solid var(--metal-dark);
-    border-radius: 4px;
-    color: var(--metal);
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 10px;
-    letter-spacing: 2px;
-    cursor: pointer;
-    text-transform: uppercase;
-    transition: all 0.15s;
-  }
-  .channel-btn:hover { background: var(--steel); color: var(--cream); }
-  .channel-btn.active { background: var(--cyan-dim); color: var(--cyan-bright); border-color: var(--cyan); }
-
-  .divider { height: 1px; background: linear-gradient(90deg, transparent, var(--metal-dark), transparent); margin: 16px 0; }
-
-  .peer-id-display { font-size: 10px; color: var(--cyan-dim); text-align: center; letter-spacing: 1px; word-break: break-all; margin-top: 8px; }
-  .peer-id-display span { color: var(--cyan); }
-
-  .waveform-wrap { height: 30px; background: #050708; border: 1px solid var(--metal-dark); border-radius: 3px; margin-bottom: 12px; overflow: hidden; }
-  #waveCanvas { width: 100%; height: 100%; }
 </style>
 </head>
 <body>
 
-<div class="radio-unit">
-  <div class="screw tl"></div>
-  <div class="screw tr"></div>
-  <div class="screw bl"></div>
-  <div class="screw br"></div>
+<header>
+  <div class="status-dot" id="dot"></div>
+  <div class="unit-name">Unit Bravo</div>
+</header>
 
-  <div class="unit-label">
-    <div class="callsign">UNIT BRAVO</div>
-    <h1>Field Communication Device</h1>
-  </div>
+<div id="statusText">Offline</div>
 
-  <div class="display">
-    <div class="display-row">
-      <span class="display-label">Channel</span>
-      <span class="display-value" id="chDisplay">CH-01</span>
-    </div>
-    <div class="freq-display">
-      <div class="freq-num">462.550</div>
-      <div class="freq-unit">MHz</div>
-    </div>
-    <div class="status-bar">
-      <div class="indicator">
-        <div class="led" id="connLed"></div>
-        <span id="connStatus">OFFLINE</span>
-      </div>
-      <div class="indicator">
-        <div class="led" id="txLed"></div>
-        <span>TX</span>
-      </div>
-      <div class="indicator">
-        <div class="led" id="rxLed"></div>
-        <span>RX</span>
-      </div>
-      <div class="signal-meter" id="sigMeter">
-        <span style="font-size:9px;letter-spacing:2px;color:var(--metal);margin-right:4px;">SIG</span>
-        <div class="sig-bar" style="height:6px" data-i="0"></div>
-        <div class="sig-bar" style="height:8px" data-i="1"></div>
-        <div class="sig-bar" style="height:10px" data-i="2"></div>
-        <div class="sig-bar" style="height:13px" data-i="3"></div>
-        <div class="sig-bar" style="height:16px" data-i="4"></div>
-        <div class="sig-bar" style="height:20px" data-i="5"></div>
-        <div class="sig-bar" style="height:22px" data-i="6"></div>
-      </div>
-    </div>
-  </div>
+<div class="log" id="log"></div>
 
-  <div class="waveform-wrap">
-    <canvas id="waveCanvas"></canvas>
-  </div>
-
-  <div class="log-area" id="logArea">
-    <div class="log-entry system">// UNIT BRAVO FIELD RADIO v2.4</div>
-    <div class="log-entry system">// AWAITING OPERATOR INPUT...</div>
-  </div>
-
-  <div class="controls-row">
-    <div class="knob-group">
-      <div class="knob-label">VOL</div>
-      <div class="knob" id="volKnob"></div>
-    </div>
-    <div class="knob-group">
-      <div class="knob-label">SQ</div>
-      <div class="knob" id="sqKnob" style="transform:rotate(120deg)"></div>
-    </div>
-    <div class="input-group">
-      <div class="input-label">Listening For</div>
-      <div class="signal-input" style="cursor:default;opacity:0.7;">UNIT-ALPHA</div>
-    </div>
-  </div>
-
-  <div class="channel-row" style="margin-bottom:12px;">
-    <button class="channel-btn active" onclick="setChannel(this,'CH-01','462.550')">CH-01</button>
-    <button class="channel-btn" onclick="setChannel(this,'CH-02','462.575')">CH-02</button>
-    <button class="channel-btn" onclick="setChannel(this,'CH-03','462.600')">CH-03</button>
-    <button class="channel-btn" onclick="setChannel(this,'CH-04','462.625')">CH-04</button>
-  </div>
-
-  <button class="connect-btn" id="connectBtn" disabled>◎ AWAITING ALPHA...</button>
-
-  <div class="peer-id-display">ID: <span style="color:var(--cyan)">UNIT-BRAVO</span> &nbsp;←&nbsp; <span style="color:var(--cyan-dim)">UNIT-ALPHA</span></div>
-
-  <div class="divider"></div>
-
-  <div class="ptt-section">
-    <button class="ptt-btn" id="pttBtn"
-      onmousedown="startTransmit()"
-      onmouseup="stopTransmit()"
-      onmouseleave="stopTransmit()"
-      ontouchstart="startTransmit()"
-      ontouchend="stopTransmit()">
-      ◉ PUSH TO TALK
-    </button>
-  </div>
-</div>
+<button class="ptt" id="ptt"
+  onmousedown="startTx()"
+  onmouseup="stopTx()"
+  onmouseleave="stopTx()"
+  ontouchstart="startTx(event)"
+  ontouchend="stopTx()">PTT</button>
 
 <audio id="remoteAudio" autoplay></audio>
 
@@ -449,224 +137,106 @@
 const script = document.createElement('script');
 script.src = 'https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js';
 document.head.appendChild(script);
-script.onload = initRadio;
+script.onload = init;
 
-let peer, conn, localStream;
-let isTransmitting = false;
-let audioCtx, analyser, sourceNode;
-let animFrame;
+const MY_ID     = 'unit-bravo-2w';
+const REMOTE_ID = 'unit-alpha-2w';
 
-const logArea = document.getElementById('logArea');
-const connLed = document.getElementById('connLed');
-const txLed = document.getElementById('txLed');
-const rxLed = document.getElementById('rxLed');
-const myPeerId = document.getElementById('myPeerId');
-const pttBtn = document.getElementById('pttBtn');
-const connectBtn = document.getElementById('connectBtn');
-const canvas = document.getElementById('waveCanvas');
-const ctx2d = canvas.getContext('2d');
-const sigBars = document.querySelectorAll('.sig-bar');
+let peer, call, localStream, linked = false;
 
-function log(msg, type='') {
-  const d = document.createElement('div');
-  d.className = 'log-entry ' + type;
+const dot    = document.getElementById('dot');
+const status = document.getElementById('statusText');
+const ptt    = document.getElementById('ptt');
+const log    = document.getElementById('log');
+
+function entry(msg, cls='sys') {
   const ts = new Date().toTimeString().slice(0,8);
-  d.textContent = `[${ts}] ${msg}`;
-  logArea.appendChild(d);
-  logArea.scrollTop = logArea.scrollHeight;
+  const d = document.createElement('div');
+  d.className = cls;
+  d.textContent = `${ts}  ${msg}`;
+  log.appendChild(d);
+  log.scrollTop = log.scrollHeight;
 }
 
-function setLed(el, state) {
-  el.className = 'led' + (state ? ' on-' + state : '');
+function setStatus(state) {
+  dot.className = 'status-dot ' + state;
+  const labels = { '': 'Offline', standby: 'Standby', linked: 'Linked' };
+  status.textContent = labels[state] || state;
+  status.className = state === 'linked' ? 'linked' : '';
 }
 
-function setSigBars(level) {
-  sigBars.forEach((b, i) => {
-    b.className = 'sig-bar';
-    if (i < level) {
-      if (level <= 3) b.classList.add('active-green');
-      else if (level <= 5) b.classList.add('active-cyan');
-      else b.classList.add('active-red');
-    }
-  });
-}
-
-function setChannel(btn, ch, freq) {
-  document.querySelectorAll('.channel-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById('chDisplay').textContent = ch;
-  document.querySelector('.freq-num').textContent = freq;
-  log(`CHANNEL SET: ${ch} — ${freq} MHz`, 'system');
-}
-
-function resizeCanvas() {
-  canvas.width = canvas.parentElement.clientWidth;
-  canvas.height = canvas.parentElement.clientHeight;
-}
-
-function drawIdle() {
-  resizeCanvas();
-  ctx2d.clearRect(0, 0, canvas.width, canvas.height);
-  ctx2d.strokeStyle = '#0a1520';
-  ctx2d.lineWidth = 1;
-  ctx2d.beginPath();
-  ctx2d.moveTo(0, canvas.height / 2);
-  ctx2d.lineTo(canvas.width, canvas.height / 2);
-  ctx2d.stroke();
-}
-
-function drawWaveform() {
-  if (!analyser) { drawIdle(); return; }
-  resizeCanvas();
-  const buf = new Uint8Array(analyser.frequencyBinCount);
-  analyser.getByteTimeDomainData(buf);
-  ctx2d.clearRect(0, 0, canvas.width, canvas.height);
-  ctx2d.strokeStyle = isTransmitting ? '#00eeff' : '#4cff6e';
-  ctx2d.lineWidth = 1.5;
-  ctx2d.shadowColor = isTransmitting ? '#00eeff' : '#4cff6e';
-  ctx2d.shadowBlur = 4;
-  ctx2d.beginPath();
-  const slice = canvas.width / buf.length;
-  let x = 0;
-  for (let i = 0; i < buf.length; i++) {
-    const v = buf[i] / 128.0;
-    const y = (v * canvas.height) / 2;
-    i === 0 ? ctx2d.moveTo(x, y) : ctx2d.lineTo(x, y);
-    x += slice;
-  }
-  ctx2d.stroke();
-  ctx2d.shadowBlur = 0;
-  animFrame = requestAnimationFrame(drawWaveform);
-}
-
-function startWaveform(stream) {
-  cancelAnimationFrame(animFrame);
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  analyser = audioCtx.createAnalyser();
-  analyser.fftSize = 256;
-  sourceNode = audioCtx.createMediaStreamSource(stream);
-  sourceNode.connect(analyser);
-  drawWaveform();
-}
-
-let sigInterval;
-function animateSig(active) {
-  clearInterval(sigInterval);
-  if (!active) { setSigBars(0); return; }
-  sigInterval = setInterval(() => {
-    setSigBars(Math.floor(Math.random() * 3) + 3);
-  }, 120);
-}
-
-const MY_ID = 'unit-bravo';
-const REMOTE_ID = 'unit-alpha';
-
-function initRadio() {
+function init() {
   peer = new Peer(MY_ID, {
-    config: {
-      iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' }
-      ]
-    }
+    config: { iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' }
+    ]}
   });
 
   peer.on('open', () => {
-    log('RADIO ONLINE — ID: UNIT-BRAVO', 'system');
-    log('STANDING BY FOR ALPHA...', 'system');
-    setLed(connLed, 'amber');
-    document.getElementById('connStatus').textContent = 'STANDBY';
+    entry('Radio online — waiting for Alpha', 'ok');
+    setStatus('standby');
   });
 
-  peer.on('call', call => {
-    log('INCOMING CALL FROM ALPHA', 'incoming');
-    navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false })
-      .then(stream => {
-        localStream = stream;
-        muteLocalStream();
-        call.answer(stream);
-        setupCall(call);
-        log('LINK ESTABLISHED — ALPHA ONLINE', 'incoming');
-      })
-      .catch(err => log('MIC ACCESS DENIED: ' + err.message, 'system'));
+  peer.on('call', incoming => {
+    entry('Inbound call from Alpha', 'info');
+    navigator.mediaDevices.getUserMedia({ audio: {
+      echoCancellation: true, noiseSuppression: true, autoGainControl: true
+    }, video: false })
+    .then(stream => {
+      localStream = stream;
+      muteLocal();
+      incoming.answer(stream);
+      attachCall(incoming);
+    })
+    .catch(e => entry('Mic denied: ' + e.message, 'err'));
   });
 
-  peer.on('error', err => {
-    log('ERROR: ' + err.message, 'system');
-    if (err.type === 'unavailable-id') {
-      log('ID CONFLICT — RELOAD TO RETRY', 'system');
-    }
+  peer.on('error', e => {
+    entry('Error: ' + e.message, 'err');
+    if (e.type === 'unavailable-id') entry('ID in use — reload to retry', 'err');
   });
-
-  drawIdle();
 }
 
-function connectToPeer() {
-  // Bravo is the listener — no manual dial needed
-}
-
-function setupCall(call) {
-  conn = call;
-  call.on('stream', stream => {
+function attachCall(c) {
+  call = c;
+  c.on('stream', stream => {
     document.getElementById('remoteAudio').srcObject = stream;
-    startWaveform(stream);
-    setLed(connLed, 'cyan');
-    document.getElementById('connStatus').textContent = 'LINKED';
-    log('AUDIO STREAM ACTIVE', 'incoming');
-    animateSig(true);
+    linked = true;
+    setStatus('linked');
+    entry('Linked to Alpha', 'ok');
+    ptt.className = 'ptt ready';
   });
-  call.on('close', () => {
-    conn = null;
-    setLed(connLed, 'amber');
-    document.getElementById('connStatus').textContent = 'STANDBY';
-    log('LINK LOST — AWAITING ALPHA...', 'system');
-    animateSig(false);
-    cancelAnimationFrame(animFrame);
-    drawIdle();
-  });
+  c.on('close', onDrop);
+  c.on('error', e => { entry('Call error: ' + e.message, 'err'); onDrop(); });
 }
 
-function muteLocalStream() {
-  if (localStream) localStream.getAudioTracks().forEach(t => t.enabled = false);
+function onDrop() {
+  linked = false;
+  call = null;
+  ptt.className = 'ptt';
+  setStatus('standby');
+  entry('Link lost — waiting for Alpha', 'sys');
 }
 
-function startTransmit() {
-  if (!localStream) { log('NO LINK ESTABLISHED', 'system'); return; }
-  isTransmitting = true;
-  localStream.getAudioTracks().forEach(t => t.enabled = true);
-  pttBtn.classList.add('active');
-  setLed(txLed, 'red');
-  startWaveform(localStream);
-  log('▶ TRANSMITTING...', '');
+function muteLocal() {
+  localStream?.getAudioTracks().forEach(t => t.enabled = false);
 }
 
-function stopTransmit() {
-  if (!isTransmitting) return;
-  isTransmitting = false;
-  muteLocalStream();
-  pttBtn.classList.remove('active');
-  setLed(txLed, null);
-  if (conn && conn.remoteStream) startWaveform(conn.remoteStream);
-  else { cancelAnimationFrame(animFrame); drawIdle(); }
-  log('◼ TRANSMISSION END', '');
+function startTx(e) {
+  if (e) e.preventDefault();
+  if (!linked) return;
+  localStream?.getAudioTracks().forEach(t => t.enabled = true);
+  ptt.className = 'ptt transmitting';
+  entry('Transmitting…', 'tx');
 }
 
-document.querySelectorAll('.knob').forEach(knob => {
-  let dragging = false, startY = 0, rot = parseInt(knob.style.transform?.replace(/[^-\d]/g,'') || '0');
-  knob.addEventListener('mousedown', e => { dragging = true; startY = e.clientY; });
-  window.addEventListener('mousemove', e => {
-    if (!dragging) return;
-    const delta = (startY - e.clientY) * 1.5;
-    rot = Math.max(-150, Math.min(150, rot + delta));
-    knob.style.transform = `rotate(${rot}deg)`;
-    startY = e.clientY;
-  });
-  window.addEventListener('mouseup', () => dragging = false);
-});
-
-window.addEventListener('resize', () => {
-  if (!isTransmitting && !analyser) drawIdle();
-});
+function stopTx() {
+  if (!linked) return;
+  muteLocal();
+  ptt.className = 'ptt ready';
+  entry('End transmission', 'sys');
+}
 </script>
 </body>
 </html>
