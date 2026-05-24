@@ -319,13 +319,23 @@
 
 </div>
 
-<audio id="remoteAudio" autoplay></audio>
+<audio id="remoteAudio" autoplay playsinline></audio>
 
 <script>
 const script = document.createElement('script');
 script.src = 'https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js';
 document.head.appendChild(script);
 script.onload = () => {}; // init called after session code entered
+
+// Free public TURN servers (Open Relay Project) — essential for mobile/carrier-NAT networks
+const ICE_SERVERS = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+  { urls: 'stun:openrelay.metered.ca:80' },
+  { urls: 'turn:openrelay.metered.ca:80',       username: 'openrelayproject', credential: 'openrelayproject' },
+  { urls: 'turn:openrelay.metered.ca:443',      username: 'openrelayproject', credential: 'openrelayproject' },
+  { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
+];
 
 let MY_ID, REMOTE_ID;
 
@@ -394,12 +404,18 @@ chatInput.addEventListener('keydown', e => { if (e.key === 'Enter') sendChat(); 
 
 function init() {
   if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
-    entry('ERROR: HTTPS required for microphone access', 'err');
-    entry('Please serve this page over HTTPS', 'err');
+    entry('ERROR: HTTPS required for mic access', 'err');
+    entry('Please open this page over HTTPS', 'err');
+    return;
+  }
+  // Real WebRTC check — PeerJS error message can be misleading
+  if (typeof RTCPeerConnection === 'undefined') {
+    entry('ERROR: WebRTC not available in this browser', 'err');
+    entry('Try Chrome or Firefox — make sure it is up to date', 'err');
     return;
   }
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    entry('ERROR: Browser does not support microphone access', 'err');
+    entry('ERROR: Mic API not available (try Chrome)', 'err');
     return;
   }
   // Acquire mic once up front — reused for all calls
@@ -427,10 +443,8 @@ function init() {
 
 function startPeer() {
   peer = new Peer(MY_ID, {
-    config: { iceServers: [
-      { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:stun1.l.google.com:19302' }
-    ]}
+    host: '0.peerjs.com', port: 443, path: '/', secure: true,
+    config: { iceServers: ICE_SERVERS }
   });
 
   peer.on('open', () => {
@@ -461,6 +475,15 @@ function startPeer() {
   });
 
   peer.on('error', e => {
+    if (e.type === 'browser-incompatible') {
+      entry('Browser WebRTC error — try Chrome (updated)', 'err');
+      return;
+    }
+    if (e.type === 'network' || e.type === 'server-error' || e.type === 'socket-error') {
+      entry('Signalling server unreachable — check internet', 'err');
+      setTimeout(() => { peer.destroy(); startPeer(); }, 6000);
+      return;
+    }
     entry('Error: ' + e.message, 'err');
     if (e.type === 'unavailable-id') {
       entry('ID in use — retrying in 4s…', 'sys');
