@@ -545,6 +545,11 @@ function init() {
 }
 
 function startPeer() {
+  // Close any stale data connection from a previous peer instance
+  if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
+  chatInput.disabled = true;
+  sendBtn.disabled = true;
+
   peer = new Peer(MY_ID, {
     
     config: { iceServers: ICE_SERVERS }
@@ -646,9 +651,6 @@ function attachCall(c) {
 function onDrop() {
   linked = false;
   call = null;
-  dataConn = null;
-  chatInput.disabled = true;
-  sendBtn.disabled = true;
   duplexBar.textContent = 'OFFLINE';
   duplexBar.className = 'duplex-bar';
   document.getElementById('remoteVideo').srcObject = null;
