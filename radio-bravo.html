@@ -3,133 +3,212 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BRAVO</title>
+<title>Bravo</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&display=swap');
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-    background: #0f0f0f;
-    color: #e0e0e0;
+    background: #1a1a1a;
+    color: #ffffff;
     font-family: 'IBM Plex Mono', monospace;
-    min-height: 100vh;
+    height: 100vh;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 24px;
-    padding: 24px;
+    overflow: hidden;
   }
 
   header {
     display: flex;
     align-items: center;
-    gap: 12px;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-bottom: 1px solid #2e2e2e;
+    flex-shrink: 0;
   }
-
-  .unit-name {
-    font-size: 13px;
-    letter-spacing: 6px;
-    color: #666;
+  .unit { font-size: 14px; font-weight: 700; letter-spacing: 4px; color: #fff; }
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: #888;
     text-transform: uppercase;
   }
-
-  .status-dot {
-    width: 8px;
-    height: 8px;
+  .dot {
+    width: 8px; height: 8px;
     border-radius: 50%;
-    background: #333;
-    transition: background 0.2s, box-shadow 0.2s;
+    background: #444;
+    transition: background 0.3s, box-shadow 0.3s;
   }
-  .status-dot.standby { background: #f0a500; box-shadow: 0 0 6px #f0a500; }
-  .status-dot.linked  { background: #22cc66; box-shadow: 0 0 6px #22cc66; }
+  .dot.standby { background: #f0a500; box-shadow: 0 0 8px #f0a500; }
+  .dot.linked  { background: #4caf50; box-shadow: 0 0 8px #4caf50; }
 
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
-
-  #statusText {
-    font-size: 11px;
-    letter-spacing: 3px;
-    color: #555;
-    text-transform: uppercase;
-  }
-  #statusText.linked { color: #22cc66; }
-
-  .log {
-    width: 100%;
-    max-width: 420px;
-    height: 200px;
-    background: #141414;
-    border: 1px solid #222;
-    border-radius: 4px;
-    padding: 12px 14px;
+  .chat {
+    flex: 1;
     overflow-y: auto;
-    font-size: 11px;
-    line-height: 1.8;
-    color: #555;
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
     scrollbar-width: thin;
     scrollbar-color: #333 transparent;
   }
-  .log .sys  { color: #444; }
-  .log .info { color: #aaa; }
-  .log .ok   { color: #22cc66; }
-  .log .err  { color: #cc4444; }
-  .log .tx   { color: #4ab8ff; }
 
-  .ptt {
-    width: 180px;
-    height: 180px;
-    border-radius: 50%;
-    border: 3px solid #333;
-    background: #1a1a1a;
+  .bubble {
+    max-width: 75%;
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    line-height: 1.5;
+    word-break: break-word;
+  }
+  .bubble.mine {
+    align-self: flex-end;
+    background: #2a2a2a;
+    border: 1px solid #3a3a3a;
+    color: #fff;
+  }
+  .bubble.theirs {
+    align-self: flex-start;
+    background: #222;
+    border: 1px solid #333;
+    color: #ddd;
+  }
+  .bubble .who {
+    font-size: 9px;
+    letter-spacing: 2px;
     color: #666;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 11px;
-    letter-spacing: 3px;
-    cursor: not-allowed;
+    margin-bottom: 4px;
     text-transform: uppercase;
+  }
+  .bubble.mine .who { color: #4caf50; }
+  .bubble.theirs .who { color: #f0a500; }
+
+  .chat-input-row {
+    display: flex;
+    gap: 10px;
+    padding: 12px 20px;
+    border-top: 1px solid #2e2e2e;
+    flex-shrink: 0;
+  }
+  .chat-input {
+    flex: 1;
+    background: #222;
+    border: 1px solid #333;
+    border-radius: 4px;
+    color: #fff;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .chat-input::placeholder { color: #555; }
+  .chat-input:focus { border-color: #555; }
+  .chat-input:disabled { opacity: 0.4; cursor: not-allowed; }
+  .send-btn {
+    background: #2a2a2a;
+    border: 1px solid #3a3a3a;
+    border-radius: 4px;
+    color: #fff;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 2px;
+    padding: 10px 16px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .send-btn:hover { background: #333; border-color: #555; }
+  .send-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  .ptt-row {
+    padding: 16px 20px;
+    border-top: 1px solid #2e2e2e;
+    flex-shrink: 0;
+  }
+  .ptt {
+    width: 100%;
+    height: 72px;
+    border-radius: 6px;
+    border: 2px solid #333;
+    background: #222;
+    color: #555;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    cursor: not-allowed;
     transition: all 0.08s;
     user-select: none;
     -webkit-user-select: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
   }
   .ptt.ready {
     border-color: #444;
     color: #aaa;
     cursor: pointer;
   }
-  .ptt.ready:hover {
-    border-color: #666;
-    background: #202020;
-  }
+  .ptt.ready:hover { background: #282828; border-color: #555; }
   .ptt.transmitting {
-    border-color: #4ab8ff;
     background: #00111f;
+    border-color: #4ab8ff;
     color: #4ab8ff;
-    box-shadow: 0 0 40px rgba(74,184,255,0.25);
-    transform: scale(0.97);
+    box-shadow: 0 0 20px rgba(74,184,255,0.15);
+    transform: scale(0.99);
   }
+
+  .log {
+    height: 100px;
+    border-top: 1px solid #2e2e2e;
+    padding: 10px 20px;
+    overflow-y: auto;
+    flex-shrink: 0;
+    scrollbar-width: thin;
+    scrollbar-color: #333 transparent;
+  }
+  .log-entry {
+    font-size: 10px;
+    line-height: 1.8;
+    letter-spacing: 0.5px;
+  }
+  .log-entry.sys  { color: #444; }
+  .log-entry.info { color: #777; }
+  .log-entry.ok   { color: #4caf50; }
+  .log-entry.err  { color: #e05555; }
+  .log-entry.tx   { color: #4ab8ff; }
 </style>
 </head>
 <body>
 
 <header>
-  <div class="status-dot" id="dot"></div>
-  <div class="unit-name">Unit Bravo</div>
+  <div class="unit">BRAVO</div>
+  <div class="status">
+    <div class="dot" id="dot"></div>
+    <span id="statusText">Offline</span>
+  </div>
 </header>
 
-<div id="statusText">Offline</div>
+<div class="chat" id="chat"></div>
+
+<div class="chat-input-row">
+  <input class="chat-input" id="chatInput" placeholder="Type a message…" disabled />
+  <button class="send-btn" id="sendBtn" onclick="sendChat()" disabled>Send</button>
+</div>
+
+<div class="ptt-row">
+  <button class="ptt" id="ptt"
+    onmousedown="startTx()"
+    onmouseup="stopTx()"
+    onmouseleave="stopTx()"
+    ontouchstart="startTx(event)"
+    ontouchend="stopTx()">Hold to Talk</button>
+</div>
 
 <div class="log" id="log"></div>
-
-<button class="ptt" id="ptt"
-  onmousedown="startTx()"
-  onmouseup="stopTx()"
-  onmouseleave="stopTx()"
-  ontouchstart="startTx(event)"
-  ontouchend="stopTx()">PTT</button>
 
 <audio id="remoteAudio" autoplay></audio>
 
@@ -142,28 +221,54 @@ script.onload = init;
 const MY_ID     = 'unit-bravo-2w';
 const REMOTE_ID = 'unit-alpha-2w';
 
-let peer, call, localStream, linked = false;
+let peer, call, dataConn, localStream, linked = false;
 
-const dot    = document.getElementById('dot');
-const status = document.getElementById('statusText');
-const ptt    = document.getElementById('ptt');
-const log    = document.getElementById('log');
+const dot       = document.getElementById('dot');
+const statusEl  = document.getElementById('statusText');
+const ptt       = document.getElementById('ptt');
+const logEl     = document.getElementById('log');
+const chat      = document.getElementById('chat');
+const chatInput = document.getElementById('chatInput');
+const sendBtn   = document.getElementById('sendBtn');
 
 function entry(msg, cls='sys') {
   const ts = new Date().toTimeString().slice(0,8);
   const d = document.createElement('div');
-  d.className = cls;
+  d.className = 'log-entry ' + cls;
   d.textContent = `${ts}  ${msg}`;
-  log.appendChild(d);
-  log.scrollTop = log.scrollHeight;
+  logEl.appendChild(d);
+  logEl.scrollTop = logEl.scrollHeight;
 }
 
 function setStatus(state) {
-  dot.className = 'status-dot ' + state;
+  dot.className = 'dot ' + state;
   const labels = { '': 'Offline', standby: 'Standby', linked: 'Linked' };
-  status.textContent = labels[state] || state;
-  status.className = state === 'linked' ? 'linked' : '';
+  statusEl.textContent = labels[state] ?? state;
 }
+
+function addBubble(text, mine) {
+  const wrap = document.createElement('div');
+  wrap.className = 'bubble ' + (mine ? 'mine' : 'theirs');
+  const who = document.createElement('div');
+  who.className = 'who';
+  who.textContent = mine ? 'Bravo' : 'Alpha';
+  const msg = document.createElement('div');
+  msg.textContent = text;
+  wrap.appendChild(who);
+  wrap.appendChild(msg);
+  chat.appendChild(wrap);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function sendChat() {
+  const txt = chatInput.value.trim();
+  if (!txt || !dataConn) return;
+  dataConn.send(txt);
+  addBubble(txt, true);
+  chatInput.value = '';
+}
+
+chatInput.addEventListener('keydown', e => { if (e.key === 'Enter') sendChat(); });
 
 function init() {
   peer = new Peer(MY_ID, {
@@ -176,6 +281,23 @@ function init() {
   peer.on('open', () => {
     entry('Radio online — waiting for Alpha', 'ok');
     setStatus('standby');
+  });
+
+  // Accept data connections from Alpha
+  peer.on('connection', dc => {
+    dataConn = dc;
+    dc.on('open', () => {
+      entry('Chat channel open', 'ok');
+      chatInput.disabled = false;
+      sendBtn.disabled = false;
+    });
+    dc.on('data', msg => addBubble(msg, false));
+    dc.on('close', () => {
+      dataConn = null;
+      chatInput.disabled = true;
+      sendBtn.disabled = true;
+      entry('Chat channel closed', 'sys');
+    });
   });
 
   peer.on('call', incoming => {
@@ -214,6 +336,9 @@ function attachCall(c) {
 function onDrop() {
   linked = false;
   call = null;
+  dataConn = null;
+  chatInput.disabled = true;
+  sendBtn.disabled = true;
   ptt.className = 'ptt';
   setStatus('standby');
   entry('Link lost — waiting for Alpha', 'sys');
