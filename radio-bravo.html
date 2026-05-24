@@ -218,6 +218,13 @@
     color: var(--danger);
   }
   .media-btn.disabled-state:hover { background: rgba(255,68,68,0.25); }
+  .media-btn.recording {
+    background: rgba(255,68,68,0.2);
+    border-color: #ff4444;
+    color: #ff4444;
+    animation: rec-blink 1.2s ease-in-out infinite;
+  }
+  @keyframes rec-blink { 0%,100%{opacity:1} 50%{opacity:0.5} }
 
   .log-panel {
     background: var(--panel); border: 1px solid var(--border);
@@ -385,6 +392,7 @@
           <div class="duplex-bar" id="duplexBar">OFFLINE</div>
           <button class="media-btn" id="videoBtn" onclick="toggleVideo()">Disable Video</button>
           <button class="media-btn" id="audioBtn" onclick="toggleAudio()">Disable Audio</button>
+          <button class="media-btn" id="recBtn" onclick="toggleRecord()">⏺ Record</button>
         </div>
       </div>
       <div class="video-panel" style="flex-shrink:0">
@@ -637,12 +645,14 @@ function attachCall(c) {
     const remoteVideo = document.getElementById('remoteVideo');
     remoteVideo.srcObject = stream;
     document.getElementById('remoteWrap').classList.remove('waiting');
+    if (audioCtx && mixDest && !remoteRecNode) {
+      remoteRecNode = connectTrackToMixer(stream);
+    }
     linked = true;
     setStatus('linked');
     entry('Linked to Alpha — full duplex active', 'ok');
     duplexBar.textContent = '● LIVE';
     duplexBar.className = 'duplex-bar live';
-    // If Alpha's data channel hasn't arrived yet, wait a moment then it will retry
     setTimeout(() => {
       if (!dataConn) entry('Waiting for chat channel from Alpha…', 'sys');
     }, 2000);
@@ -654,6 +664,7 @@ function attachCall(c) {
 function onDrop() {
   linked = false;
   call = null;
+  remoteRecNode = null;
   duplexBar.textContent = 'OFFLINE';
   duplexBar.className = 'duplex-bar';
   document.getElementById('remoteVideo').srcObject = null;
@@ -664,6 +675,64 @@ function onDrop() {
 
 function muteLocal() {
   // no-op — full duplex, mic always open when linked
+}
+
+// ── Audio Recording ──────────────────────────────────────────
+let mediaRecorder = null;
+let recordChunks  = [];
+let audioCtx      = null;
+let mixDest       = null;
+let localRecNode  = null;
+let remoteRecNode = null;
+
+function buildMixer() {
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  mixDest  = audioCtx.createMediaStreamDestination();
+}
+
+function connectTrackToMixer(stream) {
+  if (!audioCtx) buildMixer();
+  const src = audioCtx.createMediaStreamSource(stream);
+  src.connect(mixDest);
+  return src;
+}
+
+function toggleRecord() {
+  const btn = document.getElementById('recBtn');
+  if (mediaRecorder && mediaRecorder.state === 'recording') {
+    mediaRecorder.stop();
+    btn.textContent = '⏺ Record';
+    btn.classList.remove('recording');
+    entry('Recording stopped — saving…', 'sys');
+  } else {
+    if (!localStream) { entry('No local stream to record', 'err'); return; }
+    if (!audioCtx) buildMixer();
+    if (!localRecNode) localRecNode = connectTrackToMixer(localStream);
+    const remAudio = document.getElementById('remoteAudio');
+    if (remAudio.srcObject && !remoteRecNode) {
+      remoteRecNode = connectTrackToMixer(remAudio.srcObject);
+    }
+    recordChunks = [];
+    const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+      ? 'audio/webm;codecs=opus' : 'audio/webm';
+    mediaRecorder = new MediaRecorder(mixDest.stream, { mimeType });
+    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordChunks.push(e.data); };
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(recordChunks, { type: mimeType });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      const ts   = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
+      a.href     = url;
+      a.download = `bravo-recording-${ts}.webm`;
+      a.click();
+      URL.revokeObjectURL(url);
+      entry('Recording saved', 'ok');
+    };
+    mediaRecorder.start(1000);
+    btn.textContent = '⏹ Stop & Save';
+    btn.classList.add('recording');
+    entry('Recording started', 'ok');
+  }
 }
 
 function toggleVideo() {
