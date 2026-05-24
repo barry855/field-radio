@@ -474,7 +474,7 @@ function init() {
 
 function startPeer() {
   peer = new Peer(MY_ID, {
-    host: '0.peerjs.com', port: 443, path: '/', secure: true,
+    
     config: { iceServers: ICE_SERVERS }
   });
 
@@ -505,25 +505,27 @@ function startPeer() {
     answerCall(incoming);
   });
 
+  peer.on('disconnected', () => {
+    entry('Signalling server disconnected — reconnecting…', 'sys');
+    if (!peer.destroyed) peer.reconnect();
+  });
+
   peer.on('error', e => {
-    if (e.type === 'browser-incompatible') {
-      entry('Browser WebRTC error — try Chrome (updated)', 'err');
-      return;
-    }
-    if (e.type === 'network' || e.type === 'server-error' || e.type === 'socket-error') {
-      entry('Signalling server unreachable — check internet', 'err');
-      retryTimer = setTimeout(() => { peer.destroy(); startPeer(); }, 6000);
-      return;
-    }
-    entry('Error: ' + e.message, 'err');
+    entry('Peer error [' + e.type + ']: ' + e.message, 'err');
+    if (e.type === 'browser-incompatible') return;
     if (e.type === 'peer-unavailable') {
       entry('Bravo offline — retry in 5s', 'sys');
       retryTimer = setTimeout(dial, 5000);
+      return;
     }
     if (e.type === 'unavailable-id') {
       entry('ID in use — retrying in 4s…', 'sys');
       setTimeout(() => { peer.destroy(); startPeer(); }, 4000);
+      return;
     }
+    // network / server-error / socket-error / socket-closed
+    entry('Retrying in 6s…', 'sys');
+    retryTimer = setTimeout(() => { peer.destroy(); startPeer(); }, 6000);
   });
 }
 
