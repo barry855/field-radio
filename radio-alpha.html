@@ -231,10 +231,10 @@
   .log-panel {
     background: var(--panel); border: 1px solid var(--border);
     border-radius: 8px; padding: 10px 14px; position: relative;
-    flex-shrink: 0; height: 120px;
+    flex-shrink: 0;
   }
   .log {
-    height: 100%;
+    height: 76px;
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: #ccc #fff;
@@ -288,14 +288,14 @@
   .video-panel {
     background: var(--panel); border: 1px solid var(--border);
     border-radius: 8px; padding: 10px 14px; position: relative;
-    flex-shrink: 0;
+    flex: 1; min-height: 0;
   }
   .video-grid {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+    display: grid; grid-template-columns: 1fr; gap: 8px; height: 100%;
   }
   .video-wrap {
     position: relative; background: #000; border-radius: 4px;
-    overflow: hidden; aspect-ratio: 4/3;
+    overflow: hidden; aspect-ratio: 16/9;
   }
   .video-wrap video {
     width: 100%; height: 100%; object-fit: cover; display: block;
@@ -396,7 +396,7 @@
           <button class="media-btn" id="recBtn" onclick="toggleRecord()">⏺ Record</button>
         </div>
       </div>
-      <div class="video-panel" style="flex-shrink:0">
+      <div class="video-panel">
         <div class="panel-label">VIDEO</div>
         <div class="video-grid">
           <div class="video-wrap" id="localWrap">
@@ -409,10 +409,6 @@
           </div>
         </div>
       </div>
-      <div class="log-panel" style="flex:1;min-height:80px">
-        <div class="panel-label">SYS LOG</div>
-        <div class="log" id="log"></div>
-      </div>
     </div>
     <!-- CHAT TAB -->
     <div class="tab-pane" id="paneChat">
@@ -423,6 +419,10 @@
           <input class="chat-input" id="chatInput" placeholder="TYPE MESSAGE…" disabled />
           <button class="btn" id="sendBtn" onclick="sendChat()" disabled>SEND</button>
         </div>
+      </div>
+      <div class="log-panel">
+        <div class="panel-label">SYS LOG</div>
+        <div class="log" id="log"></div>
       </div>
     </div>
   </div>
