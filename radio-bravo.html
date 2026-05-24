@@ -288,6 +288,47 @@
     font-family: 'Orbitron', sans-serif; font-size: 10px;
     letter-spacing: 3px; color: var(--text-dim);
   }
+
+  /* ── tab bar ── */
+  .tab-bar {
+    display: flex; gap: 4px; flex-shrink: 0;
+  }
+  .tab-btn {
+    flex: 1; padding: 8px 14px;
+    background: var(--border); border: 1px solid var(--border);
+    border-radius: 6px 6px 0 0; border-bottom: none;
+    color: var(--text-dim); font-family: 'Orbitron', sans-serif;
+    font-size: 11px; letter-spacing: 3px; font-weight: 700;
+    cursor: pointer; transition: all 0.15s;
+    text-transform: uppercase; position: relative;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .tab-btn:hover { background: var(--btn-hover); color: var(--text); }
+  .tab-btn.active {
+    background: var(--panel); border-color: var(--border);
+    color: var(--accent2); border-bottom: 1px solid var(--panel);
+    margin-bottom: -1px; z-index: 1;
+  }
+  .tab-content {
+    display: flex; flex-direction: column; flex: 1;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 0 0 8px 8px; overflow: hidden; min-height: 0;
+    padding: 10px; gap: 10px;
+  }
+  .tab-pane { display: none; flex-direction: column; flex: 1; min-height: 0; gap: 10px; }
+  .tab-pane.active { display: flex; }
+
+  /* new-message badge */
+  .msg-badge {
+    display: none; align-items: center; justify-content: center;
+    min-width: 18px; height: 18px; padding: 0 5px;
+    background: var(--warn); color: #1a1000;
+    border-radius: 9px; font-size: 9px; font-weight: 900;
+    font-family: 'Orbitron', sans-serif; letter-spacing: 0;
+    animation: badge-pop 0.25s cubic-bezier(.36,.07,.19,.97);
+  }
+  .msg-badge.visible { display: flex; }
+  @keyframes badge-pop { 0%{transform:scale(0)} 70%{transform:scale(1.2)} 100%{transform:scale(1)} }
 </style>
 </head>
 <body>
@@ -313,41 +354,47 @@
     </div>
   </header>
 
-  <div class="chat-panel">
-    <div class="panel-label">COMMS</div>
-    <div class="chat" id="chat"></div>
-    <div class="chat-input-row">
-      <input class="chat-input" id="chatInput" placeholder="TYPE MESSAGE…" disabled />
-      <button class="btn" id="sendBtn" onclick="sendChat()" disabled>SEND</button>
+  <div class="tab-bar">
+    <button class="tab-btn active" id="tabVideoBtn" onclick="switchTab('video')">VIDEO</button>
+    <button class="tab-btn" id="tabChatBtn" onclick="switchTab('chat')">CHAT <span class="msg-badge" id="msgBadge">0</span></button>
+  </div>
+  <div class="tab-content">
+    <!-- VIDEO TAB -->
+    <div class="tab-pane active" id="paneVideo">
+      <div class="ptt-panel" style="flex-shrink:0">
+        <div class="panel-label">CHANNEL</div>
+        <div class="duplex-bar" id="duplexBar">OFFLINE</div>
+      </div>
+      <div class="video-panel" style="flex-shrink:0">
+        <div class="panel-label">VIDEO</div>
+        <div class="video-grid">
+          <div class="video-wrap" id="localWrap">
+            <video id="localVideo" autoplay playsinline muted></video>
+            <span class="video-label">BRAVO</span>
+          </div>
+          <div class="video-wrap waiting" id="remoteWrap">
+            <video id="remoteVideo" autoplay playsinline></video>
+            <span class="video-label">ALPHA</span>
+          </div>
+        </div>
+      </div>
+      <div class="log-panel" style="flex:1;min-height:80px">
+        <div class="panel-label">SYS LOG</div>
+        <div class="log" id="log"></div>
+      </div>
+    </div>
+    <!-- CHAT TAB -->
+    <div class="tab-pane" id="paneChat">
+      <div class="chat-panel" style="flex:1">
+        <div class="panel-label">COMMS</div>
+        <div class="chat" id="chat"></div>
+        <div class="chat-input-row">
+          <input class="chat-input" id="chatInput" placeholder="TYPE MESSAGE…" disabled />
+          <button class="btn" id="sendBtn" onclick="sendChat()" disabled>SEND</button>
+        </div>
+      </div>
     </div>
   </div>
-
-  <div class="ptt-panel">
-    <div class="panel-label">CHANNEL</div>
-    <div class="duplex-bar" id="duplexBar">OFFLINE</div>
-  </div>
-
-  <!-- Video -->
-  <div class="video-panel">
-    <div class="panel-label">VIDEO</div>
-    <div class="video-grid">
-      <div class="video-wrap" id="localWrap">
-        <video id="localVideo" autoplay playsinline muted></video>
-        <span class="video-label">BRAVO</span>
-      </div>
-      <div class="video-wrap waiting" id="remoteWrap">
-        <video id="remoteVideo" autoplay playsinline></video>
-        <span class="video-label">ALPHA</span>
-      </div>
-    </div>
-  </div>
-
-  <div class="log-panel">
-    <div class="panel-label">SYS LOG</div>
-    <div class="log" id="log"></div>
-  </div>
-
-</div>
 
 <audio id="remoteAudio" autoplay playsinline></audio>
 
@@ -408,6 +455,23 @@ function setStatus(state) {
   else                     { statusEl.textContent = 'OFFLINE'; }
 }
 
+let activeTab = 'video';
+let unreadCount = 0;
+const msgBadge = document.getElementById('msgBadge');
+
+function switchTab(tab) {
+  activeTab = tab;
+  document.getElementById('tabVideoBtn').classList.toggle('active', tab === 'video');
+  document.getElementById('tabChatBtn').classList.toggle('active', tab === 'chat');
+  document.getElementById('paneVideo').classList.toggle('active', tab === 'video');
+  document.getElementById('paneChat').classList.toggle('active', tab === 'chat');
+  if (tab === 'chat') {
+    unreadCount = 0;
+    msgBadge.textContent = '0';
+    msgBadge.classList.remove('visible');
+  }
+}
+
 function addBubble(text, mine) {
   const wrap = document.createElement('div');
   wrap.className = 'bubble ' + (mine ? 'mine' : 'theirs');
@@ -420,6 +484,14 @@ function addBubble(text, mine) {
   wrap.appendChild(msg);
   chat.appendChild(wrap);
   chat.scrollTop = chat.scrollHeight;
+  // Badge: notify on video tab when a new incoming message arrives
+  if (!mine && activeTab !== 'chat') {
+    unreadCount++;
+    msgBadge.textContent = unreadCount;
+    msgBadge.classList.remove('visible');
+    void msgBadge.offsetWidth; // reflow to restart animation
+    msgBadge.classList.add('visible');
+  }
 }
 
 function sendChat() {
