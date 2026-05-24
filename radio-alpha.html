@@ -39,7 +39,6 @@
     overflow: hidden;
   }
 
-  /* ── shell / outer container ── */
   .shell {
     display: flex;
     flex-direction: column;
@@ -52,7 +51,6 @@
     overflow: hidden;
   }
 
-  /* ── panel ── */
   .panel {
     background: var(--panel);
     border: 1px solid var(--border);
@@ -68,7 +66,6 @@
     letter-spacing: 2px; text-transform: uppercase;
   }
 
-  /* ── header ── */
   header {
     display: flex; align-items: center; gap: 16px;
     background: var(--panel); border: 1px solid var(--border);
@@ -83,7 +80,6 @@
   }
   .logo span { color: var(--accent2); }
 
-  /* ── status row ── */
   .statusbar { display: flex; align-items: center; gap: 16px; flex: 1; flex-wrap: wrap; }
   .status-item {
     display: flex; align-items: center; gap: 6px;
@@ -101,7 +97,6 @@
 
   @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.35} }
 
-  /* ── chat window ── */
   .chat-panel {
     flex: 1;
     background: var(--panel);
@@ -128,7 +123,6 @@
     margin-bottom: 2px;
   }
 
-  /* ── chat bubbles ── */
   .bubble {
     max-width: 80%;
     padding: 8px 12px;
@@ -157,7 +151,6 @@
   .bubble.mine .who   { color: #0077aa; }
   .bubble.theirs .who { color: #007744; }
 
-  /* ── chat input row ── */
   .chat-input-row {
     display: flex; gap: 8px; margin-top: 10px; flex-shrink: 0;
   }
@@ -172,7 +165,6 @@
   .chat-input:disabled { opacity: 0.4; cursor: not-allowed; }
   .chat-input::placeholder { color: var(--text-dim); }
 
-  /* ── buttons ── */
   .btn {
     background: var(--btn-bg); border: 1px solid var(--border);
     color: var(--text); padding: 6px 14px; border-radius: 4px;
@@ -183,10 +175,6 @@
   .btn:hover  { background: var(--btn-hover); border-color: #2a4060; }
   .btn:active { background: var(--btn-active); }
   .btn:disabled { opacity: 0.35; cursor: not-allowed; }
-  .btn.active {
-    background: rgba(0,212,255,0.12); border-color: var(--accent);
-    color: var(--accent); text-shadow: 0 0 8px rgba(0,212,255,0.5);
-  }
 
   /* ── duplex status bar ── */
   .ptt-panel {
@@ -215,7 +203,6 @@
   }
   @keyframes fdx-pulse { from{box-shadow:0 0 12px rgba(0,255,159,0.15)} to{box-shadow:0 0 28px rgba(0,255,159,0.35)} }
 
-  /* ── log panel ── */
   .log-panel {
     background: var(--panel); border: 1px solid var(--border);
     border-radius: 8px; padding: 10px 14px; position: relative;
@@ -264,8 +251,7 @@
     text-transform: uppercase; outline: none; margin-bottom: 14px;
   }
   .session-box input[type=text]:focus { border-color: var(--accent); }
-  .session-go {
-    width: 100%; padding: 10px; border-radius: 4px;
+  .session-go { width: 100%; padding: 10px; border-radius: 4px;
     background: var(--btn-bg); border: 1px solid var(--border);
     color: var(--text); font-family: 'Orbitron', sans-serif;
     font-size: 12px; letter-spacing: 2px; cursor: pointer;
@@ -287,7 +273,6 @@
 
 <div class="shell">
 
-  <!-- Header -->
   <header>
     <div class="logo">ALPHA<span>·</span>01</div>
     <div class="statusbar">
@@ -298,7 +283,6 @@
     </div>
   </header>
 
-  <!-- Chat window -->
   <div class="chat-panel">
     <div class="panel-label">COMMS</div>
     <div class="chat" id="chat"></div>
@@ -308,13 +292,11 @@
     </div>
   </div>
 
-  <!-- Duplex status -->
   <div class="ptt-panel">
     <div class="panel-label">CHANNEL</div>
     <div class="duplex-bar" id="duplexBar">OFFLINE</div>
   </div>
 
-  <!-- Log -->
   <div class="log-panel">
     <div class="panel-label">SYS LOG</div>
     <div class="log" id="log"></div>
@@ -421,7 +403,7 @@ function init() {
     entry('ERROR: Mic API not available (try Chrome)', 'err');
     return;
   }
-  // Acquire mic once up front — reused for all calls, no repeated prompts
+  // Acquire mic once up front — reused for all calls
   navigator.mediaDevices.getUserMedia({ audio: {
     echoCancellation: true, noiseSuppression: true, autoGainControl: true
   }, video: false })
