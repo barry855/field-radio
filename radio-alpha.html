@@ -381,13 +381,13 @@
   </header>
 
   <div class="tab-bar">
-    <button class="tab-btn active" id="tabLocalBtn"  onclick="switchTab('local')">LOCAL</button>
-    <button class="tab-btn"        id="tabRemoteBtn" onclick="switchTab('remote')">REMOTE</button>
+    <button class="tab-btn"        id="tabLocalBtn"  onclick="switchTab('local')">LOCAL</button>
+    <button class="tab-btn active" id="tabRemoteBtn" onclick="switchTab('remote')">REMOTE</button>
     <button class="tab-btn"        id="tabChatBtn"   onclick="switchTab('chat')">CHAT <span class="msg-badge" id="msgBadge">0</span></button>
   </div>
   <div class="tab-content">
     <!-- LOCAL TAB -->
-    <div class="tab-pane active" id="paneLocal">
+    <div class="tab-pane" id="paneLocal">
       <div class="ptt-panel" style="flex-shrink:0">
         <div class="panel-label">CHANNEL</div>
         <div class="channel-row">
@@ -408,7 +408,7 @@
       </div>
     </div>
     <!-- REMOTE TAB -->
-    <div class="tab-pane" id="paneRemote">
+    <div class="tab-pane active" id="paneRemote">
       <div class="ptt-panel" style="flex-shrink:0">
         <div class="panel-label">CHANNEL</div>
         <div class="channel-row">
@@ -504,7 +504,7 @@ function setStatus(state) {
   else                      { statusEl.textContent = 'OFFLINE'; }
 }
 
-let activeTab = 'video';
+let activeTab = 'remote';
 let unreadCount = 0;
 const msgBadge = document.getElementById('msgBadge');
 
