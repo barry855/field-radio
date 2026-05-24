@@ -258,6 +258,37 @@
     transition: background 0.15s, border-color 0.15s;
   }
   .session-go:hover { background: var(--btn-hover); border-color: var(--accent); }
+
+  /* ── video ── */
+  .video-panel {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 14px; position: relative;
+    flex-shrink: 0;
+  }
+  .video-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  }
+  .video-wrap {
+    position: relative; background: #000; border-radius: 4px;
+    overflow: hidden; aspect-ratio: 4/3;
+  }
+  .video-wrap video {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+  }
+  .video-label {
+    position: absolute; bottom: 4px; left: 6px;
+    font-family: 'Orbitron', sans-serif; font-size: 9px;
+    letter-spacing: 2px; color: rgba(255,255,255,0.7);
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+    pointer-events: none;
+  }
+  .video-wrap.waiting::after {
+    content: 'WAITING…';
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Orbitron', sans-serif; font-size: 10px;
+    letter-spacing: 3px; color: var(--text-dim);
+  }
 </style>
 </head>
 <body>
@@ -295,6 +326,21 @@
   <div class="ptt-panel">
     <div class="panel-label">CHANNEL</div>
     <div class="duplex-bar" id="duplexBar">OFFLINE</div>
+  </div>
+
+  <!-- Video -->
+  <div class="video-panel">
+    <div class="panel-label">VIDEO</div>
+    <div class="video-grid">
+      <div class="video-wrap" id="localWrap">
+        <video id="localVideo" autoplay playsinline muted></video>
+        <span class="video-label">ALPHA</span>
+      </div>
+      <div class="video-wrap waiting" id="remoteWrap">
+        <video id="remoteVideo" autoplay playsinline></video>
+        <span class="video-label">BRAVO</span>
+      </div>
+    </div>
   </div>
 
   <div class="log-panel">
@@ -406,10 +452,11 @@ function init() {
   // Acquire mic once up front — reused for all calls
   navigator.mediaDevices.getUserMedia({ audio: {
     echoCancellation: true, noiseSuppression: true, autoGainControl: true
-  }, video: false })
+  }, video: { facingMode: 'user' } })
   .then(stream => {
     localStream = stream;
-    entry('Mic ready', 'ok');
+    document.getElementById('localVideo').srcObject = stream;
+    entry('Mic + camera ready', 'ok');
     startPeer();
   })
   .catch(e => {
@@ -517,6 +564,9 @@ function attachCall(c) {
   call = c;
   c.on('stream', stream => {
     document.getElementById('remoteAudio').srcObject = stream;
+    const remoteVideo = document.getElementById('remoteVideo');
+    remoteVideo.srcObject = stream;
+    document.getElementById('remoteWrap').classList.remove('waiting');
     linked = true;
     setStatus('linked');
     entry('Linked to Bravo — full duplex active', 'ok');
@@ -535,6 +585,8 @@ function onDrop() {
   sendBtn.disabled = true;
   duplexBar.textContent = 'OFFLINE';
   duplexBar.className = 'duplex-bar';
+  document.getElementById('remoteVideo').srcObject = null;
+  document.getElementById('remoteWrap').classList.add('waiting');
   setStatus('calling');
   entry('Link lost — retrying in 5s', 'sys');
   retryTimer = setTimeout(dial, 5000);
