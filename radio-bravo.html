@@ -546,6 +546,7 @@ function init() {
 function startPeer() {
   // Close any stale data connection from a previous peer instance
   if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
+  linked = false;
   chatInput.disabled = true;
   sendBtn.disabled = true;
 
@@ -589,8 +590,8 @@ function startPeer() {
 }
 
 function attachDataConn(dc) {
-  dataConn = dc;
   dc.on('open', () => {
+    dataConn = dc;
     entry('Chat channel open', 'ok');
     chatInput.disabled = false;
     sendBtn.disabled = false;
@@ -601,6 +602,9 @@ function attachDataConn(dc) {
     chatInput.disabled = true;
     sendBtn.disabled = true;
     entry('Chat channel closed', 'sys');
+  });
+  dc.on('error', e => {
+    entry('Data channel error: ' + (e.message || e), 'err');
   });
 }
 
@@ -616,6 +620,10 @@ function attachCall(c) {
     entry('Linked to Alpha — full duplex active', 'ok');
     duplexBar.textContent = '● LIVE';
     duplexBar.className = 'duplex-bar live';
+    // If Alpha's data channel hasn't arrived yet, wait a moment then it will retry
+    setTimeout(() => {
+      if (!dataConn) entry('Waiting for chat channel from Alpha…', 'sys');
+    }, 2000);
   });
   c.on('close', onDrop);
   c.on('error', e => { entry('Call error: ' + e.message, 'err'); onDrop(); });
