@@ -380,12 +380,13 @@
   </header>
 
   <div class="tab-bar">
-    <button class="tab-btn active" id="tabVideoBtn" onclick="switchTab('video')">VIDEO</button>
-    <button class="tab-btn" id="tabChatBtn" onclick="switchTab('chat')">CHAT <span class="msg-badge" id="msgBadge">0</span></button>
+    <button class="tab-btn active" id="tabLocalBtn"  onclick="switchTab('local')">LOCAL</button>
+    <button class="tab-btn"        id="tabRemoteBtn" onclick="switchTab('remote')">REMOTE</button>
+    <button class="tab-btn"        id="tabChatBtn"   onclick="switchTab('chat')">CHAT <span class="msg-badge" id="msgBadge">0</span></button>
   </div>
   <div class="tab-content">
-    <!-- VIDEO TAB -->
-    <div class="tab-pane active" id="paneVideo">
+    <!-- LOCAL TAB -->
+    <div class="tab-pane active" id="paneLocal">
       <div class="ptt-panel" style="flex-shrink:0">
         <div class="panel-label">CHANNEL</div>
         <div class="channel-row">
@@ -396,12 +397,29 @@
         </div>
       </div>
       <div class="video-panel">
-        <div class="panel-label">VIDEO</div>
+        <div class="panel-label">LOCAL — BRAVO</div>
         <div class="video-grid">
           <div class="video-wrap" id="localWrap">
             <video id="localVideo" autoplay playsinline muted></video>
             <span class="video-label">BRAVO</span>
           </div>
+        </div>
+      </div>
+    </div>
+    <!-- REMOTE TAB -->
+    <div class="tab-pane" id="paneRemote">
+      <div class="ptt-panel" style="flex-shrink:0">
+        <div class="panel-label">CHANNEL</div>
+        <div class="channel-row">
+          <div class="duplex-bar" id="duplexBar2">OFFLINE</div>
+          <button class="media-btn" id="videoBtn2" onclick="toggleVideo()">Disable Video</button>
+          <button class="media-btn" id="audioBtn2" onclick="toggleAudio()">Disable Audio</button>
+          <button class="media-btn" id="recBtn2" onclick="toggleRecord()">⏺ Record</button>
+        </div>
+      </div>
+      <div class="video-panel">
+        <div class="panel-label">REMOTE — ALPHA</div>
+        <div class="video-grid">
           <div class="video-wrap waiting" id="remoteWrap">
             <video id="remoteVideo" autoplay playsinline></video>
             <span class="video-label">ALPHA</span>
@@ -489,12 +507,25 @@ let activeTab = 'video';
 let unreadCount = 0;
 const msgBadge = document.getElementById('msgBadge');
 
+function syncControls() {
+  const d2 = document.getElementById('duplexBar2');
+  if (d2) { d2.textContent = duplexBar.textContent; d2.className = duplexBar.className; }
+  ['videoBtn','audioBtn','recBtn'].forEach(id => {
+    const src = document.getElementById(id);
+    const dst = document.getElementById(id + '2');
+    if (src && dst) { dst.textContent = src.textContent; dst.className = src.className; }
+  });
+}
+
 function switchTab(tab) {
   activeTab = tab;
-  document.getElementById('tabVideoBtn').classList.toggle('active', tab === 'video');
-  document.getElementById('tabChatBtn').classList.toggle('active', tab === 'chat');
-  document.getElementById('paneVideo').classList.toggle('active', tab === 'video');
-  document.getElementById('paneChat').classList.toggle('active', tab === 'chat');
+  document.getElementById('tabLocalBtn') .classList.toggle('active', tab === 'local');
+  document.getElementById('tabRemoteBtn').classList.toggle('active', tab === 'remote');
+  document.getElementById('tabChatBtn')  .classList.toggle('active', tab === 'chat');
+  document.getElementById('paneLocal')  .classList.toggle('active', tab === 'local');
+  document.getElementById('paneRemote') .classList.toggle('active', tab === 'remote');
+  document.getElementById('paneChat')   .classList.toggle('active', tab === 'chat');
+  if (tab === 'remote') syncControls();
   if (tab === 'chat') {
     unreadCount = 0;
     msgBadge.textContent = '0';
@@ -683,6 +714,7 @@ function attachCall(c) {
     entry('Linked to Alpha — full duplex active', 'ok');
     duplexBar.textContent = '● LIVE';
     duplexBar.className = 'duplex-bar live';
+    syncControls();
     setTimeout(() => {
       if (!dataConn) { pendingDC = false; openDataConn(); }
     }, 2000);
@@ -696,6 +728,7 @@ function onDrop() {
   call = null;
   duplexBar.textContent = 'OFFLINE';
   duplexBar.className = 'duplex-bar';
+  syncControls();
   document.getElementById('remoteVideo').srcObject = null;
   document.getElementById('remoteWrap').classList.add('waiting');
   setStatus('standby');
