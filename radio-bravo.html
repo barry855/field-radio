@@ -544,6 +544,11 @@ function init() {
 }
 
 function startPeer() {
+  // Close any stale data connection from a previous peer instance
+  if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
+  chatInput.disabled = true;
+  sendBtn.disabled = true;
+
   peer = new Peer(MY_ID, {
     
     config: { iceServers: ICE_SERVERS }
@@ -555,19 +560,7 @@ function startPeer() {
   });
 
   peer.on('connection', dc => {
-    dataConn = dc;
-    dc.on('open', () => {
-      entry('Chat channel open', 'ok');
-      chatInput.disabled = false;
-      sendBtn.disabled = false;
-    });
-    dc.on('data', msg => addBubble(msg, false));
-    dc.on('close', () => {
-      dataConn = null;
-      chatInput.disabled = true;
-      sendBtn.disabled = true;
-      entry('Chat channel closed', 'sys');
-    });
+    attachDataConn(dc);
   });
 
   peer.on('call', incoming => {
@@ -585,13 +578,29 @@ function startPeer() {
     entry('Peer error [' + e.type + ']: ' + e.message, 'err');
     if (e.type === 'browser-incompatible') return;
     if (e.type === 'unavailable-id') {
-      entry('ID taken (stale session) — waiting 12s for it to expire…', 'sys');
-      setTimeout(() => { peer.destroy(); startPeer(); }, 12000);
+      entry('ID taken (stale session) — waiting 3 min for it to expire…', 'sys');
+      setTimeout(() => { peer.destroy(); startPeer(); }, 180000);
       return;
     }
     // network / server-error / socket-error / socket-closed
     entry('Retrying in 6s…', 'sys');
     setTimeout(() => { peer.destroy(); startPeer(); }, 6000);
+  });
+}
+
+function attachDataConn(dc) {
+  dataConn = dc;
+  dc.on('open', () => {
+    entry('Chat channel open', 'ok');
+    chatInput.disabled = false;
+    sendBtn.disabled = false;
+  });
+  dc.on('data', msg => addBubble(msg, false));
+  dc.on('close', () => {
+    dataConn = null;
+    chatInput.disabled = true;
+    sendBtn.disabled = true;
+    entry('Chat channel closed', 'sys');
   });
 }
 
@@ -615,9 +624,6 @@ function attachCall(c) {
 function onDrop() {
   linked = false;
   call = null;
-  dataConn = null;
-  chatInput.disabled = true;
-  sendBtn.disabled = true;
   duplexBar.textContent = 'OFFLINE';
   duplexBar.className = 'duplex-bar';
   document.getElementById('remoteVideo').srcObject = null;
