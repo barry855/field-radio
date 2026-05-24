@@ -182,16 +182,18 @@
     border-radius: 8px; padding: 10px 14px; position: relative;
     flex-shrink: 0;
   }
+  .channel-row {
+    display: flex; align-items: center; gap: 8px;
+  }
   .duplex-bar {
-    width: 100%; height: 64px; border-radius: 6px;
-    border: 2px solid #1a2a1a;
-    background: #050f05;
-    color: #335533;
+    flex: 0 0 auto; height: 42px; padding: 0 16px;
+    border-radius: 6px; border: 2px solid #1a2a1a;
+    background: #050f05; color: #335533;
     font-family: 'Orbitron', sans-serif;
-    font-size: 13px; font-weight: 700;
-    letter-spacing: 4px; text-transform: uppercase;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 3px; text-transform: uppercase;
     display: flex; align-items: center; justify-content: center;
-    user-select: none; transition: all 0.3s;
+    user-select: none; transition: all 0.3s; white-space: nowrap;
   }
   .duplex-bar.live {
     border-color: var(--accent2);
@@ -202,6 +204,22 @@
     animation: fdx-pulse 2s ease-in-out infinite alternate;
   }
   @keyframes fdx-pulse { from{box-shadow:0 0 12px rgba(0,255,159,0.15)} to{box-shadow:0 0 28px rgba(0,255,159,0.35)} }
+  .media-btn {
+    flex: 1; height: 42px;
+    background: var(--btn-bg); border: 1px solid var(--border);
+    color: var(--text); border-radius: 4px;
+    font-family: 'Share Tech Mono', monospace; font-size: 11px;
+    letter-spacing: 0.5px; cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+  .media-btn:hover { background: var(--btn-hover); }
+  .media-btn.disabled-state {
+    background: rgba(255,68,68,0.15);
+    border-color: var(--danger);
+    color: var(--danger);
+  }
+  .media-btn.disabled-state:hover { background: rgba(255,68,68,0.25); }
 
   .log-panel {
     background: var(--panel); border: 1px solid var(--border);
@@ -364,7 +382,11 @@
     <div class="tab-pane active" id="paneVideo">
       <div class="ptt-panel" style="flex-shrink:0">
         <div class="panel-label">CHANNEL</div>
-        <div class="duplex-bar" id="duplexBar">OFFLINE</div>
+        <div class="channel-row">
+          <div class="duplex-bar" id="duplexBar">OFFLINE</div>
+          <button class="media-btn" id="videoBtn" onclick="toggleVideo()">Disable Video</button>
+          <button class="media-btn" id="audioBtn" onclick="toggleAudio()">Disable Audio</button>
+        </div>
       </div>
       <div class="video-panel" style="flex-shrink:0">
         <div class="panel-label">VIDEO</div>
@@ -677,6 +699,42 @@ function onDrop() {
 
 function muteLocal() {
   // no-op — full duplex, mic always open when linked
+}
+
+function toggleVideo() {
+  if (!localStream) return;
+  const track = localStream.getVideoTracks()[0];
+  if (!track) return;
+  const btn = document.getElementById('videoBtn');
+  if (track.enabled) {
+    track.enabled = false;
+    btn.textContent = 'Enable Video';
+    btn.classList.add('disabled-state');
+    entry('Local video disabled', 'sys');
+  } else {
+    track.enabled = true;
+    btn.textContent = 'Disable Video';
+    btn.classList.remove('disabled-state');
+    entry('Local video enabled', 'sys');
+  }
+}
+
+function toggleAudio() {
+  if (!localStream) return;
+  const track = localStream.getAudioTracks()[0];
+  if (!track) return;
+  const btn = document.getElementById('audioBtn');
+  if (track.enabled) {
+    track.enabled = false;
+    btn.textContent = 'Enable Audio';
+    btn.classList.add('disabled-state');
+    entry('Local audio muted', 'sys');
+  } else {
+    track.enabled = true;
+    btn.textContent = 'Disable Audio';
+    btn.classList.remove('disabled-state');
+    entry('Local audio unmuted', 'sys');
+  }
 }
 
 window.addEventListener('beforeunload', () => { peer?.destroy(); });
