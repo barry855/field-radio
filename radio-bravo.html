@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="google" content="notranslate">
-<title>ALPHA — Field Radio v6</title>
+<title>BRAVO — Field Radio v6</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
 
@@ -69,16 +69,16 @@
   header {
     display: flex; align-items: center; gap: 16px;
     background: var(--panel); border: 1px solid var(--border);
-    border-radius: 8px; border-top: 2px solid var(--accent);
+    border-radius: 8px; border-top: 2px solid var(--accent2);
     padding: 10px 14px;
     flex-shrink: 0;
   }
   .logo {
     font-family: 'Orbitron', sans-serif; font-size: 20px; font-weight: 900;
-    color: var(--accent); letter-spacing: 4px;
-    text-shadow: 0 0 20px rgba(0,212,255,0.5); white-space: nowrap;
+    color: var(--accent2); letter-spacing: 4px;
+    text-shadow: 0 0 20px rgba(0,255,159,0.5); white-space: nowrap;
   }
-  .logo span { color: var(--accent2); }
+  .logo span { color: var(--accent); }
 
   .statusbar { display: flex; align-items: center; gap: 16px; flex: 1; flex-wrap: wrap; }
   .status-item {
@@ -93,9 +93,7 @@
   }
   .led.on-green  { background: var(--accent2); box-shadow: 0 0 6px var(--accent2); }
   .led.on-cyan   { background: var(--accent);  box-shadow: 0 0 6px var(--accent);  }
-  .led.on-yellow { background: var(--warn);    box-shadow: 0 0 6px var(--warn);    animation: blink 0.8s step-end infinite; }
-
-  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.35} }
+  .led.on-yellow { background: var(--warn);    box-shadow: 0 0 6px var(--warn); }
 
   .chat-panel {
     flex: 1;
@@ -134,22 +132,22 @@
   }
   .bubble.mine {
     align-self: flex-end;
-    background: rgba(0,212,255,0.15);
-    border-color: var(--accent);
+    background: rgba(0,255,159,0.15);
+    border-color: var(--accent2);
     color: #0a1520;
   }
   .bubble.theirs {
     align-self: flex-start;
-    background: rgba(0,255,159,0.12);
-    border-color: var(--accent2);
+    background: rgba(0,212,255,0.12);
+    border-color: var(--accent);
     color: #0a1520;
   }
   .bubble .who {
     font-size: 9px; letter-spacing: 2px; margin-bottom: 4px;
     text-transform: uppercase; font-family: 'Orbitron', sans-serif;
   }
-  .bubble.mine .who   { color: #0077aa; }
-  .bubble.theirs .who { color: #007744; }
+  .bubble.mine .who   { color: #007744; }
+  .bubble.theirs .who { color: #0077aa; }
 
   .chat-input-row {
     display: flex; gap: 8px; margin-top: 10px; flex-shrink: 0;
@@ -161,7 +159,7 @@
     font-family: 'Share Tech Mono', monospace; font-size: 12px;
     outline: none; transition: border-color 0.2s;
   }
-  .chat-input:focus   { border-color: var(--accent); }
+  .chat-input:focus   { border-color: var(--accent2); }
   .chat-input:disabled { opacity: 0.4; cursor: not-allowed; }
   .chat-input::placeholder { color: var(--text-dim); }
 
@@ -233,12 +231,12 @@
   }
   .session-box {
     background: var(--panel); border: 1px solid var(--border);
-    border-top: 2px solid var(--accent); border-radius: 8px; padding: 24px 28px; width: 280px;
+    border-top: 2px solid var(--accent2); border-radius: 8px; padding: 24px 28px; width: 280px;
   }
   .session-title {
     font-family: 'Orbitron', sans-serif; font-size: 18px; font-weight: 900;
-    color: var(--accent); letter-spacing: 4px; margin-bottom: 16px; display: block;
-    text-shadow: 0 0 20px rgba(0,212,255,0.5);
+    color: var(--accent2); letter-spacing: 4px; margin-bottom: 16px; display: block;
+    text-shadow: 0 0 20px rgba(0,255,159,0.5);
   }
   .session-box label {
     display: block; font-size: 10px; color: var(--text-dim);
@@ -250,14 +248,15 @@
     font-family: 'Orbitron', sans-serif; font-size: 16px; letter-spacing: 4px;
     text-transform: uppercase; outline: none; margin-bottom: 14px;
   }
-  .session-box input[type=text]:focus { border-color: var(--accent); }
-  .session-go { width: 100%; padding: 10px; border-radius: 4px;
+  .session-box input[type=text]:focus { border-color: var(--accent2); }
+  .session-go {
+    width: 100%; padding: 10px; border-radius: 4px;
     background: var(--btn-bg); border: 1px solid var(--border);
     color: var(--text); font-family: 'Orbitron', sans-serif;
     font-size: 12px; letter-spacing: 2px; cursor: pointer;
     transition: background 0.15s, border-color 0.15s;
   }
-  .session-go:hover { background: var(--btn-hover); border-color: var(--accent); }
+  .session-go:hover { background: var(--btn-hover); border-color: var(--accent2); }
 
   /* ── video ── */
   .video-panel {
@@ -295,7 +294,7 @@
 
 <div class="session-overlay" id="sessionOverlay">
   <div class="session-box">
-    <span class="session-title">ALPHA · 01</span>
+    <span class="session-title">BRAVO · 02</span>
     <label>Session Code</label>
     <input type="text" id="sessionCode" maxlength="8" placeholder="ENTER CODE" autocomplete="off" />
     <button class="session-go" onclick="startSession()">CONNECT</button>
@@ -305,7 +304,7 @@
 <div class="shell">
 
   <header>
-    <div class="logo">ALPHA<span>·</span>01</div>
+    <div class="logo">BRAVO<span>·</span>02</div>
     <div class="statusbar">
       <div class="status-item">
         <div class="led" id="linkLed"></div>
@@ -334,11 +333,11 @@
     <div class="video-grid">
       <div class="video-wrap" id="localWrap">
         <video id="localVideo" autoplay playsinline muted></video>
-        <span class="video-label">ALPHA</span>
+        <span class="video-label">BRAVO</span>
       </div>
       <div class="video-wrap waiting" id="remoteWrap">
         <video id="remoteVideo" autoplay playsinline></video>
-        <span class="video-label">BRAVO</span>
+        <span class="video-label">ALPHA</span>
       </div>
     </div>
   </div>
@@ -370,7 +369,7 @@ const ICE_SERVERS = [
 
 let MY_ID, REMOTE_ID;
 
-let peer, call, dataConn, localStream, linked = false, retryTimer;
+let peer, call, dataConn, localStream, linked = false;
 
 const linkLed   = document.getElementById('linkLed');
 const statusEl  = document.getElementById('statusText');
@@ -383,8 +382,8 @@ const sendBtn   = document.getElementById('sendBtn');
 function startSession() {
   const code = document.getElementById('sessionCode').value.trim().toUpperCase().replace(/\s+/g,'');
   if (!code) { document.getElementById('sessionCode').focus(); return; }
-  MY_ID     = 'alpha-' + code;
-  REMOTE_ID = 'bravo-' + code;
+  MY_ID     = 'bravo-' + code;
+  REMOTE_ID = 'alpha-' + code;
   document.getElementById('sessionOverlay').style.display = 'none';
   init();
 }
@@ -404,9 +403,9 @@ function entry(msg, cls='sys') {
 
 function setStatus(state) {
   linkLed.className = 'led';
-  if (state === 'calling')  { linkLed.classList.add('on-yellow'); statusEl.textContent = 'CALLING…'; }
-  else if (state === 'linked') { linkLed.classList.add('on-green');  statusEl.textContent = 'LINKED'; }
-  else                      { statusEl.textContent = 'OFFLINE'; }
+  if (state === 'standby') { linkLed.classList.add('on-cyan');  statusEl.textContent = 'STANDBY'; }
+  else if (state === 'linked') { linkLed.classList.add('on-green'); statusEl.textContent = 'LINKED'; }
+  else                     { statusEl.textContent = 'OFFLINE'; }
 }
 
 function addBubble(text, mine) {
@@ -414,7 +413,7 @@ function addBubble(text, mine) {
   wrap.className = 'bubble ' + (mine ? 'mine' : 'theirs');
   const who = document.createElement('div');
   who.className = 'who';
-  who.textContent = mine ? 'ALPHA' : 'BRAVO';
+  who.textContent = mine ? 'BRAVO' : 'ALPHA';
   const msg = document.createElement('div');
   msg.textContent = text;
   wrap.appendChild(who);
@@ -479,9 +478,8 @@ function startPeer() {
   });
 
   peer.on('open', () => {
-    entry('Radio online', 'ok');
-    setStatus('calling');
-    dial();
+    entry('Radio online — waiting for Alpha', 'ok');
+    setStatus('standby');
   });
 
   peer.on('connection', dc => {
@@ -501,8 +499,9 @@ function startPeer() {
   });
 
   peer.on('call', incoming => {
-    entry('Inbound call from Bravo', 'info');
-    answerCall(incoming);
+    entry('Inbound call from Alpha', 'info');
+    incoming.answer(localStream);
+    attachCall(incoming);
   });
 
   peer.on('disconnected', () => {
@@ -513,11 +512,6 @@ function startPeer() {
   peer.on('error', e => {
     entry('Peer error [' + e.type + ']: ' + e.message, 'err');
     if (e.type === 'browser-incompatible') return;
-    if (e.type === 'peer-unavailable') {
-      entry('Bravo offline — retry in 5s', 'sys');
-      retryTimer = setTimeout(dial, 5000);
-      return;
-    }
     if (e.type === 'unavailable-id') {
       entry('ID in use — retrying in 4s…', 'sys');
       setTimeout(() => { peer.destroy(); startPeer(); }, 4000);
@@ -525,41 +519,8 @@ function startPeer() {
     }
     // network / server-error / socket-error / socket-closed
     entry('Retrying in 6s…', 'sys');
-    retryTimer = setTimeout(() => { peer.destroy(); startPeer(); }, 6000);
+    setTimeout(() => { peer.destroy(); startPeer(); }, 6000);
   });
-}
-
-function dial() {
-  clearTimeout(retryTimer);
-  if (linked || !localStream) return;
-  entry('Calling Bravo…', 'info');
-  const c = peer.call(REMOTE_ID, localStream);
-  attachCall(c);
-  openDataConn();
-}
-
-function openDataConn() {
-  if (dataConn) return;
-  const dc = peer.connect(REMOTE_ID, { reliable: true });
-  dc.on('open', () => {
-    dataConn = dc;
-    entry('Chat channel open', 'ok');
-    chatInput.disabled = false;
-    sendBtn.disabled = false;
-  });
-  dc.on('data', msg => addBubble(msg, false));
-  dc.on('close', () => {
-    dataConn = null;
-    chatInput.disabled = true;
-    sendBtn.disabled = true;
-    entry('Chat channel closed', 'sys');
-  });
-}
-
-function answerCall(c) {
-  clearTimeout(retryTimer);
-  c.answer(localStream);
-  attachCall(c);
 }
 
 function attachCall(c) {
@@ -571,7 +532,7 @@ function attachCall(c) {
     document.getElementById('remoteWrap').classList.remove('waiting');
     linked = true;
     setStatus('linked');
-    entry('Linked to Bravo — full duplex active', 'ok');
+    entry('Linked to Alpha — full duplex active', 'ok');
     duplexBar.textContent = '● LIVE';
     duplexBar.className = 'duplex-bar live';
   });
@@ -589,9 +550,8 @@ function onDrop() {
   duplexBar.className = 'duplex-bar';
   document.getElementById('remoteVideo').srcObject = null;
   document.getElementById('remoteWrap').classList.add('waiting');
-  setStatus('calling');
-  entry('Link lost — retrying in 5s', 'sys');
-  retryTimer = setTimeout(dial, 5000);
+  setStatus('standby');
+  entry('Link lost — waiting for Alpha', 'sys');
 }
 
 function muteLocal() {
