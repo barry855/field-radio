@@ -547,6 +547,8 @@ function init() {
 function startPeer() {
   // Close any stale data connection from a previous peer instance
   if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
+  pendingDC = false;
+  linked = false;
   chatInput.disabled = true;
   sendBtn.disabled = true;
 
@@ -562,6 +564,8 @@ function startPeer() {
   });
 
   peer.on('connection', dc => {
+    if (dataConn || pendingDC) { dc.close(); return; }
+    entry('Inbound data channel from Bravo', 'sys');
     attachDataConn(dc);
   });
 
@@ -604,23 +608,32 @@ function dial() {
 }
 
 function attachDataConn(dc) {
-  dataConn = dc;
   dc.on('open', () => {
+    pendingDC = false;
+    dataConn = dc;
     entry('Chat channel open', 'ok');
     chatInput.disabled = false;
     sendBtn.disabled = false;
   });
   dc.on('data', msg => addBubble(msg, false));
   dc.on('close', () => {
+    pendingDC = false;
     dataConn = null;
     chatInput.disabled = true;
     sendBtn.disabled = true;
     entry('Chat channel closed', 'sys');
   });
+  dc.on('error', e => {
+    pendingDC = false;
+    entry('Data channel error: ' + (e.message || e), 'err');
+  });
 }
 
+let pendingDC = false;
 function openDataConn() {
-  if (dataConn) return;
+  if (dataConn || pendingDC) return;
+  pendingDC = true;
+  entry('Opening data channel…', 'sys');
   const dc = peer.connect(REMOTE_ID, { reliable: true });
   attachDataConn(dc);
 }
@@ -643,6 +656,8 @@ function attachCall(c) {
     entry('Linked to Bravo — full duplex active', 'ok');
     duplexBar.textContent = '● LIVE';
     duplexBar.className = 'duplex-bar live';
+    // If data channel hasn't opened yet, retry after a short delay
+    setTimeout(() => { if (!dataConn) { pendingDC = false; openDataConn(); } }, 2000);
   });
   c.on('close', onDrop);
   c.on('error', e => { entry('Call error: ' + e.message, 'err'); onDrop(); });
