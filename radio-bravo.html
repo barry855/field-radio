@@ -513,8 +513,8 @@ function startPeer() {
     entry('Peer error [' + e.type + ']: ' + e.message, 'err');
     if (e.type === 'browser-incompatible') return;
     if (e.type === 'unavailable-id') {
-      entry('ID in use — retrying in 4s…', 'sys');
-      setTimeout(() => { peer.destroy(); startPeer(); }, 4000);
+      entry('ID taken (stale session) — waiting 12s for it to expire…', 'sys');
+      setTimeout(() => { peer.destroy(); startPeer(); }, 12000);
       return;
     }
     // network / server-error / socket-error / socket-closed
@@ -559,6 +559,10 @@ function muteLocal() {
 }
 
 window.addEventListener('beforeunload', () => { peer?.destroy(); });
+window.addEventListener('pagehide',     () => { peer?.destroy(); });
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') peer?.destroy();
+});
 </script>
 </body>
 </html>
