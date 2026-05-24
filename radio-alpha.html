@@ -557,19 +557,7 @@ function startPeer() {
   });
 
   peer.on('connection', dc => {
-    dataConn = dc;
-    dc.on('open', () => {
-      entry('Chat channel open', 'ok');
-      chatInput.disabled = false;
-      sendBtn.disabled = false;
-    });
-    dc.on('data', msg => addBubble(msg, false));
-    dc.on('close', () => {
-      dataConn = null;
-      chatInput.disabled = true;
-      sendBtn.disabled = true;
-      entry('Chat channel closed', 'sys');
-    });
+    attachDataConn(dc);
   });
 
   peer.on('call', incoming => {
@@ -610,11 +598,9 @@ function dial() {
   openDataConn();
 }
 
-function openDataConn() {
-  if (dataConn) return;
-  const dc = peer.connect(REMOTE_ID, { reliable: true });
+function attachDataConn(dc) {
+  dataConn = dc;
   dc.on('open', () => {
-    dataConn = dc;
     entry('Chat channel open', 'ok');
     chatInput.disabled = false;
     sendBtn.disabled = false;
@@ -626,6 +612,12 @@ function openDataConn() {
     sendBtn.disabled = true;
     entry('Chat channel closed', 'sys');
   });
+}
+
+function openDataConn() {
+  if (dataConn) return;
+  const dc = peer.connect(REMOTE_ID, { reliable: true });
+  attachDataConn(dc);
 }
 
 function answerCall(c) {
