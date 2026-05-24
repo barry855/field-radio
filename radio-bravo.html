@@ -174,43 +174,32 @@
   .btn:active { background: var(--btn-active); }
   .btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
+  /* ── duplex status bar ── */
   .ptt-panel {
     background: var(--panel); border: 1px solid var(--border);
     border-radius: 8px; padding: 10px 14px; position: relative;
     flex-shrink: 0;
   }
-  .ptt {
+  .duplex-bar {
     width: 100%; height: 64px; border-radius: 6px;
-    border: 2px solid #000;
-    background: #000000;
-    color: #ffffff;
+    border: 2px solid #1a2a1a;
+    background: #050f05;
+    color: #335533;
     font-family: 'Orbitron', sans-serif;
     font-size: 13px; font-weight: 700;
     letter-spacing: 4px; text-transform: uppercase;
-    cursor: not-allowed;
-    transition: all 0.08s;
-    user-select: none; -webkit-user-select: none;
-    opacity: 0.5;
+    display: flex; align-items: center; justify-content: center;
+    user-select: none; transition: all 0.3s;
   }
-  .ptt.ready {
-    opacity: 1; cursor: pointer;
-    border-color: #333;
-    color: #ffffff;
-    background: #000000;
+  .duplex-bar.live {
+    border-color: var(--accent2);
+    color: var(--accent2);
+    background: rgba(0,255,159,0.07);
+    box-shadow: 0 0 20px rgba(0,255,159,0.2);
+    text-shadow: 0 0 10px rgba(0,255,159,0.6);
+    animation: fdx-pulse 2s ease-in-out infinite alternate;
   }
-  .ptt.ready:hover {
-    background: #111111;
-    box-shadow: 0 0 12px rgba(0,0,0,0.5);
-  }
-  .ptt.transmitting {
-    border-color: var(--warn); color: var(--warn);
-    background: rgba(255,204,0,0.12);
-    box-shadow: 0 0 28px rgba(255,204,0,0.35);
-    text-shadow: 0 0 14px rgba(255,204,0,0.8);
-    transform: scale(0.99); opacity: 1;
-    animation: tx-pulse 0.4s ease-in-out infinite alternate;
-  }
-  @keyframes tx-pulse { from{box-shadow:0 0 16px rgba(255,204,0,0.3)} to{box-shadow:0 0 32px rgba(255,204,0,0.6)} }
+  @keyframes fdx-pulse { from{box-shadow:0 0 12px rgba(0,255,159,0.15)} to{box-shadow:0 0 28px rgba(0,255,159,0.35)} }
 
   .log-panel {
     background: var(--panel); border: 1px solid var(--border);
@@ -303,13 +292,8 @@
   </div>
 
   <div class="ptt-panel">
-    <div class="panel-label">TRANSMIT</div>
-    <button class="ptt" id="ptt"
-      onmousedown="startTx()"
-      onmouseup="stopTx()"
-      onmouseleave="stopTx()"
-      ontouchstart="startTx(event)"
-      ontouchend="stopTx()">HOLD TO TALK</button>
+    <div class="panel-label">CHANNEL</div>
+    <div class="duplex-bar" id="duplexBar">OFFLINE</div>
   </div>
 
   <div class="log-panel">
@@ -343,7 +327,7 @@ let peer, call, dataConn, localStream, linked = false;
 
 const linkLed   = document.getElementById('linkLed');
 const statusEl  = document.getElementById('statusText');
-const ptt       = document.getElementById('ptt');
+const duplexBar = document.getElementById('duplexBar');
 const logEl     = document.getElementById('log');
 const chat      = document.getElementById('chat');
 const chatInput = document.getElementById('chatInput');
@@ -424,7 +408,6 @@ function init() {
   }, video: false })
   .then(stream => {
     localStream = stream;
-    muteLocal();
     entry('Mic ready', 'ok');
     startPeer();
   })
@@ -498,8 +481,9 @@ function attachCall(c) {
     document.getElementById('remoteAudio').srcObject = stream;
     linked = true;
     setStatus('linked');
-    entry('Linked to Alpha', 'ok');
-    ptt.className = 'ptt ready';
+    entry('Linked to Alpha — full duplex active', 'ok');
+    duplexBar.textContent = '● LIVE';
+    duplexBar.className = 'duplex-bar live';
   });
   c.on('close', onDrop);
   c.on('error', e => { entry('Call error: ' + e.message, 'err'); onDrop(); });
@@ -511,28 +495,14 @@ function onDrop() {
   dataConn = null;
   chatInput.disabled = true;
   sendBtn.disabled = true;
-  ptt.className = 'ptt';
+  duplexBar.textContent = 'OFFLINE';
+  duplexBar.className = 'duplex-bar';
   setStatus('standby');
   entry('Link lost — waiting for Alpha', 'sys');
 }
 
 function muteLocal() {
-  localStream?.getAudioTracks().forEach(t => t.enabled = false);
-}
-
-function startTx(e) {
-  if (e) e.preventDefault();
-  if (!linked) return;
-  localStream?.getAudioTracks().forEach(t => t.enabled = true);
-  ptt.className = 'ptt transmitting';
-  entry('Transmitting…', 'tx');
-}
-
-function stopTx() {
-  if (!linked) return;
-  muteLocal();
-  ptt.className = 'ptt ready';
-  entry('End transmission', 'sys');
+  // no-op — full duplex, mic always open when linked
 }
 
 window.addEventListener('beforeunload', () => { peer?.destroy(); });
