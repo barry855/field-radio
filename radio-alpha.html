@@ -566,7 +566,7 @@ function addBubble(text, mine) {
 function sendChat() {
   const txt = chatInput.value.trim();
   if (!txt) return;
-  if (!dataConn) { entry('Not connected — cannot send', 'err'); return; }
+  if (!dataConn || !dataConn.open) { entry('Chat channel not ready — retrying connection…', 'err'); ensureDataConn(); return; }
   dataConn.send(txt);
   addBubble(txt, true);
   chatInput.value = '';
@@ -711,6 +711,18 @@ function answerCall(c) {
   attachCall(c);
 }
 
+function ensureDataConn() {
+  if (dataConn && dataConn.open) return;
+  openDataConn();
+  // Retry every 3s until the data channel is open
+  const t = setInterval(() => {
+    if (dataConn && dataConn.open) { clearInterval(t); return; }
+    if (!linked) { clearInterval(t); return; }
+    entry('Data channel not ready — retrying…', 'sys');
+    openDataConn();
+  }, 3000);
+}
+
 function attachCall(c) {
   call = c;
   c.on('stream', stream => {
@@ -725,6 +737,7 @@ function attachCall(c) {
     duplexBar.textContent = '● LIVE';
     duplexBar.className = 'duplex-overlay live';
     syncControls();
+    ensureDataConn();
   });
   c.on('close', onDrop);
   c.on('error', e => { entry('Call error: ' + e.message, 'err'); onDrop(); });
@@ -859,7 +872,7 @@ function toggleVideo() {
   if (!localStream) return;
   const track = localStream.getVideoTracks()[0];
   if (!track) return;
-  const btn = document.getElementById('videoBtn');
+  const btn = document.getElementById('videoBtn2');
   if (track.enabled) {
     track.enabled = false;
     btn.textContent = 'Enable Video';
@@ -877,7 +890,7 @@ function toggleAudio() {
   if (!localStream) return;
   const track = localStream.getAudioTracks()[0];
   if (!track) return;
-  const btn = document.getElementById('audioBtn');
+  const btn = document.getElementById('audioBtn2');
   if (track.enabled) {
     track.enabled = false;
     btn.textContent = 'Enable Audio';
