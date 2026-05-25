@@ -719,15 +719,13 @@ function attachCall(c) {
     const remoteVideo = document.getElementById('remoteVideo');
     remoteVideo.srcObject = stream;
     document.getElementById('remoteWrap').classList.remove('waiting');
+    if (linked) return; // stream event can fire once per track — only act on first
     linked = true;
     setStatus('linked');
     entry('Linked to Alpha — full duplex active', 'ok');
     duplexBar.textContent = '● LIVE';
     duplexBar.className = 'duplex-overlay live';
     syncControls();
-    setTimeout(() => {
-      if (!dataConn) { pendingDC = false; openDataConn(); }
-    }, 2000);
   });
   c.on('close', onDrop);
   c.on('error', e => { entry('Call error: ' + e.message, 'err'); onDrop(); });
