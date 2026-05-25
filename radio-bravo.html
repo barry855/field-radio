@@ -210,6 +210,14 @@
     letter-spacing: 0.5px; cursor: pointer;
     transition: background 0.15s, border-color 0.15s, color 0.15s;
     white-space: nowrap;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  .btn {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
   }
   .media-btn:hover { background: var(--btn-hover); }
   .media-btn.disabled-state {
@@ -384,12 +392,13 @@
 
   <header>
     <div class="logo">BRAVO<span>·</span>02</div>
-    <div class="statusbar">
+    <div class="statusbar" style="flex:1;">
       <div class="status-item">
         <div class="led" id="linkLed"></div>
         <span id="statusText">OFFLINE</span>
       </div>
     </div>
+    <button class="media-btn" id="flipBtn" onclick="flipCamera()" style="margin-left:auto; height:32px; font-size:11px;">⟳ Flip</button>
   </header>
 
   <div class="tab-bar">
@@ -401,8 +410,9 @@
     <!-- LOCAL TAB -->
     <div class="tab-pane" id="paneLocal">
       <div class="channel-row" style="flex-shrink:0; padding:4px 0;">
+        <button class="media-btn" id="videoBtn" onclick="toggleVideo()">Disable Video</button>
+        <button class="media-btn" id="audioBtn" onclick="toggleAudio()">Disable Audio</button>
         <button class="media-btn" id="recBtn" onclick="toggleRecord()">⏺ Record</button>
-        <button class="media-btn" id="flipBtn" onclick="flipCamera()" style="margin-left:auto;">⟳ Flip</button>
       </div>
       <div class="video-panel">
         <div class="panel-label">LOCAL — BRAVO</div>
@@ -516,10 +526,33 @@ const msgBadge = document.getElementById('msgBadge');
 function syncControls() {
   const d2 = document.getElementById('duplexBar2');
   if (d2) { d2.textContent = duplexBar.textContent; d2.className = duplexBar.className; }
-  ['recBtn'].forEach(id => {
-    const src = document.getElementById(id);
-    const dst = document.getElementById(id + '2');
-    if (src && dst) { dst.textContent = src.textContent; dst.className = src.className; }
+  const recSrc = document.getElementById('recBtn');
+  const recDst = document.getElementById('recBtn2');
+  if (recSrc && recDst) { recDst.textContent = recSrc.textContent; recDst.className = recSrc.className; }
+  applyMediaBtnState();
+}
+
+function applyMediaBtnState() {
+  if (!localStream) return;
+  const vTrack = localStream.getVideoTracks()[0];
+  const aTrack = localStream.getAudioTracks()[0];
+  ['videoBtn','videoBtn2'].forEach(id => {
+    const b = document.getElementById(id);
+    if (!b) return;
+    if (vTrack && !vTrack.enabled) {
+      b.textContent = 'Enable Video'; b.classList.add('disabled-state');
+    } else {
+      b.textContent = 'Disable Video'; b.classList.remove('disabled-state');
+    }
+  });
+  ['audioBtn','audioBtn2'].forEach(id => {
+    const b = document.getElementById(id);
+    if (!b) return;
+    if (aTrack && !aTrack.enabled) {
+      b.textContent = 'Enable Audio'; b.classList.add('disabled-state');
+    } else {
+      b.textContent = 'Disable Audio'; b.classList.remove('disabled-state');
+    }
   });
 }
 
@@ -564,7 +597,7 @@ function addBubble(text, mine) {
 function sendChat() {
   const txt = chatInput.value.trim();
   if (!txt) return;
-  if (!dataConn || !dataConn.open) { entry('Chat channel not ready — retrying connection…', 'err'); ensureDataConn(); return; }
+  if (!dataConn) { entry('Not connected — cannot send', 'err'); return; }
   dataConn.send(txt);
   addBubble(txt, true);
   chatInput.value = '';
@@ -615,6 +648,7 @@ function startPeer() {
   // Close any stale data connection from a previous peer instance
   if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
   linked = false;
+  pendingDC = false;
 
   peer = new Peer(MY_ID, {
     
@@ -635,7 +669,7 @@ function startPeer() {
   });
 
   peer.on('connection', dc => {
-    if (dataConn && dataConn.open) { dc.close(); return; } // already have a live channel
+    if (dataConn || pendingDC) { dc.close(); return; }
     entry('Inbound data channel from Alpha', 'sys');
     attachDataConn(dc);
   });
@@ -689,16 +723,20 @@ function attachDataConn(dc) {
     entry('Chat channel closed', 'sys');
   });
   dc.on('error', e => {
-    dataConn = null;
     entry('Data channel error: ' + (e.message || e), 'err');
   });
 }
 
-// Bravo is the passive side — Alpha always initiates the data channel.
-// ensureDataConn just logs; the actual channel arrives via peer.on('connection').
-function ensureDataConn() {
-  if (dataConn && dataConn.open) return;
-  entry('Waiting for chat channel from Alpha…', 'sys');
+let pendingDC = false;
+function openDataConn() {
+  if (dataConn || pendingDC) return;
+  pendingDC = true;
+  entry('Opening data channel to Alpha…', 'sys');
+  const dc = peer.connect(REMOTE_ID, { reliable: true });
+  dc.on('open',  () => { pendingDC = false; });
+  dc.on('close', () => { pendingDC = false; });
+  dc.on('error', () => { pendingDC = false; });
+  attachDataConn(dc);
 }
 
 function attachCall(c) {
@@ -715,7 +753,6 @@ function attachCall(c) {
     duplexBar.textContent = '● LIVE';
     duplexBar.className = 'duplex-overlay live';
     syncControls();
-    ensureDataConn();
   });
   c.on('close', onDrop);
   c.on('error', e => { entry('Call error: ' + e.message, 'err'); onDrop(); });
@@ -845,36 +882,18 @@ function toggleVideo() {
   if (!localStream) return;
   const track = localStream.getVideoTracks()[0];
   if (!track) return;
-  const btn = document.getElementById('videoBtn2');
-  if (track.enabled) {
-    track.enabled = false;
-    btn.textContent = 'Enable Video';
-    btn.classList.add('disabled-state');
-    entry('Local video disabled', 'sys');
-  } else {
-    track.enabled = true;
-    btn.textContent = 'Disable Video';
-    btn.classList.remove('disabled-state');
-    entry('Local video enabled', 'sys');
-  }
+  track.enabled = !track.enabled;
+  entry(track.enabled ? 'Local video enabled' : 'Local video disabled', 'sys');
+  applyMediaBtnState();
 }
 
 function toggleAudio() {
   if (!localStream) return;
   const track = localStream.getAudioTracks()[0];
   if (!track) return;
-  const btn = document.getElementById('audioBtn2');
-  if (track.enabled) {
-    track.enabled = false;
-    btn.textContent = 'Enable Audio';
-    btn.classList.add('disabled-state');
-    entry('Local audio muted', 'sys');
-  } else {
-    track.enabled = true;
-    btn.textContent = 'Disable Audio';
-    btn.classList.remove('disabled-state');
-    entry('Local audio unmuted', 'sys');
-  }
+  track.enabled = !track.enabled;
+  entry(track.enabled ? 'Local audio unmuted' : 'Local audio muted', 'sys');
+  applyMediaBtnState();
 }
 
 // ── Camera flip (Android front/back) ─────────────────────────
