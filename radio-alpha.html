@@ -644,6 +644,7 @@ function startPeer() {
   });
 
   peer.on('disconnected', () => {
+    if (peer._waitingForIdExpiry) return; // suppress reconnect while waiting for stale ID
     entry('Signalling server disconnected — reconnecting…', 'sys');
     if (!peer.destroyed) peer.reconnect();
   });
@@ -657,8 +658,9 @@ function startPeer() {
       return;
     }
     if (e.type === 'unavailable-id') {
-      entry('ID taken (stale session) — waiting 3 min for it to expire…', 'sys');
-      setTimeout(() => { peer.destroy(); startPeer(); }, 180000);
+      entry('ID taken (stale session) — waiting 10 min for it to expire…', 'sys');
+      peer._waitingForIdExpiry = true;
+      setTimeout(() => { peer.destroy(); startPeer(); }, 600000);
       return;
     }
     // network / server-error / socket-error / socket-closed
