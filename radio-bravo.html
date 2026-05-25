@@ -481,7 +481,7 @@ const ICE_SERVERS = [
 
 let MY_ID, REMOTE_ID;
 
-let peer, call, dataConn, localStream, linked = false;
+let peer, call, dataConn, localStream, linked = false, retryTimer;
 
 const linkLed   = document.getElementById('linkLed');
 const statusEl  = document.getElementById('statusText');
@@ -645,99 +645,128 @@ function init() {
   });
 }
 
+let retryDelay = 3000;
+let pendingDC  = false;
+
 function startPeer() {
-  // Close any stale data connection from a previous peer instance
-  if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
-  linked = false;
+  clearTimeout(retryTimer);
+  if (dataConn)  { try { dataConn.close();  } catch(e){} dataConn  = null; }
+  if (call)      { try { call.close();      } catch(e){} call      = null; }
   pendingDC = false;
+  linked    = false;
 
-  peer = new Peer(MY_ID, {
-    
-    config: { iceServers: ICE_SERVERS }
-  });
+  if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e){} }
 
-  let watchdog;
+  peer = new Peer(MY_ID, { config: { iceServers: ICE_SERVERS } });
+
   peer.on('open', id => {
-    entry('Radio online — waiting for Alpha [' + id + ']', 'ok');
-    setStatus('standby');
-    // Watchdog: if no call arrives in 30s, reconnect to signalling server to stay fresh
-    watchdog = setTimeout(() => {
-      if (!linked && !peer.destroyed) {
-        entry('Refreshing signalling connection…', 'sys');
-        if (peer.disconnected) peer.reconnect();
-      }
-    }, 30000);
+    entry('Radio online [' + id + '] — calling Alpha…', 'ok');
+    retryDelay = 3000;
+    setStatus('calling');
+    dial();   // Bravo also dials Alpha — whoever comes up second connects immediately
   });
 
+  // Accept inbound calls from Alpha
+  peer.on('call', incoming => {
+    entry('Inbound call from Alpha', 'info');
+    if (!localStream) { entry('ERROR: no local stream — cannot answer', 'err'); incoming.close(); return; }
+    answerCall(incoming);
+  });
+
+  // Accept inbound data channel from Alpha
   peer.on('connection', dc => {
-    if (dataConn || pendingDC) { dc.close(); return; }
+    if (dataConn) { dc.close(); return; }
     entry('Inbound data channel from Alpha', 'sys');
     attachDataConn(dc);
   });
 
-  peer.on('call', incoming => {
-    entry('Inbound call from Alpha', 'info');
-    if (!localStream) {
-      entry('ERROR: no local stream — cannot answer', 'err');
-      incoming.close();
-      return;
-    }
-    attachCall(incoming);
-    incoming.answer(localStream);
-  });
-
   peer.on('disconnected', () => {
-    entry('Signalling server disconnected — reconnecting…', 'sys');
-    if (!peer.destroyed) peer.reconnect();
+    entry('Signalling disconnected — reconnecting…', 'sys');
+    if (!peer.destroyed) {
+      try { peer.reconnect(); } catch(e) {
+        entry('Reconnect failed — restarting…', 'sys');
+        setTimeout(startPeer, 2000);
+      }
+    }
   });
 
   peer.on('error', e => {
     entry('Peer error [' + e.type + ']: ' + e.message, 'err');
     if (e.type === 'browser-incompatible') return;
-    if (e.type === 'unavailable-id') {
-      const suffix = Math.random().toString(36).slice(2,6).toUpperCase();
-      MY_ID = MY_ID.replace(/-[A-Z0-9]{4}$/, '') + '-' + suffix || MY_ID + '-' + suffix;
-      entry('ID taken (stale session) — retrying as ' + MY_ID + '…', 'sys');
-      peer.destroy();
-      setTimeout(startPeer, 1500);
-      return;
-    }
+
     if (e.type === 'peer-unavailable') {
-      // Alpha not registered yet — ignore, we're waiting for Alpha to call us
-      entry('Alpha not yet visible — standing by…', 'sys');
+      entry('Alpha not reachable — retry in ' + (retryDelay/1000) + 's', 'sys');
+      retryTimer = setTimeout(dial, retryDelay);
+      retryDelay = Math.min(retryDelay * 1.5, 15000);
       return;
     }
-    // network / server-error / socket-error / socket-closed
-    entry('Retrying in 6s…', 'sys');
-    setTimeout(() => { peer.destroy(); startPeer(); }, 6000);
+
+    if (e.type === 'unavailable-id') {
+      entry('ID still reserved — waiting for ghost to clear…', 'sys');
+      retryTimer = setTimeout(() => {
+        if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e){} }
+        setTimeout(startPeer, 500);
+      }, 12000);
+      return;
+    }
+
+    entry('Connection error — restarting in 5s…', 'sys');
+    retryTimer = setTimeout(() => {
+      if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e){} }
+      setTimeout(startPeer, 500);
+    }, 5000);
   });
+}
+
+function dial() {
+  clearTimeout(retryTimer);
+  if (linked || !localStream || !peer || peer.destroyed || peer.disconnected) return;
+  entry('Calling Alpha…', 'info');
+  try {
+    const c = peer.call(REMOTE_ID, localStream);
+    if (!c) { entry('Call object null — retry in 4s', 'sys'); retryTimer = setTimeout(dial, 4000); return; }
+    attachCall(c);
+  } catch(e) {
+    entry('dial() error: ' + e.message + ' — retry in 4s', 'err');
+    retryTimer = setTimeout(dial, 4000);
+  }
 }
 
 function attachDataConn(dc) {
   dc.on('open', () => {
-    dataConn = dc;
+    pendingDC = false;
+    dataConn  = dc;
     entry('Chat channel open', 'ok');
   });
-  dc.on('data', msg => addBubble(msg, false));
+  dc.on('data',  msg => addBubble(msg, false));
   dc.on('close', () => {
-    dataConn = null;
+    pendingDC = false;
+    dataConn  = null;
     entry('Chat channel closed', 'sys');
   });
   dc.on('error', e => {
+    pendingDC = false;
     entry('Data channel error: ' + (e.message || e), 'err');
   });
 }
 
-let pendingDC = false;
 function openDataConn() {
-  if (dataConn || pendingDC) return;
+  if (dataConn || pendingDC || !peer || peer.destroyed) return;
   pendingDC = true;
-  entry('Opening data channel to Alpha…', 'sys');
-  const dc = peer.connect(REMOTE_ID, { reliable: true });
-  dc.on('open',  () => { pendingDC = false; });
-  dc.on('close', () => { pendingDC = false; });
-  dc.on('error', () => { pendingDC = false; });
-  attachDataConn(dc);
+  entry('Opening data channel…', 'sys');
+  try {
+    const dc = peer.connect(REMOTE_ID, { reliable: true, serialization: 'json' });
+    attachDataConn(dc);
+  } catch(e) {
+    pendingDC = false;
+    entry('Data channel open error: ' + e.message, 'err');
+  }
+}
+
+function answerCall(c) {
+  clearTimeout(retryTimer);
+  c.answer(localStream);
+  attachCall(c);
 }
 
 function attachCall(c) {
@@ -747,28 +776,32 @@ function attachCall(c) {
     const remoteVideo = document.getElementById('remoteVideo');
     remoteVideo.srcObject = stream;
     document.getElementById('remoteWrap').classList.remove('waiting');
-    if (linked) return; // stream event can fire once per track — only act on first
+    if (linked) return;
     linked = true;
+    retryDelay = 3000;
     setStatus('linked');
     entry('Linked to Alpha — full duplex active', 'ok');
     duplexBar.textContent = '● LIVE';
     duplexBar.className = 'duplex-overlay live';
     syncControls();
+    if (!dataConn && !pendingDC) setTimeout(openDataConn, 1000);
   });
   c.on('close', onDrop);
   c.on('error', e => { entry('Call error: ' + e.message, 'err'); onDrop(); });
 }
 
 function onDrop() {
+  if (!linked && !call) return;
   linked = false;
-  call = null;
+  call   = null;
   duplexBar.textContent = 'OFFLINE';
-  duplexBar.className = 'duplex-overlay';
+  duplexBar.className   = 'duplex-overlay';
   syncControls();
   document.getElementById('remoteVideo').srcObject = null;
   document.getElementById('remoteWrap').classList.add('waiting');
-  setStatus('standby');
-  entry('Link lost — waiting for Alpha', 'sys');
+  setStatus('calling');
+  entry('Link lost — retrying in 4s', 'sys');
+  retryTimer = setTimeout(dial, 4000);
 }
 
 function muteLocal() {
@@ -959,7 +992,14 @@ async function flipCamera() {
   }
 }
 
-window.addEventListener('beforeunload', () => { peer?.destroy(); });
+function cleanupPeer() {
+  clearTimeout(retryTimer);
+  clearTimeout(lockTimer);
+  if (dataConn) { try { dataConn.close(); } catch(e){} }
+  if (call)     { try { call.close();     } catch(e){} }
+  if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e){} }
+}
+window.addEventListener('beforeunload', cleanupPeer);
 </script>
 </body>
 </html>
