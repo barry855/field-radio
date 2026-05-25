@@ -655,6 +655,7 @@ function startPeer() {
   });
 
   peer.on('disconnected', () => {
+    if (peer._waitingForIdExpiry) return;
     entry('Signalling server disconnected — reconnecting…', 'sys');
     if (!peer.destroyed) peer.reconnect();
   });
@@ -663,8 +664,9 @@ function startPeer() {
     entry('Peer error [' + e.type + ']: ' + e.message, 'err');
     if (e.type === 'browser-incompatible') return;
     if (e.type === 'unavailable-id') {
-      entry('ID taken (stale session) — waiting 3 min for it to expire…', 'sys');
-      setTimeout(() => { peer.destroy(); startPeer(); }, 180000);
+      entry('ID taken (stale session) — waiting 10 min for it to expire…', 'sys');
+      peer._waitingForIdExpiry = true;
+      setTimeout(() => { peer.destroy(); startPeer(); }, 600000);
       return;
     }
     if (e.type === 'peer-unavailable') {
