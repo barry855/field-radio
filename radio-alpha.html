@@ -402,8 +402,6 @@
     <!-- LOCAL TAB -->
     <div class="tab-pane" id="paneLocal">
       <div class="channel-row" style="flex-shrink:0; padding:4px 0;">
-        <button class="media-btn" id="videoBtn" onclick="toggleVideo()">Disable Video</button>
-        <button class="media-btn" id="audioBtn" onclick="toggleAudio()">Disable Audio</button>
         <button class="media-btn" id="recBtn" onclick="toggleRecord()">⏺ Record</button>
         <button class="media-btn" id="flipBtn" onclick="flipCamera()" style="margin-left:auto;">⟳ Flip</button>
       </div>
@@ -442,8 +440,8 @@
         <div class="panel-label">COMMS</div>
         <div class="chat" id="chat"></div>
         <div class="chat-input-row">
-          <input class="chat-input" id="chatInput" placeholder="TYPE MESSAGE…" disabled />
-          <button class="btn" id="sendBtn" onclick="sendChat()" disabled>SEND</button>
+          <input class="chat-input" id="chatInput" placeholder="TYPE MESSAGE…" />
+          <button class="btn" id="sendBtn" onclick="sendChat()">SEND</button>
         </div>
       </div>
       <div class="log-panel">
@@ -520,7 +518,7 @@ function syncControls() {
   // Keep remote tab's channel row in sync with local tab's
   const d2 = document.getElementById('duplexBar2');
   if (d2) { d2.textContent = duplexBar.textContent; d2.className = duplexBar.className; }
-  ['videoBtn','audioBtn','recBtn'].forEach(id => {
+  ['recBtn'].forEach(id => {
     const src = document.getElementById(id);
     const dst = document.getElementById(id + '2');
     if (src && dst) { dst.textContent = src.textContent; dst.className = src.className; }
@@ -567,7 +565,8 @@ function addBubble(text, mine) {
 
 function sendChat() {
   const txt = chatInput.value.trim();
-  if (!txt || !dataConn) return;
+  if (!txt) return;
+  if (!dataConn) { entry('Not connected — cannot send', 'err'); return; }
   dataConn.send(txt);
   addBubble(txt, true);
   chatInput.value = '';
@@ -619,8 +618,6 @@ function startPeer() {
   if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
   pendingDC = false;
   linked = false;
-  chatInput.disabled = true;
-  sendBtn.disabled = true;
 
   peer = new Peer(MY_ID, {
     
@@ -686,15 +683,11 @@ function attachDataConn(dc) {
     pendingDC = false;
     dataConn = dc;
     entry('Chat channel open', 'ok');
-    chatInput.disabled = false;
-    sendBtn.disabled = false;
   });
   dc.on('data', msg => addBubble(msg, false));
   dc.on('close', () => {
     pendingDC = false;
     dataConn = null;
-    chatInput.disabled = true;
-    sendBtn.disabled = true;
     entry('Chat channel closed', 'sys');
   });
   dc.on('error', e => {
