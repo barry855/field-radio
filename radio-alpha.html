@@ -649,81 +649,109 @@ function init() {
   });
 }
 
+// ── How long to wait before retrying after peer-unavailable ──
+// Starts at 3s, backs off to max 15s, resets on success
+let retryDelay = 3000;
+let pendingDC  = false;
+
 function startPeer() {
-  // Close any stale data connection from a previous peer instance
-  if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
+  clearTimeout(retryTimer);
+  if (dataConn)  { try { dataConn.close();  } catch(e){} dataConn  = null; }
+  if (call)      { try { call.close();      } catch(e){} call      = null; }
   pendingDC = false;
-  linked = false;
+  linked    = false;
 
-  peer = new Peer(MY_ID, {
-    
-    config: { iceServers: ICE_SERVERS }
-  });
+  // Destroy old peer cleanly before creating a new one
+  if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e){} }
 
-  peer.on('open', () => {
-    entry('Radio online', 'ok');
+  peer = new Peer(MY_ID, { config: { iceServers: ICE_SERVERS } });
+
+  peer.on('open', id => {
+    entry('Radio online [' + id + ']', 'ok');
+    retryDelay = 3000;   // reset backoff on successful registration
     setStatus('calling');
     dial();
   });
 
-  peer.on('connection', dc => {
-    if (dataConn || pendingDC) { dc.close(); return; }
-    entry('Inbound data channel from Bravo', 'sys');
-    attachDataConn(dc);
-  });
-
+  // Accept inbound calls (Bravo calling us back after a reload)
   peer.on('call', incoming => {
     entry('Inbound call from Bravo', 'info');
     answerCall(incoming);
   });
 
+  // Accept inbound data channel
+  peer.on('connection', dc => {
+    if (dataConn) { dc.close(); return; }
+    entry('Inbound data channel from Bravo', 'sys');
+    attachDataConn(dc);
+  });
+
   peer.on('disconnected', () => {
-    entry('Signalling server disconnected — reconnecting…', 'sys');
-    if (!peer.destroyed) peer.reconnect();
+    entry('Signalling disconnected — reconnecting…', 'sys');
+    if (!peer.destroyed) {
+      try { peer.reconnect(); } catch(e) {
+        entry('Reconnect failed — restarting…', 'sys');
+        setTimeout(startPeer, 2000);
+      }
+    }
   });
 
   peer.on('error', e => {
     entry('Peer error [' + e.type + ']: ' + e.message, 'err');
     if (e.type === 'browser-incompatible') return;
+
     if (e.type === 'peer-unavailable') {
-      entry('Bravo offline — retry in 5s', 'sys');
-      retryTimer = setTimeout(dial, 5000);
+      // Bravo not up yet — keep retrying with backoff
+      entry('Bravo not reachable — retry in ' + (retryDelay/1000) + 's', 'sys');
+      retryTimer = setTimeout(dial, retryDelay);
+      retryDelay = Math.min(retryDelay * 1.5, 15000);
       return;
     }
+
     if (e.type === 'unavailable-id') {
-      // Stale session holds the preferred ID — claim a random suffix variant immediately
-      const suffix = Math.random().toString(36).slice(2,6).toUpperCase();
-      MY_ID = MY_ID.replace(/-[A-Z0-9]{4}$/, '') + '-' + suffix || MY_ID + '-' + suffix;
-      entry('ID taken (stale session) — retrying as ' + MY_ID + '…', 'sys');
-      peer.destroy();
-      setTimeout(startPeer, 1500);
+      // Our ID is still registered from a previous session (ghost).
+      // Do NOT change the ID — just wait for the ghost to expire (~10-15s) then retry.
+      entry('ID still reserved — waiting for ghost to clear…', 'sys');
+      retryTimer = setTimeout(() => {
+        if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e){} }
+        setTimeout(startPeer, 500);
+      }, 12000);
       return;
     }
-    // network / server-error / socket-error / socket-closed
-    entry('Retrying in 6s…', 'sys');
-    retryTimer = setTimeout(() => { peer.destroy(); startPeer(); }, 6000);
+
+    // socket-error / socket-closed / network / server-error — hard restart
+    entry('Connection error — restarting in 5s…', 'sys');
+    retryTimer = setTimeout(() => {
+      if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e){} }
+      setTimeout(startPeer, 500);
+    }, 5000);
   });
 }
 
 function dial() {
   clearTimeout(retryTimer);
-  if (linked || !localStream) return;
+  if (linked || !localStream || !peer || peer.destroyed || peer.disconnected) return;
   entry('Calling Bravo…', 'info');
-  const c = peer.call(REMOTE_ID, localStream);
-  attachCall(c);
-  // Data channel opened after call stream confirmed (see attachCall)
+  try {
+    const c = peer.call(REMOTE_ID, localStream);
+    if (!c) { entry('Call object null — retry in 4s', 'sys'); retryTimer = setTimeout(dial, 4000); return; }
+    attachCall(c);
+  } catch(e) {
+    entry('dial() error: ' + e.message + ' — retry in 4s', 'err');
+    retryTimer = setTimeout(dial, 4000);
+  }
 }
 
 function attachDataConn(dc) {
   dc.on('open', () => {
     pendingDC = false;
-    dataConn = dc;
+    dataConn  = dc;
     entry('Chat channel open', 'ok');
   });
-  dc.on('data', msg => addBubble(msg, false));
+  dc.on('data',  msg => addBubble(msg, false));
   dc.on('close', () => {
     pendingDC = false;
-    dataConn = null;
+    dataConn  = null;
     entry('Chat channel closed', 'sys');
   });
   dc.on('error', e => {
@@ -732,13 +760,17 @@ function attachDataConn(dc) {
   });
 }
 
-let pendingDC = false;
 function openDataConn() {
-  if (dataConn || pendingDC) return;
+  if (dataConn || pendingDC || !peer || peer.destroyed) return;
   pendingDC = true;
   entry('Opening data channel…', 'sys');
-  const dc = peer.connect(REMOTE_ID, { reliable: true });
-  attachDataConn(dc);
+  try {
+    const dc = peer.connect(REMOTE_ID, { reliable: true, serialization: 'json' });
+    attachDataConn(dc);
+  } catch(e) {
+    pendingDC = false;
+    entry('Data channel open error: ' + e.message, 'err');
+  }
 }
 
 function answerCall(c) {
@@ -754,31 +786,33 @@ function attachCall(c) {
     const remoteVideo = document.getElementById('remoteVideo');
     remoteVideo.srcObject = stream;
     document.getElementById('remoteWrap').classList.remove('waiting');
-    if (linked) return; // stream event can fire once per track — only act on first
+    if (linked) return;
     linked = true;
+    retryDelay = 3000;
     setStatus('linked');
     entry('Linked to Bravo — full duplex active', 'ok');
     duplexBar.textContent = '● LIVE';
     duplexBar.className = 'duplex-overlay live';
     syncControls();
-    // Open data channel now that call is confirmed — small delay lets Bravo settle
-    if (!dataConn && !pendingDC) setTimeout(openDataConn, 800);
+    // Open data channel 1s after stream confirmed — gives both sides time to stabilise
+    if (!dataConn && !pendingDC) setTimeout(openDataConn, 1000);
   });
   c.on('close', onDrop);
   c.on('error', e => { entry('Call error: ' + e.message, 'err'); onDrop(); });
 }
 
 function onDrop() {
+  if (!linked && !call) return; // already handled
   linked = false;
-  call = null;
+  call   = null;
   duplexBar.textContent = 'OFFLINE';
-  duplexBar.className = 'duplex-overlay';
+  duplexBar.className   = 'duplex-overlay';
   syncControls();
   document.getElementById('remoteVideo').srcObject = null;
   document.getElementById('remoteWrap').classList.add('waiting');
   setStatus('calling');
-  entry('Link lost — retrying in 5s', 'sys');
-  retryTimer = setTimeout(dial, 5000);
+  entry('Link lost — retrying in 4s', 'sys');
+  retryTimer = setTimeout(dial, 4000);
 }
 
 function muteLocal() {
@@ -973,7 +1007,21 @@ async function flipCamera() {
   }
 }
 
-window.addEventListener('beforeunload', () => { peer?.destroy(); });
+// Clean up on page unload so the peer ID is released promptly
+function cleanupPeer() {
+  clearTimeout(retryTimer);
+  clearTimeout(lockTimer);
+  if (dataConn) { try { dataConn.close(); } catch(e){} }
+  if (call)     { try { call.close();     } catch(e){} }
+  if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e){} }
+}
+window.addEventListener('beforeunload', cleanupPeer);
+// Also clean up when tab goes hidden (mobile background)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden' && !linked) {
+    // Don't destroy if linked — just let it be
+  }
+});
 </script>
 </body>
 </html>
