@@ -882,10 +882,6 @@ function toggleAudio() {
 }
 
 window.addEventListener('beforeunload', () => { peer?.destroy(); });
-window.addEventListener('pagehide',     () => { peer?.destroy(); });
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') peer?.destroy();
-});
 </script>
 </body>
 </html>
