@@ -615,7 +615,6 @@ function startPeer() {
   // Close any stale data connection from a previous peer instance
   if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
   linked = false;
-  pendingDC = false;
 
   peer = new Peer(MY_ID, {
     
@@ -636,7 +635,7 @@ function startPeer() {
   });
 
   peer.on('connection', dc => {
-    if (dataConn || pendingDC) { dc.close(); return; }
+    if (dataConn && dataConn.open) { dc.close(); return; } // already have a live channel
     entry('Inbound data channel from Alpha', 'sys');
     attachDataConn(dc);
   });
@@ -690,31 +689,16 @@ function attachDataConn(dc) {
     entry('Chat channel closed', 'sys');
   });
   dc.on('error', e => {
+    dataConn = null;
     entry('Data channel error: ' + (e.message || e), 'err');
   });
 }
 
-let pendingDC = false;
-function openDataConn() {
-  if (dataConn || pendingDC) return;
-  pendingDC = true;
-  entry('Opening data channel to Alpha…', 'sys');
-  const dc = peer.connect(REMOTE_ID, { reliable: true });
-  dc.on('open',  () => { pendingDC = false; });
-  dc.on('close', () => { pendingDC = false; });
-  dc.on('error', () => { pendingDC = false; });
-  attachDataConn(dc);
-}
-
+// Bravo is the passive side — Alpha always initiates the data channel.
+// ensureDataConn just logs; the actual channel arrives via peer.on('connection').
 function ensureDataConn() {
   if (dataConn && dataConn.open) return;
-  openDataConn();
-  const t = setInterval(() => {
-    if (dataConn && dataConn.open) { clearInterval(t); return; }
-    if (!linked) { clearInterval(t); return; }
-    entry('Data channel not ready — retrying…', 'sys');
-    openDataConn();
-  }, 3000);
+  entry('Waiting for chat channel from Alpha…', 'sys');
 }
 
 function attachCall(c) {
