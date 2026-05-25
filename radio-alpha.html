@@ -205,7 +205,7 @@
   }
   @keyframes fdx-pulse { from{box-shadow:0 0 12px rgba(0,255,159,0.15)} to{box-shadow:0 0 28px rgba(0,255,159,0.35)} }
   .media-btn {
-    flex: 1; height: 42px;
+    flex: 0 0 auto; height: 36px; padding: 0 14px;
     background: var(--btn-bg); border: 1px solid var(--border);
     color: var(--text); border-radius: 4px;
     font-family: 'Share Tech Mono', monospace; font-size: 11px;
@@ -301,11 +301,24 @@
     width: 100%; height: 100%; object-fit: cover; display: block;
   }
   .video-label {
-    position: absolute; bottom: 4px; left: 6px;
-    font-family: 'Orbitron', sans-serif; font-size: 9px;
-    letter-spacing: 2px; color: rgba(255,255,255,0.7);
+    position: absolute; bottom: 6px; left: 8px;
+    font-family: 'Orbitron', sans-serif; font-size: 10px;
+    letter-spacing: 2px; color: rgba(255,255,255,0.85);
     text-shadow: 0 1px 3px rgba(0,0,0,0.8);
     pointer-events: none;
+  }
+  .duplex-overlay {
+    position: absolute; bottom: 6px; right: 8px;
+    font-family: 'Orbitron', sans-serif; font-size: 9px;
+    font-weight: 700; letter-spacing: 2px;
+    color: #335533; pointer-events: none;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.9);
+    transition: color 0.3s;
+  }
+  .duplex-overlay.live {
+    color: var(--accent2);
+    text-shadow: 0 0 8px rgba(0,255,159,0.8);
+    animation: fdx-pulse 2s ease-in-out infinite alternate;
   }
   .video-wrap.waiting::after {
     content: 'WAITING…';
@@ -388,14 +401,10 @@
   <div class="tab-content">
     <!-- LOCAL TAB -->
     <div class="tab-pane" id="paneLocal">
-      <div class="ptt-panel" style="flex-shrink:0">
-        <div class="panel-label">CHANNEL</div>
-        <div class="channel-row">
-          <div class="duplex-bar" id="duplexBar">OFFLINE</div>
-          <button class="media-btn" id="videoBtn" onclick="toggleVideo()">Disable Video</button>
-          <button class="media-btn" id="audioBtn" onclick="toggleAudio()">Disable Audio</button>
-          <button class="media-btn" id="recBtn" onclick="toggleRecord()">⏺ Record</button>
-        </div>
+      <div class="channel-row" style="flex-shrink:0; padding:4px 0;">
+        <button class="media-btn" id="videoBtn" onclick="toggleVideo()">Disable Video</button>
+        <button class="media-btn" id="audioBtn" onclick="toggleAudio()">Disable Audio</button>
+        <button class="media-btn" id="recBtn" onclick="toggleRecord()">⏺ Record</button>
       </div>
       <div class="video-panel">
         <div class="panel-label">LOCAL — ALPHA</div>
@@ -403,20 +412,17 @@
           <div class="video-wrap" id="localWrap">
             <video id="localVideo" autoplay playsinline muted></video>
             <span class="video-label">ALPHA</span>
+            <span class="duplex-overlay" id="duplexBar">OFFLINE</span>
           </div>
         </div>
       </div>
     </div>
     <!-- REMOTE TAB -->
     <div class="tab-pane active" id="paneRemote">
-      <div class="ptt-panel" style="flex-shrink:0">
-        <div class="panel-label">CHANNEL</div>
-        <div class="channel-row">
-          <div class="duplex-bar" id="duplexBar2">OFFLINE</div>
-          <button class="media-btn" id="videoBtn2" onclick="toggleVideo()">Disable Video</button>
-          <button class="media-btn" id="audioBtn2" onclick="toggleAudio()">Disable Audio</button>
-          <button class="media-btn" id="recBtn2" onclick="toggleRecord()">⏺ Record</button>
-        </div>
+      <div class="channel-row" style="flex-shrink:0; padding:4px 0;">
+        <button class="media-btn" id="videoBtn2" onclick="toggleVideo()">Disable Video</button>
+        <button class="media-btn" id="audioBtn2" onclick="toggleAudio()">Disable Audio</button>
+        <button class="media-btn" id="recBtn2" onclick="toggleRecord()">⏺ Record</button>
       </div>
       <div class="video-panel">
         <div class="panel-label">REMOTE — BRAVO</div>
@@ -424,6 +430,7 @@
           <div class="video-wrap waiting" id="remoteWrap">
             <video id="remoteVideo" autoplay playsinline></video>
             <span class="video-label">BRAVO</span>
+            <span class="duplex-overlay" id="duplexBar2">OFFLINE</span>
           </div>
         </div>
       </div>
@@ -717,7 +724,7 @@ function attachCall(c) {
     setStatus('linked');
     entry('Linked to Bravo — full duplex active', 'ok');
     duplexBar.textContent = '● LIVE';
-    duplexBar.className = 'duplex-bar live';
+    duplexBar.className = 'duplex-overlay live';
     syncControls();
     // If data channel hasn't opened yet, retry after a short delay
     setTimeout(() => { if (!dataConn) { pendingDC = false; openDataConn(); } }, 2000);
@@ -730,7 +737,7 @@ function onDrop() {
   linked = false;
   call = null;
   duplexBar.textContent = 'OFFLINE';
-  duplexBar.className = 'duplex-bar';
+  duplexBar.className = 'duplex-overlay';
   syncControls();
   document.getElementById('remoteVideo').srcObject = null;
   document.getElementById('remoteWrap').classList.add('waiting');
