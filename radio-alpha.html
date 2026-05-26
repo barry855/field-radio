@@ -424,7 +424,7 @@
 <div class="session-overlay" id="sessionOverlay">
   <div class="session-box">
     <span class="session-title">α · 01</span>
-    <label>Unit ID / Session Code</label>
+    <label>Unit ID</label>
     <input type="text" id="sessionCode" maxlength="8" placeholder="ENTER CODE" autocomplete="off" />
     <div class="session-checks">
       <label class="session-check-item">
@@ -452,6 +452,10 @@
       <div class="status-item">
         <div class="led" id="linkLed"></div>
         <span id="statusText">OFFLINE</span>
+      </div>
+      <div class="status-item" id="unitIdDisplay" style="display:none;">
+        <span style="color:var(--text-dim);font-size:10px;letter-spacing:1px;">UNIT ID</span>
+        <span id="unitIdValue" style="color:var(--accent);font-family:'Orbitron',sans-serif;font-size:11px;letter-spacing:2px;"></span>
       </div>
     </div>
     <div class="session-timer" id="sessionTimerDisplay">⏱ --:--</div>
@@ -565,6 +569,8 @@ function startSession() {
   // Stop login timeout
   clearInterval(loginTimeoutInterval);
   document.getElementById('sessionOverlay').style.display = 'none';
+  document.getElementById('unitIdDisplay').style.display = 'flex';
+  document.getElementById('unitIdValue').textContent = code;
   startSessionCountdown();
   init();
 }
@@ -925,6 +931,7 @@ function resetLockTimer() {
   lockTimer = setTimeout(() => {
     // Re-show the session overlay to re-authenticate
     document.getElementById('sessionOverlay').style.display = 'flex';
+    document.getElementById('unitIdDisplay').style.display = 'none';
     clearInterval(sessionCountdownInterval);
     sessionSecsRemaining = 0;
     sessionTimerDisplay.textContent = '⏱ --:--';
@@ -1063,16 +1070,33 @@ function toggleAudio() {
   }
 }
 
-// ── Refresh Screen ────────────────────────────────────────────
+// ── Refresh Screen — returns to login with same Unit ID ───────
 function refreshScreen() {
-  entry('Refreshing video feeds…', 'sys');
-  const remoteVideo = document.getElementById('remoteVideo');
-  // Re-assign srcObjects to force re-render
-  const ls = document.getElementById('localVideo').srcObject;
-  const rs = remoteVideo.srcObject;
-  if (ls) { document.getElementById('localVideo').srcObject = null; setTimeout(() => { document.getElementById('localVideo').srcObject = ls; }, 100); }
-  if (rs) { remoteVideo.srcObject = null; setTimeout(() => { remoteVideo.srcObject = rs; entry('Screen refreshed', 'ok'); }, 150); }
-  else { entry('No remote stream to refresh', 'sys'); }
+  entry('Returning to login…', 'sys');
+  // Tear down active connection
+  clearTimeout(retryTimer);
+  if (call) { try { call.close(); } catch(e){} call = null; }
+  if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
+  if (peer) { try { peer.destroy(); } catch(e){} peer = null; }
+  linked = false;
+  // Stop media tracks
+  if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+  document.getElementById('localVideo').srcObject = null;
+  document.getElementById('remoteVideo').srcObject = null;
+  document.getElementById('remoteWrap').classList.add('waiting');
+  // Reset duplex / status indicators
+  duplexBar.textContent = 'OFFLINE'; duplexBar.className = 'duplex-overlay';
+  const db2 = document.getElementById('duplexBar2');
+  if (db2) { db2.textContent = 'OFFLINE'; db2.className = 'duplex-overlay'; }
+  setStatus('offline');
+  // Reset session countdown
+  clearInterval(sessionCountdownInterval);
+  sessionSecsRemaining = 0;
+  sessionTimerDisplay.textContent = '⏱ --:--';
+  sessionTimerDisplay.className = 'session-timer';
+  // Show login overlay — code stays pre-filled from localStorage
+  document.getElementById('sessionOverlay').style.display = 'flex';
+  startLoginTimeout();
 }
 
 // ── Camera flip (Android front/back) ─────────────────────────
