@@ -532,6 +532,118 @@
   }
   .msg-badge.visible { display: flex; }
   @keyframes badge-pop { 0%{transform:scale(0)} 70%{transform:scale(1.2)} 100%{transform:scale(1)} }
+
+  /* ═══════════════════════════════════════════════════════════
+     LANDSCAPE LAYOUT  (mobile landscape: width > height)
+     Videos move side-by-side; header/controls compact.
+     All JS IDs and event handlers remain untouched.
+  ═══════════════════════════════════════════════════════════ */
+
+  @media (orientation: landscape) and (max-height: 500px) {
+
+    /* ── Shell: wider, remove top padding ── */
+    .shell {
+      max-width: 100%;
+      padding: 4px 8px;
+      gap: 4px;
+    }
+
+    /* ── Header: tighter ── */
+    header {
+      padding: 4px 10px;
+    }
+    .logo { font-size: 15px; }
+    .logo .greek { font-size: 18px; }
+    .status-item { font-size: 9px; }
+    .session-timer { font-size: 9px; letter-spacing: 1px; }
+
+    /* ── Tab bar: compact ── */
+    .tab-btn {
+      padding: 4px 8px;
+      font-size: 9px;
+      letter-spacing: 1.5px;
+    }
+
+    /* ── Tab content: no gap ── */
+    .tab-content {
+      padding: 6px;
+      gap: 6px;
+    }
+
+    /* ── In LOCAL or REMOTE pane: hide the channel-rows and video panel
+       because the landscape dual-video strip replaces them ── */
+    #paneLocal  .video-panel,
+    #paneRemote .video-panel {
+      display: none;
+    }
+
+    /* ── Landscape dual-video strip: always visible regardless of active tab ── */
+    #landscapeVideoStrip {
+      display: flex !important;          /* override the default display:none */
+      flex-direction: row;
+      gap: 6px;
+      flex-shrink: 0;
+      width: 100%;
+    }
+    #landscapeVideoStrip .lv-wrap {
+      flex: 1;
+      position: relative;
+      background: #000;
+      border-radius: 4px;
+      overflow: hidden;
+      aspect-ratio: 16/9;
+    }
+    #landscapeVideoStrip .lv-wrap video {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+    }
+    #landscapeVideoStrip .lv-label {
+      position: absolute; bottom: 4px; left: 6px;
+      font-family: 'Orbitron', sans-serif; font-size: 9px;
+      letter-spacing: 2px; color: rgba(255,255,255,0.85);
+      text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+      pointer-events: none;
+    }
+    #landscapeVideoStrip .lv-duplex {
+      position: absolute; bottom: 4px; right: 6px;
+      font-family: 'Orbitron', sans-serif; font-size: 8px;
+      font-weight: 700; letter-spacing: 2px;
+      color: #335533; pointer-events: none;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.9);
+      transition: color 0.3s;
+    }
+    #landscapeVideoStrip .lv-duplex.live {
+      color: var(--accent2);
+      text-shadow: 0 0 8px rgba(0,255,159,0.8);
+      animation: fdx-pulse 2s ease-in-out infinite alternate;
+    }
+    #landscapeVideoStrip .lv-wrap.waiting::after {
+      content: 'WAITING…';
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Orbitron', sans-serif; font-size: 9px;
+      letter-spacing: 3px; color: var(--text-dim);
+    }
+
+    /* ── Controls: compress the channel-rows in LOCAL/REMOTE tabs ── */
+    .channel-row {
+      flex-wrap: nowrap;
+      gap: 4px;
+      padding: 2px 0 !important;
+    }
+    .media-btn {
+      height: 28px;
+      padding: 0 7px;
+      font-size: 9px;
+    }
+
+    /* ── Log panel: shrink ── */
+    .log { height: 48px; }
+    .log-panel { padding: 6px 10px; }
+
+    /* ── Chat panel: let it use remaining space ── */
+    .chat-panel { min-height: 0; }
+  }
+
 </style>
 <script src="./BRAVO — Field Radio v6_files/peerjs.min.js.download"></script></head>
 <body>
@@ -560,6 +672,21 @@
 </div>
 
 <div class="shell">
+
+<!-- LANDSCAPE DUAL-VIDEO STRIP (hidden in portrait, shown in landscape via CSS) -->
+<div id="landscapeVideoStrip" style="display:none;">
+  <div class="lv-wrap" id="lsLocalWrap">
+    <video id="lsLocalVideo" autoplay playsinline muted></video>
+    <span class="lv-label">LOCAL</span>
+    <span class="lv-duplex" id="lsDuplexLocal">OFFLINE</span>
+  </div>
+  <div class="lv-wrap waiting" id="lsRemoteWrap">
+    <video id="lsRemoteVideo" autoplay playsinline></video>
+    <span class="lv-label">REMOTE</span>
+    <span class="lv-duplex" id="lsDuplexRemote">OFFLINE</span>
+  </div>
+</div>
+
 
   <header>
     <div class="logo"><span class="greek">β</span><span>·</span>02</div>
@@ -1765,6 +1892,38 @@ async function flipCamera() {
 }
 
 window.addEventListener('beforeunload', () => { peer?.destroy(); });
+
+// ── Landscape video strip sync ────────────────────────────────
+// Mirror srcObject from real video elements into the strip clones
+function syncLandscapeStrip() {
+  const lsLoc = document.getElementById('lsLocalVideo');
+  const lsRem = document.getElementById('lsRemoteVideo');
+  const realLoc = document.getElementById('localVideo');
+  const realRem = document.getElementById('remoteVideo');
+  if (lsLoc && realLoc && lsLoc.srcObject !== realLoc.srcObject) {
+    lsLoc.srcObject = realLoc.srcObject;
+  }
+  if (lsRem && realRem && lsRem.srcObject !== realRem.srcObject) {
+    lsRem.srcObject = realRem.srcObject;
+    const lsRemWrap = document.getElementById('lsRemoteWrap');
+    if (lsRemWrap) {
+      if (realRem.srcObject && realRem.srcObject.getTracks().length > 0) {
+        lsRemWrap.classList.remove('waiting');
+      } else {
+        lsRemWrap.classList.add('waiting');
+      }
+    }
+  }
+  // Sync duplex overlay text/class
+  const lsDupLoc = document.getElementById('lsDuplexLocal');
+  const lsDupRem = document.getElementById('lsDuplexRemote');
+  const realDup  = document.getElementById('duplexBar');
+  const realDup2 = document.getElementById('duplexBar2');
+  if (lsDupLoc && realDup) { lsDupLoc.textContent = realDup.textContent; lsDupLoc.className = 'lv-duplex' + (realDup.classList.contains('live') ? ' live' : ''); }
+  if (lsDupRem && realDup2) { lsDupRem.textContent = realDup2.textContent; lsDupRem.className = 'lv-duplex' + (realDup2.classList.contains('live') ? ' live' : ''); }
+}
+setInterval(syncLandscapeStrip, 500);
+
 </script>
 
 
