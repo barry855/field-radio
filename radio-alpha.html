@@ -295,7 +295,7 @@
     flex-shrink: 0;
   }
   .channel-row {
-    display: flex; align-items: center; gap: 8px;
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
   }
   .duplex-bar {
     flex: 0 0 auto; height: 42px; padding: 0 16px;
@@ -317,7 +317,7 @@
   }
   @keyframes fdx-pulse { from{box-shadow:0 0 12px rgba(0,255,159,0.15)} to{box-shadow:0 0 28px rgba(0,255,159,0.35)} }
   .media-btn {
-    flex: 0 0 auto; height: 36px; padding: 0 14px;
+    flex: 0 0 auto; height: 36px; padding: 0 10px;
     background: var(--btn-bg); border: 1px solid var(--border);
     color: var(--text); border-radius: 4px;
     font-family: 'Share Tech Mono', monospace; font-size: 11px;
@@ -326,6 +326,13 @@
     white-space: nowrap;
   }
   .media-btn:hover { background: var(--btn-hover); }
+  .media-btn.screen-active {
+    background: rgba(0,212,255,0.15);
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 0 8px rgba(0,212,255,0.3);
+  }
+  .media-btn.screen-active:hover { background: rgba(0,212,255,0.25); }
   .media-btn.disabled-state {
     background: rgba(255,68,68,0.15);
     border-color: var(--danger);
@@ -1589,7 +1596,7 @@ async function toggleScreenShare() {
       } catch(e) { entry('Screen share track replace error: ' + e.message, 'err'); }
 
       screenSharing = true;
-      btns.forEach(b => { if(b){ b.textContent = '⬡ Camera'; b.classList.add('disabled-state'); }});
+      btns.forEach(b => { if(b){ b.textContent = '⬡ Camera'; b.classList.add('screen-active'); }});
       entry('Screen share started', 'ok');
 
       // Auto-stop when user ends via browser UI
@@ -1640,7 +1647,7 @@ async function stopScreenShare() {
     if (sender && restoreTrack) await sender.replaceTrack(restoreTrack);
   } catch(e) {}
 
-  btns.forEach(b => { if(b){ b.textContent = '⬡ Screen'; b.classList.remove('disabled-state'); }});
+  btns.forEach(b => { if(b){ b.textContent = '⬡ Screen'; b.classList.remove('screen-active'); }});
   entry('Screen share stopped — camera restored', 'ok');
 }
 
