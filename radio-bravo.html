@@ -1346,6 +1346,8 @@ function attachCall(c) {
     duplexBar.className = 'duplex-overlay live';
     syncControls();
     startQualityPolling();
+    // Ensure data channel is open
+    openDataConn();
     // Apply mute state now that senders are live
     if (audioMuted) {
       entry('DEBUG applying mute on stream event', 'sys');
@@ -1359,6 +1361,9 @@ function attachCall(c) {
 function onDrop() {
   linked = false;
   call = null;
+  // Reset data channel state so it re-opens cleanly on reconnect
+  if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
+  pendingDC = false;
   stopQualityPolling();
   duplexBar.textContent = 'OFFLINE';
   duplexBar.className = 'duplex-overlay';
