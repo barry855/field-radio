@@ -905,6 +905,17 @@ function answerCall(c) {
 
 function attachCall(c) {
   call = c;
+  // If audio was muted at login, replace the sender track with silence now
+  if (audioMuted && realAudioTrack) {
+    const silent = getSilentTrack();
+    try {
+      const pc = c.peerConnection || (c._pc);
+      if (pc) {
+        const sender = pc.getSenders().find(s => s.track && s.track.kind === 'audio');
+        if (sender) sender.replaceTrack(silent).catch(() => {});
+      }
+    } catch(e) {}
+  }
   c.on('stream', stream => {
     document.getElementById('remoteAudio').srcObject = stream;
     const remoteVideo = document.getElementById('remoteVideo');
