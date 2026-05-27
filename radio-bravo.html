@@ -153,6 +153,30 @@
   .bubble.mine .who   { color: #007744; }
   .bubble.theirs .who { color: #0077aa; }
 
+  .bubble .ts {
+    font-size: 8px; color: #888; letter-spacing: 0.5px;
+    margin-top: 4px; text-align: right;
+  }
+
+  /* connection quality */
+  .quality-item {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+  }
+  .quality-bars {
+    display: flex; align-items: flex-end; gap: 2px; height: 14px;
+  }
+  .quality-bars span {
+    display: block; width: 4px; border-radius: 1px;
+    background: #333; transition: background 0.4s;
+  }
+  .quality-bars span:nth-child(1) { height: 4px; }
+  .quality-bars span:nth-child(2) { height: 8px; }
+  .quality-bars span:nth-child(3) { height: 12px; }
+  .quality-bars span.lit { background: var(--accent2); }
+  .quality-bars span.lit-warn { background: var(--warn); }
+  .quality-bars span.lit-bad  { background: var(--danger); }
+
   .chat-input-row {
     display: flex; gap: 8px; margin-top: 10px; flex-shrink: 0;
   }
@@ -457,6 +481,14 @@
         <span style="color:var(--text-dim);font-size:10px;letter-spacing:1px;">UNIT ID</span>
         <span id="unitIdValue" style="color:var(--accent2);font-family:'Orbitron',sans-serif;font-size:11px;letter-spacing:2px;"></span>
       </div>
+      <div class="quality-item" id="qualityDisplay" style="display:none;">
+        <div class="quality-bars">
+          <span id="qbar1"></span>
+          <span id="qbar2"></span>
+          <span id="qbar3"></span>
+        </div>
+        <span id="qualityLabel" style="color:var(--text-dim);font-size:10px;">--</span>
+      </div>
     </div>
     <div class="session-timer" id="sessionTimerDisplay">⏱ --:--</div>
   </header>
@@ -519,6 +551,7 @@
         <div class="chat-input-row">
           <input class="chat-input" id="chatInput" placeholder="TYPE MESSAGE…" />
           <button class="btn" id="sendBtn" onclick="sendChat()">SEND</button>
+          <button class="btn" onclick="clearHistory();chat.innerHTML='';entry('Chat history cleared','sys');" title="Clear history" style="padding:6px 10px;">🗑</button>
         </div>
       </div>
       <div class="log-panel">
@@ -584,7 +617,9 @@ function startSession() {
   document.getElementById('unitIdDisplay').style.display = 'flex';
   document.getElementById('unitIdValue').textContent = code;
   startSessionCountdown();
+  document.getElementById('qualityDisplay').style.display = 'flex';
   init();
+  setTimeout(loadHistory, 100);
 }
 
 // ── Pre-fill last used code + checkbox states on load ────────
@@ -734,7 +769,50 @@ function linkify(text) {
   return frag;
 }
 
-function addBubble(text, mine) {
+// ── Chat history (localStorage) ──────────────────────────────
+const HISTORY_KEY = () => 'bravo_chat_' + (MY_ID || 'unknown');
+const HISTORY_MAX = 200;
+
+function saveMessage(text, mine) {
+  try {
+    const key = HISTORY_KEY();
+    const history = JSON.parse(localStorage.getItem(key) || '[]');
+    history.push({ text, mine, ts: Date.now() });
+    if (history.length > HISTORY_MAX) history.splice(0, history.length - HISTORY_MAX);
+    localStorage.setItem(key, JSON.stringify(history));
+  } catch(e) {}
+}
+
+function loadHistory() {
+  try {
+    const key = HISTORY_KEY();
+    const history = JSON.parse(localStorage.getItem(key) || '[]');
+    if (history.length === 0) return;
+    const divider = document.createElement('div');
+    divider.style.cssText = 'text-align:center;font-size:9px;color:#888;letter-spacing:2px;padding:4px 0;';
+    divider.textContent = '— PREVIOUS SESSION —';
+    chat.appendChild(divider);
+    history.forEach(m => addBubble(m.text, m.mine, m.ts, false));
+    const divider2 = document.createElement('div');
+    divider2.style.cssText = 'text-align:center;font-size:9px;color:#888;letter-spacing:2px;padding:4px 0;';
+    divider2.textContent = '— NOW —';
+    chat.appendChild(divider2);
+    chat.scrollTop = chat.scrollHeight;
+  } catch(e) {}
+}
+
+function clearHistory() {
+  try { localStorage.removeItem(HISTORY_KEY()); } catch(e) {}
+}
+
+function formatTs(ts) {
+  const d = new Date(ts);
+  return d.toTimeString().slice(0,5);
+}
+
+function addBubble(text, mine, ts, save = true) {
+  if (save) saveMessage(text, mine);
+  const now = ts || Date.now();
   const wrap = document.createElement('div');
   wrap.className = 'bubble ' + (mine ? 'mine' : 'theirs');
   const who = document.createElement('div');
@@ -742,8 +820,12 @@ function addBubble(text, mine) {
   who.textContent = mine ? 'BRAVO' : 'ALPHA';
   const msg = document.createElement('div');
   msg.appendChild(linkify(text));
+  const time = document.createElement('div');
+  time.className = 'ts';
+  time.textContent = formatTs(now);
   wrap.appendChild(who);
   wrap.appendChild(msg);
+  wrap.appendChild(time);
   chat.appendChild(wrap);
   chat.scrollTop = chat.scrollHeight;
   // Badge: notify on video tab when a new incoming message arrives
@@ -932,6 +1014,57 @@ function getCallStream() {
   return new MediaStream(tracks);
 }
 
+// ── Connection quality polling ────────────────────────────────
+let qualityInterval = null;
+
+function startQualityPolling() {
+  stopQualityPolling();
+  qualityInterval = setInterval(async () => {
+    if (!call) return;
+    const pc = call.peerConnection || call._pc;
+    if (!pc) return;
+    try {
+      const stats = await pc.getStats();
+      let rtt = null, lost = 0, sent = 0;
+      stats.forEach(r => {
+        if (r.type === 'remote-inbound-rtp' && r.kind === 'audio') {
+          if (r.roundTripTime != null) rtt = r.roundTripTime * 1000;
+          if (r.packetsLost != null) lost = r.packetsLost;
+        }
+        if (r.type === 'outbound-rtp' && r.kind === 'audio') {
+          if (r.packetsSent != null) sent = r.packetsSent;
+        }
+      });
+      const lossPct = sent > 0 ? (lost / sent) * 100 : 0;
+      updateQuality(rtt, lossPct);
+    } catch(e) {}
+  }, 3000);
+}
+
+function stopQualityPolling() {
+  if (qualityInterval) { clearInterval(qualityInterval); qualityInterval = null; }
+  updateQuality(null, null);
+}
+
+function updateQuality(rtt, lossPct) {
+  const bars  = [document.getElementById('qbar1'), document.getElementById('qbar2'), document.getElementById('qbar3')];
+  const label = document.getElementById('qualityLabel');
+  if (rtt === null) {
+    bars.forEach(b => { b.className = ''; });
+    label.textContent = '--';
+    label.style.color = 'var(--text-dim)';
+    return;
+  }
+  let score = 3;
+  if (rtt > 300 || lossPct > 5)  score = 2;
+  if (rtt > 600 || lossPct > 15) score = 1;
+  const cls   = score === 3 ? 'lit' : score === 2 ? 'lit-warn' : 'lit-bad';
+  const color = score === 3 ? 'var(--accent2)' : score === 2 ? 'var(--warn)' : 'var(--danger)';
+  bars.forEach((b, i) => { b.className = i < score ? cls : ''; });
+  label.textContent = Math.round(rtt) + 'ms';
+  label.style.color = color;
+}
+
 function attachCall(c) {
   call = c;
   c.on('stream', stream => {
@@ -946,6 +1079,7 @@ function attachCall(c) {
     duplexBar.textContent = '● LIVE';
     duplexBar.className = 'duplex-overlay live';
     syncControls();
+    startQualityPolling();
     // Apply mute state now that senders are live
     if (audioMuted) {
       entry('DEBUG applying mute on stream event', 'sys');
@@ -959,6 +1093,7 @@ function attachCall(c) {
 function onDrop() {
   linked = false;
   call = null;
+  stopQualityPolling();
   duplexBar.textContent = 'OFFLINE';
   duplexBar.className = 'duplex-overlay';
   syncControls();
