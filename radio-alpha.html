@@ -570,15 +570,17 @@ function startSession() {
   MY_ID     = 'alpha-' + code;
   REMOTE_ID = 'bravo-' + code;
   // Persist code and checkbox states for next load
+  const disVidChecked = document.getElementById('loginDisableVideo').checked;
+  const disAudChecked = document.getElementById('loginDisableAudio').checked;
   try {
     localStorage.setItem('alpha_last_code', code);
-    localStorage.setItem('alpha_disable_video', document.getElementById('loginDisableVideo').checked ? '1' : '0');
-    localStorage.setItem('alpha_disable_audio', document.getElementById('loginDisableAudio').checked ? '1' : '0');
+    localStorage.setItem('alpha_disable_video', disVidChecked ? '1' : '0');
+    localStorage.setItem('alpha_disable_audio', disAudChecked ? '1' : '0');
   } catch(e) {}
-  // Apply login checkbox states to media (applied in init after stream acquired)
-  loginDisableVideoFlag = document.getElementById('loginDisableVideo').checked;
-  loginDisableAudioFlag = document.getElementById('loginDisableAudio').checked;
-  // Stop login timeout
+  loginDisableVideoFlag = disVidChecked;
+  loginDisableAudioFlag = disAudChecked;
+  // Always log the checkbox state so we can see it in the activity log
+  entry('LOGIN: disableVideo=' + disVidChecked + ' disableAudio=' + disAudChecked, 'sys');
   clearInterval(loginTimeoutInterval);
   document.getElementById('sessionOverlay').style.display = 'none';
   document.getElementById('unitIdDisplay').style.display = 'flex';
@@ -592,9 +594,11 @@ function startSession() {
   try {
     const disVid = localStorage.getItem('alpha_disable_video') === '1';
     const disAud = localStorage.getItem('alpha_disable_audio') === '1';
+    const last   = localStorage.getItem('alpha_last_code');
+    // Log what we found — visible in activity log after connect
+    setTimeout(() => entry('PREFILL: code=' + last + ' vid=' + disVid + ' aud=' + disAud, 'sys'), 500);
     document.getElementById('loginDisableVideo').checked = disVid;
     document.getElementById('loginDisableAudio').checked = disAud;
-    const last = localStorage.getItem('alpha_last_code');
     if (last) {
       document.getElementById('sessionCode').value = last;
       setTimeout(() => startSession(), 300);
@@ -789,10 +793,14 @@ function init() {
     }
     if (loginDisableAudioFlag) {
       const at = stream.getAudioTracks()[0];
+      entry('AUDIO FLAG: track=' + (at ? at.label : 'none') + ' enabled=' + (at ? at.enabled : 'n/a'), 'sys');
       if (at) { realAudioTrack = at; at.enabled = false; audioMuted = true; }
+      entry('AUDIO FLAG: audioMuted now=' + audioMuted, 'sys');
       const ab = document.getElementById('audioBtn'); if(ab){ab.textContent='Enable Audio';ab.classList.add('disabled-state');}
       const ab2 = document.getElementById('audioBtn2'); if(ab2){ab2.textContent='Enable Audio';ab2.classList.add('disabled-state');}
       entry('Audio disabled (login setting)', 'sys');
+    } else {
+      entry('AUDIO FLAG: not set, audio stays on', 'sys');
     }
     startPeer();
   })
@@ -866,13 +874,14 @@ function startPeer() {
 }
 
 function getCallStream() {
-  // Build the stream we actually send — substitute silent audio if muted
   const tracks = [...localStream.getVideoTracks()];
+  entry('STREAM: audioMuted=' + audioMuted + ' audioTracks=' + localStream.getAudioTracks().length, 'sys');
   if (audioMuted) {
     tracks.push(getSilentTrack());
-    entry('Calling with silent audio (muted)', 'sys');
+    entry('STREAM: using silent audio track', 'sys');
   } else {
     tracks.push(...localStream.getAudioTracks());
+    entry('STREAM: using real audio track', 'sys');
   }
   return new MediaStream(tracks);
 }
