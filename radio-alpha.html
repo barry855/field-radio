@@ -193,6 +193,90 @@
   .chat-input:disabled { opacity: 0.4; cursor: not-allowed; }
   .chat-input::placeholder { color: var(--text-dim); }
 
+  /* ── Drag-and-drop overlay ───────────────────────────────── */
+  .chat-panel { position: relative; }
+  .drop-overlay {
+    position: absolute; inset: 0; z-index: 20;
+    background: rgba(0,212,255,0.12);
+    border: 2px dashed var(--accent);
+    border-radius: 8px;
+    display: none; align-items: center; justify-content: center;
+    flex-direction: column; gap: 8px;
+    pointer-events: none;
+  }
+  .drop-overlay.active { display: flex; }
+  .drop-overlay-icon { font-size: 32px; filter: drop-shadow(0 0 8px var(--accent)); }
+  .drop-overlay-label {
+    font-family: 'Orbitron', sans-serif; font-size: 11px;
+    letter-spacing: 3px; color: var(--accent);
+    text-transform: uppercase;
+  }
+
+  /* ── File attach button ─────────────────────────────────── */
+  .attach-btn {
+    background: var(--btn-bg); border: 1px solid var(--border);
+    color: var(--text-dim); padding: 6px 10px; border-radius: 4px;
+    font-size: 14px; cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    flex-shrink: 0; line-height: 1;
+  }
+  .attach-btn:hover { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
+
+  /* ── File preview strip ─────────────────────────────────── */
+  .file-preview-strip {
+    display: none; flex-wrap: wrap; gap: 6px;
+    margin-top: 6px; flex-shrink: 0;
+  }
+  .file-preview-strip.has-files { display: flex; }
+  .file-chip {
+    display: flex; align-items: center; gap: 5px;
+    background: rgba(0,212,255,0.1); border: 1px solid var(--accent);
+    border-radius: 4px; padding: 3px 6px;
+    font-size: 10px; color: var(--accent); max-width: 180px;
+    position: relative;
+  }
+  .file-chip-thumb {
+    width: 28px; height: 28px; object-fit: cover;
+    border-radius: 2px; flex-shrink: 0;
+  }
+  .file-chip-name {
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    flex: 1; letter-spacing: 0.5px;
+  }
+  .file-chip-remove {
+    cursor: pointer; font-size: 12px; color: var(--danger);
+    flex-shrink: 0; padding: 0 2px;
+    transition: color 0.15s;
+  }
+  .file-chip-remove:hover { color: #ff8888; }
+
+  /* ── Media bubbles ──────────────────────────────────────── */
+  .bubble img.media-img {
+    max-width: 200px; max-height: 160px; border-radius: 4px;
+    display: block; margin-top: 4px; cursor: zoom-in;
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+  .bubble video.media-vid {
+    max-width: 220px; max-height: 160px; border-radius: 4px;
+    display: block; margin-top: 4px;
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+  .bubble .file-attach-link {
+    display: inline-flex; align-items: center; gap: 5px;
+    margin-top: 4px; color: var(--accent);
+    font-size: 11px; text-decoration: none; letter-spacing: 0.5px;
+  }
+  .bubble .file-attach-link:hover { text-decoration: underline; }
+
+  /* ── Lightbox ───────────────────────────────────────────── */
+  #lightbox {
+    display: none; position: fixed; inset: 0; z-index: 999;
+    background: rgba(0,0,0,0.85); align-items: center; justify-content: center;
+    cursor: zoom-out;
+  }
+  #lightbox.open { display: flex; }
+  #lightbox img { max-width: 90vw; max-height: 90vh; border-radius: 6px; box-shadow: 0 0 40px rgba(0,212,255,0.3); }
+
   .btn {
     background: var(--btn-bg); border: 1px solid var(--border);
     color: var(--text); padding: 6px 14px; border-radius: 4px;
@@ -545,10 +629,17 @@
     </div>
     <!-- CHAT TAB -->
     <div class="tab-pane" id="paneChat">
-      <div class="chat-panel" style="flex:1">
+      <div class="chat-panel" style="flex:1" id="chatPanel">
         <div class="panel-label">COMMS</div>
+        <div class="drop-overlay" id="dropOverlay">
+          <div class="drop-overlay-icon">📎</div>
+          <div class="drop-overlay-label">Drop file to attach</div>
+        </div>
         <div class="chat" id="chat"></div>
+        <div class="file-preview-strip" id="filePreviewStrip"></div>
         <div class="chat-input-row">
+          <button class="attach-btn" id="attachBtn" title="Attach file / photo / video">📎</button>
+          <input type="file" id="fileInput" multiple accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx" style="display:none" />
           <input class="chat-input" id="chatInput" placeholder="TYPE MESSAGE…" />
           <button class="btn" id="sendBtn" onclick="sendChat()">SEND</button>
           <button class="btn" onclick="clearHistory();chat.innerHTML='';entry('Chat history cleared','sys');" title="Clear history" style="padding:6px 10px;">🗑</button>
@@ -562,6 +653,7 @@
   </div>
 
 <audio id="remoteAudio" autoplay playsinline></audio>
+<div id="lightbox"><img id="lightboxImg" src="" alt=""/></div>
 
 <script>
 const script = document.createElement('script');
@@ -849,14 +941,182 @@ function addBubble(text, mine, ts, save = true) {
 
 function sendChat() {
   const txt = chatInput.value.trim();
-  if (!txt) return;
+  const hasFiles = pendingFiles.length > 0;
+  if (!txt && !hasFiles) return;
   if (!dataConn) { entry('Not connected — cannot send', 'err'); return; }
-  dataConn.send(txt);
-  addBubble(txt, true);
-  chatInput.value = '';
+  if (txt) {
+    dataConn.send(txt);
+    addBubble(txt, true);
+    chatInput.value = '';
+  }
+  if (hasFiles) {
+    sendPendingFiles();
+  }
 }
 
+// ── File attachment state ─────────────────────────────────────
+const pendingFiles = [];  // {file, dataUrl}
+
+const fileInput      = document.getElementById('fileInput');
+const attachBtn      = document.getElementById('attachBtn');
+const filePreviewStrip = document.getElementById('filePreviewStrip');
+const chatPanel      = document.getElementById('chatPanel');
+const dropOverlay    = document.getElementById('dropOverlay');
+const lightbox       = document.getElementById('lightbox');
+const lightboxImg    = document.getElementById('lightboxImg');
+
+// Attach button → open file picker
+attachBtn.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => { addFiles([...e.target.files]); fileInput.value=''; });
+
+// ── Drag-and-drop on chat panel ───────────────────────────────
+let dragCounter = 0;
+chatPanel.addEventListener('dragenter', e => {
+  e.preventDefault(); dragCounter++;
+  dropOverlay.classList.add('active');
+});
+chatPanel.addEventListener('dragleave', () => {
+  dragCounter--;
+  if (dragCounter <= 0) { dragCounter = 0; dropOverlay.classList.remove('active'); }
+});
+chatPanel.addEventListener('dragover', e => e.preventDefault());
+chatPanel.addEventListener('drop', e => {
+  e.preventDefault(); dragCounter = 0;
+  dropOverlay.classList.remove('active');
+  const items = [...e.dataTransfer.items];
+  const files = items.filter(i => i.kind === 'file').map(i => i.getAsFile()).filter(Boolean);
+  if (files.length) addFiles(files);
+});
+
+// ── Also allow paste of images ────────────────────────────────
+document.addEventListener('paste', e => {
+  if (activeTab !== 'chat') return;
+  const items = [...(e.clipboardData?.items || [])];
+  const imageItems = items.filter(i => i.type.startsWith('image/'));
+  if (imageItems.length) {
+    e.preventDefault();
+    addFiles(imageItems.map(i => i.getAsFile()).filter(Boolean));
+  }
+});
+
+// ── Add files to pending queue ────────────────────────────────
+function addFiles(files) {
+  files.forEach(f => {
+    if (f.size > 10 * 1024 * 1024) {
+      entry('File too large (max 10 MB): ' + f.name, 'err'); return;
+    }
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const item = { file: f, dataUrl: ev.target.result };
+      pendingFiles.push(item);
+      renderFileChip(item, pendingFiles.length - 1);
+    };
+    reader.readAsDataURL(f);
+  });
+}
+
+function renderFileChip(item, idx) {
+  const chip = document.createElement('div');
+  chip.className = 'file-chip';
+  chip.dataset.idx = idx;
+  if (item.file.type.startsWith('image/')) {
+    const thumb = document.createElement('img');
+    thumb.className = 'file-chip-thumb';
+    thumb.src = item.dataUrl;
+    chip.appendChild(thumb);
+  } else {
+    const icon = document.createElement('span');
+    icon.textContent = fileIcon(item.file.type);
+    icon.style.fontSize = '18px';
+    chip.appendChild(icon);
+  }
+  const name = document.createElement('span');
+  name.className = 'file-chip-name';
+  name.textContent = item.file.name;
+  chip.appendChild(name);
+  const rm = document.createElement('span');
+  rm.className = 'file-chip-remove';
+  rm.textContent = '✕';
+  rm.addEventListener('click', () => removeFile(idx, chip));
+  chip.appendChild(rm);
+  filePreviewStrip.appendChild(chip);
+  filePreviewStrip.classList.add('has-files');
+}
+
+function removeFile(idx, chip) {
+  pendingFiles.splice(idx, 1);
+  chip.remove();
+  if (pendingFiles.length === 0) filePreviewStrip.classList.remove('has-files');
+  // Re-index remaining chips
+  [...filePreviewStrip.querySelectorAll('.file-chip')].forEach((c, i) => { c.dataset.idx = i; });
+}
+
+function fileIcon(type) {
+  if (type.startsWith('video/')) return '🎬';
+  if (type.startsWith('audio/')) return '🎵';
+  if (type === 'application/pdf') return '📄';
+  return '📎';
+}
+
+// ── Send pending files over data channel ──────────────────────
+function sendPendingFiles() {
+  [...pendingFiles].forEach(item => {
+    const payload = JSON.stringify({ __file: true, name: item.file.name, type: item.file.type, data: item.dataUrl });
+    try {
+      dataConn.send(payload);
+      addMediaBubble(item.file.name, item.file.type, item.dataUrl, true);
+    } catch(e) {
+      entry('Failed to send file: ' + item.file.name, 'err');
+    }
+  });
+  pendingFiles.length = 0;
+  filePreviewStrip.innerHTML = '';
+  filePreviewStrip.classList.remove('has-files');
+}
+
+// ── Render a media bubble (sent or received) ──────────────────
+function addMediaBubble(name, type, dataUrl, mine) {
+  const wrap = document.createElement('div');
+  wrap.className = 'bubble ' + (mine ? 'mine' : 'theirs');
+  const who = document.createElement('div');
+  who.className = 'who';
+  who.textContent = mine ? 'ALPHA' : 'BRAVO';
+  wrap.appendChild(who);
+  if (type.startsWith('image/')) {
+    const img = document.createElement('img');
+    img.className = 'media-img';
+    img.src = dataUrl;
+    img.addEventListener('click', () => { lightboxImg.src = dataUrl; lightbox.classList.add('open'); });
+    wrap.appendChild(img);
+  } else if (type.startsWith('video/')) {
+    const vid = document.createElement('video');
+    vid.className = 'media-vid';
+    vid.src = dataUrl;
+    vid.controls = true;
+    vid.playsInline = true;
+    wrap.appendChild(vid);
+  } else {
+    const a = document.createElement('a');
+    a.className = 'file-attach-link';
+    a.href = dataUrl;
+    a.download = name;
+    a.textContent = fileIcon(type) + ' ' + name;
+    wrap.appendChild(a);
+  }
+  const time = document.createElement('div');
+  time.className = 'ts';
+  time.textContent = formatTs(Date.now());
+  wrap.appendChild(time);
+  chat.appendChild(wrap);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+// ── Lightbox close ────────────────────────────────────────────
+lightbox.addEventListener('click', () => { lightbox.classList.remove('open'); lightboxImg.src = ''; });
+
 chatInput.addEventListener('keydown', e => { if (e.key === 'Enter') sendChat(); });
+
+
 
 function init() {
   if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
@@ -1000,7 +1260,16 @@ function attachDataConn(dc) {
     dataConn = dc;
     entry('Chat channel open', 'ok');
   });
-  dc.on('data', msg => addBubble(msg, false));
+  dc.on('data', msg => {
+    if (typeof msg === 'string' && msg.startsWith('{"__file":true')) {
+      try {
+        const f = JSON.parse(msg);
+        addMediaBubble(f.name, f.type, f.data, false);
+      } catch(e) { addBubble(msg, false); }
+    } else {
+      addBubble(msg, false);
+    }
+  });
   dc.on('close', () => {
     pendingDC = false;
     dataConn = null;
