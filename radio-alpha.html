@@ -1363,6 +1363,8 @@ function attachCall(c) {
     duplexBar.className = 'duplex-overlay live';
     syncControls();
     startQualityPolling();
+    // Ensure data channel is open (may have failed during retry storm)
+    openDataConn();
   });
   c.on('close', onDrop);
   c.on('error', e => { entry('Call error: ' + e.message, 'err'); onDrop(); });
@@ -1371,6 +1373,9 @@ function attachCall(c) {
 function onDrop() {
   linked = false;
   call = null;
+  // Reset data channel state so it re-opens cleanly on next dial
+  if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
+  pendingDC = false;
   stopQualityPolling();
   duplexBar.textContent = 'OFFLINE';
   duplexBar.className = 'duplex-overlay';
