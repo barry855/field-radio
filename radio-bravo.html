@@ -976,9 +976,9 @@ const sendBtn   = document.getElementById('sendBtn');
 // ── Sync chat send UI to data-channel state ───────────────────
 function syncSendUI() {
   const ready = !!dataConn;
-  sendBtn.disabled   = !ready;
-  chatInput.disabled = !ready;
-  chatInput.placeholder = ready ? 'TYPE MESSAGE…' : 'WAITING FOR DATA CHANNEL…';
+  sendBtn.disabled      = !ready;
+  chatInput.disabled    = false;   // always typeable — user may compose before link
+  chatInput.placeholder = ready ? 'TYPE MESSAGE…' : 'NOT CONNECTED…';
 }
 
 
@@ -1551,6 +1551,7 @@ function startPeer() {
 
 function attachDataConn(dc) {
   dc.on('open', () => {
+    pendingDC = false;
     dataConn = dc;
     entry('Chat channel open', 'ok');
     syncSendUI();
@@ -1566,11 +1567,13 @@ function attachDataConn(dc) {
     }
   });
   dc.on('close', () => {
+    pendingDC = false;
     dataConn = null;
     entry('Chat channel closed', 'sys');
     syncSendUI();
   });
   dc.on('error', e => {
+    pendingDC = false;
     dataConn = null;
     entry('Data channel error: ' + (e.message || e), 'err');
     syncSendUI();
@@ -1583,9 +1586,6 @@ function openDataConn() {
   pendingDC = true;
   entry('Opening data channel to Alpha…', 'sys');
   const dc = peer.connect(REMOTE_ID, { reliable: true });
-  dc.on('open',  () => { pendingDC = false; });
-  dc.on('close', () => { pendingDC = false; });
-  dc.on('error', () => { pendingDC = false; });
   attachDataConn(dc);
 }
 
