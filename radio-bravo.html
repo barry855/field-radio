@@ -832,7 +832,7 @@ function startPeer() {
       return;
     }
     attachCall(incoming);
-    incoming.answer(localStream);
+    incoming.answer(getCallStream());
   });
 
   peer.on('disconnected', () => {
@@ -889,19 +889,19 @@ function openDataConn() {
   attachDataConn(dc);
 }
 
+function getCallStream() {
+  const tracks = [...localStream.getVideoTracks()];
+  if (audioMuted) {
+    tracks.push(getSilentTrack());
+    entry('Answering with silent audio (muted)', 'sys');
+  } else {
+    tracks.push(...localStream.getAudioTracks());
+  }
+  return new MediaStream(tracks);
+}
+
 function attachCall(c) {
   call = c;
-  // If audio was muted at login, replace the sender track with silence now
-  if (audioMuted && realAudioTrack) {
-    const silent = getSilentTrack();
-    try {
-      const pc = c.peerConnection || (c._pc);
-      if (pc) {
-        const sender = pc.getSenders().find(s => s.track && s.track.kind === 'audio');
-        if (sender) sender.replaceTrack(silent).catch(() => {});
-      }
-    } catch(e) {}
-  }
   c.on('stream', stream => {
     document.getElementById('remoteAudio').srcObject = stream;
     const remoteVideo = document.getElementById('remoteVideo');
@@ -1117,43 +1117,29 @@ function getSilentTrack() {
 let audioMuted = false;
 let realAudioTrack = null;
 
-function applyMuteToSenders() {
-  if (!call) return;
-  const pc = call.peerConnection || call._pc;
-  if (!pc) return;
-  const senders = pc.getSenders();
-  entry('DEBUG senders: ' + senders.length + ', audioMuted: ' + audioMuted, 'sys');
-  const sender = senders.find(s => s.track && s.track.kind === 'audio');
-  if (!sender) {
-    entry('DEBUG no audio sender found', 'sys');
-    return;
-  }
-  if (audioMuted) {
-    const silent = getSilentTrack();
-    sender.replaceTrack(silent)
-      .then(() => entry('DEBUG silent track applied', 'sys'))
-      .catch(e => entry('DEBUG replaceTrack err: ' + e, 'err'));
-  } else if (realAudioTrack) {
-    sender.replaceTrack(realAudioTrack)
-      .then(() => entry('DEBUG real track restored', 'sys'))
-      .catch(e => entry('DEBUG replaceTrack err: ' + e, 'err'));
-  }
-}
-
 function toggleAudio() {
   if (!localStream) return;
   const btns = [document.getElementById('audioBtn'), document.getElementById('audioBtn2')];
+  realAudioTrack = localStream.getAudioTracks()[0];
+
   if (!audioMuted) {
-    realAudioTrack = localStream.getAudioTracks()[0];
-    if (realAudioTrack) realAudioTrack.enabled = false;
     audioMuted = true;
-    applyMuteToSenders();
+    if (realAudioTrack) realAudioTrack.enabled = false;
+    try {
+      const pc = call && (call.peerConnection || call._pc);
+      const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
+      if (sender) sender.replaceTrack(getSilentTrack()).catch(() => {});
+    } catch(e) {}
     btns.forEach(b => { if(b){ b.textContent = 'Enable Audio'; b.classList.add('disabled-state'); }});
     entry('Local audio muted', 'sys');
   } else {
-    if (realAudioTrack) realAudioTrack.enabled = true;
     audioMuted = false;
-    applyMuteToSenders();
+    if (realAudioTrack) realAudioTrack.enabled = true;
+    try {
+      const pc = call && (call.peerConnection || call._pc);
+      const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
+      if (sender && realAudioTrack) sender.replaceTrack(realAudioTrack).catch(() => {});
+    } catch(e) {}
     btns.forEach(b => { if(b){ b.textContent = 'Disable Audio'; b.classList.remove('disabled-state'); }});
     entry('Local audio unmuted', 'sys');
   }
