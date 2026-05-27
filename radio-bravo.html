@@ -1413,6 +1413,7 @@ function muteLocal() {
 let lockTimer;
 let autoReconnectTimer;
 function resetLockTimer() {
+  if (cameraFlipping) return;   // suppress during camera hardware handoff
   clearTimeout(lockTimer);
   lockTimer = setTimeout(() => {
     document.getElementById('sessionOverlay').style.display = 'flex';
@@ -1694,31 +1695,57 @@ function refreshScreen() {
 // ── Camera flip (Android front/back) ─────────────────────────
 let currentFacingMode = 'user';
 let flipping = false;
+let cameraFlipping = false;   // suppresses lock timer during camera hardware handoff
 
 async function flipCamera() {
   if (!localStream || flipping) return;
   flipping = true;
+  cameraFlipping = true;
   const flipBtn = document.getElementById('flipBtn');
   if (flipBtn) flipBtn.disabled = true;
 
-  // Stop existing video track
-  localStream.getVideoTracks().forEach(t => t.stop());
+  const targetMode = currentFacingMode === 'user' ? 'environment' : 'user';
 
-  currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+  // Keep a reference to the old track — don't stop it yet
+  const oldVideoTrack = localStream.getVideoTracks()[0] || null;
+
+  async function tryAcquire() {
+    // Try with exact facingMode first
+    try {
+      return await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { exact: targetMode } }, audio: false
+      });
+    } catch(e) {}
+    // Brief pause so Android camera hardware fully releases
+    await new Promise(r => setTimeout(r, 400));
+    // Try without exact
+    try {
+      return await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: targetMode }, audio: false
+      });
+    } catch(e) {}
+    // Last resort — any camera
+    await new Promise(r => setTimeout(r, 400));
+    return await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+  }
 
   try {
-    const newStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { exact: currentFacingMode } },
-      audio: false
-    });
+    const newStream = await tryAcquire();
     const newVideoTrack = newStream.getVideoTracks()[0];
+    if (!newVideoTrack) throw new Error('No video track returned by camera');
 
-    // Replace track in localStream
-    localStream.getVideoTracks().forEach(t => localStream.removeTrack(t));
+    // New track confirmed — now safe to release the old one
+    if (oldVideoTrack) {
+      localStream.removeTrack(oldVideoTrack);
+      oldVideoTrack.stop();   // stop AFTER removing so stream is never briefly empty
+    }
     localStream.addTrack(newVideoTrack);
+    currentFacingMode = targetMode;
 
-    // Update local preview
-    document.getElementById('localVideo').srcObject = localStream;
+    // Force Android to fully re-bind the media pipeline
+    const localVideo = document.getElementById('localVideo');
+    localVideo.srcObject = null;
+    localVideo.srcObject = localStream;
 
     // Replace track in active WebRTC call
     if (call && call.peerConnection) {
@@ -1728,27 +1755,11 @@ async function flipCamera() {
 
     entry('Camera flipped to ' + (currentFacingMode === 'user' ? 'front' : 'rear'), 'ok');
   } catch (e) {
-    // Exact facingMode failed — try without 'exact' as fallback
-    try {
-      const fallback = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: currentFacingMode },
-        audio: false
-      });
-      const newVideoTrack = fallback.getVideoTracks()[0];
-      localStream.getVideoTracks().forEach(t => localStream.removeTrack(t));
-      localStream.addTrack(newVideoTrack);
-      document.getElementById('localVideo').srcObject = localStream;
-      if (call && call.peerConnection) {
-        const sender = call.peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
-        if (sender) await sender.replaceTrack(newVideoTrack);
-      }
-      entry('Camera flipped (fallback) to ' + (currentFacingMode === 'user' ? 'front' : 'rear'), 'ok');
-    } catch (e2) {
-      currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user'; // revert
-      entry('Camera flip failed: ' + e2.message, 'err');
-    }
+    // All attempts failed — old track was never stopped, localStream is intact
+    entry('Camera flip failed: ' + e.message, 'err');
   } finally {
     flipping = false;
+    cameraFlipping = false;
     if (flipBtn) flipBtn.disabled = false;
   }
 }
