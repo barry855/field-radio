@@ -565,7 +565,11 @@ function startSession() {
   if (!code) { document.getElementById('sessionCode').focus(); return; }
   MY_ID     = 'bravo-' + code;
   REMOTE_ID = 'alpha-' + code;
-  try { localStorage.setItem('bravo_last_code', code); } catch(e) {}
+  try {
+    localStorage.setItem('bravo_last_code', code);
+    localStorage.setItem('bravo_disable_video', document.getElementById('loginDisableVideo').checked ? '1' : '0');
+    localStorage.setItem('bravo_disable_audio', document.getElementById('loginDisableAudio').checked ? '1' : '0');
+  } catch(e) {}
   loginDisableVideoFlag = document.getElementById('loginDisableVideo').checked;
   loginDisableAudioFlag = document.getElementById('loginDisableAudio').checked;
   clearInterval(loginTimeoutInterval);
@@ -576,13 +580,17 @@ function startSession() {
   init();
 }
 
-// ── Pre-fill last used code on load + auto-login if code exists ──
+// ── Pre-fill last used code + checkbox states on load ────────
 (function() {
   try {
-    const last = localStorage.getItem('bravo_last_code');
+    const last   = localStorage.getItem('bravo_last_code');
+    const disVid = localStorage.getItem('bravo_disable_video') === '1';
+    const disAud = localStorage.getItem('bravo_disable_audio') === '1';
+    if (disVid) document.getElementById('loginDisableVideo').checked = true;
+    if (disAud) document.getElementById('loginDisableAudio').checked = true;
     if (last) {
       document.getElementById('sessionCode').value = last;
-      // Auto-connect immediately on reload (mirrors Alpha behaviour)
+      // Auto-connect immediately on reload
       setTimeout(() => startSession(), 300);
     }
   } catch(e) {}
