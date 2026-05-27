@@ -474,6 +474,50 @@
     text-shadow: 0 0 8px rgba(0,255,159,0.8);
     animation: fdx-pulse 2s ease-in-out infinite alternate;
   }
+
+  /* ── PiP overlay ── */
+  .pip-video {
+    position: absolute; bottom: 28px; right: 6px;
+    width: 28%; max-width: 140px; min-width: 60px;
+    aspect-ratio: 4/3; border-radius: 4px;
+    border: 1px solid rgba(0,255,159,0.5);
+    object-fit: cover; background: #000;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.7);
+    z-index: 5; display: none; pointer-events: none;
+  }
+  .pip-video.active { display: block; }
+  .pip-toggle {
+    position: absolute; bottom: 28px; right: 6px;
+    width: 22px; height: 22px;
+    background: rgba(0,0,0,0.55); border: 1px solid rgba(0,255,159,0.4);
+    border-radius: 3px; color: rgba(0,255,159,0.7);
+    font-size: 12px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 6; transition: background 0.15s, border-color 0.15s;
+    padding: 0;
+  }
+  .pip-toggle:hover { background: rgba(0,255,159,0.2); border-color: var(--accent2); color: var(--accent2); }
+  .pip-toggle.pip-on {
+    background: rgba(0,255,159,0.18); border-color: var(--accent2); color: var(--accent2);
+    bottom: 6px;
+  }
+  .pip-video.active { bottom: 28px; }
+
+  /* ── tooltips ── */
+  [data-tip] { position: relative; }
+  [data-tip]::after {
+    content: attr(data-tip);
+    position: absolute; bottom: calc(100% + 6px); left: 50%;
+    transform: translateX(-50%);
+    background: rgba(10,10,10,0.92); color: #ccc;
+    font-family: 'Share Tech Mono', monospace; font-size: 10px;
+    letter-spacing: 0.5px; white-space: nowrap;
+    padding: 4px 8px; border-radius: 3px;
+    border: 1px solid var(--border);
+    pointer-events: none; opacity: 0;
+    transition: opacity 0.15s; z-index: 100;
+  }
+  [data-tip]:hover::after { opacity: 1; }
   .video-wrap.waiting::after {
     content: 'WAITING…';
     position: absolute; inset: 0;
@@ -582,14 +626,14 @@
     <!-- LOCAL TAB -->
     <div class="tab-pane" id="paneLocal">
       <div class="channel-row" style="flex-shrink:0; padding:4px 0;">
-        <button class="media-btn" id="videoBtn" onclick="toggleVideo()">Disable Video</button>
-        <button class="media-btn" id="screenBtn" onclick="toggleScreenShare()" style="border-color:var(--accent2);color:var(--accent2);">SCREEN</button>
-        <button class="media-btn" id="audioBtn" onclick="toggleAudio()">Disable Audio</button>
+        <button class="media-btn" id="videoBtn" onclick="toggleVideo()" data-tip="Enable or disable your camera">Disable Video</button>
+        <button class="media-btn" id="screenBtn" onclick="toggleScreenShare()" style="border-color:var(--accent2);color:var(--accent2);" data-tip="Share Your Screen">Share</button>
+        <button class="media-btn" id="audioBtn" onclick="toggleAudio()" data-tip="Enable or disable your microphone">Disable Audio</button>
       </div>
       <div class="channel-row" style="flex-shrink:0; padding:0 0 4px 0;">
-        <button class="media-btn" id="refreshBtnLocal" onclick="refreshScreen()">↺ Refresh</button>
-        <button class="media-btn" id="flipBtn" onclick="flipCamera()">⟳ Flip</button>
-        <button class="media-btn" id="recBtn" onclick="toggleRecord()">⏺ Record</button>
+        <button class="media-btn" id="refreshBtnLocal" onclick="refreshScreen()" data-tip="Reload page — session code is remembered">↺ Refresh</button>
+        <button class="media-btn" id="flipBtn" onclick="flipCamera()" data-tip="Switch between front and rear camera">⟳ Flip</button>
+        <button class="media-btn" id="recBtn" onclick="toggleRecord()" data-tip="Record audio + video to file">⏺ Record</button>
       </div>
       <div class="video-panel">
         <div class="panel-label">LOCAL — BRAVO</div>
@@ -598,6 +642,8 @@
             <video id="localVideo" autoplay="" playsinline="" muted=""></video>
             <span class="video-label">BRAVO</span>
             <span class="duplex-overlay" id="duplexBar">OFFLINE</span>
+            <video id="pipVideoLocal" class="pip-video" autoplay playsinline muted></video>
+            <button class="pip-toggle" id="pipBtnLocal" onclick="togglePip()" data-tip="Show/hide local camera overlay">⛶</button>
           </div>
         </div>
       </div>
@@ -605,14 +651,14 @@
     <!-- REMOTE TAB -->
     <div class="tab-pane active" id="paneRemote">
       <div class="channel-row" style="flex-shrink:0; padding:4px 0;">
-        <button class="media-btn" id="videoBtn2" onclick="toggleVideo()">Disable Video</button>
-        <button class="media-btn" id="screenBtn2" onclick="toggleScreenShare()" style="border-color:var(--accent2);color:var(--accent2);">SCREEN</button>
-        <button class="media-btn" id="audioBtn2" onclick="toggleAudio()">Disable Audio</button>
+        <button class="media-btn" id="videoBtn2" onclick="toggleVideo()" data-tip="Enable or disable your camera">Disable Video</button>
+        <button class="media-btn" id="screenBtn2" onclick="toggleScreenShare()" style="border-color:var(--accent2);color:var(--accent2);" data-tip="Share Your Screen">Share</button>
+        <button class="media-btn" id="audioBtn2" onclick="toggleAudio()" data-tip="Enable or disable your microphone">Disable Audio</button>
       </div>
       <div class="channel-row" style="flex-shrink:0; padding:0 0 4px 0;">
-        <button class="media-btn" id="refreshBtn" onclick="refreshScreen()">↺ Refresh</button>
-        <button class="media-btn" id="flipBtn2" onclick="flipCamera()">⟳ Flip</button>
-        <button class="media-btn" id="recBtn2" onclick="toggleRecord()">⏺ Record</button>
+        <button class="media-btn" id="refreshBtn" onclick="refreshScreen()" data-tip="Reload page — session code is remembered">↺ Refresh</button>
+        <button class="media-btn" id="flipBtn2" onclick="flipCamera()" data-tip="Switch between front and rear camera">⟳ Flip</button>
+        <button class="media-btn" id="recBtn2" onclick="toggleRecord()" data-tip="Record audio + video to file">⏺ Record</button>
       </div>
       <div class="video-panel">
         <div class="panel-label">REMOTE — ALPHA</div>
@@ -621,6 +667,8 @@
             <video id="remoteVideo" autoplay="" playsinline=""></video>
             <span class="video-label">ALPHA</span>
             <span class="duplex-overlay" id="duplexBar2">OFFLINE</span>
+            <video id="pipVideoRemote" class="pip-video" autoplay playsinline muted></video>
+            <button class="pip-toggle" id="pipBtnRemote" onclick="togglePip()" data-tip="Show/hide local camera overlay">⛶</button>
           </div>
         </div>
       </div>
@@ -636,11 +684,11 @@
         <div class="chat" id="chat"></div>
         <div class="file-preview-strip" id="filePreviewStrip"></div>
         <div class="chat-input-row">
-          <button class="attach-btn" id="attachBtn" title="Attach file / photo / video">📎</button>
+          <button class="attach-btn" id="attachBtn" data-tip="Attach photo, video or file">📎</button>
           <input type="file" id="fileInput" multiple="" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx" style="display:none">
           <input class="chat-input" id="chatInput" placeholder="TYPE MESSAGE…">
-          <button class="btn" id="sendBtn" onclick="sendChat()">SEND</button>
-          <button class="btn" onclick="clearHistory();chat.innerHTML=&#39;&#39;;entry(&#39;Chat history cleared&#39;,&#39;sys&#39;);" title="Clear history" style="padding:6px 10px;">🗑</button>
+          <button class="btn" id="sendBtn" onclick="sendChat()" data-tip="Send message">SEND</button>
+          <button class="btn" onclick="clearHistory();chat.innerHTML=&#39;&#39;;entry(&#39;Chat history cleared&#39;,&#39;sys&#39;);" data-tip="Clear chat history" style="padding:6px 10px;">🗑</button>
         </div>
       </div>
       <div class="log-panel">
@@ -1094,6 +1142,7 @@ function init() {
   function applyStreamFlags(stream) {
     localStream = stream;
     document.getElementById('localVideo').srcObject = stream;
+    refreshPip();
     entry('Mic + camera ready', 'ok');
     if (loginDisableVideoFlag) {
       const vt = stream.getVideoTracks()[0];
@@ -1463,7 +1512,6 @@ function toggleRecord() {
   }
 
   if (mediaRecorder && mediaRecorder.state !== 'inactive') return;
-
   if (!localStream) { entry('No local stream to record', 'err'); return; }
 
   if (audioCtx) { audioCtx.close(); audioCtx = null; mixDest = null; }
@@ -1474,13 +1522,22 @@ function toggleRecord() {
   const hasRemote = remoteVideo.srcObject && remoteVideo.srcObject.getTracks().length > 0;
   if (hasRemote) mixStream(remoteVideo.srcObject);
 
-  // Use remote video if available, otherwise fall back to local camera
-  const videoTracks = hasRemote
-    ? remoteVideo.srcObject.getVideoTracks()
-    : localStream.getVideoTracks();
+  // ── Choose video source ──────────────────────────────────────
+  let videoStream;
+  if (pipEnabled && hasRemote) {
+    const pipRef = document.getElementById('pipVideoRemote');
+    const W = remoteVideo.videoWidth  || 1280;
+    const H = remoteVideo.videoHeight || 720;
+    videoStream = startCanvasCompositor(remoteVideo, pipRef, W, H);
+  } else {
+    const videoTracks = hasRemote
+      ? remoteVideo.srcObject.getVideoTracks()
+      : localStream.getVideoTracks();
+    videoStream = new MediaStream([...videoTracks]);
+  }
 
   const recStream = new MediaStream([
-    ...videoTracks,
+    ...videoStream.getVideoTracks(),
     ...mixDest.stream.getAudioTracks()
   ]);
 
@@ -1499,6 +1556,7 @@ function toggleRecord() {
   mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordChunks.push(e.data); };
   mediaRecorder.onstop = () => {
     recBusy = false;
+    stopCanvasCompositor();
     audioCtx.close(); audioCtx = null; mixDest = null;
     if (recordChunks.length === 0) { entry('Recording empty — nothing saved', 'sys'); return; }
     const blob = new Blob(recordChunks, { type: mimeType });
@@ -1513,7 +1571,8 @@ function toggleRecord() {
   mediaRecorder.start(1000);
   btn.textContent  = '⏹ Stop & Save'; btn.classList.add('recording');
   if (btn2) { btn2.textContent = '⏹ Stop & Save'; btn2.classList.add('recording'); }
-  entry(`Recording started (${mimeType})…`, 'ok');
+  const pipNote = pipEnabled ? ' + PiP' : '';
+  entry(`Recording started (${mimeType}${pipNote})…`, 'ok');
 }
 
 function toggleVideo() {
@@ -1530,6 +1589,81 @@ function toggleVideo() {
     btns.forEach(b => { if(b){ b.textContent = 'Disable Video'; b.classList.remove('disabled-state'); }});
     entry('Local video enabled', 'sys');
   }
+}
+
+// ── Picture-in-Picture local overlay ─────────────────────────
+let pipEnabled = false;
+
+function getPipVideos() {
+  return [
+    document.getElementById('pipVideoLocal'),
+    document.getElementById('pipVideoRemote')
+  ];
+}
+function getPipBtns() {
+  return [
+    document.getElementById('pipBtnLocal'),
+    document.getElementById('pipBtnRemote')
+  ];
+}
+
+function togglePip() {
+  pipEnabled = !pipEnabled;
+  getPipVideos().forEach(v => {
+    if (!v) return;
+    if (pipEnabled) { v.srcObject = localStream || null; v.classList.add('active'); }
+    else            { v.srcObject = null; v.classList.remove('active'); }
+  });
+  getPipBtns().forEach(b => {
+    if (!b) return;
+    if (pipEnabled) { b.classList.add('pip-on'); b.setAttribute('data-tip', 'Hide local camera overlay'); }
+    else            { b.classList.remove('pip-on'); b.setAttribute('data-tip', 'Show local camera overlay'); }
+  });
+  entry('PiP overlay ' + (pipEnabled ? 'on' : 'off'), 'sys');
+}
+
+function refreshPip() {
+  if (!pipEnabled) return;
+  getPipVideos().forEach(v => { if (v) v.srcObject = localStream; });
+}
+
+// ── Canvas compositor for PiP-in-recording ───────────────────
+let recCanvas    = null;
+let recCanvasCtx = null;
+let recAnimId    = null;
+
+function startCanvasCompositor(mainVideo, pipVideo, w, h) {
+  recCanvas    = document.createElement('canvas');
+  recCanvas.width = w; recCanvas.height = h;
+  recCanvasCtx = recCanvas.getContext('2d');
+  const pip_w = Math.round(w * 0.28);
+  const pip_h = Math.round(pip_w * 0.75);
+  const pip_x = w - pip_w - 8;
+  const pip_y = h - pip_h - 8;
+  function draw() {
+    recCanvasCtx.drawImage(mainVideo, 0, 0, w, h);
+    if (pipEnabled && pipVideo && pipVideo.srcObject) {
+      recCanvasCtx.save();
+      recCanvasCtx.beginPath();
+      recCanvasCtx.roundRect(pip_x, pip_y, pip_w, pip_h, 4);
+      recCanvasCtx.clip();
+      recCanvasCtx.drawImage(pipVideo, pip_x, pip_y, pip_w, pip_h);
+      recCanvasCtx.restore();
+      recCanvasCtx.strokeStyle = 'rgba(0,255,159,0.6)';
+      recCanvasCtx.lineWidth = 1.5;
+      recCanvasCtx.beginPath();
+      recCanvasCtx.roundRect(pip_x, pip_y, pip_w, pip_h, 4);
+      recCanvasCtx.stroke();
+    }
+    recAnimId = requestAnimationFrame(draw);
+  }
+  draw();
+  return recCanvas.captureStream(30);
+}
+
+function stopCanvasCompositor() {
+  if (recAnimId) { cancelAnimationFrame(recAnimId); recAnimId = null; }
+  recCanvas = null; recCanvasCtx = null;
 }
 
 // ── Screen Share ──────────────────────────────────────────────
@@ -1605,7 +1739,7 @@ async function stopScreenShare() {
     if (sender && restoreTrack) await sender.replaceTrack(restoreTrack);
   } catch(e) {}
 
-  btns.forEach(b => { if(b){ b.textContent = 'SCREEN'; b.classList.remove('screen-active'); }});
+  btns.forEach(b => { if(b){ b.textContent = 'Share'; b.classList.remove('screen-active'); }});
   entry('Screen share stopped — camera restored', 'ok');
 }
 
@@ -1705,6 +1839,7 @@ async function flipCamera() {
     currentFacingMode = targetMode;
 
     document.getElementById('localVideo').srcObject = localStream;
+    refreshPip();
 
     // Replace track in active WebRTC call
     const pc = call && (call.peerConnection || call._pc);
