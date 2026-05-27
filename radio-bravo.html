@@ -973,6 +973,15 @@ const chat      = document.getElementById('chat');
 const chatInput = document.getElementById('chatInput');
 const sendBtn   = document.getElementById('sendBtn');
 
+// ── Sync chat send UI to data-channel state ───────────────────
+function syncSendUI() {
+  const ready = !!dataConn;
+  sendBtn.disabled   = !ready;
+  chatInput.disabled = !ready;
+  chatInput.placeholder = ready ? 'TYPE MESSAGE…' : 'WAITING FOR DATA CHANNEL…';
+}
+
+
 function startSession() {
   const code = document.getElementById('sessionCode').value.trim().toUpperCase().replace(/\s+/g,'');
   if (!code) { document.getElementById('sessionCode').focus(); return; }
@@ -1012,6 +1021,7 @@ function prefillLogin() {
   } catch(e) {}
 }
 prefillLogin();
+syncSendUI(); // button disabled until data channel opens
 
 // ── 60-second login timeout indicator ────────────────────────
 let loginTimeoutInterval;
@@ -1219,7 +1229,7 @@ function sendChat() {
   const txt = chatInput.value.trim();
   const hasFiles = pendingFiles.length > 0;
   if (!txt && !hasFiles) return;
-  if (!dataConn) { entry('Not connected — cannot send', 'err'); return; }
+  if (!dataConn) { Haptic.error(); entry('Not connected — cannot send', 'err'); return; }
   if (txt) {
     dataConn.send(txt);
     addBubble(txt, true);
@@ -1543,6 +1553,7 @@ function attachDataConn(dc) {
   dc.on('open', () => {
     dataConn = dc;
     entry('Chat channel open', 'ok');
+    syncSendUI();
   });
   dc.on('data', msg => {
     if (typeof msg === 'string' && msg.startsWith('{"__file":true')) {
@@ -1557,9 +1568,12 @@ function attachDataConn(dc) {
   dc.on('close', () => {
     dataConn = null;
     entry('Chat channel closed', 'sys');
+    syncSendUI();
   });
   dc.on('error', e => {
+    dataConn = null;
     entry('Data channel error: ' + (e.message || e), 'err');
+    syncSendUI();
   });
 }
 
@@ -1674,6 +1688,7 @@ function onDrop() {
   // Reset data channel state so it re-opens cleanly on reconnect
   if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
   pendingDC = false;
+  syncSendUI();
   stopQualityPolling();
   duplexBar.textContent = 'OFFLINE';
   duplexBar.className = 'duplex-overlay';
