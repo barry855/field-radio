@@ -78,10 +78,6 @@
     color: var(--accent); letter-spacing: 4px;
     text-shadow: 0 0 20px rgba(0,212,255,0.5); white-space: nowrap;
   }
-  .logo .greek {
-    font-family: 'Georgia', serif; font-size: 26px; font-weight: 700;
-    vertical-align: middle; line-height: 1;
-  }
   .logo span { color: var(--accent2); }
 
   .statusbar { display: flex; align-items: center; gap: 16px; flex: 1; flex-wrap: wrap; }
@@ -216,6 +212,14 @@
     letter-spacing: 0.5px; cursor: pointer;
     transition: background 0.15s, border-color 0.15s, color 0.15s;
     white-space: nowrap;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  .btn {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
   }
   .media-btn:hover { background: var(--btn-hover); }
   .media-btn.disabled-state {
@@ -287,51 +291,6 @@
     transition: background 0.15s, border-color 0.15s;
   }
   .session-go:hover { background: var(--btn-hover); border-color: var(--accent); }
-
-  /* login checkboxes */
-  .session-checks {
-    display: flex; gap: 14px; margin-bottom: 14px;
-  }
-  .session-check-item {
-    display: flex; align-items: center; gap: 6px;
-    font-size: 10px; color: var(--text-dim);
-    letter-spacing: 1px; text-transform: uppercase; cursor: pointer;
-  }
-  .session-check-item input[type=checkbox] {
-    width: 14px; height: 14px; accent-color: var(--accent);
-    cursor: pointer; margin: 0;
-  }
-
-  /* 60-second login timeout bar */
-  .login-timeout {
-    margin-bottom: 14px;
-  }
-  .login-timeout-label {
-    display: flex; justify-content: space-between;
-    font-size: 9px; color: var(--text-dim); letter-spacing: 1.5px;
-    text-transform: uppercase; margin-bottom: 4px;
-  }
-  .login-timeout-label span { color: var(--warn); font-family: 'Orbitron', sans-serif; }
-  .login-timeout-track {
-    width: 100%; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden;
-  }
-  .login-timeout-fill {
-    height: 100%; background: var(--accent); border-radius: 2px;
-    transition: width 1s linear, background 0.5s;
-    width: 100%;
-  }
-
-  /* 10-minute session countdown in header */
-  .session-timer {
-    margin-left: auto;
-    font-family: 'Orbitron', sans-serif;
-    font-size: 11px; font-weight: 700;
-    color: var(--text-dim); letter-spacing: 2px;
-    display: flex; align-items: center; gap: 6px;
-    white-space: nowrap;
-  }
-  .session-timer.warn { color: var(--warn); }
-  .session-timer.danger { color: var(--danger); animation: blink 0.8s step-end infinite; }
 
   /* ── video ── */
   .video-panel {
@@ -423,23 +382,9 @@
 
 <div class="session-overlay" id="sessionOverlay">
   <div class="session-box">
-    <span class="session-title">α · 01</span>
-    <label>Unit ID</label>
+    <span class="session-title">ALPHA · 01</span>
+    <label>Session Code</label>
     <input type="text" id="sessionCode" maxlength="8" placeholder="ENTER CODE" autocomplete="off" />
-    <div class="session-checks">
-      <label class="session-check-item">
-        <input type="checkbox" id="loginDisableVideo"> Disable Video
-      </label>
-      <label class="session-check-item">
-        <input type="checkbox" id="loginDisableAudio"> Disable Audio
-      </label>
-    </div>
-    <div class="login-timeout">
-      <div class="login-timeout-label">
-        <span>Login Timeout</span><span id="loginTimeoutSec">60s</span>
-      </div>
-      <div class="login-timeout-track"><div class="login-timeout-fill" id="loginTimeoutFill"></div></div>
-    </div>
     <button class="session-go" onclick="startSession()">CONNECT</button>
   </div>
 </div>
@@ -447,18 +392,14 @@
 <div class="shell">
 
   <header>
-    <div class="logo"><span class="greek">α</span><span>·</span>01</div>
-    <div class="statusbar">
+    <div class="logo">ALPHA<span>·</span>01</div>
+    <div class="statusbar" style="flex:1;">
       <div class="status-item">
         <div class="led" id="linkLed"></div>
         <span id="statusText">OFFLINE</span>
       </div>
-      <div class="status-item" id="unitIdDisplay" style="display:none;">
-        <span style="color:var(--text-dim);font-size:10px;letter-spacing:1px;">UNIT ID</span>
-        <span id="unitIdValue" style="color:var(--accent);font-family:'Orbitron',sans-serif;font-size:11px;letter-spacing:2px;"></span>
-      </div>
     </div>
-    <div class="session-timer" id="sessionTimerDisplay">⏱ --:--</div>
+    <button class="media-btn" id="flipBtn" onclick="flipCamera()" style="margin-left:auto; height:32px; font-size:11px;">⟳ Flip</button>
   </header>
 
   <div class="tab-bar">
@@ -472,10 +413,6 @@
       <div class="channel-row" style="flex-shrink:0; padding:4px 0;">
         <button class="media-btn" id="videoBtn" onclick="toggleVideo()">Disable Video</button>
         <button class="media-btn" id="audioBtn" onclick="toggleAudio()">Disable Audio</button>
-      </div>
-      <div class="channel-row" style="flex-shrink:0; padding:0 0 4px 0;">
-        <button class="media-btn" id="refreshBtnLocal" onclick="refreshScreen()">↺ Refresh</button>
-        <button class="media-btn" id="flipBtn" onclick="flipCamera()">⟳ Flip</button>
         <button class="media-btn" id="recBtn" onclick="toggleRecord()">⏺ Record</button>
       </div>
       <div class="video-panel">
@@ -494,10 +431,6 @@
       <div class="channel-row" style="flex-shrink:0; padding:4px 0;">
         <button class="media-btn" id="videoBtn2" onclick="toggleVideo()">Disable Video</button>
         <button class="media-btn" id="audioBtn2" onclick="toggleAudio()">Disable Audio</button>
-      </div>
-      <div class="channel-row" style="flex-shrink:0; padding:0 0 4px 0;">
-        <button class="media-btn" id="refreshBtn" onclick="refreshScreen()">↺ Refresh</button>
-        <button class="media-btn" id="flipBtn2" onclick="flipCamera()">⟳ Flip</button>
         <button class="media-btn" id="recBtn2" onclick="toggleRecord()">⏺ Record</button>
       </div>
       <div class="video-panel">
@@ -547,12 +480,6 @@ const ICE_SERVERS = [
 ];
 
 let MY_ID, REMOTE_ID;
-let loginDisableVideoFlag = false;
-let loginDisableAudioFlag = false;
-let audioMuted = false;
-let realAudioTrack = null;
-let silentCtx = null;
-let silentTrack = null;
 
 let peer, call, dataConn, localStream, linked = false, retryTimer;
 
@@ -569,111 +496,9 @@ function startSession() {
   if (!code) { document.getElementById('sessionCode').focus(); return; }
   MY_ID     = 'alpha-' + code;
   REMOTE_ID = 'bravo-' + code;
-  // Persist code and checkbox states for next load
-  const disVidChecked = document.getElementById('loginDisableVideo').checked;
-  const disAudChecked = document.getElementById('loginDisableAudio').checked;
-  try {
-    localStorage.setItem('alpha_last_code', code);
-    localStorage.setItem('alpha_disable_video', disVidChecked ? '1' : '0');
-    localStorage.setItem('alpha_disable_audio', disAudChecked ? '1' : '0');
-  } catch(e) {}
-  loginDisableVideoFlag = disVidChecked;
-  loginDisableAudioFlag = disAudChecked;
-  // Always log the checkbox state so we can see it in the activity log
-  entry('LOGIN: disableVideo=' + disVidChecked + ' disableAudio=' + disAudChecked, 'sys');
-  clearInterval(loginTimeoutInterval);
   document.getElementById('sessionOverlay').style.display = 'none';
-  document.getElementById('unitIdDisplay').style.display = 'flex';
-  document.getElementById('unitIdValue').textContent = code;
-  startSessionCountdown();
   init();
 }
-
-// ── Pre-fill last used code + checkbox states on load ────────
-(function() {
-  try {
-    const disVid = localStorage.getItem('alpha_disable_video') === '1';
-    const disAud = localStorage.getItem('alpha_disable_audio') === '1';
-    const last   = localStorage.getItem('alpha_last_code');
-    // Log what we found — visible in activity log after connect
-    setTimeout(() => entry('PREFILL: code=' + last + ' vid=' + disVid + ' aud=' + disAud, 'sys'), 500);
-    document.getElementById('loginDisableVideo').checked = disVid;
-    document.getElementById('loginDisableAudio').checked = disAud;
-    if (last) {
-      document.getElementById('sessionCode').value = last;
-      setTimeout(() => startSession(), 300);
-    }
-  } catch(e) {}
-})();
-
-// ── 60-second login timeout indicator ────────────────────────
-let loginTimeoutInterval;
-let loginSecsLeft = 60;
-function startLoginTimeout() {
-  loginSecsLeft = 60;
-  const fill = document.getElementById('loginTimeoutFill');
-  const sec  = document.getElementById('loginTimeoutSec');
-  fill.style.width = '100%';
-  fill.style.background = 'var(--accent)';
-  loginTimeoutInterval = setInterval(() => {
-    loginSecsLeft--;
-    const pct = (loginSecsLeft / 60) * 100;
-    fill.style.width = pct + '%';
-    sec.textContent = loginSecsLeft + 's';
-    if (loginSecsLeft <= 15) fill.style.background = 'var(--warn)';
-    if (loginSecsLeft <= 5)  fill.style.background = 'var(--danger)';
-    if (loginSecsLeft <= 0) {
-      clearInterval(loginTimeoutInterval);
-      sec.textContent = '0s';
-      fill.style.width = '0%';
-      // Flash the connect button to indicate timeout
-      const btn = document.querySelector('.session-go');
-      btn.style.borderColor = 'var(--danger)';
-      btn.style.color = 'var(--danger)';
-      btn.textContent = 'TIMED OUT — RETRY';
-      setTimeout(() => { startLoginTimeout(); btn.style.borderColor=''; btn.style.color=''; btn.textContent='CONNECT'; }, 2000);
-    }
-  }, 1000);
-}
-startLoginTimeout();
-
-// Restart login timer if overlay re-appears (handled inside resetLockTimer above)
-
-let sessionCountdownInterval;
-let sessionSecsRemaining = 0;
-const sessionTimerDisplay = document.getElementById('sessionTimerDisplay');
-
-function startSessionCountdown() {
-  sessionSecsRemaining = 10 * 60;
-  clearInterval(sessionCountdownInterval);
-  updateSessionTimer();
-  sessionCountdownInterval = setInterval(() => {
-    sessionSecsRemaining--;
-    updateSessionTimer();
-    if (sessionSecsRemaining <= 0) clearInterval(sessionCountdownInterval);
-  }, 1000);
-}
-
-function updateSessionTimer() {
-  const m = Math.floor(sessionSecsRemaining / 60);
-  const s = sessionSecsRemaining % 60;
-  const label = '⏱ ' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
-  sessionTimerDisplay.textContent = label;
-  sessionTimerDisplay.className = 'session-timer';
-  if (sessionSecsRemaining <= 60)  sessionTimerDisplay.classList.add('danger');
-  else if (sessionSecsRemaining <= 120) sessionTimerDisplay.classList.add('warn');
-}
-
-// Reset countdown on activity (mirrors lockTimer logic)
-function resetSessionCountdown() {
-  if (sessionSecsRemaining > 0) startSessionCountdown();
-}
-['click','keydown','mousemove','touchstart'].forEach(ev =>
-  document.addEventListener(ev, resetSessionCountdown, { passive: true })
-);
-
-// (session countdown integrated with resetLockTimer above)
-
 
 document.getElementById('sessionCode').addEventListener('keydown', e => {
   if (e.key === 'Enter') startSession();
@@ -700,13 +525,38 @@ let unreadCount = 0;
 const msgBadge = document.getElementById('msgBadge');
 
 function syncControls() {
-  // Keep remote tab's channel row in sync with local tab's
+  // Sync duplexBar overlay
   const d2 = document.getElementById('duplexBar2');
   if (d2) { d2.textContent = duplexBar.textContent; d2.className = duplexBar.className; }
-  ['recBtn'].forEach(id => {
-    const src = document.getElementById(id);
-    const dst = document.getElementById(id + '2');
-    if (src && dst) { dst.textContent = src.textContent; dst.className = src.className; }
+  // Sync local→remote for rec
+  const recSrc = document.getElementById('recBtn');
+  const recDst = document.getElementById('recBtn2');
+  if (recSrc && recDst) { recDst.textContent = recSrc.textContent; recDst.className = recSrc.className; }
+  // Sync video/audio state: read from track, apply to both buttons
+  applyMediaBtnState();
+}
+
+function applyMediaBtnState() {
+  if (!localStream) return;
+  const vTrack = localStream.getVideoTracks()[0];
+  const aTrack = localStream.getAudioTracks()[0];
+  ['videoBtn','videoBtn2'].forEach(id => {
+    const b = document.getElementById(id);
+    if (!b) return;
+    if (vTrack && !vTrack.enabled) {
+      b.textContent = 'Enable Video'; b.classList.add('disabled-state');
+    } else {
+      b.textContent = 'Disable Video'; b.classList.remove('disabled-state');
+    }
+  });
+  ['audioBtn','audioBtn2'].forEach(id => {
+    const b = document.getElementById(id);
+    if (!b) return;
+    if (aTrack && !aTrack.enabled) {
+      b.textContent = 'Enable Audio'; b.classList.add('disabled-state');
+    } else {
+      b.textContent = 'Disable Audio'; b.classList.remove('disabled-state');
+    }
   });
 }
 
@@ -783,25 +633,6 @@ function init() {
     localStream = stream;
     document.getElementById('localVideo').srcObject = stream;
     entry('Mic + camera ready', 'ok');
-    // Apply login-screen disable flags
-    if (loginDisableVideoFlag) {
-      const vt = stream.getVideoTracks()[0];
-      if (vt) { vt.enabled = false; }
-      const vb = document.getElementById('videoBtn'); if(vb){vb.textContent='Enable Video';vb.classList.add('disabled-state');}
-      const vb2 = document.getElementById('videoBtn2'); if(vb2){vb2.textContent='Enable Video';vb2.classList.add('disabled-state');}
-      entry('Video disabled (login setting)', 'sys');
-    }
-    if (loginDisableAudioFlag) {
-      const at = stream.getAudioTracks()[0];
-      entry('AUDIO FLAG: track=' + (at ? at.label : 'none') + ' enabled=' + (at ? at.enabled : 'n/a'), 'sys');
-      if (at) { realAudioTrack = at; at.enabled = false; audioMuted = true; }
-      entry('AUDIO FLAG: audioMuted now=' + audioMuted, 'sys');
-      const ab = document.getElementById('audioBtn'); if(ab){ab.textContent='Enable Audio';ab.classList.add('disabled-state');}
-      const ab2 = document.getElementById('audioBtn2'); if(ab2){ab2.textContent='Enable Audio';ab2.classList.add('disabled-state');}
-      entry('Audio disabled (login setting)', 'sys');
-    } else {
-      entry('AUDIO FLAG: not set, audio stays on', 'sys');
-    }
     startPeer();
   })
   .catch(e => {
@@ -873,26 +704,13 @@ function startPeer() {
   });
 }
 
-function getCallStream() {
-  const tracks = [...localStream.getVideoTracks()];
-  entry('STREAM: audioMuted=' + audioMuted + ' audioTracks=' + localStream.getAudioTracks().length, 'sys');
-  if (audioMuted) {
-    tracks.push(getSilentTrack());
-    entry('STREAM: using silent audio track', 'sys');
-  } else {
-    tracks.push(...localStream.getAudioTracks());
-    entry('STREAM: using real audio track', 'sys');
-  }
-  return new MediaStream(tracks);
-}
-
 function dial() {
   clearTimeout(retryTimer);
   if (linked || !localStream) return;
   entry('Calling Bravo…', 'info');
-  const c = peer.call(REMOTE_ID, getCallStream());
+  const c = peer.call(REMOTE_ID, localStream);
   attachCall(c);
-  openDataConn();
+  // Data channel opened after call stream confirmed (see attachCall)
 }
 
 function attachDataConn(dc) {
@@ -924,7 +742,7 @@ function openDataConn() {
 
 function answerCall(c) {
   clearTimeout(retryTimer);
-  c.answer(getCallStream());
+  c.answer(localStream);
   attachCall(c);
 }
 
@@ -935,13 +753,15 @@ function attachCall(c) {
     const remoteVideo = document.getElementById('remoteVideo');
     remoteVideo.srcObject = stream;
     document.getElementById('remoteWrap').classList.remove('waiting');
-    if (linked) return;
+    if (linked) return; // stream event can fire once per track — only act on first
     linked = true;
     setStatus('linked');
     entry('Linked to Bravo — full duplex active', 'ok');
     duplexBar.textContent = '● LIVE';
     duplexBar.className = 'duplex-overlay live';
     syncControls();
+    // Open data channel now that call is confirmed — small delay lets Bravo settle
+    if (!dataConn && !pendingDC) setTimeout(openDataConn, 800);
   });
   c.on('close', onDrop);
   c.on('error', e => { entry('Call error: ' + e.message, 'err'); onDrop(); });
@@ -966,49 +786,13 @@ function muteLocal() {
 
 // ── Session timeout (10 min inactivity) ──────────────────────
 let lockTimer;
-let autoReconnectTimer;
 function resetLockTimer() {
   clearTimeout(lockTimer);
   lockTimer = setTimeout(() => {
     // Re-show the session overlay to re-authenticate
     document.getElementById('sessionOverlay').style.display = 'flex';
-    document.getElementById('unitIdDisplay').style.display = 'none';
-    clearInterval(sessionCountdownInterval);
-    sessionSecsRemaining = 0;
-    sessionTimerDisplay.textContent = '⏱ --:--';
-    sessionTimerDisplay.className = 'session-timer';
     if (peer) { peer.destroy(); }
-    entry('Session timed out — auto-reconnecting…', 'sys');
-    // Auto-reconnect after 3 seconds (only on timeout, not on manual Refresh)
-    let autoSecs = 3;
-    const btn = document.querySelector('.session-go');
-    const origText = btn.textContent;
-    btn.textContent = `AUTO-CONNECT (${autoSecs}s) — TAP TO CANCEL`;
-    btn.style.borderColor = 'var(--warn)';
-    btn.style.color = 'var(--warn)';
-    const cancelOnce = () => {
-      clearTimeout(autoReconnectTimer);
-      clearInterval(autoCountdown);
-      btn.textContent = origText;
-      btn.style.borderColor = '';
-      btn.style.color = '';
-      startLoginTimeout();
-      btn.removeEventListener('click', cancelOnce);
-    };
-    btn.addEventListener('click', cancelOnce, { once: true });
-    const autoCountdown = setInterval(() => {
-      autoSecs--;
-      if (autoSecs > 0) {
-        btn.textContent = `AUTO-CONNECT (${autoSecs}s) — TAP TO CANCEL`;
-      } else {
-        clearInterval(autoCountdown);
-        btn.removeEventListener('click', cancelOnce);
-        btn.textContent = origText;
-        btn.style.borderColor = '';
-        btn.style.color = '';
-        startSession();
-      }
-    }, 1000);
+    entry('Session timed out — re-enter code to reconnect', 'sys');
   }, 10 * 60 * 1000);
 }
 ['click','keydown','mousemove','touchstart'].forEach(ev =>
@@ -1112,66 +896,18 @@ function toggleVideo() {
   if (!localStream) return;
   const track = localStream.getVideoTracks()[0];
   if (!track) return;
-  const btns = [document.getElementById('videoBtn'), document.getElementById('videoBtn2')];
-  if (track.enabled) {
-    track.enabled = false;
-    btns.forEach(b => { if(b){ b.textContent = 'Enable Video'; b.classList.add('disabled-state'); }});
-    entry('Local video disabled', 'sys');
-  } else {
-    track.enabled = true;
-    btns.forEach(b => { if(b){ b.textContent = 'Disable Video'; b.classList.remove('disabled-state'); }});
-    entry('Local video enabled', 'sys');
-  }
-}
-
-// ── Silent audio track used when muted ───────────────────────
-function getSilentTrack() {
-  if (silentTrack && silentTrack.readyState !== 'ended') return silentTrack;
-  silentCtx = new (window.AudioContext || window.webkitAudioContext)();
-  const dest = silentCtx.createMediaStreamDestination();
-  const osc  = silentCtx.createOscillator();
-  const gain = silentCtx.createGain();
-  gain.gain.value = 0;
-  osc.connect(gain);
-  gain.connect(dest);
-  osc.start();
-  silentTrack = dest.stream.getAudioTracks()[0];
-  return silentTrack;
+  track.enabled = !track.enabled;
+  entry(track.enabled ? 'Local video enabled' : 'Local video disabled', 'sys');
+  applyMediaBtnState();
 }
 
 function toggleAudio() {
   if (!localStream) return;
-  const btns = [document.getElementById('audioBtn'), document.getElementById('audioBtn2')];
-  realAudioTrack = localStream.getAudioTracks()[0];
-
-  if (!audioMuted) {
-    audioMuted = true;
-    if (realAudioTrack) realAudioTrack.enabled = false;
-    // Best-effort replaceTrack on active call
-    try {
-      const pc = call && (call.peerConnection || call._pc);
-      const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
-      if (sender) sender.replaceTrack(getSilentTrack()).catch(() => {});
-    } catch(e) {}
-    btns.forEach(b => { if(b){ b.textContent = 'Enable Audio'; b.classList.add('disabled-state'); }});
-    entry('Local audio muted', 'sys');
-  } else {
-    audioMuted = false;
-    if (realAudioTrack) realAudioTrack.enabled = true;
-    // Best-effort replaceTrack on active call
-    try {
-      const pc = call && (call.peerConnection || call._pc);
-      const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
-      if (sender && realAudioTrack) sender.replaceTrack(realAudioTrack).catch(() => {});
-    } catch(e) {}
-    btns.forEach(b => { if(b){ b.textContent = 'Disable Audio'; b.classList.remove('disabled-state'); }});
-    entry('Local audio unmuted', 'sys');
-  }
-}
-
-// ── Refresh Screen — reloads page (Unit ID pre-fills from localStorage) ──
-function refreshScreen() {
-  window.location.reload();
+  const track = localStream.getAudioTracks()[0];
+  if (!track) return;
+  track.enabled = !track.enabled;
+  entry(track.enabled ? 'Local audio unmuted' : 'Local audio muted', 'sys');
+  applyMediaBtnState();
 }
 
 // ── Camera flip (Android front/back) ─────────────────────────
