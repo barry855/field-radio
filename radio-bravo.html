@@ -830,7 +830,7 @@ const msgBadge = document.getElementById('msgBadge');
 function syncControls() {
   const d2 = document.getElementById('duplexBar2');
   if (d2) { d2.textContent = duplexBar.textContent; d2.className = duplexBar.className; }
-  ['recBtn'].forEach(id => {
+  ['videoBtn', 'screenBtn', 'audioBtn', 'recBtn'].forEach(id => {
     const src = document.getElementById(id);
     const dst = document.getElementById(id + '2');
     if (src && dst) { dst.textContent = src.textContent; dst.className = src.className; }
@@ -1732,6 +1732,8 @@ async function flipCamera() {
 }
 
 window.addEventListener('beforeunload', () => { peer?.destroy(); });
+// Sync remote-tab controls on initial load so SCREEN button is visible from the start
+syncControls();
 </script>
 </body>
 </html>
