@@ -792,6 +792,154 @@
 <div id="lightbox"><img id="lightboxImg" src="file:///C:/Users/barry/Downloads/radio-bravo_21.html" alt=""></div>
 
 <script>
+
+// ══════════════════════════════════════════════════════════════
+//  HAPTIC SOUND ENGINE
+//  Web Audio API — no files needed. All sounds synthesised.
+//  Excluded: incoming chat messages (as specified).
+// ══════════════════════════════════════════════════════════════
+const Haptic = (() => {
+  let _ctx = null;
+
+  function ctx() {
+    if (!_ctx) _ctx = new (window.AudioContext || window.webkitAudioContext)();
+    // Resume if suspended (autoplay policy)
+    if (_ctx.state === 'suspended') _ctx.resume();
+    return _ctx;
+  }
+
+  // Core tone builder
+  function tone({ freq = 440, freq2 = null, type = 'sine', gain = 0.18,
+                  attack = 0.005, decay = 0.08, sustain = 0, release = 0.06,
+                  start = 0, duration = null }) {
+    const c = ctx();
+    const now = c.currentTime + start;
+    const dur = duration ?? (attack + decay + sustain + release);
+
+    const osc = c.createOscillator();
+    const env = c.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, now);
+    if (freq2 !== null) {
+      osc.frequency.linearRampToValueAtTime(freq2, now + dur);
+    }
+    env.gain.setValueAtTime(0, now);
+    env.gain.linearRampToValueAtTime(gain, now + attack);
+    env.gain.linearRampToValueAtTime(sustain > 0 ? gain * 0.6 : 0, now + attack + decay);
+    if (sustain > 0) env.gain.linearRampToValueAtTime(0, now + attack + decay + sustain + release);
+    osc.connect(env);
+    env.connect(c.destination);
+    osc.start(now);
+    osc.stop(now + dur + 0.02);
+  }
+
+  // Noise burst (for error buzz)
+  function noise({ gain = 0.06, duration = 0.12, start = 0 }) {
+    const c = ctx();
+    const now = c.currentTime + start;
+    const bufSize = Math.floor(c.sampleRate * duration);
+    const buf = c.createBuffer(1, bufSize, c.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) d[i] = (Math.random() * 2 - 1);
+    const src = c.createBufferSource();
+    src.buffer = buf;
+    const filt = c.createBiquadFilter();
+    filt.type = 'bandpass'; filt.frequency.value = 180; filt.Q.value = 0.8;
+    const env = c.createGain();
+    env.gain.setValueAtTime(gain, now);
+    env.gain.linearRampToValueAtTime(0, now + duration);
+    src.connect(filt); filt.connect(env); env.connect(c.destination);
+    src.start(now); src.stop(now + duration + 0.01);
+  }
+
+  return {
+    // ── Button press — generic control tap ──────────────────
+    tap() {
+      tone({ freq: 900, type: 'square', gain: 0.07,
+             attack: 0.002, decay: 0.04, sustain: 0, release: 0 });
+    },
+
+    // ── Session connect (CONNECT button pressed) ────────────
+    sessionStart() {
+      tone({ freq: 440, gain: 0.14, attack: 0.005, decay: 0.07, start: 0 });
+      tone({ freq: 660, gain: 0.14, attack: 0.005, decay: 0.09, start: 0.08 });
+      tone({ freq: 880, gain: 0.16, attack: 0.005, decay: 0.14, start: 0.18 });
+    },
+
+    // ── Link established (full duplex live) ─────────────────
+    linkUp() {
+      tone({ freq: 523, type: 'sine', gain: 0.16, attack: 0.005, decay: 0.1, start: 0    });
+      tone({ freq: 784, type: 'sine', gain: 0.18, attack: 0.005, decay: 0.12, start: 0.1 });
+      tone({ freq: 1046,type: 'sine', gain: 0.20, attack: 0.005, decay: 0.18, start: 0.22 });
+    },
+
+    // ── Link lost / call drop ────────────────────────────────
+    linkDown() {
+      tone({ freq: 880, type: 'sine', gain: 0.16, attack: 0.005, decay: 0.1, start: 0    });
+      tone({ freq: 587, type: 'sine', gain: 0.14, attack: 0.005, decay: 0.1, start: 0.1  });
+      tone({ freq: 370, type: 'sine', gain: 0.12, attack: 0.005, decay: 0.14, start: 0.2 });
+    },
+
+    // ── Record start ─────────────────────────────────────────
+    recStart() {
+      tone({ freq: 1200, type: 'square', gain: 0.09, attack: 0.003, decay: 0.05, start: 0    });
+      tone({ freq: 1600, type: 'square', gain: 0.09, attack: 0.003, decay: 0.06, start: 0.07 });
+    },
+
+    // ── Record stop ──────────────────────────────────────────
+    recStop() {
+      tone({ freq: 1600, type: 'square', gain: 0.09, attack: 0.003, decay: 0.05, start: 0    });
+      tone({ freq: 800,  type: 'square', gain: 0.07, attack: 0.003, decay: 0.08, start: 0.07 });
+    },
+
+    // ── Error ────────────────────────────────────────────────
+    error() {
+      noise({ gain: 0.08, duration: 0.14, start: 0    });
+      noise({ gain: 0.06, duration: 0.10, start: 0.18 });
+    },
+
+    // ── Session timeout warning ──────────────────────────────
+    sessionTimeout() {
+      tone({ freq: 880, freq2: 220, type: 'sine', gain: 0.15,
+             attack: 0.005, decay: 0.0, sustain: 0.35, release: 0.15,
+             duration: 0.50 });
+    },
+
+    // ── Audio mute/unmute toggle ─────────────────────────────
+    audioToggle(muted) {
+      if (muted) {
+        tone({ freq: 600, type: 'sine', gain: 0.12, attack: 0.003, decay: 0.05, start: 0    });
+        tone({ freq: 400, type: 'sine', gain: 0.10, attack: 0.003, decay: 0.07, start: 0.07 });
+      } else {
+        tone({ freq: 400, type: 'sine', gain: 0.10, attack: 0.003, decay: 0.05, start: 0    });
+        tone({ freq: 600, type: 'sine', gain: 0.12, attack: 0.003, decay: 0.07, start: 0.07 });
+      }
+    },
+
+    // ── Screen share on/off ──────────────────────────────────
+    screenOn() {
+      tone({ freq: 700,  type: 'sine', gain: 0.12, attack: 0.005, decay: 0.07, start: 0    });
+      tone({ freq: 1050, type: 'sine', gain: 0.12, attack: 0.005, decay: 0.07, start: 0.09 });
+    },
+    screenOff() {
+      tone({ freq: 1050, type: 'sine', gain: 0.12, attack: 0.005, decay: 0.07, start: 0    });
+      tone({ freq: 700,  type: 'sine', gain: 0.12, attack: 0.005, decay: 0.07, start: 0.09 });
+    },
+
+    // ── Message sent ─────────────────────────────────────────
+    msgSent() {
+      tone({ freq: 1100, type: 'sine', gain: 0.08,
+             attack: 0.002, decay: 0.05, start: 0 });
+    },
+
+    // ── Camera flip ─────────────────────────────────────────
+    flip() {
+      tone({ freq: 800, freq2: 1200, type: 'sine', gain: 0.10,
+             attack: 0.003, decay: 0.08, start: 0 });
+    },
+  };
+})();
+
 const script = document.createElement('script');
 script.src = 'https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js';
 document.head.appendChild(script);
@@ -841,6 +989,7 @@ function startSession() {
   loginDisableAudioFlag = disAudChecked;
   entry('LOGIN: disableVideo=' + disVidChecked + ' disableAudio=' + disAudChecked, 'sys');
   clearInterval(loginTimeoutInterval);
+  Haptic.sessionStart();
   document.getElementById('sessionOverlay').style.display = 'none';
   document.getElementById('unitIdDisplay').style.display = 'flex';
   document.getElementById('unitIdValue').textContent = code;
@@ -1074,6 +1223,7 @@ function sendChat() {
   if (txt) {
     dataConn.send(txt);
     addBubble(txt, true);
+    Haptic.msgSent();
     chatInput.value = '';
   }
   if (hasFiles) {
@@ -1290,7 +1440,7 @@ function init() {
 
   function handleMediaError(e) {
     if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError') {
-      entry('Mic blocked — click padlock in address bar, set Microphone to Allow, reload', 'err');
+      Haptic.error(); entry('Mic blocked — click padlock in address bar, set Microphone to Allow, reload', 'err');
     } else if (e.name === 'NotFoundError') {
       entry('No microphone found on this device', 'err');
     } else if (e.name === 'SecurityError') {
@@ -1499,6 +1649,7 @@ function attachCall(c) {
     if (linked) return;
     linked = true;
     setStatus('linked');
+    Haptic.linkUp();
     entry('Linked to Alpha — full duplex active', 'ok');
     duplexBar.textContent = '● LIVE';
     duplexBar.className = 'duplex-overlay live';
@@ -1518,6 +1669,7 @@ function attachCall(c) {
 
 function onDrop() {
   linked = false;
+  Haptic.linkDown();
   call = null;
   // Reset data channel state so it re-opens cleanly on reconnect
   if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
@@ -1551,6 +1703,7 @@ function resetLockTimer() {
     sessionTimerDisplay.textContent = '⏱ --:--';
     sessionTimerDisplay.className = 'session-timer';
     if (peer) { peer.destroy(); }
+    Haptic.sessionTimeout();
     entry('Session timed out — auto-reconnecting…', 'sys');
     // Auto-reconnect after 3 seconds (only on timeout, not on manual Refresh)
     let autoSecs = 3;
@@ -1618,6 +1771,7 @@ function toggleRecord() {
   if (mediaRecorder && mediaRecorder.state === 'recording') {
     recBusy = true;
     mediaRecorder.stop();
+    Haptic.recStop();
     btn.textContent  = '⏺ Record'; btn.classList.remove('recording');
     if (btn2) { btn2.textContent = '⏺ Record'; btn2.classList.remove('recording'); }
     entry('Recording stopped — saving…', 'sys');
@@ -1673,12 +1827,14 @@ function toggleRecord() {
     entry(`Recording saved (${ext})`, 'ok');
   };
   mediaRecorder.start(1000);
+  Haptic.recStart();
   btn.textContent  = '⏹ Stop & Save'; btn.classList.add('recording');
   if (btn2) { btn2.textContent = '⏹ Stop & Save'; btn2.classList.add('recording'); }
   entry(`Recording started (${mimeType})…`, 'ok');
 }
 
 function toggleVideo() {
+  Haptic.tap();
   if (!localStream) return;
   const track = localStream.getVideoTracks()[0];
   if (!track) return;
@@ -1723,6 +1879,7 @@ async function toggleScreenShare() {
       } catch(e) { entry('Screen share track replace error: ' + e.message, 'err'); }
 
       screenSharing = true;
+      Haptic.screenOn();
       btns.forEach(b => { if(b){ b.textContent = 'CAMERA'; b.classList.add('screen-active'); }});
       entry('Screen share started', 'ok');
 
@@ -1767,6 +1924,7 @@ async function stopScreenShare() {
     if (sender && restoreTrack) await sender.replaceTrack(restoreTrack);
   } catch(e) {}
 
+  Haptic.screenOff();
   btns.forEach(b => { if(b){ b.textContent = 'SCREEN'; b.classList.remove('screen-active'); }});
   entry('Screen share stopped — camera restored', 'ok');
 }
@@ -1799,6 +1957,7 @@ function toggleAudio() {
       const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
       if (sender) sender.replaceTrack(getSilentTrack()).catch(() => {});
     } catch(e) {}
+    Haptic.audioToggle(true);
     btns.forEach(b => { if(b){ b.textContent = 'Enable Audio'; b.classList.add('disabled-state'); }});
     entry('Local audio muted', 'sys');
   } else {
@@ -1809,6 +1968,7 @@ function toggleAudio() {
       const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
       if (sender && realAudioTrack) sender.replaceTrack(realAudioTrack).catch(() => {});
     } catch(e) {}
+    Haptic.audioToggle(false);
     btns.forEach(b => { if(b){ b.textContent = 'Disable Audio'; b.classList.remove('disabled-state'); }});
     entry('Local audio unmuted', 'sys');
   }
@@ -1880,6 +2040,7 @@ async function flipCamera() {
       if (sender) await sender.replaceTrack(newVideoTrack);
     }
 
+    Haptic.flip();
     entry('Camera flipped to ' + (currentFacingMode === 'user' ? 'front' : 'rear'), 'ok');
   } catch (e) {
     // All attempts failed — old track was never stopped, localStream is intact
