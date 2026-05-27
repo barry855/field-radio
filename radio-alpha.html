@@ -586,14 +586,13 @@ function startSession() {
 // ── Pre-fill last used code + checkbox states on load ────────
 (function() {
   try {
-    const last  = localStorage.getItem('alpha_last_code');
     const disVid = localStorage.getItem('alpha_disable_video') === '1';
     const disAud = localStorage.getItem('alpha_disable_audio') === '1';
-    if (disVid) document.getElementById('loginDisableVideo').checked = true;
-    if (disAud) document.getElementById('loginDisableAudio').checked = true;
+    document.getElementById('loginDisableVideo').checked = disVid;
+    document.getElementById('loginDisableAudio').checked = disAud;
+    const last = localStorage.getItem('alpha_last_code');
     if (last) {
       document.getElementById('sessionCode').value = last;
-      // Auto-connect immediately on reload
       setTimeout(() => startSession(), 300);
     }
   } catch(e) {}
