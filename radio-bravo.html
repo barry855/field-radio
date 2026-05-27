@@ -549,6 +549,10 @@ const ICE_SERVERS = [
 let MY_ID, REMOTE_ID;
 let loginDisableVideoFlag = false;
 let loginDisableAudioFlag = false;
+let audioMuted = false;
+let realAudioTrack = null;
+let silentCtx = null;
+let silentTrack = null;
 
 let peer, call, dataConn, localStream, linked = false;
 
@@ -565,13 +569,16 @@ function startSession() {
   if (!code) { document.getElementById('sessionCode').focus(); return; }
   MY_ID     = 'bravo-' + code;
   REMOTE_ID = 'alpha-' + code;
+  const disVidChecked = document.getElementById('loginDisableVideo').checked;
+  const disAudChecked = document.getElementById('loginDisableAudio').checked;
   try {
     localStorage.setItem('bravo_last_code', code);
-    localStorage.setItem('bravo_disable_video', document.getElementById('loginDisableVideo').checked ? '1' : '0');
-    localStorage.setItem('bravo_disable_audio', document.getElementById('loginDisableAudio').checked ? '1' : '0');
+    localStorage.setItem('bravo_disable_video', disVidChecked ? '1' : '0');
+    localStorage.setItem('bravo_disable_audio', disAudChecked ? '1' : '0');
   } catch(e) {}
-  loginDisableVideoFlag = document.getElementById('loginDisableVideo').checked;
-  loginDisableAudioFlag = document.getElementById('loginDisableAudio').checked;
+  loginDisableVideoFlag = disVidChecked;
+  loginDisableAudioFlag = disAudChecked;
+  entry('LOGIN: disableVideo=' + disVidChecked + ' disableAudio=' + disAudChecked, 'sys');
   clearInterval(loginTimeoutInterval);
   document.getElementById('sessionOverlay').style.display = 'none';
   document.getElementById('unitIdDisplay').style.display = 'flex';
@@ -585,9 +592,10 @@ function startSession() {
   try {
     const disVid = localStorage.getItem('bravo_disable_video') === '1';
     const disAud = localStorage.getItem('bravo_disable_audio') === '1';
+    const last   = localStorage.getItem('bravo_last_code');
+    setTimeout(() => entry('PREFILL: code=' + last + ' vid=' + disVid + ' aud=' + disAud, 'sys'), 500);
     document.getElementById('loginDisableVideo').checked = disVid;
     document.getElementById('loginDisableAudio').checked = disAud;
-    const last = localStorage.getItem('bravo_last_code');
     if (last) {
       document.getElementById('sessionCode').value = last;
       setTimeout(() => startSession(), 300);
@@ -774,10 +782,14 @@ function init() {
     }
     if (loginDisableAudioFlag) {
       const at = stream.getAudioTracks()[0];
+      entry('AUDIO FLAG: track=' + (at ? at.label : 'none') + ' enabled=' + (at ? at.enabled : 'n/a'), 'sys');
       if (at) { realAudioTrack = at; at.enabled = false; audioMuted = true; }
+      entry('AUDIO FLAG: audioMuted now=' + audioMuted, 'sys');
       const ab = document.getElementById('audioBtn'); if(ab){ab.textContent='Enable Audio';ab.classList.add('disabled-state');}
       const ab2 = document.getElementById('audioBtn2'); if(ab2){ab2.textContent='Enable Audio';ab2.classList.add('disabled-state');}
       entry('Audio disabled (login setting)', 'sys');
+    } else {
+      entry('AUDIO FLAG: not set, audio stays on', 'sys');
     }
     startPeer();
   })
@@ -891,12 +903,16 @@ function openDataConn() {
 
 function getCallStream() {
   const tracks = [...localStream.getVideoTracks()];
+  entry('STREAM: audioMuted=' + audioMuted + ' audioTracks=' + localStream.getAudioTracks().length, 'sys');
   if (audioMuted) {
     tracks.push(getSilentTrack());
-    entry('Answering with silent audio (muted)', 'sys');
+    entry('STREAM: using silent audio track', 'sys');
   } else {
     tracks.push(...localStream.getAudioTracks());
+    entry('STREAM: using real audio track', 'sys');
   }
+  return new MediaStream(tracks);
+}
   return new MediaStream(tracks);
 }
 
@@ -1097,9 +1113,6 @@ function toggleVideo() {
 }
 
 // ── Silent audio track used when muted ───────────────────────
-let silentCtx = null;
-let silentTrack = null;
-
 function getSilentTrack() {
   if (silentTrack && silentTrack.readyState !== 'ended') return silentTrack;
   silentCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1113,9 +1126,6 @@ function getSilentTrack() {
   silentTrack = dest.stream.getAudioTracks()[0];
   return silentTrack;
 }
-
-let audioMuted = false;
-let realAudioTrack = null;
 
 function toggleAudio() {
   if (!localStream) return;
