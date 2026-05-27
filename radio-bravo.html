@@ -717,6 +717,23 @@ function switchTab(tab) {
   }
 }
 
+function linkify(text) {
+  const frag = document.createDocumentFragment();
+  const re = /(https?:\/\/[^\s]+)/g;
+  let last = 0, m;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) frag.appendChild(document.createTextNode(text.slice(last, m.index)));
+    const a = document.createElement('a');
+    a.href = m[1]; a.textContent = m[1];
+    a.target = '_blank'; a.rel = 'noopener noreferrer';
+    a.style.cssText = 'color:inherit;text-decoration:underline;word-break:break-all;';
+    frag.appendChild(a);
+    last = re.lastIndex;
+  }
+  if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+  return frag;
+}
+
 function addBubble(text, mine) {
   const wrap = document.createElement('div');
   wrap.className = 'bubble ' + (mine ? 'mine' : 'theirs');
@@ -724,7 +741,7 @@ function addBubble(text, mine) {
   who.className = 'who';
   who.textContent = mine ? 'BRAVO' : 'ALPHA';
   const msg = document.createElement('div');
-  msg.textContent = text;
+  msg.appendChild(linkify(text));
   wrap.appendChild(who);
   wrap.appendChild(msg);
   chat.appendChild(wrap);
