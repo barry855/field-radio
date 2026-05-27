@@ -976,9 +976,9 @@ const sendBtn   = document.getElementById('sendBtn');
 // ── Sync chat send UI to data-channel state ───────────────────
 function syncSendUI() {
   const ready = !!dataConn;
-  sendBtn.disabled   = !ready;
-  chatInput.disabled = !ready;
-  chatInput.placeholder = ready ? 'TYPE MESSAGE…' : 'WAITING FOR DATA CHANNEL…';
+  sendBtn.disabled      = !ready;
+  chatInput.disabled    = false;   // always typeable — user may compose before link
+  chatInput.placeholder = ready ? 'TYPE MESSAGE…' : 'NOT CONNECTED…';
 }
 
 
