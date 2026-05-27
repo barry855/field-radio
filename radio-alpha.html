@@ -590,21 +590,18 @@ function startSession() {
 }
 
 // ── Pre-fill last used code + checkbox states on load ────────
-(function() {
+function prefillLogin() {
   try {
     const disVid = localStorage.getItem('alpha_disable_video') === '1';
     const disAud = localStorage.getItem('alpha_disable_audio') === '1';
     const last   = localStorage.getItem('alpha_last_code');
-    // Log what we found — visible in activity log after connect
-    setTimeout(() => entry('PREFILL: code=' + last + ' vid=' + disVid + ' aud=' + disAud, 'sys'), 500);
     document.getElementById('loginDisableVideo').checked = disVid;
     document.getElementById('loginDisableAudio').checked = disAud;
-    if (last) {
-      document.getElementById('sessionCode').value = last;
-      setTimeout(() => startSession(), 300);
-    }
+    if (last) document.getElementById('sessionCode').value = last;
+    setTimeout(() => entry('PREFILL: code=' + last + ' vid=' + disVid + ' aud=' + disAud, 'sys'), 500);
   } catch(e) {}
-})();
+}
+prefillLogin();
 
 // ── 60-second login timeout indicator ────────────────────────
 let loginTimeoutInterval;
@@ -976,6 +973,7 @@ function resetLockTimer() {
     // Re-show the session overlay to re-authenticate
     document.getElementById('sessionOverlay').style.display = 'flex';
     document.getElementById('unitIdDisplay').style.display = 'none';
+    prefillLogin();
     clearInterval(sessionCountdownInterval);
     sessionSecsRemaining = 0;
     sessionTimerDisplay.textContent = '⏱ --:--';
