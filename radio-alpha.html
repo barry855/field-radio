@@ -1104,33 +1104,9 @@ function toggleAudio() {
   }
 }
 
-// ── Refresh Screen — returns to login with same Unit ID ───────
+// ── Refresh Screen — reloads page (Unit ID pre-fills from localStorage) ──
 function refreshScreen() {
-  entry('Returning to login…', 'sys');
-  // Tear down active connection
-  clearTimeout(retryTimer);
-  if (call) { try { call.close(); } catch(e){} call = null; }
-  if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
-  if (peer) { try { peer.destroy(); } catch(e){} peer = null; }
-  linked = false;
-  // Stop media tracks
-  if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
-  document.getElementById('localVideo').srcObject = null;
-  document.getElementById('remoteVideo').srcObject = null;
-  document.getElementById('remoteWrap').classList.add('waiting');
-  // Reset duplex / status indicators
-  duplexBar.textContent = 'OFFLINE'; duplexBar.className = 'duplex-overlay';
-  const db2 = document.getElementById('duplexBar2');
-  if (db2) { db2.textContent = 'OFFLINE'; db2.className = 'duplex-overlay'; }
-  setStatus('offline');
-  // Reset session countdown
-  clearInterval(sessionCountdownInterval);
-  sessionSecsRemaining = 0;
-  sessionTimerDisplay.textContent = '⏱ --:--';
-  sessionTimerDisplay.className = 'session-timer';
-  // Show login overlay — code stays pre-filled from localStorage
-  document.getElementById('sessionOverlay').style.display = 'flex';
-  startLoginTimeout();
+  window.location.reload();
 }
 
 // ── Camera flip (Android front/back) ─────────────────────────
