@@ -504,6 +504,28 @@
     letter-spacing: 3px; color: var(--text-dim);
     background: rgba(0,0,0,0.72);
   }
+  .mini-video-overlay {
+    position: absolute; top: 16px; right: 20px; z-index: 4;
+    width: clamp(112px, 30%, 170px); aspect-ratio: 16/9;
+    background: #000; border: 1px solid var(--accent);
+    border-radius: 4px; overflow: hidden;
+    box-shadow: 0 8px 22px rgba(0,0,0,0.42);
+  }
+  .mini-video-overlay.hidden { display: none; }
+  .mini-video-overlay video {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+  }
+  .mini-video-overlay .video-label {
+    bottom: 4px; left: 6px; font-size: 8px; letter-spacing: 1px;
+  }
+  .mini-video-overlay.no-video::after {
+    content: 'NO VIDEO';
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Orbitron', sans-serif; font-size: 8px;
+    letter-spacing: 2px; color: var(--text-dim);
+    background: rgba(0,0,0,0.72);
+  }
 
   /* ── tab bar ── */
   .tab-bar {
@@ -618,6 +640,7 @@
     <div class="tab-pane" id="paneLocal">
       <div class="channel-row" style="flex-shrink:0; padding:4px 0;">
         <button class="media-btn" id="videoBtn" onclick="toggleVideo()">Disable Video</button>
+        <button class="media-btn" id="miniBtn" onclick="toggleMiniVideo()">Hide Mini</button>
         <button class="media-btn" id="screenBtn" onclick="toggleScreenShare()" style="border-color:var(--accent);color:var(--accent);">SCREEN</button>
         <button class="media-btn" id="audioBtn" onclick="toggleAudio()">Disable Audio</button>
       </div>
@@ -635,12 +658,17 @@
             <span class="duplex-overlay" id="duplexBar">OFFLINE</span>
           </div>
         </div>
+        <div class="mini-video-overlay" id="miniRemoteOverlay">
+          <video id="miniRemoteVideo" autoplay="" playsinline=""></video>
+          <span class="video-label">BRAVO</span>
+        </div>
       </div>
     </div>
     <!-- REMOTE TAB -->
     <div class="tab-pane active" id="paneRemote">
       <div class="channel-row" style="flex-shrink:0; padding:4px 0;">
         <button class="media-btn" id="videoBtn2" onclick="toggleVideo()">Disable Video</button>
+        <button class="media-btn" id="miniBtn2" onclick="toggleMiniVideo()">Hide Mini</button>
         <button class="media-btn" id="screenBtn2" onclick="toggleScreenShare()" style="border-color:var(--accent);color:var(--accent);">SCREEN</button>
         <button class="media-btn" id="audioBtn2" onclick="toggleAudio()">Disable Audio</button>
       </div>
@@ -657,6 +685,10 @@
             <span class="video-label">BRAVO</span>
             <span class="duplex-overlay" id="duplexBar2">OFFLINE</span>
           </div>
+        </div>
+        <div class="mini-video-overlay" id="miniLocalOverlay">
+          <video id="miniLocalVideo" autoplay="" playsinline="" muted=""></video>
+          <span class="video-label">ALPHA</span>
         </div>
       </div>
     </div>
@@ -820,6 +852,7 @@ function setStatus(state) {
 
 let activeTab = 'remote';
 let unreadCount = 0;
+let miniVideoVisible = true;
 const msgBadge = document.getElementById('msgBadge');
 
 function syncControls() {
@@ -848,6 +881,39 @@ function switchTab(tab) {
     msgBadge.classList.remove('visible');
   }
 }
+
+function syncMiniVideos() {
+  const miniLocal = document.getElementById('miniLocalVideo');
+  const miniRemote = document.getElementById('miniRemoteVideo');
+  const miniLocalOverlay = document.getElementById('miniLocalOverlay');
+  const miniRemoteOverlay = document.getElementById('miniRemoteOverlay');
+  const remoteVideo = document.getElementById('remoteVideo');
+  if (miniLocal && localStream && miniLocal.srcObject !== localStream) {
+    miniLocal.srcObject = localStream;
+  }
+  if (miniRemote && remoteVideo && miniRemote.srcObject !== remoteVideo.srcObject) {
+    miniRemote.srcObject = remoteVideo.srcObject;
+  }
+  if (miniLocalOverlay) miniLocalOverlay.classList.toggle('no-video', !localStream);
+  if (miniRemoteOverlay) miniRemoteOverlay.classList.toggle('no-video', !(remoteVideo && remoteVideo.srcObject));
+}
+
+function updateMiniVideoVisibility() {
+  ['miniLocalOverlay', 'miniRemoteOverlay'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('hidden', !miniVideoVisible);
+  });
+  [document.getElementById('miniBtn'), document.getElementById('miniBtn2')].forEach(btn => {
+    if (btn) btn.textContent = miniVideoVisible ? 'Hide Mini' : 'Show Mini';
+  });
+  syncMiniVideos();
+}
+
+function toggleMiniVideo() {
+  miniVideoVisible = !miniVideoVisible;
+  updateMiniVideoVisibility();
+}
+updateMiniVideoVisibility();
 
 function linkify(text) {
   const frag = document.createDocumentFragment();
@@ -967,6 +1033,8 @@ function setupTooltips() {
     videoBtn2: 'Toggle local video',
     screenBtn: 'Share screen or return to camera',
     screenBtn2: 'Share screen or return to camera',
+    miniBtn: 'Show or hide the small video overlay',
+    miniBtn2: 'Show or hide the small video overlay',
     audioBtn: 'Toggle microphone',
     audioBtn2: 'Toggle microphone',
     refreshBtn: 'Reconnect the remote screen',
@@ -1191,6 +1259,7 @@ function init() {
     localStream = stream;
     document.getElementById('localVideo').srcObject = stream;
     entry('Mic + camera ready', 'ok');
+    syncMiniVideos();
     updateLocalVideoState();
     if (loginDisableVideoFlag) {
       const vt = stream.getVideoTracks()[0];
@@ -1471,6 +1540,7 @@ function attachCall(c) {
     document.getElementById('remoteAudio').srcObject = stream;
     const remoteVideo = document.getElementById('remoteVideo');
     remoteVideo.srcObject = stream;
+    syncMiniVideos();
     document.getElementById('remoteWrap').classList.remove('waiting');
     updateRemoteVideoState(true, stream.getVideoTracks().length > 0);
     stream.getVideoTracks().forEach(track => {
@@ -1517,6 +1587,7 @@ function onDrop() {
   duplexBar.className = 'duplex-overlay';
   syncControls();
   document.getElementById('remoteVideo').srcObject = null;
+  syncMiniVideos();
   document.getElementById('remoteWrap').classList.remove('video-off', 'no-video');
   document.getElementById('remoteWrap').classList.add('waiting');
   setStatus('calling');
@@ -1713,6 +1784,7 @@ async function toggleScreenShare() {
       // Update local preview
       document.getElementById('localVideo').srcObject = null;
       document.getElementById('localVideo').srcObject = localStream;
+      syncMiniVideos();
       updateLocalVideoState();
       sendVideoState();
 
@@ -1767,6 +1839,7 @@ async function stopScreenShare() {
   // Update preview
   document.getElementById('localVideo').srcObject = null;
   document.getElementById('localVideo').srcObject = localStream;
+  syncMiniVideos();
   updateLocalVideoState();
   sendVideoState();
 
@@ -1879,6 +1952,7 @@ async function flipCamera() {
     currentFacingMode = targetMode;
 
     document.getElementById('localVideo').srcObject = localStream;
+    syncMiniVideos();
 
     // Replace track in active WebRTC call
     const pc = call && (call.peerConnection || call._pc);
