@@ -1,8 +1,8 @@
 
 <!DOCTYPE html>
-<html lang="en" translate="no">
-<head>
-<meta charset="UTF-8">
+<!-- saved from url=(0052)file:///C:/Users/barry/Downloads/radio-alpha_23.html -->
+<html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="google" content="notranslate">
 <title>ALPHA — Field Radio v6</title>
@@ -533,14 +533,14 @@
   .msg-badge.visible { display: flex; }
   @keyframes badge-pop { 0%{transform:scale(0)} 70%{transform:scale(1.2)} 100%{transform:scale(1)} }
 </style>
-</head>
+<script src="./ALPHA — Field Radio v6_files/peerjs.min.js.download"></script></head>
 <body>
 
 <div class="session-overlay" id="sessionOverlay">
   <div class="session-box">
     <span class="session-title">α · 01</span>
     <label>Unit ID</label>
-    <input type="text" id="sessionCode" maxlength="8" placeholder="ENTER CODE" autocomplete="off" />
+    <input type="text" id="sessionCode" maxlength="8" placeholder="ENTER CODE" autocomplete="off">
     <div class="session-checks">
       <label class="session-check-item">
         <input type="checkbox" id="loginDisableVideo"> Disable Video
@@ -551,9 +551,9 @@
     </div>
     <div class="login-timeout">
       <div class="login-timeout-label">
-        <span>Login Timeout</span><span id="loginTimeoutSec">60s</span>
+        <span>Login Timeout</span><span id="loginTimeoutSec">43s</span>
       </div>
-      <div class="login-timeout-track"><div class="login-timeout-fill" id="loginTimeoutFill"></div></div>
+      <div class="login-timeout-track"><div class="login-timeout-fill" id="loginTimeoutFill" style="width: 71.6667%; background: var(--accent);"></div></div>
     </div>
     <button class="session-go" onclick="startSession()">CONNECT</button>
   </div>
@@ -570,7 +570,7 @@
       </div>
       <div class="status-item" id="unitIdDisplay" style="display:none;">
         <span style="color:var(--text-dim);font-size:10px;letter-spacing:1px;">UNIT ID</span>
-        <span id="unitIdValue" style="color:var(--accent);font-family:'Orbitron',sans-serif;font-size:11px;letter-spacing:2px;"></span>
+        <span id="unitIdValue" style="color:var(--accent);font-family:&#39;Orbitron&#39;,sans-serif;font-size:11px;letter-spacing:2px;"></span>
       </div>
       <div class="quality-item" id="qualityDisplay" style="display:none;">
         <div class="quality-bars">
@@ -585,9 +585,9 @@
   </header>
 
   <div class="tab-bar">
-    <button class="tab-btn"        id="tabLocalBtn"  onclick="switchTab('local')">LOCAL</button>
-    <button class="tab-btn active" id="tabRemoteBtn" onclick="switchTab('remote')">REMOTE</button>
-    <button class="tab-btn"        id="tabChatBtn"   onclick="switchTab('chat')">CHAT <span class="msg-badge" id="msgBadge">0</span></button>
+    <button class="tab-btn" id="tabLocalBtn" onclick="switchTab(&#39;local&#39;)">LOCAL</button>
+    <button class="tab-btn active" id="tabRemoteBtn" onclick="switchTab(&#39;remote&#39;)">REMOTE</button>
+    <button class="tab-btn" id="tabChatBtn" onclick="switchTab(&#39;chat&#39;)">CHAT <span class="msg-badge" id="msgBadge">0</span></button>
   </div>
   <div class="tab-content">
     <!-- LOCAL TAB -->
@@ -606,7 +606,7 @@
         <div class="panel-label">LOCAL — ALPHA</div>
         <div class="video-grid">
           <div class="video-wrap" id="localWrap">
-            <video id="localVideo" autoplay playsinline muted></video>
+            <video id="localVideo" autoplay="" playsinline="" muted=""></video>
             <span class="video-label">ALPHA</span>
             <span class="duplex-overlay" id="duplexBar">OFFLINE</span>
           </div>
@@ -629,7 +629,7 @@
         <div class="panel-label">REMOTE — BRAVO</div>
         <div class="video-grid">
           <div class="video-wrap waiting" id="remoteWrap">
-            <video id="remoteVideo" autoplay playsinline></video>
+            <video id="remoteVideo" autoplay="" playsinline=""></video>
             <span class="video-label">BRAVO</span>
             <span class="duplex-overlay" id="duplexBar2">OFFLINE</span>
           </div>
@@ -648,21 +648,21 @@
         <div class="file-preview-strip" id="filePreviewStrip"></div>
         <div class="chat-input-row">
           <button class="attach-btn" id="attachBtn" title="Attach file / photo / video">📎</button>
-          <input type="file" id="fileInput" multiple accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx" style="display:none" />
-          <input class="chat-input" id="chatInput" placeholder="TYPE MESSAGE…" />
+          <input type="file" id="fileInput" multiple="" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx" style="display:none">
+          <input class="chat-input" id="chatInput" placeholder="TYPE MESSAGE…">
           <button class="btn" id="sendBtn" onclick="sendChat()">SEND</button>
-          <button class="btn" onclick="clearHistory();chat.innerHTML='';entry('Chat history cleared','sys');" title="Clear history" style="padding:6px 10px;">🗑</button>
+          <button class="btn" onclick="clearHistory();chat.innerHTML=&#39;&#39;;entry(&#39;Chat history cleared&#39;,&#39;sys&#39;);" title="Clear history" style="padding:6px 10px;">🗑</button>
         </div>
       </div>
       <div class="log-panel">
         <div class="panel-label">SYS LOG</div>
-        <div class="log" id="log"></div>
+        <div class="log" id="log"><span class="log-entry sys">15:59:51  PREFILL: code=123 vid=false aud=false</span></div>
       </div>
     </div>
   </div>
 
-<audio id="remoteAudio" autoplay playsinline></audio>
-<div id="lightbox"><img id="lightboxImg" src="" alt=""/></div>
+<audio id="remoteAudio" autoplay="" playsinline=""></audio>
+<div id="lightbox"><img id="lightboxImg" src="file:///C:/Users/barry/Downloads/radio-alpha_23.html" alt=""></div>
 
 <script>
 const script = document.createElement('script');
@@ -839,7 +839,7 @@ function syncControls() {
   // Keep remote tab's channel row in sync with local tab's
   const d2 = document.getElementById('duplexBar2');
   if (d2) { d2.textContent = duplexBar.textContent; d2.className = duplexBar.className; }
-  ['videoBtn', 'screenBtn', 'audioBtn', 'recBtn'].forEach(id => {
+  ['recBtn'].forEach(id => {
     const src = document.getElementById(id);
     const dst = document.getElementById(id + '2');
     if (src && dst) { dst.textContent = src.textContent; dst.className = src.className; }
@@ -1143,15 +1143,15 @@ function init() {
     entry('ERROR: Mic API not available (try Chrome)', 'err');
     return;
   }
-  // Acquire mic once up front — reused for all calls
-  navigator.mediaDevices.getUserMedia({ audio: {
-    echoCancellation: true, noiseSuppression: true, autoGainControl: true
-  }, video: { facingMode: 'user' } })
-  .then(stream => {
+  // Acquire mic + camera — facingMode only used as a soft hint on mobile,
+  // omitted on desktop to avoid OverconstrainedError on macOS.
+  const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+  const videoConstraint = isMobile ? { facingMode: 'user' } : true;
+
+  function applyStreamFlags(stream) {
     localStream = stream;
     document.getElementById('localVideo').srcObject = stream;
     entry('Mic + camera ready', 'ok');
-    // Apply login-screen disable flags
     if (loginDisableVideoFlag) {
       const vt = stream.getVideoTracks()[0];
       if (vt) { vt.enabled = false; }
@@ -1171,8 +1171,9 @@ function init() {
       entry('AUDIO FLAG: not set, audio stays on', 'sys');
     }
     startPeer();
-  })
-  .catch(e => {
+  }
+
+  function handleMediaError(e) {
     if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError') {
       entry('Mic blocked — click padlock in address bar, set Microphone to Allow, reload', 'err');
     } else if (e.name === 'NotFoundError') {
@@ -1181,6 +1182,26 @@ function init() {
       entry('Mic blocked by browser security policy', 'err');
     } else {
       entry('Mic error: ' + e.name + ' — ' + e.message, 'err');
+    }
+  }
+
+  navigator.mediaDevices.getUserMedia({
+    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+    video: videoConstraint
+  })
+  .then(applyStreamFlags)
+  .catch(e => {
+    // Camera failed (OverconstrainedError, NotFoundError, NotReadableError etc.) — retry audio-only
+    if (e.name !== 'NotAllowedError' && e.name !== 'PermissionDeniedError' && e.name !== 'SecurityError') {
+      entry('Camera unavailable (' + e.name + ') — retrying audio-only', 'sys');
+      navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        video: false
+      })
+      .then(applyStreamFlags)
+      .catch(handleMediaError);
+    } else {
+      handleMediaError(e);
     }
   });
 }
@@ -1580,11 +1601,6 @@ async function toggleScreenShare() {
       // Save current camera track
       cameraTrack = localStream.getVideoTracks()[0] || null;
 
-      // Find the video sender BEFORE removing the camera track
-      // (sender.track becomes null after removeTrack in some browsers, breaking the .find())
-      const pc0 = call && (call.peerConnection || call._pc);
-      const videoSender = pc0 && pc0.getSenders().find(s => s.track && s.track.kind === 'video');
-
       // Swap track in localStream
       if (cameraTrack) localStream.removeTrack(cameraTrack);
       localStream.addTrack(screenTrack);
@@ -1595,7 +1611,9 @@ async function toggleScreenShare() {
 
       // Replace track in live call
       try {
-        if (videoSender) await videoSender.replaceTrack(screenTrack);
+        const pc = call && (call.peerConnection || call._pc);
+        const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'video');
+        if (sender) await sender.replaceTrack(screenTrack);
       } catch(e) { entry('Screen share track replace error: ' + e.message, 'err'); }
 
       screenSharing = true;
@@ -1618,11 +1636,6 @@ async function stopScreenShare() {
   if (!screenSharing) return;
   const btns = [document.getElementById('screenBtn'), document.getElementById('screenBtn2')];
   screenSharing = false;
-
-  // Find video sender BEFORE stopping/removing the screen track
-  // (sender.track becomes null after removeTrack in some browsers)
-  const pc0 = call && (call.peerConnection || call._pc);
-  const videoSender = pc0 && pc0.getSenders().find(s => s.track && s.track.kind === 'video');
 
   // Stop screen track
   if (screenTrack) { screenTrack.stop(); screenTrack = null; }
@@ -1650,7 +1663,9 @@ async function stopScreenShare() {
 
   // Replace track in live call
   try {
-    if (videoSender && restoreTrack) await videoSender.replaceTrack(restoreTrack);
+    const pc = call && (call.peerConnection || call._pc);
+    const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'video');
+    if (sender && restoreTrack) await sender.replaceTrack(restoreTrack);
   } catch(e) {}
 
   btns.forEach(b => { if(b){ b.textContent = 'SCREEN'; b.classList.remove('screen-active'); }});
@@ -1770,8 +1785,7 @@ async function flipCamera() {
 }
 
 window.addEventListener('beforeunload', () => { peer?.destroy(); });
-// Sync remote-tab controls on initial load so SCREEN button is visible from the start
-syncControls();
 </script>
-</body>
-</html>
+
+
+</div></body></html>
