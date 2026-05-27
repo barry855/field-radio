@@ -1580,6 +1580,11 @@ async function toggleScreenShare() {
       // Save current camera track
       cameraTrack = localStream.getVideoTracks()[0] || null;
 
+      // Find the video sender BEFORE removing the camera track
+      // (sender.track becomes null after removeTrack in some browsers, breaking the .find())
+      const pc0 = call && (call.peerConnection || call._pc);
+      const videoSender = pc0 && pc0.getSenders().find(s => s.track && s.track.kind === 'video');
+
       // Swap track in localStream
       if (cameraTrack) localStream.removeTrack(cameraTrack);
       localStream.addTrack(screenTrack);
@@ -1590,9 +1595,7 @@ async function toggleScreenShare() {
 
       // Replace track in live call
       try {
-        const pc = call && (call.peerConnection || call._pc);
-        const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'video');
-        if (sender) await sender.replaceTrack(screenTrack);
+        if (videoSender) await videoSender.replaceTrack(screenTrack);
       } catch(e) { entry('Screen share track replace error: ' + e.message, 'err'); }
 
       screenSharing = true;
@@ -1615,6 +1618,11 @@ async function stopScreenShare() {
   if (!screenSharing) return;
   const btns = [document.getElementById('screenBtn'), document.getElementById('screenBtn2')];
   screenSharing = false;
+
+  // Find video sender BEFORE stopping/removing the screen track
+  // (sender.track becomes null after removeTrack in some browsers)
+  const pc0 = call && (call.peerConnection || call._pc);
+  const videoSender = pc0 && pc0.getSenders().find(s => s.track && s.track.kind === 'video');
 
   // Stop screen track
   if (screenTrack) { screenTrack.stop(); screenTrack = null; }
@@ -1642,9 +1650,7 @@ async function stopScreenShare() {
 
   // Replace track in live call
   try {
-    const pc = call && (call.peerConnection || call._pc);
-    const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'video');
-    if (sender && restoreTrack) await sender.replaceTrack(restoreTrack);
+    if (videoSender && restoreTrack) await videoSender.replaceTrack(restoreTrack);
   } catch(e) {}
 
   btns.forEach(b => { if(b){ b.textContent = 'SCREEN'; b.classList.remove('screen-active'); }});
