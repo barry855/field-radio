@@ -5,7 +5,7 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="google" content="notranslate">
-<title>BRAVO — Field Radio v6</title>
+<title>BRAVO â€” Field Radio v6</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
 
@@ -191,7 +191,7 @@
   .chat-input:disabled { opacity: 0.4; cursor: not-allowed; }
   .chat-input::placeholder { color: var(--text-dim); }
 
-  /* ── Drag-and-drop overlay ───────────────────────────────── */
+  /* â”€â”€ Drag-and-drop overlay â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   .chat-panel { position: relative; }
   .drop-overlay {
     position: absolute; inset: 0; z-index: 20;
@@ -210,7 +210,7 @@
     text-transform: uppercase;
   }
 
-  /* ── File attach button ─────────────────────────────────── */
+  /* â”€â”€ File attach button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   .attach-btn {
     background: var(--btn-bg); border: 1px solid var(--border);
     color: var(--text-dim); padding: 6px 10px; border-radius: 4px;
@@ -220,7 +220,7 @@
   }
   .attach-btn:hover { background: var(--btn-hover); border-color: var(--accent2); color: var(--accent2); }
 
-  /* ── File preview strip ─────────────────────────────────── */
+  /* â”€â”€ File preview strip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   .file-preview-strip {
     display: none; flex-wrap: wrap; gap: 6px;
     margin-top: 6px; flex-shrink: 0;
@@ -248,7 +248,7 @@
   }
   .file-chip-remove:hover { color: #ff8888; }
 
-  /* ── Media bubbles ──────────────────────────────────────── */
+  /* â”€â”€ Media bubbles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   .bubble img.media-img {
     max-width: 200px; max-height: 160px; border-radius: 4px;
     display: block; margin-top: 4px; cursor: zoom-in;
@@ -266,7 +266,7 @@
   }
   .bubble .file-attach-link:hover { text-decoration: underline; }
 
-  /* ── Lightbox ───────────────────────────────────────────── */
+  /* â”€â”€ Lightbox â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   #lightbox {
     display: none; position: fixed; inset: 0; z-index: 999;
     background: rgba(0,0,0,0.85); align-items: center; justify-content: center;
@@ -286,7 +286,7 @@
   .btn:active { background: var(--btn-active); }
   .btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
-  /* ── duplex status bar ── */
+  /* â”€â”€ duplex status bar â”€â”€ */
   .ptt-panel {
     background: var(--panel); border: 1px solid var(--border);
     border-radius: 8px; padding: 10px 14px; position: relative;
@@ -337,6 +337,11 @@
     color: var(--danger);
   }
   .media-btn.disabled-state:hover { background: rgba(255,68,68,0.25); }
+  .media-btn.video-on {
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 0 8px rgba(0,212,255,0.22);
+  }
   .media-btn.recording {
     background: rgba(255,68,68,0.2);
     border-color: #ff4444;
@@ -438,21 +443,23 @@
   /* 10-minute session countdown in header */
   @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.35} }
 
-  /* ── video ── */
+  /* â”€â”€ video â”€â”€ */
   .video-panel {
     background: var(--panel); border: 1px solid var(--border);
     border-radius: 8px; padding: 10px 14px; position: relative;
-    flex: 1; min-height: 0;
+    flex: 0 1 auto; min-height: 0;
+    max-height: min(42vh, 320px);
   }
   .video-grid {
-    display: grid; grid-template-columns: 1fr; gap: 8px; height: 100%;
+    display: grid; grid-template-columns: 1fr; gap: 8px; height: auto;
   }
   .video-wrap {
     position: relative; background: #000; border-radius: 4px;
     overflow: hidden; aspect-ratio: 16/9;
+    width: 100%; max-height: min(34vh, 280px);
   }
   .video-wrap video {
-    width: 100%; height: 100%; object-fit: cover; display: block;
+    width: 100%; height: 100%; object-fit: contain; display: block;
   }
   .video-label {
     position: absolute; bottom: 6px; left: 8px;
@@ -474,59 +481,31 @@
     text-shadow: 0 0 8px rgba(0,255,159,0.8);
     animation: fdx-pulse 2s ease-in-out infinite alternate;
   }
-
-  /* ── PiP overlay ── */
-  .pip-video {
-    position: absolute; bottom: 28px; right: 6px;
-    width: 28%; max-width: 140px; min-width: 60px;
-    aspect-ratio: 4/3; border-radius: 4px;
-    border: 1px solid rgba(0,255,159,0.5);
-    object-fit: cover; background: #000;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.7);
-    z-index: 5; display: none; pointer-events: none;
-  }
-  .pip-video.active { display: block; }
-  .pip-toggle {
-    position: absolute; bottom: 28px; right: 6px;
-    width: 22px; height: 22px;
-    background: rgba(0,0,0,0.55); border: 1px solid rgba(0,255,159,0.4);
-    border-radius: 3px; color: rgba(0,255,159,0.7);
-    font-size: 12px; line-height: 1; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    z-index: 6; transition: background 0.15s, border-color 0.15s;
-    padding: 0;
-  }
-  .pip-toggle:hover { background: rgba(0,255,159,0.2); border-color: var(--accent2); color: var(--accent2); }
-  .pip-toggle.pip-on {
-    background: rgba(0,255,159,0.18); border-color: var(--accent2); color: var(--accent2);
-    bottom: 6px;
-  }
-  .pip-video.active { bottom: 28px; }
-
-  /* ── tooltips ── */
-  [data-tip] { position: relative; }
-  [data-tip]::after {
-    content: attr(data-tip);
-    position: absolute; bottom: calc(100% + 6px); left: 50%;
-    transform: translateX(-50%);
-    background: rgba(10,10,10,0.92); color: #ccc;
-    font-family: 'Share Tech Mono', monospace; font-size: 10px;
-    letter-spacing: 0.5px; white-space: nowrap;
-    padding: 4px 8px; border-radius: 3px;
-    border: 1px solid var(--border);
-    pointer-events: none; opacity: 0;
-    transition: opacity 0.15s; z-index: 100;
-  }
-  [data-tip]:hover::after { opacity: 1; }
   .video-wrap.waiting::after {
-    content: 'WAITING…';
+    content: 'WAITINGâ€¦';
     position: absolute; inset: 0;
     display: flex; align-items: center; justify-content: center;
     font-family: 'Orbitron', sans-serif; font-size: 10px;
     letter-spacing: 3px; color: var(--text-dim);
   }
 
-  /* ── tab bar ── */
+  /* â”€â”€ tab bar â”€â”€ */
+  .video-wrap.video-off::after {
+    content: 'VIDEO OFF';
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Orbitron', sans-serif; font-size: 10px;
+    letter-spacing: 3px; color: var(--warn);
+    background: rgba(0,0,0,0.72);
+  }
+  .video-wrap.no-video::after {
+    content: 'NO VIDEO';
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Orbitron', sans-serif; font-size: 10px;
+    letter-spacing: 3px; color: var(--text-dim);
+    background: rgba(0,0,0,0.72);
+  }
   .tab-bar {
     display: flex; gap: 4px; flex-shrink: 0;
   }
@@ -549,11 +528,23 @@
   .tab-content {
     display: flex; flex-direction: column; flex: 1;
     background: var(--panel); border: 1px solid var(--border);
-    border-radius: 0 0 8px 8px; overflow: hidden; min-height: 0;
+    border-radius: 0 0 8px 8px; overflow: visible; min-height: 0;
     padding: 10px; gap: 10px;
   }
   .tab-pane { display: none; flex-direction: column; flex: 1; min-height: 0; gap: 10px; }
   .tab-pane.active { display: flex; }
+  .app-tooltip {
+    position: fixed; z-index: 1000; pointer-events: none;
+    max-width: min(240px, calc(100vw - 16px));
+    padding: 6px 8px; border-radius: 4px;
+    background: #050f15; border: 1px solid var(--accent2);
+    color: var(--text); font-size: 10px; line-height: 1.35;
+    letter-spacing: 0.7px; text-transform: uppercase;
+    box-shadow: 0 8px 22px rgba(0,0,0,0.35);
+    opacity: 0; transform: translateY(3px);
+    transition: opacity 0.12s, transform 0.12s;
+  }
+  .app-tooltip.visible { opacity: 1; transform: translateY(0); }
 
   /* new-message badge */
   .msg-badge {
@@ -567,12 +558,12 @@
   .msg-badge.visible { display: flex; }
   @keyframes badge-pop { 0%{transform:scale(0)} 70%{transform:scale(1.2)} 100%{transform:scale(1)} }
 </style>
-<script src="./BRAVO — Field Radio v6_files/peerjs.min.js.download"></script></head>
+<script src="./BRAVO â€” Field Radio v6_files/peerjs.min.js.download"></script></head>
 <body>
 
 <div class="session-overlay" id="sessionOverlay">
   <div class="session-box">
-    <span class="session-title">β · 02</span>
+    <span class="session-title">Î² Â· 02</span>
     <label>Unit ID</label>
     <input type="text" id="sessionCode" maxlength="8" placeholder="ENTER CODE" autocomplete="off">
     <div class="session-checks">
@@ -596,7 +587,7 @@
 <div class="shell">
 
   <header>
-    <div class="logo"><span class="greek">β</span><span>·</span>02</div>
+    <div class="logo"><span class="greek">Î²</span><span>Â·</span>02</div>
     <div class="statusbar">
       <div class="status-item">
         <div class="led" id="linkLed"></div>
@@ -626,24 +617,22 @@
     <!-- LOCAL TAB -->
     <div class="tab-pane" id="paneLocal">
       <div class="channel-row" style="flex-shrink:0; padding:4px 0;">
-        <button class="media-btn" id="videoBtn" onclick="toggleVideo()" data-tip="Enable or disable your camera">Disable Video</button>
-        <button class="media-btn" id="screenBtn" onclick="toggleScreenShare()" style="border-color:var(--accent2);color:var(--accent2);" data-tip="Share Your Screen">Share</button>
-        <button class="media-btn" id="audioBtn" onclick="toggleAudio()" data-tip="Enable or disable your microphone">Disable Audio</button>
+        <button class="media-btn" id="videoBtn" onclick="toggleVideo()">Disable Video</button>
+        <button class="media-btn" id="screenBtn" onclick="toggleScreenShare()" style="border-color:var(--accent2);color:var(--accent2);">SCREEN</button>
+        <button class="media-btn" id="audioBtn" onclick="toggleAudio()">Disable Audio</button>
       </div>
       <div class="channel-row" style="flex-shrink:0; padding:0 0 4px 0;">
-        <button class="media-btn" id="refreshBtnLocal" onclick="refreshScreen()" data-tip="Reload page — session code is remembered">↺ Refresh</button>
-        <button class="media-btn" id="flipBtn" onclick="flipCamera()" data-tip="Switch between front and rear camera">⟳ Flip</button>
-        <button class="media-btn" id="recBtn" onclick="toggleRecord()" data-tip="Record audio + video to file">⏺ Record</button>
+        <button class="media-btn" id="refreshBtnLocal" onclick="refreshScreen()">â†º Refresh</button>
+        <button class="media-btn" id="flipBtn" onclick="flipCamera()">âŸ³ Flip</button>
+        <button class="media-btn" id="recBtn" onclick="toggleRecord()">âº Record</button>
       </div>
       <div class="video-panel">
-        <div class="panel-label">LOCAL — BRAVO</div>
+        <div class="panel-label">LOCAL â€” BRAVO</div>
         <div class="video-grid">
           <div class="video-wrap" id="localWrap">
             <video id="localVideo" autoplay="" playsinline="" muted=""></video>
             <span class="video-label">BRAVO</span>
             <span class="duplex-overlay" id="duplexBar">OFFLINE</span>
-            <video id="pipVideoLocal" class="pip-video" autoplay playsinline muted></video>
-            <button class="pip-toggle" id="pipBtnLocal" onclick="togglePip()" data-tip="Show/hide local camera overlay">⛶</button>
           </div>
         </div>
       </div>
@@ -651,24 +640,22 @@
     <!-- REMOTE TAB -->
     <div class="tab-pane active" id="paneRemote">
       <div class="channel-row" style="flex-shrink:0; padding:4px 0;">
-        <button class="media-btn" id="videoBtn2" onclick="toggleVideo()" data-tip="Enable or disable your camera">Disable Video</button>
-        <button class="media-btn" id="screenBtn2" onclick="toggleScreenShare()" style="border-color:var(--accent2);color:var(--accent2);" data-tip="Share Your Screen">Share</button>
-        <button class="media-btn" id="audioBtn2" onclick="toggleAudio()" data-tip="Enable or disable your microphone">Disable Audio</button>
+        <button class="media-btn" id="videoBtn2" onclick="toggleVideo()">Disable Video</button>
+        <button class="media-btn" id="screenBtn2" onclick="toggleScreenShare()" style="border-color:var(--accent2);color:var(--accent2);">SCREEN</button>
+        <button class="media-btn" id="audioBtn2" onclick="toggleAudio()">Disable Audio</button>
       </div>
       <div class="channel-row" style="flex-shrink:0; padding:0 0 4px 0;">
-        <button class="media-btn" id="refreshBtn" onclick="refreshScreen()" data-tip="Reload page — session code is remembered">↺ Refresh</button>
-        <button class="media-btn" id="flipBtn2" onclick="flipCamera()" data-tip="Switch between front and rear camera">⟳ Flip</button>
-        <button class="media-btn" id="recBtn2" onclick="toggleRecord()" data-tip="Record audio + video to file">⏺ Record</button>
+        <button class="media-btn" id="refreshBtn" onclick="refreshScreen()">â†º Refresh</button>
+        <button class="media-btn" id="flipBtn2" onclick="flipCamera()">âŸ³ Flip</button>
+        <button class="media-btn" id="recBtn2" onclick="toggleRecord()">âº Record</button>
       </div>
       <div class="video-panel">
-        <div class="panel-label">REMOTE — ALPHA</div>
+        <div class="panel-label">REMOTE â€” ALPHA</div>
         <div class="video-grid">
           <div class="video-wrap waiting" id="remoteWrap">
             <video id="remoteVideo" autoplay="" playsinline=""></video>
             <span class="video-label">ALPHA</span>
             <span class="duplex-overlay" id="duplexBar2">OFFLINE</span>
-            <video id="pipVideoRemote" class="pip-video" autoplay playsinline muted></video>
-            <button class="pip-toggle" id="pipBtnRemote" onclick="togglePip()" data-tip="Show/hide local camera overlay">⛶</button>
           </div>
         </div>
       </div>
@@ -678,17 +665,17 @@
       <div class="chat-panel" style="flex:1" id="chatPanel">
         <div class="panel-label">COMMS</div>
         <div class="drop-overlay" id="dropOverlay">
-          <div class="drop-overlay-icon">📎</div>
+          <div class="drop-overlay-icon">ðŸ“Ž</div>
           <div class="drop-overlay-label">Drop file to attach</div>
         </div>
         <div class="chat" id="chat"></div>
         <div class="file-preview-strip" id="filePreviewStrip"></div>
         <div class="chat-input-row">
-          <button class="attach-btn" id="attachBtn" data-tip="Attach photo, video or file">📎</button>
+          <button class="attach-btn" id="attachBtn" title="Attach file / photo / video">ðŸ“Ž</button>
           <input type="file" id="fileInput" multiple="" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx" style="display:none">
-          <input class="chat-input" id="chatInput" placeholder="TYPE MESSAGE…">
-          <button class="btn" id="sendBtn" onclick="sendChat()" data-tip="Send message">SEND</button>
-          <button class="btn" onclick="clearHistory();chat.innerHTML=&#39;&#39;;entry(&#39;Chat history cleared&#39;,&#39;sys&#39;);" data-tip="Clear chat history" style="padding:6px 10px;">🗑</button>
+          <input class="chat-input" id="chatInput" placeholder="TYPE MESSAGEâ€¦">
+          <button class="btn" id="sendBtn" onclick="sendChat()">SEND</button>
+          <button class="btn" onclick="clearHistory();chat.innerHTML=&#39;&#39;;entry(&#39;Chat history cleared&#39;,&#39;sys&#39;);" title="Clear history" style="padding:6px 10px;">ðŸ—‘</button>
         </div>
       </div>
       <div class="log-panel">
@@ -707,7 +694,7 @@ script.src = 'https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js';
 document.head.appendChild(script);
 script.onload = () => {}; // init called after session code entered
 
-// Free public TURN servers (Open Relay Project) — essential for mobile/carrier-NAT networks
+// Free public TURN servers (Open Relay Project) â€” essential for mobile/carrier-NAT networks
 const ICE_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
@@ -759,7 +746,7 @@ function startSession() {
   setTimeout(loadHistory, 100);
 }
 
-// ── Pre-fill last used code + checkbox states on load ────────
+// â”€â”€ Pre-fill last used code + checkbox states on load â”€â”€â”€â”€â”€â”€â”€â”€
 function prefillLogin() {
   try {
     const disVid = localStorage.getItem('bravo_disable_video') === '1';
@@ -773,7 +760,7 @@ function prefillLogin() {
 }
 prefillLogin();
 
-// ── 60-second login timeout indicator ────────────────────────
+// â”€â”€ 60-second login timeout indicator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let loginTimeoutInterval;
 let loginSecsLeft = 60;
 function startLoginTimeout() {
@@ -796,7 +783,7 @@ function startLoginTimeout() {
       const btn = document.querySelector('.session-go');
       btn.style.borderColor = 'var(--danger)';
       btn.style.color = 'var(--danger)';
-      btn.textContent = 'TIMED OUT — RETRY';
+      btn.textContent = 'TIMED OUT â€” RETRY';
       setTimeout(() => { startLoginTimeout(); btn.style.borderColor=''; btn.style.color=''; btn.textContent='CONNECT'; }, 2000);
     }
   }, 1000);
@@ -873,7 +860,7 @@ function linkify(text) {
   return frag;
 }
 
-// ── Chat history (localStorage) ──────────────────────────────
+// â”€â”€ Chat history (localStorage) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const HISTORY_KEY = () => 'bravo_chat_' + (MY_ID || 'unknown');
 const HISTORY_MAX = 200;
 
@@ -894,12 +881,12 @@ function loadHistory() {
     if (history.length === 0) return;
     const divider = document.createElement('div');
     divider.style.cssText = 'text-align:center;font-size:9px;color:#888;letter-spacing:2px;padding:4px 0;';
-    divider.textContent = '— PREVIOUS SESSION —';
+    divider.textContent = 'â€” PREVIOUS SESSION â€”';
     chat.appendChild(divider);
     history.forEach(m => addBubble(m.text, m.mine, m.ts, false));
     const divider2 = document.createElement('div');
     divider2.style.cssText = 'text-align:center;font-size:9px;color:#888;letter-spacing:2px;padding:4px 0;';
-    divider2.textContent = '— NOW —';
+    divider2.textContent = 'â€” NOW â€”';
     chat.appendChild(divider2);
     chat.scrollTop = chat.scrollHeight;
   } catch(e) {}
@@ -946,7 +933,7 @@ function sendChat() {
   const txt = chatInput.value.trim();
   const hasFiles = pendingFiles.length > 0;
   if (!txt && !hasFiles) return;
-  if (!dataConn) { entry('Not connected — cannot send', 'err'); return; }
+  if (!dataConn) { entry('Not connected â€” cannot send', 'err'); return; }
   if (txt) {
     dataConn.send(txt);
     addBubble(txt, true);
@@ -957,7 +944,7 @@ function sendChat() {
   }
 }
 
-// ── File attachment state ─────────────────────────────────────
+// â”€â”€ File attachment state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const pendingFiles = [];  // {file, dataUrl}
 
 const fileInput        = document.getElementById('fileInput');
@@ -968,11 +955,63 @@ const dropOverlay      = document.getElementById('dropOverlay');
 const lightbox         = document.getElementById('lightbox');
 const lightboxImg      = document.getElementById('lightboxImg');
 
-// Attach button → open file picker
+function setupTooltips() {
+  const labels = {
+    videoBtn: 'Toggle local video',
+    videoBtn2: 'Toggle local video',
+    screenBtn: 'Share screen or return to camera',
+    screenBtn2: 'Share screen or return to camera',
+    audioBtn: 'Toggle microphone',
+    audioBtn2: 'Toggle microphone',
+    refreshBtn: 'Reconnect the remote screen',
+    refreshBtnLocal: 'Reconnect the remote screen',
+    flipBtn: 'Switch camera',
+    flipBtn2: 'Switch camera',
+    recBtn: 'Start or stop recording',
+    recBtn2: 'Start or stop recording',
+    attachBtn: 'Attach file / photo / video'
+  };
+  Object.entries(labels).forEach(([id, label]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.dataset.tooltip = label;
+    el.setAttribute('aria-label', label);
+    el.removeAttribute('title');
+  });
+
+  const tip = document.createElement('div');
+  tip.className = 'app-tooltip';
+  document.body.appendChild(tip);
+
+  const place = target => {
+    const rect = target.getBoundingClientRect();
+    tip.textContent = target.dataset.tooltip;
+    tip.classList.add('visible');
+    const tr = tip.getBoundingClientRect();
+    let left = rect.left + rect.width / 2 - tr.width / 2;
+    let top = rect.top - tr.height - 8;
+    if (top < 8) top = rect.bottom + 8;
+    left = Math.max(8, Math.min(left, window.innerWidth - tr.width - 8));
+    tip.style.left = left + 'px';
+    tip.style.top = top + 'px';
+  };
+  const hide = () => tip.classList.remove('visible');
+
+  document.querySelectorAll('[data-tooltip]').forEach(el => {
+    el.addEventListener('mouseenter', () => place(el));
+    el.addEventListener('focus', () => place(el));
+    el.addEventListener('mouseleave', hide);
+    el.addEventListener('blur', hide);
+    el.addEventListener('click', hide);
+  });
+}
+setupTooltips();
+
+// Attach button â†’ open file picker
 attachBtn.addEventListener('click', () => fileInput.click());
 fileInput.addEventListener('change', e => { addFiles([...e.target.files]); fileInput.value=''; });
 
-// ── Drag-and-drop on chat panel ───────────────────────────────
+// â”€â”€ Drag-and-drop on chat panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let dragCounter = 0;
 chatPanel.addEventListener('dragenter', e => {
   e.preventDefault(); dragCounter++;
@@ -991,7 +1030,7 @@ chatPanel.addEventListener('drop', e => {
   if (files.length) addFiles(files);
 });
 
-// ── Also allow paste of images ────────────────────────────────
+// â”€â”€ Also allow paste of images â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 document.addEventListener('paste', e => {
   if (activeTab !== 'chat') return;
   const items = [...(e.clipboardData?.items || [])];
@@ -1002,7 +1041,7 @@ document.addEventListener('paste', e => {
   }
 });
 
-// ── Add files to pending queue ────────────────────────────────
+// â”€â”€ Add files to pending queue â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function addFiles(files) {
   files.forEach(f => {
     if (f.size > 10 * 1024 * 1024) {
@@ -1039,7 +1078,7 @@ function renderFileChip(item, idx) {
   chip.appendChild(name);
   const rm = document.createElement('span');
   rm.className = 'file-chip-remove';
-  rm.textContent = '✕';
+  rm.textContent = 'âœ•';
   rm.addEventListener('click', () => removeFile(idx, chip));
   chip.appendChild(rm);
   filePreviewStrip.appendChild(chip);
@@ -1054,13 +1093,13 @@ function removeFile(idx, chip) {
 }
 
 function fileIcon(type) {
-  if (type.startsWith('video/')) return '🎬';
-  if (type.startsWith('audio/')) return '🎵';
-  if (type === 'application/pdf') return '📄';
-  return '📎';
+  if (type.startsWith('video/')) return 'ðŸŽ¬';
+  if (type.startsWith('audio/')) return 'ðŸŽµ';
+  if (type === 'application/pdf') return 'ðŸ“„';
+  return 'ðŸ“Ž';
 }
 
-// ── Send pending files over data channel ──────────────────────
+// â”€â”€ Send pending files over data channel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function sendPendingFiles() {
   [...pendingFiles].forEach(item => {
     const payload = JSON.stringify({ __file: true, name: item.file.name, type: item.file.type, data: item.dataUrl });
@@ -1076,7 +1115,7 @@ function sendPendingFiles() {
   filePreviewStrip.classList.remove('has-files');
 }
 
-// ── Render a media bubble (sent or received) ──────────────────
+// â”€â”€ Render a media bubble (sent or received) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function addMediaBubble(name, type, dataUrl, mine) {
   const wrap = document.createElement('div');
   wrap.className = 'bubble ' + (mine ? 'mine' : 'theirs');
@@ -1113,7 +1152,7 @@ function addMediaBubble(name, type, dataUrl, mine) {
   chat.scrollTop = chat.scrollHeight;
 }
 
-// ── Lightbox close ────────────────────────────────────────────
+// â”€â”€ Lightbox close â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 lightbox.addEventListener('click', () => { lightbox.classList.remove('open'); lightboxImg.src = ''; });
 
 chatInput.addEventListener('keydown', e => { if (e.key === 'Enter') sendChat(); });
@@ -1124,17 +1163,17 @@ function init() {
     entry('Please open this page over HTTPS', 'err');
     return;
   }
-  // Real WebRTC check — PeerJS error message can be misleading
+  // Real WebRTC check â€” PeerJS error message can be misleading
   if (typeof RTCPeerConnection === 'undefined') {
     entry('ERROR: WebRTC not available in this browser', 'err');
-    entry('Try Chrome or Firefox — make sure it is up to date', 'err');
+    entry('Try Chrome or Firefox â€” make sure it is up to date', 'err');
     return;
   }
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     entry('ERROR: Mic API not available (try Chrome)', 'err');
     return;
   }
-  // Acquire mic + camera — facingMode only used as a soft hint on mobile,
+  // Acquire mic + camera â€” facingMode only used as a soft hint on mobile,
   // omitted on desktop to avoid OverconstrainedError on macOS.
   const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
   const videoConstraint = isMobile ? { facingMode: 'user' } : true;
@@ -1142,13 +1181,12 @@ function init() {
   function applyStreamFlags(stream) {
     localStream = stream;
     document.getElementById('localVideo').srcObject = stream;
-    refreshPip();
     entry('Mic + camera ready', 'ok');
+    updateLocalVideoState();
     if (loginDisableVideoFlag) {
       const vt = stream.getVideoTracks()[0];
       if (vt) { vt.enabled = false; }
-      const vb = document.getElementById('videoBtn'); if(vb){vb.textContent='Enable Video';vb.classList.add('disabled-state');}
-      const vb2 = document.getElementById('videoBtn2'); if(vb2){vb2.textContent='Enable Video';vb2.classList.add('disabled-state');}
+      updateLocalVideoState();
       entry('Video disabled (login setting)', 'sys');
     }
     if (loginDisableAudioFlag) {
@@ -1167,13 +1205,13 @@ function init() {
 
   function handleMediaError(e) {
     if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError') {
-      entry('Mic blocked — click padlock in address bar, set Microphone to Allow, reload', 'err');
+      entry('Mic blocked â€” click padlock in address bar, set Microphone to Allow, reload', 'err');
     } else if (e.name === 'NotFoundError') {
       entry('No microphone found on this device', 'err');
     } else if (e.name === 'SecurityError') {
       entry('Mic blocked by browser security policy', 'err');
     } else {
-      entry('Mic error: ' + e.name + ' — ' + e.message, 'err');
+      entry('Mic error: ' + e.name + ' â€” ' + e.message, 'err');
     }
   }
 
@@ -1183,9 +1221,9 @@ function init() {
   })
   .then(applyStreamFlags)
   .catch(e => {
-    // Camera failed (OverconstrainedError, NotFoundError, NotReadableError etc.) — retry audio-only
+    // Camera failed (OverconstrainedError, NotFoundError, NotReadableError etc.) â€” retry audio-only
     if (e.name !== 'NotAllowedError' && e.name !== 'PermissionDeniedError' && e.name !== 'SecurityError') {
-      entry('Camera unavailable (' + e.name + ') — retrying audio-only', 'sys');
+      entry('Camera unavailable (' + e.name + ') â€” retrying audio-only', 'sys');
       navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
         video: false
@@ -1211,12 +1249,12 @@ function startPeer() {
 
   let watchdog;
   peer.on('open', id => {
-    entry('Radio online — waiting for Alpha [' + id + ']', 'ok');
+    entry('Radio online â€” waiting for Alpha [' + id + ']', 'ok');
     setStatus('standby');
     // Watchdog: if no call arrives in 30s, reconnect to signalling server to stay fresh
     watchdog = setTimeout(() => {
       if (!linked && !peer.destroyed) {
-        entry('Refreshing signalling connection…', 'sys');
+        entry('Refreshing signalling connectionâ€¦', 'sys');
         if (peer.disconnected) peer.reconnect();
       }
     }, 30000);
@@ -1231,7 +1269,7 @@ function startPeer() {
   peer.on('call', incoming => {
     entry('Inbound call from Alpha', 'info');
     if (!localStream) {
-      entry('ERROR: no local stream — cannot answer', 'err');
+      entry('ERROR: no local stream â€” cannot answer', 'err');
       incoming.close();
       return;
     }
@@ -1240,7 +1278,7 @@ function startPeer() {
   });
 
   peer.on('disconnected', () => {
-    entry('Signalling server disconnected — reconnecting…', 'sys');
+    entry('Signalling server disconnected â€” reconnectingâ€¦', 'sys');
     saveRecordingIfActive();
     if (!peer.destroyed) peer.reconnect();
   });
@@ -1251,18 +1289,18 @@ function startPeer() {
     if (e.type === 'unavailable-id') {
       const suffix = Math.random().toString(36).slice(2,6).toUpperCase();
       MY_ID = MY_ID.replace(/-[A-Z0-9]{4}$/, '') + '-' + suffix || MY_ID + '-' + suffix;
-      entry('ID taken (stale session) — retrying as ' + MY_ID + '…', 'sys');
+      entry('ID taken (stale session) â€” retrying as ' + MY_ID + 'â€¦', 'sys');
       peer.destroy();
       setTimeout(startPeer, 1500);
       return;
     }
     if (e.type === 'peer-unavailable') {
-      // Alpha not registered yet — ignore, we're waiting for Alpha to call us
-      entry('Alpha not yet visible — standing by…', 'sys');
+      // Alpha not registered yet â€” ignore, we're waiting for Alpha to call us
+      entry('Alpha not yet visible â€” standing byâ€¦', 'sys');
       return;
     }
     // network / server-error / socket-error / socket-closed
-    entry('Retrying in 6s…', 'sys');
+    entry('Retrying in 6sâ€¦', 'sys');
     setTimeout(() => { peer.destroy(); startPeer(); }, 6000);
   });
 }
@@ -1271,13 +1309,22 @@ function attachDataConn(dc) {
   dc.on('open', () => {
     dataConn = dc;
     entry('Chat channel open', 'ok');
+    sendVideoState();
   });
   dc.on('data', msg => {
-    if (typeof msg === 'string' && msg.startsWith('{"__file":true')) {
+    if (typeof msg === 'string' && msg.startsWith('{')) {
       try {
         const f = JSON.parse(msg);
-        addMediaBubble(f.name, f.type, f.data, false);
-      } catch(e) { addBubble(msg, false); }
+        if (f.__control === 'video') {
+          updateRemoteVideoState(f.enabled, f.hasTrack !== false);
+          return;
+        }
+        if (f.__file === true) {
+          addMediaBubble(f.name, f.type, f.data, false);
+          return;
+        }
+      } catch(e) {}
+      addBubble(msg, false);
     } else {
       addBubble(msg, false);
     }
@@ -1295,7 +1342,7 @@ let pendingDC = false;
 function openDataConn() {
   if (dataConn || pendingDC) return;
   pendingDC = true;
-  entry('Opening data channel to Alpha…', 'sys');
+  entry('Opening data channel to Alphaâ€¦', 'sys');
   const dc = peer.connect(REMOTE_ID, { reliable: true });
   dc.on('open',  () => { pendingDC = false; });
   dc.on('close', () => { pendingDC = false; });
@@ -1316,7 +1363,7 @@ function getCallStream() {
   return new MediaStream(tracks);
 }
 
-// ── Connection quality polling ────────────────────────────────
+// â”€â”€ Connection quality polling â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let qualityInterval = null;
 
 function startQualityPolling() {
@@ -1367,6 +1414,44 @@ function updateQuality(rtt, lossPct) {
   label.style.color = color;
 }
 
+function setVideoButtons(enabled) {
+  const btns = [document.getElementById('videoBtn'), document.getElementById('videoBtn2')];
+  btns.forEach(b => {
+    if (!b) return;
+    b.textContent = enabled ? 'Video On' : 'Video Off';
+    b.classList.toggle('video-on', enabled);
+    b.classList.toggle('disabled-state', !enabled);
+  });
+}
+
+function updateLocalVideoState() {
+  const wrap = document.getElementById('localWrap');
+  const track = localStream && localStream.getVideoTracks()[0];
+  if (!wrap) return;
+  wrap.classList.toggle('no-video', !track);
+  wrap.classList.toggle('video-off', !!track && !track.enabled);
+  if (track) setVideoButtons(track.enabled);
+}
+
+function updateRemoteVideoState(enabled, hasTrack = true) {
+  const wrap = document.getElementById('remoteWrap');
+  if (!wrap) return;
+  wrap.classList.toggle('no-video', !hasTrack);
+  wrap.classList.toggle('video-off', hasTrack && enabled === false);
+}
+
+function sendVideoState() {
+  if (!dataConn || !localStream) return;
+  const track = localStream.getVideoTracks()[0];
+  try {
+    dataConn.send(JSON.stringify({
+      __control: 'video',
+      enabled: !!(track && track.enabled),
+      hasTrack: !!track
+    }));
+  } catch(e) {}
+}
+
 function attachCall(c) {
   call = c;
   c.on('stream', stream => {
@@ -1374,11 +1459,17 @@ function attachCall(c) {
     const remoteVideo = document.getElementById('remoteVideo');
     remoteVideo.srcObject = stream;
     document.getElementById('remoteWrap').classList.remove('waiting');
+    updateRemoteVideoState(true, stream.getVideoTracks().length > 0);
+    stream.getVideoTracks().forEach(track => {
+      track.addEventListener('mute', () => updateRemoteVideoState(false, true));
+      track.addEventListener('unmute', () => updateRemoteVideoState(true, true));
+      track.addEventListener('ended', () => updateRemoteVideoState(false, false));
+    });
     if (linked) return;
     linked = true;
     setStatus('linked');
-    entry('Linked to Alpha — full duplex active', 'ok');
-    duplexBar.textContent = '● LIVE';
+    entry('Linked to Alpha â€” full duplex active', 'ok');
+    duplexBar.textContent = 'â— LIVE';
     duplexBar.className = 'duplex-overlay live';
     syncControls();
     startQualityPolling();
@@ -1394,16 +1485,16 @@ function attachCall(c) {
   c.on('error', e => { entry('Call error: ' + e.message, 'err'); onDrop(); });
 }
 
-// ── Save recording if a disconnection interrupts it ──────────
+// â”€â”€ Save recording if a disconnection interrupts it â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function saveRecordingIfActive() {
   if (!mediaRecorder || mediaRecorder.state !== 'recording') return;
-  entry('Connection lost — auto-saving recording…', 'sys');
+  entry('Connection lost â€” auto-saving recordingâ€¦', 'sys');
   const btn  = document.getElementById('recBtn');
   const btn2 = document.getElementById('recBtn2');
-  if (btn)  { btn.textContent  = '⏺ Record'; btn.classList.remove('recording'); }
-  if (btn2) { btn2.textContent = '⏺ Record'; btn2.classList.remove('recording'); }
+  if (btn)  { btn.textContent  = 'âº Record'; btn.classList.remove('recording'); }
+  if (btn2) { btn2.textContent = 'âº Record'; btn2.classList.remove('recording'); }
   recBusy = true;
-  mediaRecorder.stop(); // triggers onstop → saves file automatically
+  mediaRecorder.stop(); // triggers onstop â†’ saves file automatically
 }
 
 function onDrop() {
@@ -1418,16 +1509,17 @@ function onDrop() {
   duplexBar.className = 'duplex-overlay';
   syncControls();
   document.getElementById('remoteVideo').srcObject = null;
+  document.getElementById('remoteWrap').classList.remove('video-off', 'no-video');
   document.getElementById('remoteWrap').classList.add('waiting');
   setStatus('standby');
-  entry('Link lost — waiting for Alpha', 'sys');
+  entry('Link lost â€” waiting for Alpha', 'sys');
 }
 
 function muteLocal() {
-  // no-op — full duplex, mic always open when linked
+  // no-op â€” full duplex, mic always open when linked
 }
 
-// ── Session timeout (10 min inactivity) ──────────────────────
+// â”€â”€ Session timeout (10 min inactivity) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let lockTimer;
 let autoReconnectTimer;
 function resetLockTimer() {
@@ -1438,12 +1530,12 @@ function resetLockTimer() {
     prefillLogin();
     saveRecordingIfActive();
     if (peer) { peer.destroy(); }
-    entry('Session timed out — auto-reconnecting…', 'sys');
+    entry('Session timed out â€” auto-reconnectingâ€¦', 'sys');
     // Auto-reconnect after 3 seconds (only on timeout, not on manual Refresh)
     let autoSecs = 3;
     const btn = document.querySelector('.session-go');
     const origText = btn.textContent;
-    btn.textContent = `AUTO-CONNECT (${autoSecs}s) — TAP TO CANCEL`;
+    btn.textContent = `AUTO-CONNECT (${autoSecs}s) â€” TAP TO CANCEL`;
     btn.style.borderColor = 'var(--warn)';
     btn.style.color = 'var(--warn)';
     const cancelOnce = () => {
@@ -1459,7 +1551,7 @@ function resetLockTimer() {
     const autoCountdown = setInterval(() => {
       autoSecs--;
       if (autoSecs > 0) {
-        btn.textContent = `AUTO-CONNECT (${autoSecs}s) — TAP TO CANCEL`;
+        btn.textContent = `AUTO-CONNECT (${autoSecs}s) â€” TAP TO CANCEL`;
       } else {
         clearInterval(autoCountdown);
         btn.removeEventListener('click', cancelOnce);
@@ -1476,7 +1568,7 @@ function resetLockTimer() {
 );
 resetLockTimer();
 
-// ── Video+Mixed Audio Recording ───────────────────────────────
+// â”€â”€ Video+Mixed Audio Recording â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let mediaRecorder = null;
 let recordChunks  = [];
 let audioCtx      = null;
@@ -1505,13 +1597,14 @@ function toggleRecord() {
   if (mediaRecorder && mediaRecorder.state === 'recording') {
     recBusy = true;
     mediaRecorder.stop();
-    btn.textContent  = '⏺ Record'; btn.classList.remove('recording');
-    if (btn2) { btn2.textContent = '⏺ Record'; btn2.classList.remove('recording'); }
-    entry('Recording stopped — saving…', 'sys');
+    btn.textContent  = 'âº Record'; btn.classList.remove('recording');
+    if (btn2) { btn2.textContent = 'âº Record'; btn2.classList.remove('recording'); }
+    entry('Recording stopped â€” savingâ€¦', 'sys');
     return;
   }
 
   if (mediaRecorder && mediaRecorder.state !== 'inactive') return;
+
   if (!localStream) { entry('No local stream to record', 'err'); return; }
 
   if (audioCtx) { audioCtx.close(); audioCtx = null; mixDest = null; }
@@ -1522,22 +1615,13 @@ function toggleRecord() {
   const hasRemote = remoteVideo.srcObject && remoteVideo.srcObject.getTracks().length > 0;
   if (hasRemote) mixStream(remoteVideo.srcObject);
 
-  // ── Choose video source ──────────────────────────────────────
-  let videoStream;
-  if (pipEnabled && hasRemote) {
-    const pipRef = document.getElementById('pipVideoRemote');
-    const W = remoteVideo.videoWidth  || 1280;
-    const H = remoteVideo.videoHeight || 720;
-    videoStream = startCanvasCompositor(remoteVideo, pipRef, W, H);
-  } else {
-    const videoTracks = hasRemote
-      ? remoteVideo.srcObject.getVideoTracks()
-      : localStream.getVideoTracks();
-    videoStream = new MediaStream([...videoTracks]);
-  }
+  // Use remote video if available, otherwise fall back to local camera
+  const videoTracks = hasRemote
+    ? remoteVideo.srcObject.getVideoTracks()
+    : localStream.getVideoTracks();
 
   const recStream = new MediaStream([
-    ...videoStream.getVideoTracks(),
+    ...videoTracks,
     ...mixDest.stream.getAudioTracks()
   ]);
 
@@ -1556,9 +1640,8 @@ function toggleRecord() {
   mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordChunks.push(e.data); };
   mediaRecorder.onstop = () => {
     recBusy = false;
-    stopCanvasCompositor();
     audioCtx.close(); audioCtx = null; mixDest = null;
-    if (recordChunks.length === 0) { entry('Recording empty — nothing saved', 'sys'); return; }
+    if (recordChunks.length === 0) { entry('Recording empty â€” nothing saved', 'sys'); return; }
     const blob = new Blob(recordChunks, { type: mimeType });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
@@ -1569,104 +1652,29 @@ function toggleRecord() {
     entry(`Recording saved (${ext})`, 'ok');
   };
   mediaRecorder.start(1000);
-  btn.textContent  = '⏹ Stop & Save'; btn.classList.add('recording');
-  if (btn2) { btn2.textContent = '⏹ Stop & Save'; btn2.classList.add('recording'); }
-  const pipNote = pipEnabled ? ' + PiP' : '';
-  entry(`Recording started (${mimeType}${pipNote})…`, 'ok');
+  btn.textContent  = 'â¹ Stop & Save'; btn.classList.add('recording');
+  if (btn2) { btn2.textContent = 'â¹ Stop & Save'; btn2.classList.add('recording'); }
+  entry(`Recording started (${mimeType})â€¦`, 'ok');
 }
 
 function toggleVideo() {
   if (!localStream) return;
   const track = localStream.getVideoTracks()[0];
   if (!track) return;
-  const btns = [document.getElementById('videoBtn'), document.getElementById('videoBtn2')];
   if (track.enabled) {
     track.enabled = false;
-    btns.forEach(b => { if(b){ b.textContent = 'Enable Video'; b.classList.add('disabled-state'); }});
+    setVideoButtons(false);
     entry('Local video disabled', 'sys');
   } else {
     track.enabled = true;
-    btns.forEach(b => { if(b){ b.textContent = 'Disable Video'; b.classList.remove('disabled-state'); }});
+    setVideoButtons(true);
     entry('Local video enabled', 'sys');
   }
+  updateLocalVideoState();
+  sendVideoState();
 }
 
-// ── Picture-in-Picture local overlay ─────────────────────────
-let pipEnabled = false;
-
-function getPipVideos() {
-  return [
-    document.getElementById('pipVideoLocal'),
-    document.getElementById('pipVideoRemote')
-  ];
-}
-function getPipBtns() {
-  return [
-    document.getElementById('pipBtnLocal'),
-    document.getElementById('pipBtnRemote')
-  ];
-}
-
-function togglePip() {
-  pipEnabled = !pipEnabled;
-  getPipVideos().forEach(v => {
-    if (!v) return;
-    if (pipEnabled) { v.srcObject = localStream || null; v.classList.add('active'); }
-    else            { v.srcObject = null; v.classList.remove('active'); }
-  });
-  getPipBtns().forEach(b => {
-    if (!b) return;
-    if (pipEnabled) { b.classList.add('pip-on'); b.setAttribute('data-tip', 'Hide local camera overlay'); }
-    else            { b.classList.remove('pip-on'); b.setAttribute('data-tip', 'Show local camera overlay'); }
-  });
-  entry('PiP overlay ' + (pipEnabled ? 'on' : 'off'), 'sys');
-}
-
-function refreshPip() {
-  if (!pipEnabled) return;
-  getPipVideos().forEach(v => { if (v) v.srcObject = localStream; });
-}
-
-// ── Canvas compositor for PiP-in-recording ───────────────────
-let recCanvas    = null;
-let recCanvasCtx = null;
-let recAnimId    = null;
-
-function startCanvasCompositor(mainVideo, pipVideo, w, h) {
-  recCanvas    = document.createElement('canvas');
-  recCanvas.width = w; recCanvas.height = h;
-  recCanvasCtx = recCanvas.getContext('2d');
-  const pip_w = Math.round(w * 0.28);
-  const pip_h = Math.round(pip_w * 0.75);
-  const pip_x = w - pip_w - 8;
-  const pip_y = h - pip_h - 8;
-  function draw() {
-    recCanvasCtx.drawImage(mainVideo, 0, 0, w, h);
-    if (pipEnabled && pipVideo && pipVideo.srcObject) {
-      recCanvasCtx.save();
-      recCanvasCtx.beginPath();
-      recCanvasCtx.roundRect(pip_x, pip_y, pip_w, pip_h, 4);
-      recCanvasCtx.clip();
-      recCanvasCtx.drawImage(pipVideo, pip_x, pip_y, pip_w, pip_h);
-      recCanvasCtx.restore();
-      recCanvasCtx.strokeStyle = 'rgba(0,255,159,0.6)';
-      recCanvasCtx.lineWidth = 1.5;
-      recCanvasCtx.beginPath();
-      recCanvasCtx.roundRect(pip_x, pip_y, pip_w, pip_h, 4);
-      recCanvasCtx.stroke();
-    }
-    recAnimId = requestAnimationFrame(draw);
-  }
-  draw();
-  return recCanvas.captureStream(30);
-}
-
-function stopCanvasCompositor() {
-  if (recAnimId) { cancelAnimationFrame(recAnimId); recAnimId = null; }
-  recCanvas = null; recCanvasCtx = null;
-}
-
-// ── Screen Share ──────────────────────────────────────────────
+// â”€â”€ Screen Share â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let screenSharing = false;
 let cameraTrack = null;
 let screenTrack = null;
@@ -1687,6 +1695,8 @@ async function toggleScreenShare() {
 
       document.getElementById('localVideo').srcObject = null;
       document.getElementById('localVideo').srcObject = localStream;
+      updateLocalVideoState();
+      sendVideoState();
 
       try {
         const pc = call && (call.peerConnection || call._pc);
@@ -1732,6 +1742,8 @@ async function stopScreenShare() {
 
   document.getElementById('localVideo').srcObject = null;
   document.getElementById('localVideo').srcObject = localStream;
+  updateLocalVideoState();
+  sendVideoState();
 
   try {
     const pc = call && (call.peerConnection || call._pc);
@@ -1739,11 +1751,11 @@ async function stopScreenShare() {
     if (sender && restoreTrack) await sender.replaceTrack(restoreTrack);
   } catch(e) {}
 
-  btns.forEach(b => { if(b){ b.textContent = 'Share'; b.classList.remove('screen-active'); }});
-  entry('Screen share stopped — camera restored', 'ok');
+  btns.forEach(b => { if(b){ b.textContent = 'SCREEN'; b.classList.remove('screen-active'); }});
+  entry('Screen share stopped â€” camera restored', 'ok');
 }
 
-// ── Silent audio track used when muted ───────────────────────
+// â”€â”€ Silent audio track used when muted â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function getSilentTrack() {
   if (silentTrack && silentTrack.readyState !== 'ended') return silentTrack;
   silentCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1786,12 +1798,12 @@ function toggleAudio() {
   }
 }
 
-// ── Refresh Screen — reloads page (Unit ID pre-fills from localStorage) ──
+// â”€â”€ Refresh Screen â€” reloads page (Unit ID pre-fills from localStorage) â”€â”€
 function refreshScreen() {
   window.location.reload();
 }
 
-// ── Camera flip (Android front/back) ─────────────────────────
+// â”€â”€ Camera flip (Android front/back) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let currentFacingMode = 'user';
 let flipping = false;
 
@@ -1803,7 +1815,7 @@ async function flipCamera() {
 
   const targetMode = currentFacingMode === 'user' ? 'environment' : 'user';
 
-  // Keep a reference to the old track — don't stop it yet
+  // Keep a reference to the old track â€” don't stop it yet
   const oldVideoTrack = localStream.getVideoTracks()[0] || null;
 
   async function tryAcquire() {
@@ -1821,7 +1833,7 @@ async function flipCamera() {
         video: { facingMode: targetMode }, audio: false
       });
     } catch(e) {}
-    // Last resort — any camera
+    // Last resort â€” any camera
     await new Promise(r => setTimeout(r, 400));
     return await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
   }
@@ -1839,7 +1851,8 @@ async function flipCamera() {
     currentFacingMode = targetMode;
 
     document.getElementById('localVideo').srcObject = localStream;
-    refreshPip();
+    updateLocalVideoState();
+    sendVideoState();
 
     // Replace track in active WebRTC call
     const pc = call && (call.peerConnection || call._pc);
@@ -1850,7 +1863,7 @@ async function flipCamera() {
 
     entry('Camera flipped to ' + (currentFacingMode === 'user' ? 'front' : 'rear'), 'ok');
   } catch(e) {
-    // All attempts failed — leave localStream with the original track untouched
+    // All attempts failed â€” leave localStream with the original track untouched
     entry('Camera flip failed: ' + e.message, 'err');
   } finally {
     flipping = false;
@@ -1863,3 +1876,4 @@ window.addEventListener('beforeunload', () => { peer?.destroy(); });
 
 
 </div></body></html>
+
