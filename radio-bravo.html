@@ -588,20 +588,18 @@ function startSession() {
 }
 
 // ── Pre-fill last used code + checkbox states on load ────────
-(function() {
+function prefillLogin() {
   try {
     const disVid = localStorage.getItem('bravo_disable_video') === '1';
     const disAud = localStorage.getItem('bravo_disable_audio') === '1';
     const last   = localStorage.getItem('bravo_last_code');
-    setTimeout(() => entry('PREFILL: code=' + last + ' vid=' + disVid + ' aud=' + disAud, 'sys'), 500);
     document.getElementById('loginDisableVideo').checked = disVid;
     document.getElementById('loginDisableAudio').checked = disAud;
-    if (last) {
-      document.getElementById('sessionCode').value = last;
-      setTimeout(() => startSession(), 300);
-    }
+    if (last) document.getElementById('sessionCode').value = last;
+    setTimeout(() => entry('PREFILL: code=' + last + ' vid=' + disVid + ' aud=' + disAud, 'sys'), 500);
   } catch(e) {}
-})();
+}
+prefillLogin();
 
 // ── 60-second login timeout indicator ────────────────────────
 let loginTimeoutInterval;
@@ -631,7 +629,10 @@ function startLoginTimeout() {
     }
   }, 1000);
 }
-startLoginTimeout();
+// Only start login timeout if the overlay wasn't already dismissed by auto-login
+if (document.getElementById('sessionOverlay').style.display !== 'none') {
+  startLoginTimeout();
+}
 
 // ── Session countdown (10 min) ────────────────────────────────
 let sessionCountdownInterval;
@@ -964,6 +965,7 @@ function resetLockTimer() {
   lockTimer = setTimeout(() => {
     document.getElementById('sessionOverlay').style.display = 'flex';
     document.getElementById('unitIdDisplay').style.display = 'none';
+    prefillLogin();
     clearInterval(sessionCountdownInterval);
     sessionSecsRemaining = 0;
     sessionTimerDisplay.textContent = '⏱ --:--';
