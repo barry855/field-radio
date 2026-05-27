@@ -905,29 +905,23 @@ function answerCall(c) {
 
 function attachCall(c) {
   call = c;
-  // If audio was muted at login, replace the sender track with silence now
-  if (audioMuted && realAudioTrack) {
-    const silent = getSilentTrack();
-    try {
-      const pc = c.peerConnection || (c._pc);
-      if (pc) {
-        const sender = pc.getSenders().find(s => s.track && s.track.kind === 'audio');
-        if (sender) sender.replaceTrack(silent).catch(() => {});
-      }
-    } catch(e) {}
-  }
   c.on('stream', stream => {
     document.getElementById('remoteAudio').srcObject = stream;
     const remoteVideo = document.getElementById('remoteVideo');
     remoteVideo.srcObject = stream;
     document.getElementById('remoteWrap').classList.remove('waiting');
-    if (linked) return; // stream event can fire once per track — only act on first
+    if (linked) return;
     linked = true;
     setStatus('linked');
     entry('Linked to Bravo — full duplex active', 'ok');
     duplexBar.textContent = '● LIVE';
     duplexBar.className = 'duplex-overlay live';
     syncControls();
+    // Apply mute state now that senders are live
+    if (audioMuted) {
+      entry('DEBUG applying mute on stream event', 'sys');
+      applyMuteToSenders();
+    }
   });
   c.on('close', onDrop);
   c.on('error', e => { entry('Call error: ' + e.message, 'err'); onDrop(); });
@@ -1111,14 +1105,15 @@ function toggleVideo() {
 }
 
 // ── Silent audio track used when muted ───────────────────────
+let silentCtx = null;
 let silentTrack = null;
+
 function getSilentTrack() {
   if (silentTrack && silentTrack.readyState !== 'ended') return silentTrack;
-  const ctx  = new (window.AudioContext || window.webkitAudioContext)();
-  const dest = ctx.createMediaStreamDestination();
-  // oscillator at 0 gain — produces a valid silent track
-  const osc  = ctx.createOscillator();
-  const gain = ctx.createGain();
+  silentCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const dest = silentCtx.createMediaStreamDestination();
+  const osc  = silentCtx.createOscillator();
+  const gain = silentCtx.createGain();
   gain.gain.value = 0;
   osc.connect(gain);
   gain.connect(dest);
@@ -1130,30 +1125,43 @@ function getSilentTrack() {
 let audioMuted = false;
 let realAudioTrack = null;
 
+function applyMuteToSenders() {
+  if (!call) return;
+  const pc = call.peerConnection || call._pc;
+  if (!pc) return;
+  const senders = pc.getSenders();
+  entry('DEBUG senders: ' + senders.length + ', audioMuted: ' + audioMuted, 'sys');
+  const sender = senders.find(s => s.track && s.track.kind === 'audio');
+  if (!sender) {
+    entry('DEBUG no audio sender found', 'sys');
+    return;
+  }
+  if (audioMuted) {
+    const silent = getSilentTrack();
+    sender.replaceTrack(silent)
+      .then(() => entry('DEBUG silent track applied', 'sys'))
+      .catch(e => entry('DEBUG replaceTrack err: ' + e, 'err'));
+  } else if (realAudioTrack) {
+    sender.replaceTrack(realAudioTrack)
+      .then(() => entry('DEBUG real track restored', 'sys'))
+      .catch(e => entry('DEBUG replaceTrack err: ' + e, 'err'));
+  }
+}
+
 function toggleAudio() {
   if (!localStream) return;
   const btns = [document.getElementById('audioBtn'), document.getElementById('audioBtn2')];
-
   if (!audioMuted) {
-    // Mute: swap real track for silent track on all senders
     realAudioTrack = localStream.getAudioTracks()[0];
     if (realAudioTrack) realAudioTrack.enabled = false;
-    const silent = getSilentTrack();
-    if (call && call.peerConnection) {
-      const sender = call.peerConnection.getSenders().find(s => s.track && s.track.kind === 'audio');
-      if (sender) sender.replaceTrack(silent).catch(() => {});
-    }
     audioMuted = true;
+    applyMuteToSenders();
     btns.forEach(b => { if(b){ b.textContent = 'Enable Audio'; b.classList.add('disabled-state'); }});
     entry('Local audio muted', 'sys');
   } else {
-    // Unmute: restore real track
     if (realAudioTrack) realAudioTrack.enabled = true;
-    if (call && call.peerConnection) {
-      const sender = call.peerConnection.getSenders().find(s => s.track && s.track.kind === 'audio');
-      if (sender && realAudioTrack) sender.replaceTrack(realAudioTrack).catch(() => {});
-    }
     audioMuted = false;
+    applyMuteToSenders();
     btns.forEach(b => { if(b){ b.textContent = 'Disable Audio'; b.classList.remove('disabled-state'); }});
     entry('Local audio unmuted', 'sys');
   }
