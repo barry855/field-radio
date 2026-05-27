@@ -592,6 +592,7 @@
       <div class="channel-row" style="flex-shrink:0; padding:0 0 4px 0;">
         <button class="media-btn" id="refreshBtnLocal" onclick="refreshScreen()">↺ Refresh</button>
         <button class="media-btn" id="flipBtn" onclick="flipCamera()">⟳ Flip</button>
+        <button class="media-btn" id="screenBtn" onclick="toggleScreenShare()">⬡ Screen</button>
         <button class="media-btn" id="recBtn" onclick="toggleRecord()">⏺ Record</button>
       </div>
       <div class="video-panel">
@@ -611,9 +612,14 @@
         <button class="media-btn" id="videoBtn2" onclick="toggleVideo()">Disable Video</button>
         <button class="media-btn" id="audioBtn2" onclick="toggleAudio()">Disable Audio</button>
       </div>
+      <div class="channel-row" style="flex-shrink:0; padding:4px 0;">
+        <button class="media-btn" id="videoBtn2" onclick="toggleVideo()">Disable Video</button>
+        <button class="media-btn" id="audioBtn2" onclick="toggleAudio()">Disable Audio</button>
+      </div>
       <div class="channel-row" style="flex-shrink:0; padding:0 0 4px 0;">
         <button class="media-btn" id="refreshBtn" onclick="refreshScreen()">↺ Refresh</button>
         <button class="media-btn" id="flipBtn2" onclick="flipCamera()">⟳ Flip</button>
+        <button class="media-btn" id="screenBtn2" onclick="toggleScreenShare()">⬡ Screen</button>
         <button class="media-btn" id="recBtn2" onclick="toggleRecord()">⏺ Record</button>
       </div>
       <div class="video-panel">
@@ -1533,6 +1539,83 @@ function toggleVideo() {
     btns.forEach(b => { if(b){ b.textContent = 'Disable Video'; b.classList.remove('disabled-state'); }});
     entry('Local video enabled', 'sys');
   }
+}
+
+// ── Screen Share ──────────────────────────────────────────────
+let screenSharing = false;
+let cameraTrack = null;
+let screenTrack = null;
+
+async function toggleScreenShare() {
+  const btns = [document.getElementById('screenBtn'), document.getElementById('screenBtn2')];
+  if (!screenSharing) {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+      entry('Screen share not supported in this browser', 'err'); return;
+    }
+    try {
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+      screenTrack = screenStream.getVideoTracks()[0];
+
+      cameraTrack = localStream.getVideoTracks()[0] || null;
+      if (cameraTrack) localStream.removeTrack(cameraTrack);
+      localStream.addTrack(screenTrack);
+
+      document.getElementById('localVideo').srcObject = null;
+      document.getElementById('localVideo').srcObject = localStream;
+
+      try {
+        const pc = call && (call.peerConnection || call._pc);
+        const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'video');
+        if (sender) await sender.replaceTrack(screenTrack);
+      } catch(e) { entry('Screen share track replace error: ' + e.message, 'err'); }
+
+      screenSharing = true;
+      btns.forEach(b => { if(b){ b.textContent = '⬡ Camera'; b.classList.add('disabled-state'); }});
+      entry('Screen share started', 'ok');
+
+      screenTrack.addEventListener('ended', () => {
+        if (screenSharing) stopScreenShare();
+      });
+    } catch(e) {
+      if (e.name !== 'NotAllowedError') entry('Screen share error: ' + e.message, 'err');
+    }
+  } else {
+    stopScreenShare();
+  }
+}
+
+async function stopScreenShare() {
+  if (!screenSharing) return;
+  const btns = [document.getElementById('screenBtn'), document.getElementById('screenBtn2')];
+  screenSharing = false;
+
+  if (screenTrack) { screenTrack.stop(); screenTrack = null; }
+  localStream.getVideoTracks().forEach(t => localStream.removeTrack(t));
+
+  let restoreTrack = cameraTrack && cameraTrack.readyState !== 'ended' ? cameraTrack : null;
+  if (!restoreTrack) {
+    try {
+      const cam = await navigator.mediaDevices.getUserMedia({ video: { facingMode: currentFacingMode }, audio: false });
+      restoreTrack = cam.getVideoTracks()[0];
+    } catch(e) { entry('Could not restore camera: ' + e.message, 'err'); }
+  }
+
+  if (restoreTrack) {
+    localStream.addTrack(restoreTrack);
+    cameraTrack = restoreTrack;
+  }
+
+  document.getElementById('localVideo').srcObject = null;
+  document.getElementById('localVideo').srcObject = localStream;
+
+  try {
+    const pc = call && (call.peerConnection || call._pc);
+    const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'video');
+    if (sender && restoreTrack) await sender.replaceTrack(restoreTrack);
+  } catch(e) {}
+
+  btns.forEach(b => { if(b){ b.textContent = '⬡ Screen'; b.classList.remove('disabled-state'); }});
+  entry('Screen share stopped — camera restored', 'ok');
 }
 
 // ── Silent audio track used when muted ───────────────────────
