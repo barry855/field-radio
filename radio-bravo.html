@@ -436,16 +436,6 @@
   }
 
   /* 10-minute session countdown in header */
-  .session-timer {
-    margin-left: auto;
-    font-family: 'Orbitron', sans-serif;
-    font-size: 11px; font-weight: 700;
-    color: var(--text-dim); letter-spacing: 2px;
-    display: flex; align-items: center; gap: 6px;
-    white-space: nowrap;
-  }
-  .session-timer.warn { color: var(--warn); }
-  .session-timer.danger { color: var(--danger); animation: blink 0.8s step-end infinite; }
   @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.35} }
 
   /* ── video ── */
@@ -581,7 +571,6 @@
         <span id="qualityLabel" style="color:var(--text-dim);font-size:10px;">--</span>
       </div>
     </div>
-    <div class="session-timer" id="sessionTimerDisplay">⏱ --:--</div>
   </header>
 
   <div class="tab-bar">
@@ -717,7 +706,6 @@ function startSession() {
   document.getElementById('sessionOverlay').style.display = 'none';
   document.getElementById('unitIdDisplay').style.display = 'flex';
   document.getElementById('unitIdValue').textContent = code;
-  startSessionCountdown();
   document.getElementById('qualityDisplay').style.display = 'flex';
   init();
   setTimeout(loadHistory, 100);
@@ -769,39 +757,6 @@ function startLoginTimeout() {
 if (document.getElementById('sessionOverlay').style.display !== 'none') {
   startLoginTimeout();
 }
-
-// ── Session countdown (10 min) ────────────────────────────────
-let sessionCountdownInterval;
-let sessionSecsRemaining = 0;
-const sessionTimerDisplay = document.getElementById('sessionTimerDisplay');
-
-function startSessionCountdown() {
-  sessionSecsRemaining = 10 * 60;
-  clearInterval(sessionCountdownInterval);
-  updateSessionTimer();
-  sessionCountdownInterval = setInterval(() => {
-    sessionSecsRemaining--;
-    updateSessionTimer();
-    if (sessionSecsRemaining <= 0) clearInterval(sessionCountdownInterval);
-  }, 1000);
-}
-
-function updateSessionTimer() {
-  const m = Math.floor(sessionSecsRemaining / 60);
-  const s = sessionSecsRemaining % 60;
-  const label = '⏱ ' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
-  sessionTimerDisplay.textContent = label;
-  sessionTimerDisplay.className = 'session-timer';
-  if (sessionSecsRemaining <= 60)  sessionTimerDisplay.classList.add('danger');
-  else if (sessionSecsRemaining <= 120) sessionTimerDisplay.classList.add('warn');
-}
-
-function resetSessionCountdown() {
-  if (sessionSecsRemaining > 0) startSessionCountdown();
-}
-['click','keydown','mousemove','touchstart'].forEach(ev =>
-  document.addEventListener(ev, resetSessionCountdown, { passive: true })
-);
 
 document.getElementById('sessionCode').addEventListener('keydown', e => {
   if (e.key === 'Enter') startSession();
@@ -1237,6 +1192,7 @@ function startPeer() {
 
   peer.on('disconnected', () => {
     entry('Signalling server disconnected — reconnecting…', 'sys');
+    saveRecordingIfActive();
     if (!peer.destroyed) peer.reconnect();
   });
 
@@ -1389,7 +1345,20 @@ function attachCall(c) {
   c.on('error', e => { entry('Call error: ' + e.message, 'err'); onDrop(); });
 }
 
+// ── Save recording if a disconnection interrupts it ──────────
+function saveRecordingIfActive() {
+  if (!mediaRecorder || mediaRecorder.state !== 'recording') return;
+  entry('Connection lost — auto-saving recording…', 'sys');
+  const btn  = document.getElementById('recBtn');
+  const btn2 = document.getElementById('recBtn2');
+  if (btn)  { btn.textContent  = '⏺ Record'; btn.classList.remove('recording'); }
+  if (btn2) { btn2.textContent = '⏺ Record'; btn2.classList.remove('recording'); }
+  recBusy = true;
+  mediaRecorder.stop(); // triggers onstop → saves file automatically
+}
+
 function onDrop() {
+  saveRecordingIfActive();
   linked = false;
   call = null;
   // Reset data channel state so it re-opens cleanly on reconnect
@@ -1418,10 +1387,7 @@ function resetLockTimer() {
     document.getElementById('sessionOverlay').style.display = 'flex';
     document.getElementById('unitIdDisplay').style.display = 'none';
     prefillLogin();
-    clearInterval(sessionCountdownInterval);
-    sessionSecsRemaining = 0;
-    sessionTimerDisplay.textContent = '⏱ --:--';
-    sessionTimerDisplay.className = 'session-timer';
+    saveRecordingIfActive();
     if (peer) { peer.destroy(); }
     entry('Session timed out — auto-reconnecting…', 'sys');
     // Auto-reconnect after 3 seconds (only on timeout, not on manual Refresh)
