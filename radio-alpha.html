@@ -549,6 +549,10 @@ const ICE_SERVERS = [
 let MY_ID, REMOTE_ID;
 let loginDisableVideoFlag = false;
 let loginDisableAudioFlag = false;
+let audioMuted = false;
+let realAudioTrack = null;
+let silentCtx = null;
+let silentTrack = null;
 
 let peer, call, dataConn, localStream, linked = false, retryTimer;
 
@@ -1112,9 +1116,6 @@ function toggleVideo() {
 }
 
 // ── Silent audio track used when muted ───────────────────────
-let silentCtx = null;
-let silentTrack = null;
-
 function getSilentTrack() {
   if (silentTrack && silentTrack.readyState !== 'ended') return silentTrack;
   silentCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1128,9 +1129,6 @@ function getSilentTrack() {
   silentTrack = dest.stream.getAudioTracks()[0];
   return silentTrack;
 }
-
-let audioMuted = false;
-let realAudioTrack = null;
 
 function toggleAudio() {
   if (!localStream) return;
