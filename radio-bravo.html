@@ -750,7 +750,7 @@
           <button class="attach-btn" id="attachBtn" title="Attach file / photo / video">📎</button>
           <input type="file" id="fileInput" multiple="" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx" style="display:none">
           <input class="chat-input" id="chatInput" placeholder="TYPE MESSAGE…">
-          <button class="btn" id="sendBtn" onclick="sendChat()">SEND</button>
+          <button class="btn" id="sendBtn">SEND</button>
           <button class="btn" onclick="clearHistory();chat.innerHTML=&#39;&#39;;entry(&#39;Chat history cleared&#39;,&#39;sys&#39;);" title="Clear history" style="padding:6px 10px;">🗑</button>
         </div>
       </div>
@@ -808,6 +808,10 @@ const logEl     = document.getElementById('log');
 const chat      = document.getElementById('chat');
 const chatInput = document.getElementById('chatInput');
 const sendBtn   = document.getElementById('sendBtn');
+// Older Android fires touchstart→touchend→click for one tap; bind touchstart
+// and call preventDefault() to suppress the synthetic click that follows.
+sendBtn.addEventListener('touchstart', e => { e.preventDefault(); sendChat(); }, { passive: false });
+sendBtn.addEventListener('click', sendChat); // desktop / non-touch fallback
 
 function startSession() {
   const code = document.getElementById('sessionCode').value.trim().toUpperCase().replace(/\s+/g,'');
@@ -1050,7 +1054,11 @@ function addBubble(text, mine, ts, save = true) {
   }
 }
 
+let _sendChatLast = 0;
 function sendChat() {
+  const now = Date.now();
+  if (now - _sendChatLast < 300) return;   // debounce — blocks multi-fire on older Android
+  _sendChatLast = now;
   const txt = chatInput.value.trim();
   const hasFiles = pendingFiles.length > 0;
   if (!txt && !hasFiles) return;
@@ -1281,7 +1289,7 @@ function addMediaBubble(name, type, dataUrl, mine) {
 // ── Lightbox close ────────────────────────────────────────────
 lightbox.addEventListener('click', () => { lightbox.classList.remove('open'); lightboxImg.src = ''; });
 
-chatInput.addEventListener('keydown', e => { if (e.key === 'Enter') sendChat(); });
+chatInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); sendChat(); } });
 
 function init() {
   if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
