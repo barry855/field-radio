@@ -1820,17 +1820,20 @@ let screenSharing = false;
 let cameraTrack = null;
 let screenTrack = null;
 
-// Hide share buttons on devices that don't support getDisplayMedia (older Android, etc.)
-(function initScreenShareSupport() {
-  const supported = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
+// Hide share buttons on Android Chrome (no getDisplayMedia support).
+// Android Firefox does support it, so we allow that through.
+document.addEventListener('DOMContentLoaded', function initScreenShareSupport() {
+  const ua = navigator.userAgent;
+  const isAndroid = /Android/i.test(ua);
+  const isFirefox = /Firefox\//i.test(ua);
+  const isAndroidChrome = isAndroid && !isFirefox;
+  const supported = !isAndroidChrome && !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
   if (!supported) {
     document.querySelectorAll('#screenBtn, #screenBtn2').forEach(btn => {
-      if (btn) {
-        btn.style.display = 'none';
-      }
+      if (btn) btn.style.display = 'none';
     });
   }
-})();
+});
 
 async function toggleScreenShare() {
   const btns = [document.getElementById('screenBtn'), document.getElementById('screenBtn2')];
