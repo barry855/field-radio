@@ -585,11 +585,19 @@
 
   /* ── Google Translate widget ────────────────────────────────── */
   #google_translate_element {
+    display: none;  /* hidden until chat tab is active */
     padding: 4px 6px 2px 6px;
     background: rgba(0,0,0,0.25);
-    border-bottom: 1px solid var(--border);
+    border: 1px solid var(--border);
+    border-radius: 4px;
     flex-shrink: 0;
+    overflow: visible;
+    position: relative;
+    z-index: 9999;
   }
+  #google_translate_element.gt-visible { display: block; }
+  /* keep dropdown from being clipped */
+  #google_translate_element .goog-te-gadget-simple {
   /* Trim default Google widget styling to fit the dark UI */
   .goog-te-gadget {
     font-family: 'Share Tech Mono', monospace !important;
@@ -734,6 +742,7 @@
     </div>
   </header>
 
+  <div id="google_translate_element" id="gtWidget"></div>
   <div class="tab-bar">
     <button class="tab-btn" id="tabLocalBtn" onclick="switchTab(&#39;local&#39;)">LOCAL</button>
     <button class="tab-btn active" id="tabRemoteBtn" onclick="switchTab(&#39;remote&#39;)">REMOTE</button>
@@ -805,7 +814,6 @@
     </div>
     <!-- CHAT TAB -->
     <div class="tab-pane" id="paneChat">
-      <div id="google_translate_element"></div>
       <div class="chat-panel" style="flex:1" id="chatPanel">
         <div class="panel-label">COMMS</div>
         <div class="drop-overlay" id="dropOverlay">
@@ -1091,6 +1099,7 @@ function switchTab(tab) {
   document.getElementById('paneLocal')  .classList.toggle('active', tab === 'local');
   document.getElementById('paneRemote') .classList.toggle('active', tab === 'remote');
   document.getElementById('paneChat')   .classList.toggle('active', tab === 'chat');
+  document.getElementById('google_translate_element').classList.toggle('gt-visible', tab === 'chat');
   if (tab === 'remote') syncControls();
   if (tab === 'chat') {
     unreadCount = 0;
