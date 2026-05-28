@@ -622,7 +622,7 @@
   }
   #translateDropdown li:hover,
   #translateDropdown li:focus { background: rgba(0,212,255,0.12); color: var(--accent); outline: none; }
-  #translateDropdown li.selected { color: var(--accent2); }
+  #translateDropdown li.selected { color: var(--accent2); background: rgba(0,255,159,0.08); border-left: 3px solid var(--accent2); padding-left: 5px; }
   #translateSearch {
     width: calc(100% - 16px); margin: 8px; padding: 5px 8px;
     background: #0c1520; border: 1px solid var(--border);
@@ -1135,6 +1135,9 @@ function toggleTranslateDrop(e) {
     const search = document.getElementById('translateSearch');
     search.value = '';
     filterLangs('');
+    // Scroll to the currently selected language
+    const selected = dd.querySelector('li.selected');
+    if (selected) setTimeout(() => selected.scrollIntoView({ block: 'nearest' }), 30);
     setTimeout(() => search.focus(), 50);
   }
 }
