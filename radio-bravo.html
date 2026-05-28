@@ -1200,6 +1200,7 @@ function applyTranslate(code, name) {
   _translateName = name;
   document.getElementById('translateTrigger').textContent = name.toUpperCase();
   document.getElementById('translateDropdown').classList.remove('open');
+  try { localStorage.setItem('bravo_translate_lang', JSON.stringify({code, name})); } catch(e) {}
   resetLockTimer();  // prevent inactivity lock firing during selection
   entry('Translate active: ' + name + ' — applies to new incoming messages', 'sys');
   // Translate existing bubbles one at a time with a gap to avoid blocking the event loop
@@ -1209,7 +1210,10 @@ function applyTranslate(code, name) {
 function resetTranslate() {
   _translateLang = null;
   _translateName = null;
-  document.getElementById('translateTrigger').textContent = 'SELECT LANGUAGE';
+  try { localStorage.removeItem('bravo_translate_lang'); } catch(e) {}
+  const sysLang = (navigator.language || 'en').split('-')[0].toUpperCase();
+  document.getElementById('translateTrigger').textContent = 'ORIGINAL (' + sysLang + ')';
+  setTimeout(() => { document.getElementById('translateTrigger').textContent = 'SELECT LANGUAGE'; }, 2000);
   // Restore original text in all bubbles
   document.querySelectorAll('#chat .bubble').forEach(b => {
     if (b.dataset.orig) {
@@ -1217,7 +1221,7 @@ function resetTranslate() {
       if (msgDiv) msgDiv.textContent = b.dataset.orig;
     }
   });
-  entry('Chat restored to original', 'sys');
+  entry('Chat restored to original — system language: ' + (navigator.language || 'unknown'), 'sys');
 }
 
 // Wire up list items
@@ -1242,6 +1246,15 @@ function prefillLogin() {
     setTimeout(() => entry('PREFILL: code=' + last + ' vid=' + disVid + ' aud=' + disAud, 'sys'), 500);
     // Start presence polling immediately if code was pre-filled
     if (last) startPresencePolling(last);
+    // Restore saved translate language
+    const savedLang = localStorage.getItem('bravo_translate_lang');
+    if (savedLang) {
+      const { code, name } = JSON.parse(savedLang);
+      _translateLang = code;
+      _translateName = name;
+      document.getElementById('translateTrigger').textContent = name.toUpperCase();
+      entry('Translate restored: ' + name, 'sys');
+    }
   } catch(e) {}
 }
 prefillLogin();
