@@ -98,6 +98,7 @@
   .led.on-green  { background: var(--accent2); box-shadow: 0 0 6px var(--accent2); }
   .led.on-cyan   { background: var(--accent);  box-shadow: 0 0 6px var(--accent);  }
   .led.on-yellow { background: var(--warn);    box-shadow: 0 0 6px var(--warn);    animation: blink 0.8s step-end infinite; }
+  .led.on-amber  { background: #ffaa00;       box-shadow: 0 0 8px #ffaa00; }  /* reachable — solid amber */
 
   @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.35} }
 
@@ -905,9 +906,10 @@ function entry(msg, cls='sys') {
 
 function setStatus(state) {
   linkLed.className = 'led';
-  if (state === 'calling')  { linkLed.classList.add('on-yellow'); statusEl.textContent = 'CALLING…'; }
-  else if (state === 'linked') { linkLed.classList.add('on-green');  statusEl.textContent = 'LINKED'; }
-  else                      { statusEl.textContent = 'OFFLINE'; }
+  if (state === 'calling')      { linkLed.classList.add('on-yellow'); statusEl.textContent = 'CALLING…'; }
+  else if (state === 'reachable') { linkLed.classList.add('on-amber');  statusEl.textContent = 'REACHABLE'; }
+  else if (state === 'linked')    { linkLed.classList.add('on-green');  statusEl.textContent = 'LINKED'; }
+  else                            { statusEl.textContent = 'OFFLINE'; }
 }
 
 let activeTab = 'remote';
@@ -1464,13 +1466,27 @@ function attachDataConn(dc) {
   dc.on('open', () => {
     pendingDC = false;
     dataConn = dc;
-    entry('Chat channel open', 'ok');
+    entry('Chat channel open — pinging peer…', 'ok');
+    setStatus('reachable');
+    try { dc.send(JSON.stringify({ __control: 'ping', ts: Date.now() })); } catch(e) {}
     sendVideoState();
   });
   dc.on('data', msg => {
     if (typeof msg === 'string' && msg.startsWith('{')) {
       try {
         const f = JSON.parse(msg);
+        if (f.__control === 'ping') {
+          try { dc.send(JSON.stringify({ __control: 'pong', ts: f.ts })); } catch(e) {}
+          if (!linked) setStatus('reachable');
+          entry('Ping from Bravo — pong sent', 'sys');
+          return;
+        }
+        if (f.__control === 'pong') {
+          const rtt = Date.now() - (f.ts || Date.now());
+          if (!linked) setStatus('reachable');
+          entry('Pong ← Bravo reachable  RTT ' + rtt + 'ms', 'ok');
+          return;
+        }
         if (f.__control === 'video') {
           updateRemoteVideoState(f.enabled, f.hasTrack !== false);
           return;
