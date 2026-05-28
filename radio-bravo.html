@@ -1424,13 +1424,6 @@ function loadHistory() {
     divider2.textContent = '— NOW —';
     chat.appendChild(divider2);
     chat.scrollTop = chat.scrollHeight;
-  // Auto-translate new incoming bubbles if language is active
-  if (!mine && _translateLang) {
-    b.dataset.orig = text;
-    translateText(text, _translateLang).then(t => {
-      if (t) { const md = wrap.querySelector('div:not(.who):not(.ts)'); if (md) md.textContent = t; }
-    });
-  }
   } catch(e) {}
 }
 
@@ -1468,6 +1461,13 @@ function addBubble(text, mine, ts, save = true) {
     msgBadge.classList.remove('visible');
     void msgBadge.offsetWidth; // reflow to restart animation
     msgBadge.classList.add('visible');
+  }
+  // Auto-translate bubbles if language is active
+  if (_translateLang) {
+    wrap.dataset.orig = text;
+    translateText(text, _translateLang).then(t => {
+      if (t) { const md = wrap.querySelector('div:not(.who):not(.ts)'); if (md) md.textContent = t; }
+    });
   }
 }
 
