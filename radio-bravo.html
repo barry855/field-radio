@@ -1974,17 +1974,25 @@ async function flipCamera() {
   const targetMode = currentFacingMode === 'user' ? 'environment' : 'user';
   const fallbackMode = currentFacingMode; // in case new camera fails, restore this
 
-  // Stop the old track BEFORE requesting the new camera.
-  // Android Chrome cannot hold two camera tracks open simultaneously and
-  // will crash/close the tab if getUserMedia is called while one is still active.
+  // On Android (especially Android 11), the camera hardware stays locked as long
+  // as ANY video element is actively rendering the track — even after track.stop().
+  // We must: (1) detach srcObject from all video elements, (2) stop & remove the
+  // track, (3) wait for hardware to fully release, then (4) re-acquire.
+  const localVideoEl = document.getElementById('localVideo');
+  const miniLocalEl  = document.getElementById('miniLocal');
+
+  // Detach video elements so the hardware lock is released
+  if (localVideoEl) localVideoEl.srcObject = null;
+  if (miniLocalEl)  miniLocalEl.srcObject  = null;
+
   const oldVideoTrack = localStream.getVideoTracks()[0] || null;
   if (oldVideoTrack) {
     oldVideoTrack.stop();
     localStream.removeTrack(oldVideoTrack);
   }
 
-  // Brief pause so Android camera hardware fully releases before we reopen
-  await new Promise(r => setTimeout(r, 300));
+  // Give Android 11 camera hardware time to fully release (needs longer than newer versions)
+  await new Promise(r => setTimeout(r, 800));
 
   async function tryAcquire(mode) {
     // Try with exact facingMode first
