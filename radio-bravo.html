@@ -98,6 +98,7 @@
   .led.on-green  { background: var(--accent2); box-shadow: 0 0 6px var(--accent2); }
   .led.on-cyan   { background: var(--accent);  box-shadow: 0 0 6px var(--accent);  }
   .led.on-yellow { background: var(--warn);    box-shadow: 0 0 6px var(--warn); }
+  .led.on-amber  { background: #ffaa00;       box-shadow: 0 0 8px #ffaa00; }  /* reachable — solid amber */
 
   .chat-panel {
     flex: 1;
@@ -126,11 +127,11 @@
   }
 
   .bubble {
-    max-width: 80%;
-    padding: 8px 12px;
+    max-width: 82%;
+    padding: 10px 14px;
     border-radius: 6px;
-    font-size: 12px;
-    line-height: 1.5;
+    font-size: 16px;
+    line-height: 1.55;
     word-break: break-word;
     border: 1px solid var(--border);
   }
@@ -147,15 +148,15 @@
     color: #0a1520;
   }
   .bubble .who {
-    font-size: 9px; letter-spacing: 2px; margin-bottom: 4px;
+    font-size: 12px; letter-spacing: 2px; margin-bottom: 5px;
     text-transform: uppercase; font-family: 'Orbitron', sans-serif;
   }
   .bubble.mine .who   { color: #007744; }
   .bubble.theirs .who { color: #0077aa; }
 
   .bubble .ts {
-    font-size: 8px; color: #888; letter-spacing: 0.5px;
-    margin-top: 4px; text-align: right;
+    font-size: 11px; color: #888; letter-spacing: 0.5px;
+    margin-top: 5px; text-align: right;
   }
 
   /* connection quality */
@@ -184,7 +185,7 @@
     flex: 1;
     background: #0c1520; border: 1px solid var(--border);
     color: var(--text); padding: 7px 10px; border-radius: 4px;
-    font-family: 'Share Tech Mono', monospace; font-size: 12px;
+    font-family: 'Share Tech Mono', monospace; font-size: 16px;
     outline: none; transition: border-color 0.2s;
   }
   .chat-input:focus   { border-color: var(--accent2); }
@@ -487,6 +488,7 @@
     display: flex; align-items: center; justify-content: center;
     font-family: 'Orbitron', sans-serif; font-size: 10px;
     letter-spacing: 3px; color: var(--text-dim);
+    background: rgba(0,0,0,0.85);
   }
   .video-wrap.video-off::after {
     content: 'VIDEO OFF';
@@ -579,6 +581,65 @@
   }
   .msg-badge.visible { display: flex; }
   @keyframes badge-pop { 0%{transform:scale(0)} 70%{transform:scale(1.2)} 100%{transform:scale(1)} }
+
+  /* ── Speaker / earphone toggle ─────────────────────────────── */
+  .speaker-btn {
+    flex: 0 0 auto; height: 36px; padding: 0 10px;
+    background: var(--btn-bg); border: 1px solid var(--border);
+    color: var(--text); border-radius: 4px;
+    font-family: 'Share Tech Mono', monospace; font-size: 11px;
+    letter-spacing: 0.5px; cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+  .speaker-btn:hover { background: var(--btn-hover); }
+  .speaker-btn.speaker-on {
+    border-color: var(--accent2); color: var(--accent2);
+    box-shadow: 0 0 7px rgba(0,255,159,0.25);
+  }
+  .speaker-btn.speaker-ear {
+    border-color: var(--accent); color: var(--accent);
+    box-shadow: 0 0 7px rgba(0,212,255,0.25);
+  }
+
+  /* ── Zoom slider row ───────────────────────────────────────── */
+  .zoom-row {
+    display: flex; align-items: center; gap: 8px;
+    flex-shrink: 0; padding: 2px 0;
+    font-size: 10px; color: var(--text-dim);
+    letter-spacing: 1px; text-transform: uppercase;
+  }
+  .zoom-row input[type=range] {
+    flex: 1; accent-color: var(--accent);
+    height: 4px; cursor: pointer;
+  }
+  .zoom-row .zoom-val {
+    min-width: 34px; text-align: right;
+    color: var(--accent); font-family: 'Orbitron', sans-serif;
+    font-size: 10px;
+  }
+
+  /* ── Login presence indicator ──────────────────────────────── */
+  .login-presence {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 14px; padding: 7px 10px;
+    border: 1px solid var(--border); border-radius: 4px;
+    background: rgba(0,0,0,0.2);
+  }
+  .login-presence .pled {
+    width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+    background: #333; border: 1px solid #555;
+    transition: background 0.4s, box-shadow 0.4s;
+  }
+  .login-presence .pled.p-searching { background: #555; animation: blink 1s step-end infinite; }
+  .login-presence .pled.p-reachable { background: #ffaa00; box-shadow: 0 0 8px #ffaa00; }
+  .login-presence .pled.p-offline   { background: #ff4444; box-shadow: 0 0 6px #ff4444; }
+  .login-presence .ptxt {
+    font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+    font-family: 'Orbitron', sans-serif; color: var(--text-dim);
+  }
+  .login-presence .ptxt.p-reachable { color: #ffaa00; }
+  .login-presence .ptxt.p-offline   { color: #ff4444; }
 </style>
 <script src="./BRAVO — Field Radio v6_files/peerjs.min.js.download"></script></head>
 <body>
@@ -601,6 +662,10 @@
         <span>Login Timeout</span><span id="loginTimeoutSec">43s</span>
       </div>
       <div class="login-timeout-track"><div class="login-timeout-fill" id="loginTimeoutFill" style="width: 71.6667%; background: var(--accent2);"></div></div>
+    </div>
+    <div class="login-presence" id="loginPresence">
+      <div class="pled" id="loginPresenceLed"></div>
+      <span class="ptxt" id="loginPresenceTxt">ENTER CODE</span>
     </div>
     <button class="session-go" onclick="startSession()">CONNECT</button>
   </div>
@@ -648,6 +713,12 @@
         <button class="media-btn" id="refreshBtnLocal" onclick="refreshScreen()">↺ Refresh</button>
         <button class="media-btn" id="flipBtn" onclick="flipCamera()">⟳ Flip</button>
         <button class="media-btn" id="recBtn" onclick="toggleRecord()">⏺ Record</button>
+        <button class="speaker-btn speaker-on" id="speakerBtnLocal" onclick="toggleSpeaker()">🔊 Speaker</button>
+      </div>
+      <div class="zoom-row">
+        <span>ZOOM</span>
+        <input type="range" id="zoomSliderLocal" min="1" max="4" step="0.1" value="1" oninput="applyZoom(this.value,'local')">
+        <span class="zoom-val" id="zoomValLocal">1.0×</span>
       </div>
       <div class="video-panel">
         <div class="panel-label">LOCAL — BRAVO</div>
@@ -676,6 +747,7 @@
         <button class="media-btn" id="refreshBtn" onclick="refreshScreen()">↺ Refresh</button>
         <button class="media-btn" id="flipBtn2" onclick="flipCamera()">⟳ Flip</button>
         <button class="media-btn" id="recBtn2" onclick="toggleRecord()">⏺ Record</button>
+        <button class="speaker-btn speaker-on" id="speakerBtnRemote" onclick="toggleSpeaker()">🔊 Speaker</button>
       </div>
       <div class="video-panel">
         <div class="panel-label">REMOTE — ALPHA</div>
@@ -706,7 +778,7 @@
           <button class="attach-btn" id="attachBtn" title="Attach file / photo / video">📎</button>
           <input type="file" id="fileInput" multiple="" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx" style="display:none">
           <input class="chat-input" id="chatInput" placeholder="TYPE MESSAGE…">
-          <button class="btn" id="sendBtn" onclick="sendChat()">SEND</button>
+          <button class="btn" id="sendBtn">SEND</button>
           <button class="btn" onclick="clearHistory();chat.innerHTML=&#39;&#39;;entry(&#39;Chat history cleared&#39;,&#39;sys&#39;);" title="Clear history" style="padding:6px 10px;">🗑</button>
         </div>
       </div>
@@ -721,10 +793,21 @@
 <div id="lightbox"><img id="lightboxImg" src="file:///C:/Users/barry/Downloads/radio-bravo_21.html" alt=""></div>
 
 <script>
-const script = document.createElement('script');
-script.src = 'https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js';
-document.head.appendChild(script);
-script.onload = () => {}; // init called after session code entered
+// Load PeerJS with CDN fallback
+(function loadPeerJS(urls, idx) {
+  if (idx >= urls.length) {
+    entry('ERROR: Could not load PeerJS from any CDN — check internet connection', 'err');
+    return;
+  }
+  const s = document.createElement('script');
+  s.src = urls[idx];
+  s.onload = () => { entry('PeerJS ready (' + urls[idx].split('/')[2] + ')', 'sys'); };
+  s.onerror = () => { entry('CDN failed: ' + urls[idx].split('/')[2] + ' — trying next…', 'sys'); loadPeerJS(urls, idx + 1); };
+  document.head.appendChild(s);
+})([
+  'https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js',
+  'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js'
+], 0);
 
 // Free public TURN servers (Open Relay Project) — essential for mobile/carrier-NAT networks
 const ICE_SERVERS = [
@@ -753,8 +836,13 @@ const logEl     = document.getElementById('log');
 const chat      = document.getElementById('chat');
 const chatInput = document.getElementById('chatInput');
 const sendBtn   = document.getElementById('sendBtn');
+// Older Android fires touchstart→touchend→click for one tap; bind touchstart
+// and call preventDefault() to suppress the synthetic click that follows.
+sendBtn.addEventListener('touchstart', e => { e.preventDefault(); sendChat(); }, { passive: false });
+sendBtn.addEventListener('click', sendChat); // desktop / non-touch fallback
 
 function startSession() {
+  stopPresencePolling();
   const code = document.getElementById('sessionCode').value.trim().toUpperCase().replace(/\s+/g,'');
   if (!code) { document.getElementById('sessionCode').focus(); return; }
   MY_ID     = 'bravo-' + code;
@@ -779,6 +867,69 @@ function startSession() {
 }
 
 // ── Pre-fill last used code + checkbox states on load ────────
+
+// ── Login-screen presence heartbeat (Firebase) ───────────────
+const FB_URL = 'https://alpha-bravo-chat-default-rtdb.firebaseio.com';
+const PRESENCE_STALE_MS = 15000;  // 15s — if partner's heartbeat older than this, show offline
+let presencePollTimer = null;
+let presenceWriteTimer = null;
+let presenceCode = '';
+
+function loginPresenceSetState(state, text) {
+  const led = document.getElementById('loginPresenceLed');
+  const txt = document.getElementById('loginPresenceTxt');
+  if (!led || !txt) return;
+  led.className = 'pled ' + (state ? 'p-' + state : '');
+  txt.className = 'ptxt ' + (state ? 'p-' + state : '');
+  txt.textContent = text;
+}
+
+async function presenceWrite(myKey) {
+  try {
+    await fetch(FB_URL + '/presence/' + myKey + '.json', {
+      method: 'PUT',
+      body: JSON.stringify({ ts: Date.now() })
+    });
+  } catch(e) {}
+}
+
+async function presencePoll(partnerKey, myKey) {
+  try {
+    const res = await fetch(FB_URL + '/presence/' + partnerKey + '.json');
+    const data = await res.json();
+    if (data && data.ts && (Date.now() - data.ts) < PRESENCE_STALE_MS) {
+      loginPresenceSetState('reachable', 'ALPHA REACHABLE');
+    } else {
+      loginPresenceSetState('offline', 'ALPHA OFFLINE');
+    }
+  } catch(e) {
+    loginPresenceSetState('offline', 'NO NETWORK');
+  }
+  // Write own heartbeat each poll cycle
+  await presenceWrite(myKey);
+}
+
+function startPresencePolling(code) {
+  stopPresencePolling();
+  if (!code || code.length < 2) {
+    loginPresenceSetState('', 'ENTER CODE');
+    return;
+  }
+  presenceCode = code;
+  // BRAVO polls for alpha-CODE, writes bravo-CODE
+  const myKey      = 'bravo-' + code;
+  const partnerKey = 'alpha-' + code;
+  loginPresenceSetState('searching', 'CHECKING…');
+  presencePoll(partnerKey, myKey); // immediate first poll
+  presencePollTimer = setInterval(() => presencePoll(partnerKey, myKey), 5000);
+}
+
+function stopPresencePolling() {
+  clearInterval(presencePollTimer);
+  clearInterval(presenceWriteTimer);
+  presencePollTimer = null;
+}
+
 function prefillLogin() {
   try {
     const disVid = localStorage.getItem('bravo_disable_video') === '1';
@@ -788,6 +939,8 @@ function prefillLogin() {
     document.getElementById('loginDisableAudio').checked = disAud;
     if (last) document.getElementById('sessionCode').value = last;
     setTimeout(() => entry('PREFILL: code=' + last + ' vid=' + disVid + ' aud=' + disAud, 'sys'), 500);
+    // Start presence polling immediately if code was pre-filled
+    if (last) startPresencePolling(last);
   } catch(e) {}
 }
 prefillLogin();
@@ -825,6 +978,19 @@ if (document.getElementById('sessionOverlay').style.display !== 'none') {
   startLoginTimeout();
 }
 
+// 'input' + 'keyup' + 'change' — covers older Android WebViews where 'input' can be silent
+(function() {
+  let _lastCode = '';
+  function _onCodeChange() {
+    const code = document.getElementById('sessionCode').value.trim().toUpperCase().replace(/\s+/g,'');
+    if (code === _lastCode) return;
+    _lastCode = code;
+    startPresencePolling(code);
+  }
+  ['input','keyup','change'].forEach(ev =>
+    document.getElementById('sessionCode').addEventListener(ev, _onCodeChange)
+  );
+})();
 document.getElementById('sessionCode').addEventListener('keydown', e => {
   if (e.key === 'Enter') startSession();
 });
@@ -840,9 +1006,10 @@ function entry(msg, cls='sys') {
 
 function setStatus(state) {
   linkLed.className = 'led';
-  if (state === 'standby') { linkLed.classList.add('on-cyan');  statusEl.textContent = 'STANDBY'; }
-  else if (state === 'linked') { linkLed.classList.add('on-green'); statusEl.textContent = 'LINKED'; }
-  else                     { statusEl.textContent = 'OFFLINE'; }
+  if (state === 'standby')      { linkLed.classList.add('on-cyan');   statusEl.textContent = 'STANDBY'; }
+  else if (state === 'reachable') { linkLed.classList.add('on-amber');  statusEl.textContent = 'REACHABLE'; }
+  else if (state === 'linked')    { linkLed.classList.add('on-green');  statusEl.textContent = 'LINKED'; }
+  else                            { statusEl.textContent = 'OFFLINE'; }
 }
 
 let activeTab = 'remote';
@@ -995,7 +1162,11 @@ function addBubble(text, mine, ts, save = true) {
   }
 }
 
+let _sendChatLast = 0;
 function sendChat() {
+  const now = Date.now();
+  if (now - _sendChatLast < 300) return;   // debounce — blocks multi-fire on older Android
+  _sendChatLast = now;
   const txt = chatInput.value.trim();
   const hasFiles = pendingFiles.length > 0;
   if (!txt && !hasFiles) return;
@@ -1037,7 +1208,10 @@ function setupTooltips() {
     flipBtn2: 'Switch camera',
     recBtn: 'Start or stop recording',
     recBtn2: 'Start or stop recording',
-    attachBtn: 'Attach file / photo / video'
+    attachBtn: 'Attach file / photo / video',
+    speakerBtnLocal: 'Toggle speaker / earphone output',
+    speakerBtnRemote: 'Toggle speaker / earphone output',
+    zoomSliderLocal: 'Zoom local camera'
   };
   Object.entries(labels).forEach(([id, label]) => {
     const el = document.getElementById(id);
@@ -1223,7 +1397,7 @@ function addMediaBubble(name, type, dataUrl, mine) {
 // ── Lightbox close ────────────────────────────────────────────
 lightbox.addEventListener('click', () => { lightbox.classList.remove('open'); lightboxImg.src = ''; });
 
-chatInput.addEventListener('keydown', e => { if (e.key === 'Enter') sendChat(); });
+chatInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); sendChat(); } });
 
 function init() {
   if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
@@ -1377,13 +1551,27 @@ function startPeer() {
 function attachDataConn(dc) {
   dc.on('open', () => {
     dataConn = dc;
-    entry('Chat channel open', 'ok');
+    entry('Chat channel open — pinging peer…', 'ok');
+    setStatus('reachable');
+    try { dc.send(JSON.stringify({ __control: 'ping', ts: Date.now() })); } catch(e) {}
     sendVideoState();
   });
   dc.on('data', msg => {
     if (typeof msg === 'string' && msg.startsWith('{')) {
       try {
         const f = JSON.parse(msg);
+        if (f.__control === 'ping') {
+          try { dc.send(JSON.stringify({ __control: 'pong', ts: f.ts })); } catch(e) {}
+          if (!linked) setStatus('reachable');
+          entry('Ping from Alpha — pong sent', 'sys');
+          return;
+        }
+        if (f.__control === 'pong') {
+          const rtt = Date.now() - (f.ts || Date.now());
+          if (!linked) setStatus('reachable');
+          entry('Pong ← Alpha reachable  RTT ' + rtt + 'ms', 'ok');
+          return;
+        }
         if (f.__control === 'video') {
           updateRemoteVideoState(f.enabled, f.hasTrack !== false);
           return;
@@ -1578,7 +1766,10 @@ function onDrop() {
   duplexBar.textContent = 'OFFLINE';
   duplexBar.className = 'duplex-overlay';
   syncControls();
-  document.getElementById('remoteVideo').srcObject = null;
+  const _ra = document.getElementById('remoteAudio');
+  if (_ra) { try { _ra.pause(); _ra.srcObject = null; } catch(e){} }
+  const _rv = document.getElementById('remoteVideo');
+  if (_rv) { try { _rv.srcObject = null; _rv.load(); } catch(e){} }
   syncMiniVideos();
   document.getElementById('remoteWrap').classList.remove('video-off', 'no-video');
   document.getElementById('remoteWrap').classList.add('waiting');
@@ -1750,6 +1941,21 @@ let screenSharing = false;
 let cameraTrack = null;
 let screenTrack = null;
 
+// Hide share buttons on Android Chrome (no getDisplayMedia support).
+// Android Firefox does support it, so we allow that through.
+document.addEventListener('DOMContentLoaded', function initScreenShareSupport() {
+  const ua = navigator.userAgent;
+  const isAndroid = /Android/i.test(ua);
+  const isFirefox = /Firefox\//i.test(ua);
+  const isAndroidChrome = isAndroid && !isFirefox;
+  const supported = !isAndroidChrome && !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
+  if (!supported) {
+    document.querySelectorAll('#screenBtn, #screenBtn2').forEach(btn => {
+      if (btn) btn.style.display = 'none';
+    });
+  }
+});
+
 async function toggleScreenShare() {
   const btns = [document.getElementById('screenBtn'), document.getElementById('screenBtn2')];
   if (!screenSharing) {
@@ -1887,23 +2093,39 @@ async function flipCamera() {
   if (flipBtn) flipBtn.disabled = true;
 
   const targetMode = currentFacingMode === 'user' ? 'environment' : 'user';
+  const fallbackMode = currentFacingMode; // in case new camera fails, restore this
 
-  // Keep a reference to the old track — don't stop it yet
+  // On Android (especially Android 11), the camera hardware stays locked as long
+  // as ANY video element is actively rendering the track — even after track.stop().
+  // We must: (1) detach srcObject from all video elements, (2) stop & remove the
+  // track, (3) wait for hardware to fully release, then (4) re-acquire.
+  const localVideoEl = document.getElementById('localVideo');
+  const miniLocalEl  = document.getElementById('miniLocal');
+
+  // Detach video elements so the hardware lock is released
+  if (localVideoEl) localVideoEl.srcObject = null;
+  if (miniLocalEl)  miniLocalEl.srcObject  = null;
+
   const oldVideoTrack = localStream.getVideoTracks()[0] || null;
+  if (oldVideoTrack) {
+    oldVideoTrack.stop();
+    localStream.removeTrack(oldVideoTrack);
+  }
 
-  async function tryAcquire() {
+  // Give Android 11 camera hardware time to fully release (needs longer than newer versions)
+  await new Promise(r => setTimeout(r, 800));
+
+  async function tryAcquire(mode) {
     // Try with exact facingMode first
     try {
       return await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { exact: targetMode } }, audio: false
+        video: { facingMode: { exact: mode } }, audio: false
       });
     } catch(e) {}
-    // Brief pause so Android camera hardware fully releases
-    await new Promise(r => setTimeout(r, 400));
     // Try without exact
     try {
       return await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: targetMode }, audio: false
+        video: { facingMode: mode }, audio: false
       });
     } catch(e) {}
     // Last resort — any camera
@@ -1912,14 +2134,8 @@ async function flipCamera() {
   }
 
   try {
-    const newStream = await tryAcquire();
+    const newStream = await tryAcquire(targetMode);
     const newTrack  = newStream.getVideoTracks()[0];
-
-    // Now safe to stop and replace the old track
-    if (oldVideoTrack) {
-      oldVideoTrack.stop();
-      localStream.removeTrack(oldVideoTrack);
-    }
     localStream.addTrack(newTrack);
     currentFacingMode = targetMode;
 
@@ -1935,14 +2151,70 @@ async function flipCamera() {
 
     entry('Camera flipped to ' + (currentFacingMode === 'user' ? 'front' : 'rear'), 'ok');
   } catch(e) {
-    // All attempts failed — leave localStream with the original track untouched
-    entry('Camera flip failed: ' + e.message, 'err');
+    // All attempts failed — try to recover the original camera so the user isn't left with no video
+    entry('Camera flip failed: ' + e.message + ' — attempting to restore original camera…', 'err');
+    try {
+      const recoveryStream = await tryAcquire(fallbackMode);
+      const recoveryTrack  = recoveryStream.getVideoTracks()[0];
+      localStream.addTrack(recoveryTrack);
+      document.getElementById('localVideo').srcObject = localStream;
+      syncMiniVideos();
+      entry('Camera restored to original.', 'ok');
+    } catch(re) {
+      entry('Camera restore also failed: ' + re.message, 'err');
+    }
   } finally {
     flipping = false;
     if (flipBtn) flipBtn.disabled = false;
   }
 }
 
+
+// ── Speaker / Earphone toggle ─────────────────────────────────
+let speakerMode = true;
+
+async function toggleSpeaker() {
+  speakerMode = !speakerMode;
+  const btns = [
+    document.getElementById('speakerBtnLocal'),
+    document.getElementById('speakerBtnRemote')
+  ];
+  const ra = document.getElementById('remoteAudio');
+  if (speakerMode) {
+    if (ra && ra.setSinkId) {
+      try { await ra.setSinkId(''); } catch(e) { entry('setSinkId: ' + e.message, 'sys'); }
+    }
+    btns.forEach(b => { if(b){ b.textContent='🔊 Speaker'; b.classList.add('speaker-on'); b.classList.remove('speaker-ear'); }});
+    entry('Audio: loudspeaker', 'sys');
+  } else {
+    if (ra && ra.setSinkId) {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const earphone = devices.find(d => d.kind === 'audiooutput' &&
+          /earpiece|receiver|phone/i.test(d.label));
+        if (earphone) await ra.setSinkId(earphone.deviceId);
+      } catch(e) { entry('setSinkId earphone: ' + e.message, 'sys'); }
+    }
+    btns.forEach(b => { if(b){ b.textContent='🎧 Earphone'; b.classList.remove('speaker-on'); b.classList.add('speaker-ear'); }});
+    entry('Audio: earphone', 'sys');
+  }
+}
+
+// ── Local video zoom ──────────────────────────────────────────
+function applyZoom(val, channel) {
+  const v = parseFloat(val);
+  if (channel === 'local') {
+    const vid = document.getElementById('localVideo');
+    if (vid) vid.style.transform = v > 1 ? `scale(${v})` : '';
+    const lbl = document.getElementById('zoomValLocal');
+    if (lbl) lbl.textContent = v.toFixed(1) + '×';
+    const s2 = document.getElementById('zoomSliderRemote');
+    if (s2 && s2.value !== String(val)) { s2.value = val; applyZoom(val, 'remote-sync'); }
+  } else if (channel === 'remote-sync') {
+    const lbl2 = document.getElementById('zoomValRemote');
+    if (lbl2) lbl2.textContent = parseFloat(val).toFixed(1) + '×';
+  }
+}
 window.addEventListener('beforeunload', () => { peer?.destroy(); });
 </script>
 
