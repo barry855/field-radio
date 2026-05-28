@@ -1577,9 +1577,20 @@ function attachDataConn(dc) {
     sendVideoState();
   });
   dc.on('data', msg => {
-    if (typeof msg === 'string' && msg.startsWith('{')) {
+    // Normalise to string — older Android/PeerJS may deliver as object or ArrayBuffer
+    let msgStr;
+    if (typeof msg === 'string') {
+      msgStr = msg;
+    } else if (msg instanceof ArrayBuffer) {
+      msgStr = new TextDecoder().decode(msg);
+    } else if (typeof msg === 'object' && msg !== null) {
+      try { msgStr = JSON.stringify(msg); } catch(e) { msgStr = String(msg); }
+    } else {
+      msgStr = String(msg);
+    }
+    if (msgStr.startsWith('{')) {
       try {
-        const f = JSON.parse(msg);
+        const f = JSON.parse(msgStr);
         if (f.__control === 'ping') {
           try { dc.send(JSON.stringify({ __control: 'pong', ts: f.ts })); } catch(e) {}
           if (!linked) setStatus('reachable');
@@ -1601,9 +1612,9 @@ function attachDataConn(dc) {
           return;
         }
       } catch(e) {}
-      addBubble(msg, false);
+      addBubble(msgStr, false);
     } else {
-      addBubble(msg, false);
+      addBubble(msgStr, false);
     }
   });
   dc.on('close', () => {
