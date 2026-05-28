@@ -1571,9 +1571,8 @@ function attachDataConn(dc) {
   dc.on('open', () => {
     pendingDC = false;
     dataConn = dc;
-    entry('Chat channel open — pinging peer…', 'ok');
+    entry('Chat channel open', 'ok');
     setStatus('reachable');
-    try { dc.send(JSON.stringify({ __control: 'ping', ts: Date.now() })); } catch(e) {}
     sendVideoState();
   });
   dc.on('data', msg => {
@@ -1591,18 +1590,6 @@ function attachDataConn(dc) {
     if (msgStr.startsWith('{')) {
       try {
         const f = JSON.parse(msgStr);
-        if (f.__control === 'ping') {
-          try { dc.send(JSON.stringify({ __control: 'pong', ts: f.ts })); } catch(e) {}
-          if (!linked) setStatus('reachable');
-          entry('Ping from Bravo — pong sent', 'sys');
-          return;
-        }
-        if (f.__control === 'pong') {
-          const rtt = Date.now() - (f.ts || Date.now());
-          if (!linked) setStatus('reachable');
-          entry('Pong ← Bravo reachable  RTT ' + rtt + 'ms', 'ok');
-          return;
-        }
         if (f.__control === 'video') {
           updateRemoteVideoState(f.enabled, f.hasTrack !== false);
           return;
