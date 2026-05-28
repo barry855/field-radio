@@ -583,44 +583,61 @@
   @keyframes badge-pop { 0%{transform:scale(0)} 70%{transform:scale(1.2)} 100%{transform:scale(1)} }
 
 
-  /* ── Google Translate widget ────────────────────────────────── */
-  #google_translate_element {
-    display: none;  /* hidden until chat tab is active */
-    padding: 4px 6px 2px 6px;
+
+
+  /* ── Custom translate picker ────────────────────────────────── */
+  #translateBar {
+    display: none; align-items: center; gap: 8px;
+    padding: 4px 8px; flex-shrink: 0;
     background: rgba(0,0,0,0.25);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    flex-shrink: 0;
-    overflow: visible;
+    border: 1px solid var(--border); border-radius: 4px;
     position: relative;
-    z-index: 9999;
   }
-  #google_translate_element.gt-visible { display: block; }
-  /* keep dropdown from being clipped */
-  #google_translate_element .goog-te-gadget-simple {
-  /* Trim default Google widget styling to fit the dark UI */
-  .goog-te-gadget {
-    font-family: 'Share Tech Mono', monospace !important;
-    font-size: 11px !important;
-    color: var(--text-dim) !important;
+  #translateBar.gt-visible { display: flex; }
+  #translateBar label {
+    font-size: 10px; letter-spacing: 1.5px; color: var(--text-dim);
+    text-transform: uppercase; white-space: nowrap; flex-shrink: 0;
   }
-  .goog-te-gadget .goog-te-gadget-simple {
-    background: var(--btn-bg) !important;
-    border: 1px solid var(--border) !important;
-    border-radius: 4px !important;
-    padding: 3px 8px !important;
-    font-size: 11px !important;
-    color: var(--text) !important;
+  #translateTrigger {
+    flex: 1; background: var(--btn-bg); border: 1px solid var(--border);
+    color: var(--text); border-radius: 4px; padding: 4px 10px;
+    font-family: 'Share Tech Mono', monospace; font-size: 12px;
+    cursor: pointer; text-align: left; letter-spacing: 1px;
+    transition: border-color 0.15s;
   }
-  .goog-te-gadget .goog-te-gadget-simple:hover {
-    border-color: var(--accent) !important;
+  #translateTrigger:hover { border-color: var(--accent); }
+  #translateDropdown {
+    display: none; position: fixed;
+    background: #0d1b2a; border: 1px solid var(--accent);
+    border-radius: 6px; z-index: 99999;
+    max-height: 260px; overflow-y: auto;
+    min-width: 200px; box-shadow: 0 8px 32px rgba(0,0,0,0.7);
   }
-  .goog-te-gadget-icon { display: none !important; }
-  /* Hide the "Powered by Google" text to save space */
-  .goog-te-gadget > span > a { display: none !important; }
-  /* Keep the banner Google injects from pushing layout */
-  .goog-te-banner-frame { display: none !important; }
-  body { top: 0 !important; }
+  #translateDropdown.open { display: block; }
+  #translateDropdown li {
+    list-style: none; padding: 7px 14px;
+    font-size: 13px; font-family: 'Share Tech Mono', monospace;
+    color: var(--text); cursor: pointer; letter-spacing: 0.5px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  #translateDropdown li:hover,
+  #translateDropdown li:focus { background: rgba(0,212,255,0.12); color: var(--accent); outline: none; }
+  #translateDropdown li.selected { color: var(--accent2); }
+  #translateSearch {
+    width: calc(100% - 16px); margin: 8px; padding: 5px 8px;
+    background: #0c1520; border: 1px solid var(--border);
+    border-radius: 4px; color: var(--text);
+    font-family: 'Share Tech Mono', monospace; font-size: 12px;
+    outline: none; display: block; box-sizing: border-box;
+  }
+  #translateSearch:focus { border-color: var(--accent); }
+  #translateResetBtn {
+    flex-shrink: 0; background: var(--btn-bg); border: 1px solid var(--border);
+    color: var(--text-dim); border-radius: 4px; padding: 4px 8px;
+    font-size: 10px; letter-spacing: 1px; cursor: pointer;
+    font-family: 'Share Tech Mono', monospace; white-space: nowrap;
+  }
+  #translateResetBtn:hover { border-color: var(--danger); color: var(--danger); }
 
   /* ── Send button disabled state ────────────────────────────── */
   .btn:disabled, .btn[disabled] {
@@ -742,7 +759,123 @@
     </div>
   </header>
 
-  <div id="google_translate_element" id="gtWidget"></div>
+  <div id="translateBar">
+    <label>🌐 TRANSLATE</label>
+    <button id="translateTrigger" onclick="toggleTranslateDrop(event)">SELECT LANGUAGE</button>
+    <button id="translateResetBtn" onclick="resetTranslate()">ORIGINAL</button>
+    <ul id="translateDropdown">
+      <input id="translateSearch" type="text" placeholder="Search language…" oninput="filterLangs(this.value)" autocomplete="off">
+          <li data-lang="af" tabindex="0">Afrikaans</li>
+          <li data-lang="sq" tabindex="0">Albanian</li>
+          <li data-lang="am" tabindex="0">Amharic</li>
+          <li data-lang="ar" tabindex="0">Arabic</li>
+          <li data-lang="hy" tabindex="0">Armenian</li>
+          <li data-lang="az" tabindex="0">Azerbaijani</li>
+          <li data-lang="eu" tabindex="0">Basque</li>
+          <li data-lang="be" tabindex="0">Belarusian</li>
+          <li data-lang="bn" tabindex="0">Bengali</li>
+          <li data-lang="bs" tabindex="0">Bosnian</li>
+          <li data-lang="bg" tabindex="0">Bulgarian</li>
+          <li data-lang="ca" tabindex="0">Catalan</li>
+          <li data-lang="ceb" tabindex="0">Cebuano</li>
+          <li data-lang="zh-CN" tabindex="0">Chinese (Simplified)</li>
+          <li data-lang="zh-TW" tabindex="0">Chinese (Traditional)</li>
+          <li data-lang="co" tabindex="0">Corsican</li>
+          <li data-lang="hr" tabindex="0">Croatian</li>
+          <li data-lang="cs" tabindex="0">Czech</li>
+          <li data-lang="da" tabindex="0">Danish</li>
+          <li data-lang="nl" tabindex="0">Dutch</li>
+          <li data-lang="en" tabindex="0">English</li>
+          <li data-lang="eo" tabindex="0">Esperanto</li>
+          <li data-lang="et" tabindex="0">Estonian</li>
+          <li data-lang="fi" tabindex="0">Finnish</li>
+          <li data-lang="fr" tabindex="0">French</li>
+          <li data-lang="fy" tabindex="0">Frisian</li>
+          <li data-lang="gl" tabindex="0">Galician</li>
+          <li data-lang="ka" tabindex="0">Georgian</li>
+          <li data-lang="de" tabindex="0">German</li>
+          <li data-lang="el" tabindex="0">Greek</li>
+          <li data-lang="gu" tabindex="0">Gujarati</li>
+          <li data-lang="ht" tabindex="0">Haitian Creole</li>
+          <li data-lang="ha" tabindex="0">Hausa</li>
+          <li data-lang="haw" tabindex="0">Hawaiian</li>
+          <li data-lang="he" tabindex="0">Hebrew</li>
+          <li data-lang="hi" tabindex="0">Hindi</li>
+          <li data-lang="hmn" tabindex="0">Hmong</li>
+          <li data-lang="hu" tabindex="0">Hungarian</li>
+          <li data-lang="is" tabindex="0">Icelandic</li>
+          <li data-lang="ig" tabindex="0">Igbo</li>
+          <li data-lang="id" tabindex="0">Indonesian</li>
+          <li data-lang="ga" tabindex="0">Irish</li>
+          <li data-lang="it" tabindex="0">Italian</li>
+          <li data-lang="ja" tabindex="0">Japanese</li>
+          <li data-lang="jv" tabindex="0">Javanese</li>
+          <li data-lang="kn" tabindex="0">Kannada</li>
+          <li data-lang="kk" tabindex="0">Kazakh</li>
+          <li data-lang="km" tabindex="0">Khmer</li>
+          <li data-lang="rw" tabindex="0">Kinyarwanda</li>
+          <li data-lang="ko" tabindex="0">Korean</li>
+          <li data-lang="ku" tabindex="0">Kurdish</li>
+          <li data-lang="ky" tabindex="0">Kyrgyz</li>
+          <li data-lang="lo" tabindex="0">Lao</li>
+          <li data-lang="la" tabindex="0">Latin</li>
+          <li data-lang="lv" tabindex="0">Latvian</li>
+          <li data-lang="lt" tabindex="0">Lithuanian</li>
+          <li data-lang="lb" tabindex="0">Luxembourgish</li>
+          <li data-lang="mk" tabindex="0">Macedonian</li>
+          <li data-lang="mg" tabindex="0">Malagasy</li>
+          <li data-lang="ms" tabindex="0">Malay</li>
+          <li data-lang="ml" tabindex="0">Malayalam</li>
+          <li data-lang="mt" tabindex="0">Maltese</li>
+          <li data-lang="mi" tabindex="0">Maori</li>
+          <li data-lang="mr" tabindex="0">Marathi</li>
+          <li data-lang="mn" tabindex="0">Mongolian</li>
+          <li data-lang="my" tabindex="0">Myanmar (Burmese)</li>
+          <li data-lang="ne" tabindex="0">Nepali</li>
+          <li data-lang="no" tabindex="0">Norwegian</li>
+          <li data-lang="ny" tabindex="0">Nyanja (Chichewa)</li>
+          <li data-lang="or" tabindex="0">Odia (Oriya)</li>
+          <li data-lang="ps" tabindex="0">Pashto</li>
+          <li data-lang="fa" tabindex="0">Persian</li>
+          <li data-lang="pl" tabindex="0">Polish</li>
+          <li data-lang="pt" tabindex="0">Portuguese</li>
+          <li data-lang="pa" tabindex="0">Punjabi</li>
+          <li data-lang="ro" tabindex="0">Romanian</li>
+          <li data-lang="ru" tabindex="0">Russian</li>
+          <li data-lang="sm" tabindex="0">Samoan</li>
+          <li data-lang="gd" tabindex="0">Scots Gaelic</li>
+          <li data-lang="sr" tabindex="0">Serbian</li>
+          <li data-lang="st" tabindex="0">Sesotho</li>
+          <li data-lang="sn" tabindex="0">Shona</li>
+          <li data-lang="sd" tabindex="0">Sindhi</li>
+          <li data-lang="si" tabindex="0">Sinhala</li>
+          <li data-lang="sk" tabindex="0">Slovak</li>
+          <li data-lang="sl" tabindex="0">Slovenian</li>
+          <li data-lang="so" tabindex="0">Somali</li>
+          <li data-lang="es" tabindex="0">Spanish</li>
+          <li data-lang="su" tabindex="0">Sundanese</li>
+          <li data-lang="sw" tabindex="0">Swahili</li>
+          <li data-lang="sv" tabindex="0">Swedish</li>
+          <li data-lang="tl" tabindex="0">Filipino (Tagalog)</li>
+          <li data-lang="tg" tabindex="0">Tajik</li>
+          <li data-lang="ta" tabindex="0">Tamil</li>
+          <li data-lang="tt" tabindex="0">Tatar</li>
+          <li data-lang="te" tabindex="0">Telugu</li>
+          <li data-lang="th" tabindex="0">Thai</li>
+          <li data-lang="tr" tabindex="0">Turkish</li>
+          <li data-lang="tk" tabindex="0">Turkmen</li>
+          <li data-lang="uk" tabindex="0">Ukrainian</li>
+          <li data-lang="ur" tabindex="0">Urdu</li>
+          <li data-lang="ug" tabindex="0">Uyghur</li>
+          <li data-lang="uz" tabindex="0">Uzbek</li>
+          <li data-lang="vi" tabindex="0">Vietnamese</li>
+          <li data-lang="cy" tabindex="0">Welsh</li>
+          <li data-lang="xh" tabindex="0">Xhosa</li>
+          <li data-lang="yi" tabindex="0">Yiddish</li>
+          <li data-lang="yo" tabindex="0">Yoruba</li>
+          <li data-lang="zu" tabindex="0">Zulu</li>
+    </ul>
+  </div>
   <div class="tab-bar">
     <button class="tab-btn" id="tabLocalBtn" onclick="switchTab(&#39;local&#39;)">LOCAL</button>
     <button class="tab-btn active" id="tabRemoteBtn" onclick="switchTab(&#39;remote&#39;)">REMOTE</button>
@@ -982,14 +1115,65 @@ function stopPresencePolling() {
 }
 
 
-// ── Google Translate widget ───────────────────────────────────
-function googleTranslateElementInit() {
-  new google.translate.TranslateElement({
-    pageLanguage: 'auto',
-    layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
-    autoDisplay: false
-  }, 'google_translate_element');
+
+// ── Custom translate picker ───────────────────────────────────
+// Uses Google Translate's URL cookie method — no widget, no iframe clipping
+let _translateLang = null;
+
+function toggleTranslateDrop(e) {
+  e.stopPropagation();
+  const dd = document.getElementById('translateDropdown');
+  const trigger = document.getElementById('translateTrigger');
+  const rect = trigger.getBoundingClientRect();
+  dd.classList.toggle('open');
+  if (dd.classList.contains('open')) {
+    // Position fixed relative to trigger
+    dd.style.left = rect.left + 'px';
+    dd.style.top  = (rect.bottom + 4) + 'px';
+    dd.style.width = Math.max(rect.width, 200) + 'px';
+    const search = document.getElementById('translateSearch');
+    search.value = '';
+    filterLangs('');
+    setTimeout(() => search.focus(), 50);
+  }
 }
+
+function filterLangs(q) {
+  const items = document.querySelectorAll('#translateDropdown li');
+  const lq = q.toLowerCase();
+  items.forEach(li => {
+    li.style.display = li.textContent.toLowerCase().includes(lq) ? '' : 'none';
+  });
+}
+
+function applyTranslate(code, name) {
+  _translateLang = code;
+  document.getElementById('translateTrigger').textContent = name.toUpperCase();
+  document.getElementById('translateDropdown').classList.remove('open');
+  // Set Google Translate cookie and reload via translate.google.com
+  document.cookie = 'googtrans=/auto/' + code + '; path=/';
+  document.cookie = 'googtrans=/auto/' + code + '; domain=' + location.hostname + '; path=/';
+  location.reload();
+}
+
+function resetTranslate() {
+  _translateLang = null;
+  document.getElementById('translateTrigger').textContent = 'SELECT LANGUAGE';
+  document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/';
+  document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; domain=' + location.hostname + '; path=/';
+  location.reload();
+}
+
+// Wire up list items
+document.querySelectorAll('#translateDropdown li').forEach(li => {
+  li.addEventListener('click', () => applyTranslate(li.dataset.lang, li.textContent));
+  li.addEventListener('keydown', e => { if (e.key === 'Enter') applyTranslate(li.dataset.lang, li.textContent); });
+});
+
+// Close dropdown on outside click
+document.addEventListener('click', () => {
+  document.getElementById('translateDropdown').classList.remove('open');
+});
 function prefillLogin() {
   try {
     const disVid = localStorage.getItem('alpha_disable_video') === '1';
@@ -1099,7 +1283,7 @@ function switchTab(tab) {
   document.getElementById('paneLocal')  .classList.toggle('active', tab === 'local');
   document.getElementById('paneRemote') .classList.toggle('active', tab === 'remote');
   document.getElementById('paneChat')   .classList.toggle('active', tab === 'chat');
-  document.getElementById('google_translate_element').classList.toggle('gt-visible', tab === 'chat');
+  document.getElementById('translateBar').classList.toggle('gt-visible', tab === 'chat');
   if (tab === 'remote') syncControls();
   if (tab === 'chat') {
     unreadCount = 0;
@@ -2314,5 +2498,4 @@ window.addEventListener('beforeunload', () => { peer?.destroy(); });
 </script>
 
 
-</div><script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" defer></script>
-</body></html>
+</div></body></html>
