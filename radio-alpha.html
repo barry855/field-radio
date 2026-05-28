@@ -2000,23 +2000,31 @@ async function flipCamera() {
   if (flipBtn) flipBtn.disabled = true;
 
   const targetMode = currentFacingMode === 'user' ? 'environment' : 'user';
+  const fallbackMode = currentFacingMode; // in case new camera fails, restore this
 
-  // Keep a reference to the old track — don't stop it yet
+  // Stop the old track BEFORE requesting the new camera.
+  // Android Chrome cannot hold two camera tracks open simultaneously and
+  // will crash/close the tab if getUserMedia is called while one is still active.
   const oldVideoTrack = localStream.getVideoTracks()[0] || null;
+  if (oldVideoTrack) {
+    oldVideoTrack.stop();
+    localStream.removeTrack(oldVideoTrack);
+  }
 
-  async function tryAcquire() {
+  // Brief pause so Android camera hardware fully releases before we reopen
+  await new Promise(r => setTimeout(r, 300));
+
+  async function tryAcquire(mode) {
     // Try with exact facingMode first
     try {
       return await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { exact: targetMode } }, audio: false
+        video: { facingMode: { exact: mode } }, audio: false
       });
     } catch(e) {}
-    // Brief pause so Android camera hardware fully releases
-    await new Promise(r => setTimeout(r, 400));
     // Try without exact
     try {
       return await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: targetMode }, audio: false
+        video: { facingMode: mode }, audio: false
       });
     } catch(e) {}
     // Last resort — any camera
@@ -2025,14 +2033,8 @@ async function flipCamera() {
   }
 
   try {
-    const newStream  = await tryAcquire();
-    const newTrack   = newStream.getVideoTracks()[0];
-
-    // Now safe to stop and replace the old track
-    if (oldVideoTrack) {
-      oldVideoTrack.stop();
-      localStream.removeTrack(oldVideoTrack);
-    }
+    const newStream = await tryAcquire(targetMode);
+    const newTrack  = newStream.getVideoTracks()[0];
     localStream.addTrack(newTrack);
     currentFacingMode = targetMode;
 
@@ -2048,8 +2050,18 @@ async function flipCamera() {
 
     entry('Camera flipped to ' + (currentFacingMode === 'user' ? 'front' : 'rear'), 'ok');
   } catch(e) {
-    // All attempts failed — leave localStream with the original track untouched
-    entry('Camera flip failed: ' + e.message, 'err');
+    // All attempts failed — try to recover the original camera so the user isn't left with no video
+    entry('Camera flip failed: ' + e.message + ' — attempting to restore original camera…', 'err');
+    try {
+      const recoveryStream = await tryAcquire(fallbackMode);
+      const recoveryTrack  = recoveryStream.getVideoTracks()[0];
+      localStream.addTrack(recoveryTrack);
+      document.getElementById('localVideo').srcObject = localStream;
+      syncMiniVideos();
+      entry('Camera restored to original.', 'ok');
+    } catch(re) {
+      entry('Camera restore also failed: ' + re.message, 'err');
+    }
   } finally {
     flipping = false;
     if (flipBtn) flipBtn.disabled = false;
