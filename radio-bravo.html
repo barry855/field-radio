@@ -1200,6 +1200,10 @@ function applyTranslate(code, name) {
   _translateName = name;
   document.getElementById('translateTrigger').textContent = name.toUpperCase();
   document.getElementById('translateDropdown').classList.remove('open');
+  // Mark selected item in dropdown
+  document.querySelectorAll('#translateDropdown li').forEach(li => {
+    li.classList.toggle('selected', li.dataset.lang === code);
+  });
   try { localStorage.setItem('bravo_translate_lang', JSON.stringify({code, name})); } catch(e) {}
   resetLockTimer();  // prevent inactivity lock firing during selection
   entry('Translate active: ' + name + ' — applies to new incoming messages', 'sys');
@@ -1211,9 +1215,9 @@ function resetTranslate() {
   _translateLang = null;
   _translateName = null;
   try { localStorage.removeItem('bravo_translate_lang'); } catch(e) {}
-  const sysLang = (navigator.language || 'en').split('-')[0].toUpperCase();
-  document.getElementById('translateTrigger').textContent = 'ORIGINAL (' + sysLang + ')';
-  setTimeout(() => { document.getElementById('translateTrigger').textContent = 'SELECT LANGUAGE'; }, 2000);
+  document.getElementById('translateTrigger').textContent = 'SELECT LANGUAGE';
+  // Clear selected state in dropdown
+  document.querySelectorAll('#translateDropdown li').forEach(li => li.classList.remove('selected'));
   // Restore original text in all bubbles
   document.querySelectorAll('#chat .bubble').forEach(b => {
     if (b.dataset.orig) {
@@ -1253,6 +1257,9 @@ function prefillLogin() {
       _translateLang = code;
       _translateName = name;
       document.getElementById('translateTrigger').textContent = name.toUpperCase();
+      document.querySelectorAll('#translateDropdown li').forEach(li => {
+        li.classList.toggle('selected', li.dataset.lang === code);
+      });
       entry('Translate restored: ' + name, 'sys');
     }
   } catch(e) {}
@@ -1533,7 +1540,8 @@ function setupTooltips() {
     attachBtn: 'Attach file / photo / video',
     speakerBtnLocal: 'Toggle speaker / earphone output',
     speakerBtnRemote: 'Toggle speaker / earphone output',
-    zoomSliderLocal: 'Zoom local camera'
+    zoomSliderLocal: 'Zoom local camera',
+    translateResetBtn: 'Restore original — system language: ' + (navigator.language || 'unknown')
   };
   Object.entries(labels).forEach(([id, label]) => {
     const el = document.getElementById(id);
