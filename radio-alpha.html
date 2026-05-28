@@ -1468,8 +1468,8 @@ function addBubble(text, mine, ts, save = true) {
     void msgBadge.offsetWidth; // reflow to restart animation
     msgBadge.classList.add('visible');
   }
-  // Auto-translate new incoming bubbles if language is active
-  if (!mine && _translateLang) {
+  // Auto-translate bubbles if language is active
+  if (_translateLang) {
     wrap.dataset.orig = text;
     translateText(text, _translateLang).then(t => {
       if (t) { const md = wrap.querySelector('div:not(.who):not(.ts)'); if (md) md.textContent = t; }
