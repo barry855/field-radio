@@ -618,6 +618,28 @@
     color: var(--accent); font-family: 'Orbitron', sans-serif;
     font-size: 10px;
   }
+
+  /* ── Login presence indicator ──────────────────────────────── */
+  .login-presence {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 14px; padding: 7px 10px;
+    border: 1px solid var(--border); border-radius: 4px;
+    background: rgba(0,0,0,0.2);
+  }
+  .login-presence .pled {
+    width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+    background: #333; border: 1px solid #555;
+    transition: background 0.4s, box-shadow 0.4s;
+  }
+  .login-presence .pled.p-searching { background: #555; animation: blink 1s step-end infinite; }
+  .login-presence .pled.p-reachable { background: #ffaa00; box-shadow: 0 0 8px #ffaa00; }
+  .login-presence .pled.p-offline   { background: #ff4444; box-shadow: 0 0 6px #ff4444; }
+  .login-presence .ptxt {
+    font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+    font-family: 'Orbitron', sans-serif; color: var(--text-dim);
+  }
+  .login-presence .ptxt.p-reachable { color: #ffaa00; }
+  .login-presence .ptxt.p-offline   { color: #ff4444; }
 </style>
 <script src="./ALPHA — Field Radio v6_files/peerjs.min.js.download"></script></head>
 <body>
@@ -640,6 +662,10 @@
         <span>Login Timeout</span><span id="loginTimeoutSec">43s</span>
       </div>
       <div class="login-timeout-track"><div class="login-timeout-fill" id="loginTimeoutFill" style="width: 71.6667%; background: var(--accent);"></div></div>
+    </div>
+    <div class="login-presence" id="loginPresence">
+      <div class="pled" id="loginPresenceLed"></div>
+      <span class="ptxt" id="loginPresenceTxt">ENTER CODE</span>
     </div>
     <button class="session-go" onclick="startSession()">CONNECT</button>
   </div>
@@ -816,6 +842,7 @@ sendBtn.addEventListener('touchstart', e => { e.preventDefault(); sendChat(); },
 sendBtn.addEventListener('click', sendChat); // desktop / non-touch fallback
 
 function startSession() {
+  stopPresencePolling();
   const code = document.getElementById('sessionCode').value.trim().toUpperCase().replace(/\s+/g,'');
   if (!code) { document.getElementById('sessionCode').focus(); return; }
   MY_ID     = 'alpha-' + code;
@@ -842,6 +869,69 @@ function startSession() {
 }
 
 // ── Pre-fill last used code + checkbox states on load ────────
+
+// ── Login-screen presence heartbeat (Firebase) ───────────────
+const FB_URL = 'https://alpha-bravo-chat-default-rtdb.firebaseio.com';
+const PRESENCE_STALE_MS = 15000;  // 15s — if partner's heartbeat older than this, show offline
+let presencePollTimer = null;
+let presenceWriteTimer = null;
+let presenceCode = '';
+
+function loginPresenceSetState(state, text) {
+  const led = document.getElementById('loginPresenceLed');
+  const txt = document.getElementById('loginPresenceTxt');
+  if (!led || !txt) return;
+  led.className = 'pled ' + (state ? 'p-' + state : '');
+  txt.className = 'ptxt ' + (state ? 'p-' + state : '');
+  txt.textContent = text;
+}
+
+async function presenceWrite(myKey) {
+  try {
+    await fetch(FB_URL + '/presence/' + myKey + '.json', {
+      method: 'PUT',
+      body: JSON.stringify({ ts: Date.now() })
+    });
+  } catch(e) {}
+}
+
+async function presencePoll(partnerKey, myKey) {
+  try {
+    const res = await fetch(FB_URL + '/presence/' + partnerKey + '.json');
+    const data = await res.json();
+    if (data && data.ts && (Date.now() - data.ts) < PRESENCE_STALE_MS) {
+      loginPresenceSetState('reachable', 'BRAVO REACHABLE');
+    } else {
+      loginPresenceSetState('offline', 'BRAVO OFFLINE');
+    }
+  } catch(e) {
+    loginPresenceSetState('offline', 'NO NETWORK');
+  }
+  // Write own heartbeat each poll cycle
+  await presenceWrite(myKey);
+}
+
+function startPresencePolling(code) {
+  stopPresencePolling();
+  if (!code || code.length < 2) {
+    loginPresenceSetState('', 'ENTER CODE');
+    return;
+  }
+  presenceCode = code;
+  // ALPHA polls for bravo-CODE, writes alpha-CODE
+  const myKey      = 'alpha-' + code;
+  const partnerKey = 'bravo-' + code;
+  loginPresenceSetState('searching', 'CHECKING…');
+  presencePoll(partnerKey, myKey); // immediate first poll
+  presencePollTimer = setInterval(() => presencePoll(partnerKey, myKey), 5000);
+}
+
+function stopPresencePolling() {
+  clearInterval(presencePollTimer);
+  clearInterval(presenceWriteTimer);
+  presencePollTimer = null;
+}
+
 function prefillLogin() {
   try {
     const disVid = localStorage.getItem('alpha_disable_video') === '1';
@@ -851,6 +941,8 @@ function prefillLogin() {
     document.getElementById('loginDisableAudio').checked = disAud;
     if (last) document.getElementById('sessionCode').value = last;
     setTimeout(() => entry('PREFILL: code=' + last + ' vid=' + disVid + ' aud=' + disAud, 'sys'), 500);
+    // Start presence polling immediately if code was pre-filled
+    if (last) startPresencePolling(last);
   } catch(e) {}
 }
 prefillLogin();
@@ -891,6 +983,19 @@ if (document.getElementById('sessionOverlay').style.display !== 'none') {
 
 // Restart login timer if overlay re-appears (handled inside resetLockTimer above)
 
+// 'input' + 'keyup' + 'change' — covers older Android WebViews where 'input' can be silent
+(function() {
+  let _lastCode = '';
+  function _onCodeChange() {
+    const code = document.getElementById('sessionCode').value.trim().toUpperCase().replace(/\s+/g,'');
+    if (code === _lastCode) return;
+    _lastCode = code;
+    startPresencePolling(code);
+  }
+  ['input','keyup','change'].forEach(ev =>
+    document.getElementById('sessionCode').addEventListener(ev, _onCodeChange)
+  );
+})();
 document.getElementById('sessionCode').addEventListener('keydown', e => {
   if (e.key === 'Enter') startSession();
 });
