@@ -487,6 +487,7 @@
     display: flex; align-items: center; justify-content: center;
     font-family: 'Orbitron', sans-serif; font-size: 10px;
     letter-spacing: 3px; color: var(--text-dim);
+    background: rgba(0,0,0,0.85);
   }
   .video-wrap.video-off::after {
     content: 'VIDEO OFF';
@@ -1654,7 +1655,8 @@ function onDrop() {
   syncControls();
   const _ra = document.getElementById('remoteAudio');
   if (_ra) { try { _ra.pause(); _ra.srcObject = null; } catch(e){} }
-  document.getElementById('remoteVideo').srcObject = null;
+  const _rv = document.getElementById('remoteVideo');
+  if (_rv) { try { _rv.srcObject = null; _rv.load(); } catch(e){} }
   syncMiniVideos();
   document.getElementById('remoteWrap').classList.remove('video-off', 'no-video');
   document.getElementById('remoteWrap').classList.add('waiting');
