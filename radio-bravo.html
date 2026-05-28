@@ -1114,9 +1114,11 @@ function stopPresencePolling() {
 
 
 
-// ── Custom translate picker ───────────────────────────────────
-// Uses Google Translate's URL cookie method — no widget, no iframe clipping
+
+// ── Translate via MyMemory free API ──────────────────────────
+// Translates incoming chat bubbles in-place. No server, no reload.
 let _translateLang = null;
+let _translateName = null;
 
 function toggleTranslateDrop(e) {
   e.stopPropagation();
@@ -1125,9 +1127,8 @@ function toggleTranslateDrop(e) {
   const rect = trigger.getBoundingClientRect();
   dd.classList.toggle('open');
   if (dd.classList.contains('open')) {
-    // Position fixed relative to trigger
-    dd.style.left = rect.left + 'px';
-    dd.style.top  = (rect.bottom + 4) + 'px';
+    dd.style.left  = rect.left + 'px';
+    dd.style.top   = (rect.bottom + 4) + 'px';
     dd.style.width = Math.max(rect.width, 200) + 'px';
     const search = document.getElementById('translateSearch');
     search.value = '';
@@ -1144,34 +1145,70 @@ function filterLangs(q) {
   });
 }
 
+async function translateText(text, targetLang) {
+  try {
+    const url = 'https://api.mymemory.translated.net/get?q='
+      + encodeURIComponent(text) + '&langpair=auto|' + targetLang;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.responseStatus === 200 && data.responseData) {
+      return data.responseData.translatedText;
+    }
+  } catch(e) {}
+  return null;
+}
+
+async function translateBubblesSequentially(langCode) {
+  const bubbles = Array.from(document.querySelectorAll('#chat .bubble'));
+  for (const b of bubbles) {
+    if (_translateLang !== langCode) return;  // user changed/reset — abort
+    const msgDiv = b.querySelector('div:not(.who):not(.ts)');
+    if (!msgDiv) continue;
+    if (!b.dataset.orig) b.dataset.orig = msgDiv.innerText;
+    if (!b.dataset.orig.trim()) continue;
+    const translated = await translateText(b.dataset.orig, langCode);
+    if (translated && _translateLang === langCode) msgDiv.textContent = translated;
+    // Yield to event loop between each bubble to prevent UI freeze
+    await new Promise(r => setTimeout(r, 50));
+  }
+}
+
 function applyTranslate(code, name) {
   _translateLang = code;
+  _translateName = name;
   document.getElementById('translateTrigger').textContent = name.toUpperCase();
   document.getElementById('translateDropdown').classList.remove('open');
-  // Set Google Translate cookie and reload via translate.google.com
-  document.cookie = 'googtrans=/auto/' + code + '; path=/';
-  document.cookie = 'googtrans=/auto/' + code + '; domain=' + location.hostname + '; path=/';
-  location.reload();
+  resetLockTimer();  // prevent inactivity lock firing during selection
+  entry('Translate active: ' + name + ' — applies to new incoming messages', 'sys');
+  // Translate existing bubbles one at a time with a gap to avoid blocking the event loop
+  translateBubblesSequentially(code);
 }
 
 function resetTranslate() {
   _translateLang = null;
+  _translateName = null;
   document.getElementById('translateTrigger').textContent = 'SELECT LANGUAGE';
-  document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/';
-  document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; domain=' + location.hostname + '; path=/';
-  location.reload();
+  // Restore original text in all bubbles
+  document.querySelectorAll('#chat .bubble').forEach(b => {
+    if (b.dataset.orig) {
+      const msgDiv = b.querySelector('div:not(.who):not(.ts)');
+      if (msgDiv) msgDiv.textContent = b.dataset.orig;
+    }
+  });
+  entry('Chat restored to original', 'sys');
 }
 
 // Wire up list items
 document.querySelectorAll('#translateDropdown li').forEach(li => {
-  li.addEventListener('click', () => applyTranslate(li.dataset.lang, li.textContent));
-  li.addEventListener('keydown', e => { if (e.key === 'Enter') applyTranslate(li.dataset.lang, li.textContent); });
+  li.addEventListener('click', () => applyTranslate(li.dataset.lang, li.textContent.trim()));
+  li.addEventListener('keydown', e => { if (e.key === 'Enter') applyTranslate(li.dataset.lang, li.textContent.trim()); });
 });
 
 // Close dropdown on outside click
 document.addEventListener('click', () => {
   document.getElementById('translateDropdown').classList.remove('open');
 });
+
 function prefillLogin() {
   try {
     const disVid = localStorage.getItem('bravo_disable_video') === '1';
@@ -1365,6 +1402,13 @@ function loadHistory() {
     divider2.textContent = '— NOW —';
     chat.appendChild(divider2);
     chat.scrollTop = chat.scrollHeight;
+  // Auto-translate new incoming bubbles if language is active
+  if (!mine && _translateLang) {
+    b.dataset.orig = text;
+    translateText(text, _translateLang).then(t => {
+      if (t) { const md = wrap.querySelector('div:not(.who):not(.ts)'); if (md) md.textContent = t; }
+    });
+  }
   } catch(e) {}
 }
 
