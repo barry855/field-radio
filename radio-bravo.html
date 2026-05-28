@@ -582,6 +582,13 @@
   .msg-badge.visible { display: flex; }
   @keyframes badge-pop { 0%{transform:scale(0)} 70%{transform:scale(1.2)} 100%{transform:scale(1)} }
 
+  /* ── Send button disabled state ────────────────────────────── */
+  .btn:disabled, .btn[disabled] {
+    opacity: 0.35; cursor: not-allowed;
+    border-color: var(--border) !important;
+    color: var(--text-dim) !important;
+  }
+
   /* ── Speaker / earphone toggle ─────────────────────────────── */
   .speaker-btn {
     flex: 0 0 auto; height: 36px; padding: 0 10px;
@@ -838,6 +845,7 @@ const chatInput = document.getElementById('chatInput');
 const sendBtn   = document.getElementById('sendBtn');
 // Older Android fires touchstart→touchend→click for one tap; bind touchstart
 // and call preventDefault() to suppress the synthetic click that follows.
+sendBtn.disabled = true;
 sendBtn.addEventListener('touchstart', e => { e.preventDefault(); sendChat(); }, { passive: false });
 sendBtn.addEventListener('click', sendChat); // desktop / non-touch fallback
 
@@ -1170,7 +1178,7 @@ function sendChat() {
   const txt = chatInput.value.trim();
   const hasFiles = pendingFiles.length > 0;
   if (!txt && !hasFiles) return;
-  if (!dataConn) { entry('Not connected — cannot send', 'err'); return; }
+  if (!dataConn) { return; }  // button is disabled when not connected — silent guard
   if (txt) {
     dataConn.send(txt);
     addBubble(txt, true);
@@ -1553,6 +1561,7 @@ function attachDataConn(dc) {
     dataConn = dc;
     entry('Chat channel open', 'ok');
     setStatus('reachable');
+    document.getElementById('sendBtn').disabled = false;
     sendVideoState();
   });
   dc.on('data', msg => {
@@ -1586,6 +1595,7 @@ function attachDataConn(dc) {
   });
   dc.on('close', () => {
     dataConn = null;
+    document.getElementById('sendBtn').disabled = true;
     entry('Chat channel closed', 'sys');
   });
   dc.on('error', e => {
