@@ -1831,6 +1831,18 @@ let screenSharing = false;
 let cameraTrack = null;   // saved camera track while screen-sharing
 let screenTrack = null;
 
+// Hide share buttons on devices that don't support getDisplayMedia (older Android, etc.)
+(function initScreenShareSupport() {
+  const supported = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
+  if (!supported) {
+    document.querySelectorAll('#screenBtn, #screenBtn2').forEach(btn => {
+      if (btn) {
+        btn.style.display = 'none';
+      }
+    });
+  }
+})();
+
 async function toggleScreenShare() {
   const btns = [document.getElementById('screenBtn'), document.getElementById('screenBtn2')];
   if (!screenSharing) {
