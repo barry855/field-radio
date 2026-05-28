@@ -579,6 +579,43 @@
   }
   .msg-badge.visible { display: flex; }
   @keyframes badge-pop { 0%{transform:scale(0)} 70%{transform:scale(1.2)} 100%{transform:scale(1)} }
+
+  /* ── Speaker / earphone toggle ─────────────────────────────── */
+  .speaker-btn {
+    flex: 0 0 auto; height: 36px; padding: 0 10px;
+    background: var(--btn-bg); border: 1px solid var(--border);
+    color: var(--text); border-radius: 4px;
+    font-family: 'Share Tech Mono', monospace; font-size: 11px;
+    letter-spacing: 0.5px; cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+  .speaker-btn:hover { background: var(--btn-hover); }
+  .speaker-btn.speaker-on {
+    border-color: var(--accent2); color: var(--accent2);
+    box-shadow: 0 0 7px rgba(0,255,159,0.25);
+  }
+  .speaker-btn.speaker-ear {
+    border-color: var(--accent); color: var(--accent);
+    box-shadow: 0 0 7px rgba(0,212,255,0.25);
+  }
+
+  /* ── Zoom slider row ───────────────────────────────────────── */
+  .zoom-row {
+    display: flex; align-items: center; gap: 8px;
+    flex-shrink: 0; padding: 2px 0;
+    font-size: 10px; color: var(--text-dim);
+    letter-spacing: 1px; text-transform: uppercase;
+  }
+  .zoom-row input[type=range] {
+    flex: 1; accent-color: var(--accent);
+    height: 4px; cursor: pointer;
+  }
+  .zoom-row .zoom-val {
+    min-width: 34px; text-align: right;
+    color: var(--accent); font-family: 'Orbitron', sans-serif;
+    font-size: 10px;
+  }
 </style>
 <script src="./BRAVO — Field Radio v6_files/peerjs.min.js.download"></script></head>
 <body>
@@ -648,6 +685,12 @@
         <button class="media-btn" id="refreshBtnLocal" onclick="refreshScreen()">↺ Refresh</button>
         <button class="media-btn" id="flipBtn" onclick="flipCamera()">⟳ Flip</button>
         <button class="media-btn" id="recBtn" onclick="toggleRecord()">⏺ Record</button>
+        <button class="speaker-btn speaker-on" id="speakerBtnLocal" onclick="toggleSpeaker()">🔊 Speaker</button>
+      </div>
+      <div class="zoom-row">
+        <span>ZOOM</span>
+        <input type="range" id="zoomSliderLocal" min="1" max="4" step="0.1" value="1" oninput="applyZoom(this.value,'local')">
+        <span class="zoom-val" id="zoomValLocal">1.0×</span>
       </div>
       <div class="video-panel">
         <div class="panel-label">LOCAL — BRAVO</div>
@@ -676,6 +719,7 @@
         <button class="media-btn" id="refreshBtn" onclick="refreshScreen()">↺ Refresh</button>
         <button class="media-btn" id="flipBtn2" onclick="flipCamera()">⟳ Flip</button>
         <button class="media-btn" id="recBtn2" onclick="toggleRecord()">⏺ Record</button>
+        <button class="speaker-btn speaker-on" id="speakerBtnRemote" onclick="toggleSpeaker()">🔊 Speaker</button>
       </div>
       <div class="video-panel">
         <div class="panel-label">REMOTE — ALPHA</div>
@@ -1037,7 +1081,10 @@ function setupTooltips() {
     flipBtn2: 'Switch camera',
     recBtn: 'Start or stop recording',
     recBtn2: 'Start or stop recording',
-    attachBtn: 'Attach file / photo / video'
+    attachBtn: 'Attach file / photo / video',
+    speakerBtnLocal: 'Toggle speaker / earphone output',
+    speakerBtnRemote: 'Toggle speaker / earphone output',
+    zoomSliderLocal: 'Zoom local camera'
   };
   Object.entries(labels).forEach(([id, label]) => {
     const el = document.getElementById(id);
@@ -1578,6 +1625,8 @@ function onDrop() {
   duplexBar.textContent = 'OFFLINE';
   duplexBar.className = 'duplex-overlay';
   syncControls();
+  const _ra = document.getElementById('remoteAudio');
+  if (_ra) { try { _ra.pause(); _ra.srcObject = null; } catch(e){} }
   document.getElementById('remoteVideo').srcObject = null;
   syncMiniVideos();
   document.getElementById('remoteWrap').classList.remove('video-off', 'no-video');
@@ -1943,6 +1992,52 @@ async function flipCamera() {
   }
 }
 
+
+// ── Speaker / Earphone toggle ─────────────────────────────────
+let speakerMode = true;
+
+async function toggleSpeaker() {
+  speakerMode = !speakerMode;
+  const btns = [
+    document.getElementById('speakerBtnLocal'),
+    document.getElementById('speakerBtnRemote')
+  ];
+  const ra = document.getElementById('remoteAudio');
+  if (speakerMode) {
+    if (ra && ra.setSinkId) {
+      try { await ra.setSinkId(''); } catch(e) { entry('setSinkId: ' + e.message, 'sys'); }
+    }
+    btns.forEach(b => { if(b){ b.textContent='🔊 Speaker'; b.classList.add('speaker-on'); b.classList.remove('speaker-ear'); }});
+    entry('Audio: loudspeaker', 'sys');
+  } else {
+    if (ra && ra.setSinkId) {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const earphone = devices.find(d => d.kind === 'audiooutput' &&
+          /earpiece|receiver|phone/i.test(d.label));
+        if (earphone) await ra.setSinkId(earphone.deviceId);
+      } catch(e) { entry('setSinkId earphone: ' + e.message, 'sys'); }
+    }
+    btns.forEach(b => { if(b){ b.textContent='🎧 Earphone'; b.classList.remove('speaker-on'); b.classList.add('speaker-ear'); }});
+    entry('Audio: earphone', 'sys');
+  }
+}
+
+// ── Local video zoom ──────────────────────────────────────────
+function applyZoom(val, channel) {
+  const v = parseFloat(val);
+  if (channel === 'local') {
+    const vid = document.getElementById('localVideo');
+    if (vid) vid.style.transform = v > 1 ? `scale(${v})` : '';
+    const lbl = document.getElementById('zoomValLocal');
+    if (lbl) lbl.textContent = v.toFixed(1) + '×';
+    const s2 = document.getElementById('zoomSliderRemote');
+    if (s2 && s2.value !== String(val)) { s2.value = val; applyZoom(val, 'remote-sync'); }
+  } else if (channel === 'remote-sync') {
+    const lbl2 = document.getElementById('zoomValRemote');
+    if (lbl2) lbl2.textContent = parseFloat(val).toFixed(1) + '×';
+  }
+}
 window.addEventListener('beforeunload', () => { peer?.destroy(); });
 </script>
 
