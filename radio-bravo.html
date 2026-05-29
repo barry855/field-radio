@@ -735,15 +735,20 @@
     transition: border-color 0.15s;
   }
   #translateTrigger:hover { border-color: var(--accent); }
-  #translateDropdown {
+  #translateDropdownWrap {
     display: none; position: absolute;
     top: 100%; left: 0; right: 0;
     background: #0d1b2a; border: 1px solid var(--accent);
     border-radius: 6px; z-index: 99999;
-    max-height: 260px; overflow-y: auto;
     min-width: 200px; box-shadow: 0 8px 32px rgba(0,0,0,0.7);
+    padding: 0;
   }
-  #translateDropdown.open { display: block; }
+  #translateDropdownWrap.open { display: block; }
+  #translateDropdown {
+    display: block;
+    max-height: 220px; overflow-y: auto;
+    margin: 0; padding: 0;
+  }
   #translateDropdown li {
     list-style: none; padding: 7px 14px;
     font-size: 13px; font-family: 'Share Tech Mono', monospace;
@@ -893,8 +898,7 @@
     <label>🌐 TRANSLATE</label>
     <button id="translateTrigger" onclick="toggleTranslateDrop(event)">SELECT LANGUAGE</button>
     <button id="translateResetBtn" onclick="resetTranslate()">ORIGINAL</button>
-    <ul id="translateDropdown">
-      <input id="translateSearch" type="text" placeholder="Search language…" oninput="filterLangs(this.value)" autocomplete="off">
+    <div id="translateDropdownWrap"><input id="translateSearch" type="text" placeholder="Search language…" oninput="filterLangs(this.value)" autocomplete="off"><ul id="translateDropdown">
           <li data-lang="af" tabindex="0">Afrikaans</li>
           <li data-lang="sq" tabindex="0">Albanian</li>
           <li data-lang="am" tabindex="0">Amharic</li>
@@ -1260,15 +1264,17 @@ let _translateName = null;
 
 function toggleTranslateDrop(e) {
   e.stopPropagation();
-  const dd = document.getElementById('translateDropdown');
-  dd.classList.toggle('open');
-  if (dd.classList.contains('open')) {
+  const wrap = document.getElementById('translateDropdownWrap');
+  wrap.classList.toggle('open');
+  if (wrap.classList.contains('open')) {
     const search = document.getElementById('translateSearch');
     search.value = '';
     filterLangs('');
     // Scroll to the currently selected language
+    const dd = document.getElementById('translateDropdown');
     const selected = dd.querySelector('li.selected');
     if (selected) setTimeout(() => selected.scrollIntoView({ block: 'nearest' }), 30);
+    setTimeout(() => search.focus(), 30);
   }
 }
 
@@ -1334,7 +1340,7 @@ function applyTranslate(code, name) {
   _translateLang = code;
   _translateName = name;
   document.getElementById('translateTrigger').textContent = name.toUpperCase();
-  document.getElementById('translateDropdown').classList.remove('open');
+  document.getElementById('translateDropdownWrap').classList.remove('open');
   // Mark selected item in dropdown
   document.querySelectorAll('#translateDropdown li').forEach(li => {
     li.classList.toggle('selected', li.dataset.lang === code);
@@ -1371,7 +1377,7 @@ document.querySelectorAll('#translateDropdown li').forEach(li => {
 
 // Close dropdown on outside click
 document.addEventListener('click', () => {
-  document.getElementById('translateDropdown').classList.remove('open');
+  document.getElementById('translateDropdownWrap').classList.remove('open');
 });
 
 function prefillLogin() {
