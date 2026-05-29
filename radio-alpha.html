@@ -1607,11 +1607,11 @@ function saveChatToFile() {
     const border = b.mine ? '#00d4ff'   : '#00ff9f';
     const whoCol = b.mine ? '#0077aa'   : '#007744';
     return `<div style="display:flex;justify-content:${align};margin:6px 0;">
-  <div style="max-width:75%;padding:10px 14px;border-radius:6px;background:${bg};border:1px solid ${border};font-size:15px;line-height:1.55;word-break:break-word;">
-    <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;font-family:monospace;color:${whoCol};margin-bottom:5px;">${b.who}</div>
+  <div style="max-width:75%;padding:10px 14px;border-radius:6px;background:${bg};border:1px solid ${border};font-size:18px;font-weight:bold;color:#000;line-height:1.55;word-break:break-word;">
+    <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;font-family:monospace;color:${whoCol};margin-bottom:5px;font-weight:bold;">${b.who}</div>
     <div>${b.html}</div>
     ${b.downloadHtml ? '<div style="margin-top:5px;">' + b.downloadHtml + '</div>' : ''}
-    <div style="font-size:11px;color:#888;text-align:right;margin-top:5px;">${b.time}</div>
+    <div style="font-size:11px;color:#555;text-align:right;margin-top:5px;font-weight:normal;">${b.time}</div>
   </div>
 </div>`;
   }).join('\n');
