@@ -161,6 +161,16 @@
     font-size: 11px; color: #888; letter-spacing: 0.5px;
     margin-top: 5px; text-align: right;
   }
+  /* Original-text peek on hover / tap */
+  .bubble[data-orig] { cursor: default; }
+  .bubble[data-orig] .msg-text { transition: opacity 0.15s; }
+  .bubble.show-orig .msg-text  { opacity: 0.25; }
+  .bubble .orig-peek {
+    display: none; font-style: italic; opacity: 0.72;
+    font-size: 0.85em; margin-top: 4px;
+    border-top: 1px dashed rgba(128,128,128,0.4); padding-top: 4px;
+  }
+  .bubble.show-orig .orig-peek { display: block; }
 
   /* connection quality */
   .quality-item {
@@ -1310,7 +1320,7 @@ async function translateBubblesSequentially(langCode) {
   let count = 0;
   for (const b of bubbles) {
     if (_translateLang !== langCode) return;  // user changed/reset — abort
-    const msgDiv = b.querySelector('div:not(.who):not(.ts)');
+    const msgDiv = b.querySelector('.msg-text');
     if (!msgDiv) continue;
     if (!b.dataset.orig) b.dataset.orig = msgDiv.innerText;
     if (!b.dataset.orig.trim()) continue;
@@ -1348,7 +1358,7 @@ function resetTranslate() {
   // Restore original text in all bubbles
   document.querySelectorAll('#chat .bubble').forEach(b => {
     if (b.dataset.orig) {
-      const msgDiv = b.querySelector('div:not(.who):not(.ts)');
+      const msgDiv = b.querySelector('.msg-text');
       if (msgDiv) msgDiv.textContent = b.dataset.orig;
     }
   });
@@ -1584,7 +1594,7 @@ function saveChatToFile() {
     const mine   = bubble.classList.contains('mine');
     const who    = whoEl  ? whoEl.textContent.trim()  : (mine ? 'BRAVO' : 'ALPHA');
     const time   = tsEl   ? tsEl.textContent.trim()   : '';
-    const msgDiv = bubble.querySelector('div:not(.who):not(.ts)');
+    const msgDiv = bubble.querySelector('.msg-text');
     const imgEl  = bubble.querySelector('img.media-img');
     const vidEl  = bubble.querySelector('video.media-vid');
     const fileEl = bubble.querySelector('a.file-attach-link');
@@ -1795,6 +1805,22 @@ function formatTs(ts) {
   return d.toTimeString().slice(0,5);
 }
 
+// ── Original-text peek helpers ────────────────────────────────
+function _peekOrig(wrap) {
+  const curr = wrap.querySelector('.msg-text');
+  if (!curr || !wrap.dataset.orig) return;
+  const currText = curr.innerText || curr.textContent;
+  if (currText === wrap.dataset.orig) return; // not translated, nothing to show
+  wrap.querySelector('.orig-peek').textContent = wrap.dataset.orig;
+  wrap.classList.add('show-orig');
+}
+function _hidePeek(wrap) {
+  wrap.classList.remove('show-orig');
+}
+function _togglePeek(wrap) {
+  if (wrap.classList.contains('show-orig')) { _hidePeek(wrap); } else { _peekOrig(wrap); }
+}
+
 function addBubble(text, mine, ts, save = true) {
   if (save) saveMessage(text, mine);
   const now = ts || Date.now();
@@ -1804,13 +1830,22 @@ function addBubble(text, mine, ts, save = true) {
   who.className = 'who';
   who.textContent = mine ? 'BRAVO' : 'ALPHA';
   const msg = document.createElement('div');
+  msg.className = 'msg-text';
   msg.appendChild(linkify(text));
+  const origPeek = document.createElement('div');
+  origPeek.className = 'orig-peek';
   const time = document.createElement('div');
   time.className = 'ts';
   time.textContent = formatTs(now);
+  wrap.dataset.orig = text;
   wrap.appendChild(who);
   wrap.appendChild(msg);
+  wrap.appendChild(origPeek);
   wrap.appendChild(time);
+  // Show original text on hover (desktop) or tap (mobile)
+  wrap.addEventListener('mouseenter', () => _peekOrig(wrap));
+  wrap.addEventListener('mouseleave', () => _hidePeek(wrap));
+  wrap.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') _togglePeek(wrap); });
   chat.appendChild(wrap);
   chat.scrollTop = chat.scrollHeight;
   // Badge: notify on video tab when a new incoming message arrives
@@ -1825,7 +1860,7 @@ function addBubble(text, mine, ts, save = true) {
   if (_translateLang) {
     wrap.dataset.orig = text;
     translateText(text, _translateLang).then(t => {
-      if (t) { const md = wrap.querySelector('div:not(.who):not(.ts)'); if (md) md.textContent = t; }
+      if (t) { const md = wrap.querySelector('.msg-text'); if (md) md.textContent = t; }
     });
   }
 }
