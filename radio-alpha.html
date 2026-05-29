@@ -462,9 +462,11 @@
   .log-panel.collapsed { padding-bottom: 10px; }
   .log-panel.collapsed .log { display: none; }
   .log-panel .panel-label {
+    position: static; background: none; padding: 0;
     cursor: pointer; user-select: none;
     display: flex; align-items: center; gap: 6px;
     touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+    min-height: 28px;
   }
   .log-toggle-arrow {
     font-size: 10px; color: var(--text-dim);
@@ -722,7 +724,8 @@
   }
   #translateTrigger:hover { border-color: var(--accent); }
   #translateDropdown {
-    display: none; position: fixed;
+    display: none; position: absolute;
+    top: 100%; left: 0; right: 0;
     background: #0d1b2a; border: 1px solid var(--accent);
     border-radius: 6px; z-index: 99999;
     max-height: 260px; overflow-y: auto;
@@ -1250,20 +1253,14 @@ let _translateName = null;
 function toggleTranslateDrop(e) {
   e.stopPropagation();
   const dd = document.getElementById('translateDropdown');
-  const trigger = document.getElementById('translateTrigger');
-  const rect = trigger.getBoundingClientRect();
   dd.classList.toggle('open');
   if (dd.classList.contains('open')) {
-    dd.style.left  = rect.left + 'px';
-    dd.style.top   = (rect.bottom + 4) + 'px';
-    dd.style.width = Math.max(rect.width, 200) + 'px';
     const search = document.getElementById('translateSearch');
     search.value = '';
     filterLangs('');
     // Scroll to the currently selected language
     const selected = dd.querySelector('li.selected');
     if (selected) setTimeout(() => selected.scrollIntoView({ block: 'nearest' }), 30);
-    setTimeout(() => search.focus(), 50);
   }
 }
 
