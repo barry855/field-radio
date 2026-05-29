@@ -1638,7 +1638,8 @@ function saveChatToFile() {
       tmp.appendChild(msgDiv.cloneNode(true));
       html = tmp.innerHTML;
     }
-    if (html) bubbles.push({ who, time, mine, html, downloadHtml: downloadHtml || '' });
+    const orig = (bubble.dataset.orig && bubble.dataset.orig !== (msgDiv && msgDiv.textContent)) ? bubble.dataset.orig : '';
+    if (html) bubbles.push({ who, time, mine, html, downloadHtml: downloadHtml || '', orig });
   });
 
   if (!bubbles.length) { entry('Nothing to save — chat is empty', 'sys'); return; }
@@ -1654,8 +1655,9 @@ function saveChatToFile() {
     return `<div style="display:flex;justify-content:${align};margin:6px 0;">
   <div style="max-width:75%;padding:10px 14px;border-radius:6px;background:${bg};border:1px solid ${border};font-size:18px;font-weight:bold;color:#000;line-height:1.55;word-break:break-word;">
     <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;font-family:monospace;color:${whoCol};margin-bottom:5px;font-weight:bold;">${b.who}</div>
-    <div>${b.html}</div>
+    <div${b.orig ? ' title="' + b.orig.replace(/"/g, '&quot;') + '" style="cursor:help;"' : ''}>${b.html}</div>
     ${b.downloadHtml ? '<div style="margin-top:5px;">' + b.downloadHtml + '</div>' : ''}
+    ${b.orig ? '<div style="font-size:11px;color:#666;font-style:italic;margin-top:4px;border-top:1px dashed #ccc;padding-top:4px;font-weight:normal;">' + b.orig.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>' : ''}
     <div style="font-size:11px;color:#555;text-align:right;margin-top:5px;font-weight:normal;">${b.time}</div>
   </div>
 </div>`;
