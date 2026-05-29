@@ -341,6 +341,12 @@
   }
   .file-chip-remove:hover { color: #ff8888; }
 
+
+  /* ── File transfer progress ─────────────────────────────── */
+  .transfer-progress { opacity: 0.75; font-style: italic; }
+  .xfer-label { font-size: 11px; color: var(--text-dim); margin-top: 3px; letter-spacing: 0.5px; }
+  .xfer-pct { color: var(--accent); font-weight: 700; }
+
   /* ── Media bubbles ──────────────────────────────────────── */
   .bubble img.media-img {
     max-width: 200px; max-height: 160px; border-radius: 4px;
@@ -1950,8 +1956,8 @@ document.addEventListener('paste', e => {
 // ── Add files to pending queue ────────────────────────────────
 function addFiles(files) {
   files.forEach(f => {
-    if (f.size > 10 * 1024 * 1024) {
-      entry('File too large (max 10 MB): ' + f.name, 'err'); return;
+    if (f.size > 20 * 1024 * 1024) {
+      entry('File too large (max 20 MB): ' + f.name, 'err'); return;
     }
     const reader = new FileReader();
     reader.onload = ev => {
@@ -2006,20 +2012,71 @@ function fileIcon(type) {
   return '📎';
 }
 
-// ── Send pending files over data channel ──────────────────────
+// ── Send pending files over data channel (chunked) ───────────
+const FILE_CHUNK = 48 * 1024; // ~48KB base64 chars — safely under JSON channel limit
+
 function sendPendingFiles() {
-  [...pendingFiles].forEach(item => {
-    const payload = JSON.stringify({ __file: true, name: item.file.name, type: item.file.type, data: item.dataUrl });
-    try {
-      dataConn.send(payload);
-      addMediaBubble(item.file.name, item.file.type, item.dataUrl, true);
-    } catch(e) {
-      entry('Failed to send file: ' + item.file.name, 'err');
-    }
-  });
+  [...pendingFiles].forEach(item => sendFileChunked(item));
   pendingFiles.length = 0;
   filePreviewStrip.innerHTML = '';
   filePreviewStrip.classList.remove('has-files');
+}
+
+function sendFileChunked(item) {
+  const data  = item.dataUrl;
+  const total = Math.ceil(data.length / FILE_CHUNK);
+  const id    = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  try {
+    for (let i = 0; i < total; i++) {
+      const chunk = data.slice(i * FILE_CHUNK, (i + 1) * FILE_CHUNK);
+      dataConn.send(JSON.stringify({
+        __chunk: true, id,
+        name: item.file.name, type: item.file.type,
+        index: i, total, data: chunk
+      }));
+    }
+    addMediaBubble(item.file.name, item.file.type, item.dataUrl, true);
+  } catch(e) {
+    entry('Failed to send file: ' + item.file.name + ' — ' + e.message, 'err');
+  }
+}
+
+// ── Reassemble incoming file chunks ──────────────────────────
+const _incomingChunks = {}; // id → { name, type, total, parts[] }
+
+function receiveChunk(f) {
+  if (!_incomingChunks[f.id]) {
+    _incomingChunks[f.id] = { name: f.name, type: f.type, total: f.total, parts: new Array(f.total) };
+    addTransferProgress(f.id, f.name);
+  }
+  const rec = _incomingChunks[f.id];
+  rec.parts[f.index] = f.data;
+  const received = rec.parts.filter(Boolean).length;
+  updateTransferProgress(f.id, received, f.total);
+  if (received === f.total) {
+    const dataUrl = rec.parts.join('');
+    delete _incomingChunks[f.id];
+    removeTransferProgress(f.id);
+    addMediaBubble(rec.name, rec.type, dataUrl, false);
+  }
+}
+
+// Progress placeholders shown while chunks arrive
+function addTransferProgress(id, name) {
+  const el = document.createElement('div');
+  el.className = 'bubble theirs transfer-progress';
+  el.id = 'xfer-' + id;
+  el.innerHTML = '<div class="who">BRAVO</div><div class="xfer-label">📥 ' + name + ' — <span class="xfer-pct">0%</span></div>';
+  chat.appendChild(el);
+  chat.scrollTop = chat.scrollHeight;
+}
+function updateTransferProgress(id, received, total) {
+  const el = document.getElementById('xfer-' + id);
+  if (el) el.querySelector('.xfer-pct').textContent = Math.round(received / total * 100) + '%';
+}
+function removeTransferProgress(id) {
+  const el = document.getElementById('xfer-' + id);
+  if (el) el.remove();
 }
 
 // ── Render a media bubble (sent or received) ──────────────────
@@ -2259,6 +2316,10 @@ function attachDataConn(dc) {
         }
         if (f.__file === true) {
           addMediaBubble(f.name, f.type, f.data, false);
+          return;
+        }
+        if (f.__chunk === true) {
+          receiveChunk(f);
           return;
         }
       } catch(e) {}
