@@ -1899,20 +1899,25 @@ setupTooltips();
 attachBtn.addEventListener('click', () => fileInput.click());
 fileInput.addEventListener('change', e => { addFiles([...e.target.files]); fileInput.value=''; });
 
-// ── Drag-and-drop on chat panel ───────────────────────────────
+// ── Drag-and-drop (document-level so it works on any tab) ────
 let dragCounter = 0;
-chatPanel.addEventListener('dragenter', e => {
-  e.preventDefault(); dragCounter++;
+document.addEventListener('dragenter', e => {
+  e.preventDefault();
+  if (activeTab !== 'chat') return;
+  dragCounter++;
   dropOverlay.classList.add('active');
 });
-chatPanel.addEventListener('dragleave', () => {
-  dragCounter--;
-  if (dragCounter <= 0) { dragCounter = 0; dropOverlay.classList.remove('active'); }
+document.addEventListener('dragleave', e => {
+  // Only decrement when leaving the document entirely
+  if (e.relatedTarget) return;
+  dragCounter = 0;
+  dropOverlay.classList.remove('active');
 });
-chatPanel.addEventListener('dragover', e => e.preventDefault());
-chatPanel.addEventListener('drop', e => {
+document.addEventListener('dragover', e => e.preventDefault()); // always prevent browser file-open
+document.addEventListener('drop', e => {
   e.preventDefault(); dragCounter = 0;
   dropOverlay.classList.remove('active');
+  if (activeTab !== 'chat') return; // ignore drops on other tabs
   const items = [...e.dataTransfer.items];
   const files = items.filter(i => i.kind === 'file').map(i => i.getAsFile()).filter(Boolean);
   if (files.length) addFiles(files);
@@ -1923,7 +1928,11 @@ document.addEventListener('paste', e => {
   if (activeTab !== 'chat') return;
   const items = [...(e.clipboardData?.items || [])];
   const imageItems = items.filter(i => i.type.startsWith('image/'));
-  if (imageItems.length) {
+  // Only intercept if we actually have images AND focus is not on a text input
+  // (so normal text paste into chatInput is never blocked)
+  const focusedEl = document.activeElement;
+  const isTextInput = focusedEl && (focusedEl.tagName === 'INPUT' || focusedEl.tagName === 'TEXTAREA');
+  if (imageItems.length && !isTextInput) {
     e.preventDefault();
     addFiles(imageItems.map(i => i.getAsFile()).filter(Boolean));
   }
