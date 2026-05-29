@@ -1889,9 +1889,23 @@ function sendChat() {
   const txt = chatInput.value.trim();
   const hasFiles = pendingFiles.length > 0;
   if (!txt && !hasFiles) return;
-  if (!dataConn) { return; }  // button is disabled when not connected — silent guard
+  if (!dataConn || !dataConn.open) {
+    if (dataConn && !dataConn.open) {
+      entry('Chat channel lost — reconnecting…', 'sys');
+      try { dataConn.close(); } catch(e) {}
+      dataConn = null;
+      openDataConn();
+    }
+    entry('Message not sent — channel not ready', 'err');
+    return;
+  }
   if (txt) {
-    dataConn.send(txt);
+    try {
+      dataConn.send(txt);
+    } catch(e) {
+      entry('Send failed: ' + e.message, 'err');
+      return;
+    }
     addBubble(txt, true);
     chatInput.value = ''; chatInput.style.height = 'auto';
   }
