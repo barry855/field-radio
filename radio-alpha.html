@@ -211,6 +211,23 @@
   }
   .clear-chat-btn:hover, .clear-chat-btn:active { opacity: 1; border-color: var(--danger, #cc2222); }
 
+  .save-chat-btn {
+    position: absolute;
+    bottom: 58px; right: 10px;
+    z-index: 10;
+    background: rgba(5,15,21,0.55);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-dim);
+    font-size: 14px;
+    line-height: 1;
+    padding: 4px 6px;
+    cursor: pointer;
+    opacity: 0.45;
+    transition: opacity 0.15s, border-color 0.15s;
+  }
+  .save-chat-btn:hover, .save-chat-btn:active { opacity: 1; border-color: var(--accent, #00d4ff); }
+
   /* ── Drag-and-drop overlay ───────────────────────────────── */
   .chat-panel { position: relative; }
   .drop-overlay {
@@ -910,8 +927,8 @@
       <div class="channel-row" style="flex-shrink:0; padding:0 0 4px 0;">
         <button class="media-btn" id="refreshBtnLocal" onclick="refreshScreen()">↺ Refresh</button>
         <button class="media-btn" id="flipBtn" onclick="flipCamera()">⟳ Flip</button>
-        <button class="media-btn" id="recBtn" onclick="toggleRecord()">⏺ Record</button>
         <button class="speaker-btn speaker-on" id="speakerBtnLocal" onclick="toggleSpeaker()">🔊 Speaker</button>
+        <button class="media-btn" id="recBtn" onclick="toggleRecord()">⏺ Record</button>
       </div>
       <div class="zoom-row">
         <span>ZOOM</span>
@@ -944,8 +961,8 @@
       <div class="channel-row" style="flex-shrink:0; padding:0 0 4px 0;">
         <button class="media-btn" id="refreshBtn" onclick="refreshScreen()">↺ Refresh</button>
         <button class="media-btn" id="flipBtn2" onclick="flipCamera()">⟳ Flip</button>
-        <button class="media-btn" id="recBtn2" onclick="toggleRecord()">⏺ Record</button>
         <button class="speaker-btn speaker-on" id="speakerBtnRemote" onclick="toggleSpeaker()">🔊 Speaker</button>
+        <button class="media-btn" id="recBtn2" onclick="toggleRecord()">⏺ Record</button>
       </div>
       <div class="video-panel">
         <div class="panel-label">REMOTE — BRAVO</div>
@@ -972,6 +989,7 @@
         </div>
         <div class="chat" id="chat"></div>
         <button class="clear-chat-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" title="Clear chat history">🗑</button>
+        <button class="save-chat-btn" onclick="saveChatToFile()" title="Save chat to .txt file">💾</button>
         <div class="file-preview-strip" id="filePreviewStrip"></div>
         <div class="chat-input-row">
           <button class="attach-btn" id="attachBtn" title="Attach file / photo / video">📎</button>
@@ -1473,6 +1491,39 @@ function loadHistory() {
 
 function clearHistory() {
   try { localStorage.removeItem(HISTORY_KEY()); } catch(e) {}
+}
+
+function saveChatToFile() {
+  const chat = document.getElementById('chat');
+  if (!chat) return;
+  const lines = [];
+  chat.querySelectorAll('.bubble-row').forEach(row => {
+    const bubble = row.querySelector('.bubble');
+    const meta   = row.querySelector('.bubble-meta');
+    if (!bubble) return;
+    const who  = bubble.classList.contains('mine') ? 'ME' : 'THEM';
+    const time = meta ? meta.textContent.trim() : '';
+    const text = bubble.innerText || bubble.textContent || '';
+    lines.push((time ? '[' + time + '] ' : '') + who + ': ' + text.trim());
+  });
+  // Also capture system messages
+  chat.querySelectorAll('.entry.sys, .entry.err, .entry.info, .entry').forEach(el => {
+    if (!el.closest('.bubble-row')) {
+      lines.push(el.innerText || el.textContent || '');
+    }
+  });
+  const content = lines.join('\n');
+  const blob = new Blob([content], { type: 'text/plain' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const ts   = new Date().toISOString().slice(0,19).replace(/[:T]/g, '-');
+  a.href     = url;
+  a.download = 'chat-alpha-' + ts + '.txt';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  entry('Chat saved to file', 'sys');
 }
 
 function formatTs(ts) {
