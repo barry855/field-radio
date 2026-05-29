@@ -196,7 +196,7 @@
 
   .clear-chat-btn {
     position: absolute;
-    bottom: 58px; left: 10px;
+    top: 10px; right: 10px;
     z-index: 10;
     background: rgba(5,15,21,0.55);
     border: 1px solid var(--border);
@@ -227,6 +227,52 @@
     transition: opacity 0.15s, border-color 0.15s;
   }
   .save-chat-btn:hover, .save-chat-btn:active { opacity: 1; border-color: var(--accent, #00d4ff); }
+
+  /* ── Chat find bar ──────────────────────────────────────── */
+  .chat-find-bar {
+    display: none; align-items: center; gap: 6px;
+    background: #0c1520; border: 1px solid var(--accent);
+    border-radius: 4px; padding: 4px 8px;
+    margin-bottom: 6px; flex-shrink: 0;
+  }
+  .chat-find-bar.open { display: flex; }
+  .chat-find-input {
+    flex: 1; background: transparent; border: none; outline: none;
+    color: var(--text); font-family: 'Share Tech Mono', monospace;
+    font-size: 13px; min-width: 0;
+  }
+  .chat-find-input::placeholder { color: var(--text-dim); }
+  .chat-find-count {
+    font-size: 11px; color: var(--text-dim); letter-spacing: 0.5px;
+    white-space: nowrap; min-width: 48px; text-align: center;
+  }
+  .chat-find-nav {
+    background: none; border: none; color: var(--text-dim);
+    font-size: 14px; cursor: pointer; padding: 2px 5px; border-radius: 3px;
+    transition: color 0.15s, background 0.15s;
+  }
+  .chat-find-nav:hover { color: var(--accent); background: rgba(0,212,255,0.1); }
+  .chat-find-close {
+    background: none; border: none; color: var(--text-dim);
+    font-size: 14px; cursor: pointer; padding: 2px 5px; border-radius: 3px;
+    transition: color 0.15s;
+  }
+  .chat-find-close:hover { color: var(--danger, #cc2222); }
+  mark.find-highlight {
+    background: rgba(255,220,0,0.55); color: inherit; border-radius: 2px; padding: 0 1px;
+  }
+  mark.find-highlight.current {
+    background: rgba(255,140,0,0.8); outline: 1px solid #ff8c00;
+  }
+  .find-chat-btn {
+    background: var(--btn-bg); border: 1px solid var(--border);
+    color: var(--text-dim); border-radius: 4px;
+    font-size: 15px; padding: 0 9px; cursor: pointer; flex-shrink: 0;
+    transition: background 0.15s, border-color 0.15s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .find-chat-btn:hover { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
+  .find-chat-btn.active { border-color: var(--accent); color: var(--accent); }
 
   /* ── Drag-and-drop overlay ───────────────────────────────── */
   .chat-panel { position: relative; }
@@ -987,13 +1033,21 @@
           <div class="drop-overlay-icon">📎</div>
           <div class="drop-overlay-label">Drop file to attach</div>
         </div>
+        <div class="chat-find-bar" id="chatFindBar">
+          <input class="chat-find-input" id="chatFindInput" placeholder="Find in chat…" autocomplete="off" spellcheck="false">
+          <span class="chat-find-count" id="chatFindCount"></span>
+          <button class="chat-find-nav" id="chatFindPrev" title="Previous match">▲</button>
+          <button class="chat-find-nav" id="chatFindNext" title="Next match">▼</button>
+          <button class="chat-find-close" id="chatFindClose" title="Close">✕</button>
+        </div>
         <div class="chat" id="chat"></div>
         <button class="clear-chat-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" title="Clear chat history">🗑</button>
-        <button class="save-chat-btn" onclick="saveChatToFile()" title="Save chat to .txt file">💾</button>
+        <button class="save-chat-btn" onclick="saveChatToFile()" title="Save chat as HTML">💾</button>
         <div class="file-preview-strip" id="filePreviewStrip"></div>
         <div class="chat-input-row">
           <button class="attach-btn" id="attachBtn" title="Attach file / photo / video">📎</button>
           <input type="file" id="fileInput" multiple="" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx" style="display:none">
+          <button class="find-chat-btn" id="findChatBtn" title="Find in chat">🔍</button>
           <input class="chat-input" id="chatInput" placeholder="TYPE MESSAGE…">
           <button class="btn" id="sendBtn">SEND</button>
         </div>
@@ -1494,37 +1548,227 @@ function clearHistory() {
 }
 
 function saveChatToFile() {
-  const chat = document.getElementById('chat');
-  if (!chat) return;
-  const lines = [];
-  chat.querySelectorAll('.bubble-row').forEach(row => {
-    const bubble = row.querySelector('.bubble');
-    const meta   = row.querySelector('.bubble-meta');
-    if (!bubble) return;
-    const who  = bubble.classList.contains('mine') ? 'ME' : 'THEM';
-    const time = meta ? meta.textContent.trim() : '';
-    const text = bubble.innerText || bubble.textContent || '';
-    lines.push((time ? '[' + time + '] ' : '') + who + ': ' + text.trim());
-  });
-  // Also capture system messages
-  chat.querySelectorAll('.entry.sys, .entry.err, .entry.info, .entry').forEach(el => {
-    if (!el.closest('.bubble-row')) {
-      lines.push(el.innerText || el.textContent || '');
+  const chatEl = document.getElementById('chat');
+  if (!chatEl) return;
+
+  // Collect bubbles into structured data
+  const bubbles = [];
+  chatEl.querySelectorAll('.bubble').forEach(bubble => {
+    const whoEl  = bubble.querySelector('.who');
+    const tsEl   = bubble.querySelector('.ts');
+    const mine   = bubble.classList.contains('mine');
+    const who    = whoEl  ? whoEl.textContent.trim()  : (mine ? 'ALPHA' : 'BRAVO');
+    const time   = tsEl   ? tsEl.textContent.trim()   : '';
+    const msgDiv = bubble.querySelector('div:not(.who):not(.ts)');
+    const imgEl  = bubble.querySelector('img.media-img');
+    const vidEl  = bubble.querySelector('video.media-vid');
+    const fileEl = bubble.querySelector('a.file-attach-link');
+    let html = '', downloadHtml = '';
+    if (imgEl) {
+      const src  = imgEl.src || '';
+      const name = 'image-' + Date.now() + '.jpg';
+      html = '<img src="' + src + '" style="max-width:320px;max-height:240px;border-radius:6px;display:block;margin:6px 0;">';
+      if (src.startsWith('data:')) downloadHtml = '<a href="' + src + '" download="' + name + '" style="font-size:11px;color:#00d4ff;">⬇ Save image</a>';
+    } else if (vidEl) {
+      const src  = vidEl.src || '';
+      const name = 'video-' + Date.now() + '.webm';
+      html = '<video src="' + src + '" controls playsinline style="max-width:320px;max-height:240px;border-radius:6px;display:block;margin:6px 0;"></video>';
+      if (src.startsWith('data:')) downloadHtml = '<a href="' + src + '" download="' + name + '" style="font-size:11px;color:#00d4ff;">⬇ Save video</a>';
+    } else if (fileEl) {
+      const href = fileEl.href || '';
+      const fname = fileEl.download || fileEl.textContent.trim();
+      html = '<a href="' + href + '" download="' + fname + '" style="color:#00d4ff;text-decoration:underline;font-size:13px;">📎 ' + fname + '</a>';
+    } else if (msgDiv) {
+      // preserve links
+      const tmp = document.createElement('div');
+      tmp.appendChild(msgDiv.cloneNode(true));
+      html = tmp.innerHTML;
     }
+    if (html) bubbles.push({ who, time, mine, html, downloadHtml: downloadHtml || '' });
   });
-  const content = lines.join('\n');
-  const blob = new Blob([content], { type: 'text/plain' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  const ts   = new Date().toISOString().slice(0,19).replace(/[:T]/g, '-');
-  a.href     = url;
-  a.download = 'chat-alpha-' + ts + '.txt';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  entry('Chat saved to file', 'sys');
+
+  if (!bubbles.length) { entry('Nothing to save — chat is empty', 'sys'); return; }
+
+  const ts  = new Date().toISOString().slice(0,19).replace(/[:T]/g, '-');
+  const date = new Date().toLocaleString();
+
+  const rows = bubbles.map(b => {
+    const align  = b.mine ? 'flex-end'  : 'flex-start';
+    const bg     = b.mine ? 'rgba(0,212,255,0.15)' : 'rgba(0,255,159,0.12)';
+    const border = b.mine ? '#00d4ff'   : '#00ff9f';
+    const whoCol = b.mine ? '#0077aa'   : '#007744';
+    return `<div style="display:flex;justify-content:${align};margin:6px 0;">
+  <div style="max-width:75%;padding:10px 14px;border-radius:6px;background:${bg};border:1px solid ${border};font-size:15px;line-height:1.55;word-break:break-word;">
+    <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;font-family:monospace;color:${whoCol};margin-bottom:5px;">${b.who}</div>
+    <div>${b.html}</div>
+    ${b.downloadHtml ? '<div style="margin-top:5px;">' + b.downloadHtml + '</div>' : ''}
+    <div style="font-size:11px;color:#888;text-align:right;margin-top:5px;">${b.time}</div>
+  </div>
+</div>`;
+  }).join('\n');
+
+  const htmlDoc = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ALPHA Chat — ${ts}</title>
+<style>
+  body { margin:0; padding:16px; background:#0a1520; color:#c8d8e8; font-family:'Segoe UI',Arial,sans-serif; }
+  h2 { font-family:monospace; letter-spacing:3px; color:#00d4ff; margin:0 0 4px; font-size:16px; }
+  .meta { font-size:11px; color:#556; letter-spacing:1px; margin-bottom:16px; }
+  .chat-wrap { background:#fff; border-radius:8px; padding:12px; max-width:720px; margin:0 auto; }
+  a { color:#00d4ff; }
+  img, video { max-width:100%; }
+</style>
+</head>
+<body>
+<div style="max-width:720px;margin:0 auto;">
+  <h2>⚡ ALPHA — FIELD RADIO CHAT LOG</h2>
+  <div class="meta">Saved: ${date}</div>
+  <div class="chat-wrap">${rows}</div>
+  <div style="font-size:10px;color:#334;text-align:center;margin-top:12px;letter-spacing:1px;">
+    To save embedded media: right-click image/video → Save As, or use the ⬇ Save links above.
+  </div>
+</div>
+</body>
+</html>`;
+
+  try {
+    const blob = new Blob([htmlDoc], { type: 'text/html;charset=utf-8' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = 'chat-alpha-' + ts + '.html';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1500);
+    entry('Chat saved as HTML (' + bubbles.length + ' messages)', 'sys');
+  } catch(e) {
+    entry('Save failed: ' + e.message, 'err');
+  }
 }
+
+// ── Chat find / search ────────────────────────────────────────
+(function() {
+  let findMatches = [], findIdx = -1, findTerm = '';
+
+  function escapeRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+  function clearHighlights() {
+    document.querySelectorAll('#chat mark.find-highlight').forEach(m => {
+      const parent = m.parentNode;
+      parent.replaceChild(document.createTextNode(m.textContent), m);
+      parent.normalize();
+    });
+    findMatches = []; findIdx = -1;
+  }
+
+  function highlightAll(term) {
+    clearHighlights();
+    if (!term) { document.getElementById('chatFindCount').textContent = ''; return; }
+    const re = new RegExp('(' + escapeRe(term) + ')', 'gi');
+    // Walk text nodes inside message divs only (skip .who and .ts)
+    const chatEl = document.getElementById('chat');
+    const walker = document.createTreeWalker(chatEl, NodeFilter.SHOW_TEXT, {
+      acceptNode: n => {
+        const p = n.parentNode;
+        if (!p) return NodeFilter.FILTER_REJECT;
+        // skip .who and .ts nodes
+        if (p.classList && (p.classList.contains('who') || p.classList.contains('ts'))) return NodeFilter.FILTER_REJECT;
+        // skip inside <a> download links and media elements
+        let anc = p;
+        while (anc && anc !== chatEl) {
+          if (anc.tagName === 'MARK' || anc.tagName === 'VIDEO' || anc.tagName === 'IMG') return NodeFilter.FILTER_REJECT;
+          anc = anc.parentNode;
+        }
+        return n.textContent.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+      }
+    });
+    const textNodes = [];
+    let node;
+    while ((node = walker.nextNode())) textNodes.push(node);
+    textNodes.forEach(tn => {
+      if (!re.test(tn.textContent)) return;
+      re.lastIndex = 0;
+      const frag = document.createDocumentFragment();
+      let last = 0, m;
+      const txt = tn.textContent;
+      while ((m = re.exec(txt)) !== null) {
+        if (m.index > last) frag.appendChild(document.createTextNode(txt.slice(last, m.index)));
+        const mark = document.createElement('mark');
+        mark.className = 'find-highlight';
+        mark.textContent = m[1];
+        frag.appendChild(mark);
+        findMatches.push(mark);
+        last = re.lastIndex;
+      }
+      if (last < txt.length) frag.appendChild(document.createTextNode(txt.slice(last)));
+      tn.parentNode.replaceChild(frag, tn);
+    });
+    updateCount();
+  }
+
+  function updateCount() {
+    const el = document.getElementById('chatFindCount');
+    if (!findMatches.length) { el.textContent = findTerm ? '0 / 0' : ''; return; }
+    el.textContent = (findIdx + 1) + ' / ' + findMatches.length;
+  }
+
+  function setCurrent(idx) {
+    findMatches.forEach((m, i) => m.classList.toggle('current', i === idx));
+    findIdx = idx;
+    updateCount();
+    if (findMatches[idx]) findMatches[idx].scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+
+  function stepFind(dir) {
+    if (!findMatches.length) return;
+    let next = findIdx + dir;
+    if (next < 0) next = findMatches.length - 1;
+    if (next >= findMatches.length) next = 0;
+    setCurrent(next);
+  }
+
+  function openFind() {
+    const bar = document.getElementById('chatFindBar');
+    const btn = document.getElementById('findChatBtn');
+    bar.classList.add('open');
+    btn.classList.add('active');
+    document.getElementById('chatFindInput').focus();
+  }
+
+  function closeFind() {
+    const bar = document.getElementById('chatFindBar');
+    const btn = document.getElementById('findChatBtn');
+    bar.classList.remove('open');
+    btn.classList.remove('active');
+    clearHighlights();
+    document.getElementById('chatFindInput').value = '';
+    document.getElementById('chatFindCount').textContent = '';
+    findTerm = '';
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('findChatBtn').addEventListener('click', () => {
+      const bar = document.getElementById('chatFindBar');
+      bar.classList.contains('open') ? closeFind() : openFind();
+    });
+    document.getElementById('chatFindClose').addEventListener('click', closeFind);
+    document.getElementById('chatFindPrev').addEventListener('click', () => stepFind(-1));
+    document.getElementById('chatFindNext').addEventListener('click', () => stepFind(1));
+    document.getElementById('chatFindInput').addEventListener('input', e => {
+      findTerm = e.target.value;
+      highlightAll(findTerm);
+      if (findMatches.length) setCurrent(0);
+    });
+    document.getElementById('chatFindInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter')  { e.preventDefault(); stepFind(e.shiftKey ? -1 : 1); }
+      if (e.key === 'Escape') { e.preventDefault(); closeFind(); }
+    });
+  });
+})();
 
 function formatTs(ts) {
   const d = new Date(ts);
