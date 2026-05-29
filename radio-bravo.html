@@ -462,12 +462,14 @@
   .log-panel .panel-label {
     cursor: pointer; user-select: none;
     display: flex; align-items: center; gap: 6px;
+    touch-action: manipulation; -webkit-tap-highlight-color: transparent;
   }
-  .log-panel .panel-label::after {
-    content: '▾'; font-size: 10px; color: var(--text-dim);
-    transition: transform 0.2s; margin-left: auto;
+  .log-toggle-arrow {
+    font-size: 10px; color: var(--text-dim);
+    margin-left: auto; transition: transform 0.2s;
+    display: inline-block; line-height: 1;
   }
-  .log-panel.collapsed .panel-label::after { transform: rotate(-90deg); }
+  .log-panel.collapsed .log-toggle-arrow { transform: rotate(-90deg); }
   .log {
     height: 76px;
     overflow-y: auto;
@@ -1086,7 +1088,7 @@
         </div>
       </div>
       <div class="log-panel collapsed" id="logPanel">
-        <div class="panel-label" onclick="toggleLogPanel()">SYS LOG</div>
+        <div class="panel-label" onclick="toggleLogPanel()">SYS LOG<span class="log-toggle-arrow" id="logToggleArrow">▾</span></div>
         <div class="log" id="log"><span class="log-entry sys">16:00:39  PREFILL: code=null vid=false aud=false</span></div>
       </div>
     </div>
@@ -2143,6 +2145,11 @@ chatInput.addEventListener('keydown', e => {
 function toggleLogPanel() {
   const p = document.getElementById('logPanel');
   p.classList.toggle('collapsed');
+  // If expanding, scroll log to bottom so latest entry is visible
+  if (!p.classList.contains('collapsed')) {
+    const l = document.getElementById('log');
+    if (l) setTimeout(() => { l.scrollTop = l.scrollHeight; }, 50);
+  }
 }
 
 function init() {
