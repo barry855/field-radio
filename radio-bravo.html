@@ -371,6 +371,7 @@
     font-family: 'Share Tech Mono', monospace; font-size: 12px;
     cursor: pointer; transition: background 0.15s, border-color 0.15s, color 0.15s;
     white-space: nowrap; letter-spacing: 0.5px;
+    touch-action: manipulation;
   }
   .btn:hover  { background: var(--btn-hover); border-color: #2a4060; }
   .btn:active { background: var(--btn-active); }
@@ -1115,11 +1116,12 @@ const logEl     = document.getElementById('log');
 const chat      = document.getElementById('chat');
 const chatInput = document.getElementById('chatInput');
 const sendBtn   = document.getElementById('sendBtn');
-// Older Android fires touchstart→touchend→click for one tap; bind touchstart
-// and call preventDefault() to suppress the synthetic click that follows.
+// Use click only — touchstart+preventDefault was swallowing the input value
+// on Android Chrome before the keyboard blur resolved. touch-action:manipulation
+// on the button (set in CSS) eliminates the 300ms tap delay without needing
+// touchstart at all.
 sendBtn.disabled = true;
-sendBtn.addEventListener('touchstart', e => { e.preventDefault(); sendChat(); }, { passive: false });
-sendBtn.addEventListener('click', sendChat); // desktop / non-touch fallback
+sendBtn.addEventListener('click', sendChat);
 
 function startSession() {
   stopPresencePolling();
