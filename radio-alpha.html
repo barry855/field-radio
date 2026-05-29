@@ -1156,12 +1156,26 @@ const logEl     = document.getElementById('log');
 const chat      = document.getElementById('chat');
 const chatInput = document.getElementById('chatInput');
 const sendBtn   = document.getElementById('sendBtn');
-// Use click only — touchstart+preventDefault was swallowing the input value
-// on Android Chrome before the keyboard blur resolved. touch-action:manipulation
-// on the button (set in CSS) eliminates the 300ms tap delay without needing
-// touchstart at all.
+// On Android, tapping Send while the keyboard is open causes the browser to
+// blur the textarea first, then fire click — but if the keyboard dismiss
+// animation interrupts the tap sequence the click is swallowed entirely and
+// the button appears frozen. Fix: intercept pointerdown, call preventDefault()
+// (stops the blur/keyboard-dismiss from happening mid-tap), read the input
+// value while focus is still live, then send. The click listener is kept as
+// a fallback for mouse users and assistive technology.
+sendBtn.addEventListener('pointerdown', e => {
+  if (e.pointerType !== 'mouse') {
+    e.preventDefault(); // keeps keyboard open, prevents blur swallowing the click
+    sendChat();
+  }
+});
 sendBtn.disabled = true;
-sendBtn.addEventListener('click', sendChat);
+sendBtn.addEventListener('click', e => {
+  // Only handle mouse clicks here; touch is handled by pointerdown above
+  if (!e.isTrusted || e.detail === 0) return; // synthetic / AT events still go through
+  if (e.pointerType === 'touch' || e.pointerType === 'pen') return;
+  sendChat();
+});
 
 function startSession() {
   stopPresencePolling();
