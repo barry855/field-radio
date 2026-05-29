@@ -2195,13 +2195,17 @@ function startPeer() {
 }
 
 function attachDataConn(dc) {
-  dc.on('open', () => {
+  function onDcOpen() {
+    if (dataConn === dc) return; // already handled
     dataConn = dc;
     entry('Chat channel open', 'ok');
     setStatus('reachable');
     document.getElementById('sendBtn').disabled = false;
     sendVideoState();
-  });
+  }
+  dc.on('open', onDcOpen);
+  // Android/WebView fallback: 'open' sometimes fires before the handler is attached
+  if (dc.open) { setTimeout(onDcOpen, 0); }
   dc.on('data', msg => {
     // Normalise to string — older Android/PeerJS may deliver as object or ArrayBuffer
     let msgStr;
@@ -2232,11 +2236,13 @@ function attachDataConn(dc) {
     }
   });
   dc.on('close', () => {
+    pendingDC = false;
     dataConn = null;
     document.getElementById('sendBtn').disabled = true;
     entry('Chat channel closed', 'sys');
   });
   dc.on('error', e => {
+    pendingDC = false;
     entry('Data channel error: ' + (e.message || e), 'err');
   });
 }
@@ -2246,7 +2252,7 @@ function openDataConn() {
   if (dataConn || pendingDC) return;
   pendingDC = true;
   entry('Opening data channel to Alpha…', 'sys');
-  const dc = peer.connect(REMOTE_ID, { reliable: true });
+  const dc = peer.connect(REMOTE_ID, { reliable: true, serialization: 'json' });
   dc.on('open',  () => { pendingDC = false; });
   dc.on('close', () => { pendingDC = false; });
   dc.on('error', () => { pendingDC = false; });
@@ -2609,7 +2615,7 @@ async function toggleRecordRemote() {
     saveRec(recRemoteChunks, mimeType, 'remote');
   };
   recRemote.start(1000);
-  btn.textContent = '⏹ Stop Remote'; btn.classList.add('recording');
+  btn.textContent = '⏹ Stop & Save'; btn.classList.add('recording');
   entry(`Remote recording started${withMini ? ' (with local mini overlay)' : ''}…`, 'ok');
 }
 
@@ -2663,7 +2669,7 @@ async function toggleRecordLocal() {
     saveRec(recLocalChunks, mimeType, 'local');
   };
   recLocal.start(1000);
-  btn.textContent = '⏹ Stop Local'; btn.classList.add('recording');
+  btn.textContent = '⏹ Stop & Save'; btn.classList.add('recording');
   entry(`Local recording started${withMini ? ' (with remote mini overlay)' : ''}…`, 'ok');
 }
 
