@@ -835,7 +835,7 @@
   .login-presence .ptxt.p-reachable { color: #ffaa00; }
   .login-presence .ptxt.p-offline   { color: #ff4444; }
 </style>
-</head>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script></head>
 <body>
 
 <div class="session-overlay" id="sessionOverlay">
@@ -1113,22 +1113,6 @@
 <div id="lightbox"><img id="lightboxImg" src="file:///C:/Users/barry/Downloads/radio-bravo_21.html" alt=""></div>
 
 <script>
-// Load PeerJS with CDN fallback
-(function loadPeerJS(urls, idx) {
-  if (idx >= urls.length) {
-    entry('ERROR: Could not load PeerJS from any CDN — check internet connection', 'err');
-    return;
-  }
-  const s = document.createElement('script');
-  s.src = urls[idx];
-  s.onload = () => { entry('PeerJS ready (' + urls[idx].split('/')[2] + ')', 'sys'); };
-  s.onerror = () => { entry('CDN failed: ' + urls[idx].split('/')[2] + ' — trying next…', 'sys'); loadPeerJS(urls, idx + 1); };
-  document.head.appendChild(s);
-})([
-  'https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js',
-  'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js'
-], 0);
-
 // Free public TURN servers (Open Relay Project) — essential for mobile/carrier-NAT networks
 const ICE_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
