@@ -194,6 +194,23 @@
   .chat-input:disabled { opacity: 0.4; cursor: not-allowed; }
   .chat-input::placeholder { color: var(--text-dim); }
 
+  .clear-chat-btn {
+    position: absolute;
+    bottom: 58px; left: 10px;
+    z-index: 10;
+    background: rgba(5,15,21,0.55);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-dim);
+    font-size: 14px;
+    line-height: 1;
+    padding: 4px 6px;
+    cursor: pointer;
+    opacity: 0.45;
+    transition: opacity 0.15s, border-color 0.15s;
+  }
+  .clear-chat-btn:hover, .clear-chat-btn:active { opacity: 1; border-color: var(--danger, #cc2222); }
+
   /* ── Drag-and-drop overlay ───────────────────────────────── */
   .chat-panel { position: relative; }
   .drop-overlay {
@@ -954,13 +971,13 @@
           <div class="drop-overlay-label">Drop file to attach</div>
         </div>
         <div class="chat" id="chat"></div>
+        <button class="clear-chat-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" title="Clear chat history">🗑</button>
         <div class="file-preview-strip" id="filePreviewStrip"></div>
         <div class="chat-input-row">
           <button class="attach-btn" id="attachBtn" title="Attach file / photo / video">📎</button>
           <input type="file" id="fileInput" multiple="" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx" style="display:none">
           <input class="chat-input" id="chatInput" placeholder="TYPE MESSAGE…">
           <button class="btn" id="sendBtn">SEND</button>
-          <button class="btn" onclick="clearHistory();chat.innerHTML=&#39;&#39;;entry(&#39;Chat history cleared&#39;,&#39;sys&#39;);" title="Clear history" style="padding:6px 10px;">🗑</button>
         </div>
       </div>
       <div class="log-panel">
