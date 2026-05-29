@@ -1761,23 +1761,22 @@ function saveChatToFile() {
     findTerm = '';
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('findChatBtn').addEventListener('click', () => {
-      const bar = document.getElementById('chatFindBar');
-      bar.classList.contains('open') ? closeFind() : openFind();
-    });
-    document.getElementById('chatFindClose').addEventListener('click', closeFind);
-    document.getElementById('chatFindPrev').addEventListener('click', () => stepFind(-1));
-    document.getElementById('chatFindNext').addEventListener('click', () => stepFind(1));
-    document.getElementById('chatFindInput').addEventListener('input', e => {
-      findTerm = e.target.value;
-      highlightAll(findTerm);
-      if (findMatches.length) setCurrent(0);
-    });
-    document.getElementById('chatFindInput').addEventListener('keydown', e => {
-      if (e.key === 'Enter')  { e.preventDefault(); stepFind(e.shiftKey ? -1 : 1); }
-      if (e.key === 'Escape') { e.preventDefault(); closeFind(); }
-    });
+  // Script runs after DOM is parsed (inline at bottom of body) — bind directly.
+  document.getElementById('findChatBtn').addEventListener('click', () => {
+    const bar = document.getElementById('chatFindBar');
+    bar.classList.contains('open') ? closeFind() : openFind();
+  });
+  document.getElementById('chatFindClose').addEventListener('click', closeFind);
+  document.getElementById('chatFindPrev').addEventListener('click', () => stepFind(-1));
+  document.getElementById('chatFindNext').addEventListener('click', () => stepFind(1));
+  document.getElementById('chatFindInput').addEventListener('input', e => {
+    findTerm = e.target.value;
+    highlightAll(findTerm);
+    if (findMatches.length) setCurrent(0);
+  });
+  document.getElementById('chatFindInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter')  { e.preventDefault(); stepFind(e.shiftKey ? -1 : 1); }
+    if (e.key === 'Escape') { e.preventDefault(); closeFind(); }
   });
 })();
 
