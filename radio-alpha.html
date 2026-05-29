@@ -373,7 +373,6 @@
     font-family: 'Share Tech Mono', monospace; font-size: 12px;
     cursor: pointer; transition: background 0.15s, border-color 0.15s, color 0.15s;
     white-space: nowrap; letter-spacing: 0.5px;
-    touch-action: manipulation;
   }
   .btn:hover  { background: var(--btn-hover); border-color: #2a4060; }
   .btn:active { background: var(--btn-active); }
@@ -1116,12 +1115,11 @@ const logEl     = document.getElementById('log');
 const chat      = document.getElementById('chat');
 const chatInput = document.getElementById('chatInput');
 const sendBtn   = document.getElementById('sendBtn');
-// Use click only — touchstart+preventDefault was swallowing the input value
-// on Android Chrome before the keyboard blur resolved. touch-action:manipulation
-// on the button (set in CSS) eliminates the 300ms tap delay without needing
-// touchstart at all.
+// Older Android fires touchstart→touchend→click for one tap; bind touchstart
+// and call preventDefault() to suppress the synthetic click that follows.
 sendBtn.disabled = true;
-sendBtn.addEventListener('click', sendChat);
+sendBtn.addEventListener('touchstart', e => { e.preventDefault(); sendChat(); }, { passive: false });
+sendBtn.addEventListener('click', sendChat); // desktop / non-touch fallback
 
 function startSession() {
   stopPresencePolling();
@@ -1761,22 +1759,23 @@ function saveChatToFile() {
     findTerm = '';
   }
 
-  // Script runs after DOM is parsed (inline at bottom of body) — bind directly.
-  document.getElementById('findChatBtn').addEventListener('click', () => {
-    const bar = document.getElementById('chatFindBar');
-    bar.classList.contains('open') ? closeFind() : openFind();
-  });
-  document.getElementById('chatFindClose').addEventListener('click', closeFind);
-  document.getElementById('chatFindPrev').addEventListener('click', () => stepFind(-1));
-  document.getElementById('chatFindNext').addEventListener('click', () => stepFind(1));
-  document.getElementById('chatFindInput').addEventListener('input', e => {
-    findTerm = e.target.value;
-    highlightAll(findTerm);
-    if (findMatches.length) setCurrent(0);
-  });
-  document.getElementById('chatFindInput').addEventListener('keydown', e => {
-    if (e.key === 'Enter')  { e.preventDefault(); stepFind(e.shiftKey ? -1 : 1); }
-    if (e.key === 'Escape') { e.preventDefault(); closeFind(); }
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('findChatBtn').addEventListener('click', () => {
+      const bar = document.getElementById('chatFindBar');
+      bar.classList.contains('open') ? closeFind() : openFind();
+    });
+    document.getElementById('chatFindClose').addEventListener('click', closeFind);
+    document.getElementById('chatFindPrev').addEventListener('click', () => stepFind(-1));
+    document.getElementById('chatFindNext').addEventListener('click', () => stepFind(1));
+    document.getElementById('chatFindInput').addEventListener('input', e => {
+      findTerm = e.target.value;
+      highlightAll(findTerm);
+      if (findMatches.length) setCurrent(0);
+    });
+    document.getElementById('chatFindInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter')  { e.preventDefault(); stepFind(e.shiftKey ? -1 : 1); }
+      if (e.key === 'Escape') { e.preventDefault(); closeFind(); }
+    });
   });
 })();
 
