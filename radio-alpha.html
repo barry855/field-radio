@@ -2013,7 +2013,7 @@ function fileIcon(type) {
 }
 
 // ── Send pending files over data channel (chunked) ───────────
-const FILE_CHUNK = 48 * 1024; // ~48KB base64 chars — safely under JSON channel limit
+const FILE_CHUNK = 8 * 1024; // 8KB base64 chars — safe for all platforms incl. Android WebView
 
 function sendPendingFiles() {
   [...pendingFiles].forEach(item => sendFileChunked(item));
@@ -2029,11 +2029,11 @@ function sendFileChunked(item) {
   try {
     for (let i = 0; i < total; i++) {
       const chunk = data.slice(i * FILE_CHUNK, (i + 1) * FILE_CHUNK);
-      dataConn.send(JSON.stringify({
+      dataConn.send({
         __chunk: true, id,
         name: item.file.name, type: item.file.type,
         index: i, total, data: chunk
-      }));
+      });
     }
     addMediaBubble(item.file.name, item.file.type, item.dataUrl, true);
   } catch(e) {
@@ -2296,36 +2296,29 @@ function attachDataConn(dc) {
   // Android/WebView fallback: 'open' sometimes fires before the handler is attached
   if (dc.open) { setTimeout(onDcOpen, 0); }
   dc.on('data', msg => {
-    // Normalise to string — older Android/PeerJS may deliver as object or ArrayBuffer
-    let msgStr;
-    if (typeof msg === 'string') {
-      msgStr = msg;
-    } else if (msg instanceof ArrayBuffer) {
-      msgStr = new TextDecoder().decode(msg);
-    } else if (typeof msg === 'object' && msg !== null) {
-      try { msgStr = JSON.stringify(msg); } catch(e) { msgStr = String(msg); }
+    // PeerJS json mode delivers objects directly; binary/legacy paths deliver string/ArrayBuffer
+    let f = null;
+    let msgStr = null;
+    if (typeof msg === 'object' && msg !== null && !(msg instanceof ArrayBuffer)) {
+      f = msg; // already a parsed object — fast path
     } else {
-      msgStr = String(msg);
+      if (msg instanceof ArrayBuffer) {
+        msgStr = new TextDecoder().decode(msg);
+      } else {
+        msgStr = String(msg);
+      }
+      if (msgStr.startsWith('{')) {
+        try { f = JSON.parse(msgStr); } catch(e) {}
+      }
     }
-    if (msgStr.startsWith('{')) {
-      try {
-        const f = JSON.parse(msgStr);
-        if (f.__control === 'video') {
-          updateRemoteVideoState(f.enabled, f.hasTrack !== false);
-          return;
-        }
-        if (f.__file === true) {
-          addMediaBubble(f.name, f.type, f.data, false);
-          return;
-        }
-        if (f.__chunk === true) {
-          receiveChunk(f);
-          return;
-        }
-      } catch(e) {}
-      addBubble(msgStr, false);
+    if (f) {
+      if (f.__control === 'video') { updateRemoteVideoState(f.enabled, f.hasTrack !== false); return; }
+      if (f.__file  === true)      { addMediaBubble(f.name, f.type, f.data, false); return; }
+      if (f.__chunk === true)      { receiveChunk(f); return; }
+      // Unknown control object — show as JSON text
+      addBubble(msgStr || JSON.stringify(f), false);
     } else {
-      addBubble(msgStr, false);
+      addBubble(msgStr || String(msg), false);
     }
   });
   dc.on('close', () => {
@@ -2437,11 +2430,11 @@ function sendVideoState() {
   if (!dataConn || !localStream) return;
   const track = localStream.getVideoTracks()[0];
   try {
-    dataConn.send(JSON.stringify({
+    dataConn.send({
       __control: 'video',
       enabled: !!(track && track.enabled),
       hasTrack: !!track
-    }));
+    });
   } catch(e) {}
 }
 
