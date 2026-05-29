@@ -132,7 +132,8 @@
     max-width: 82%;
     padding: 10px 14px;
     border-radius: 6px;
-    font-size: 16px;
+    font-size: 18px;
+    font-weight: bold;
     line-height: 1.55;
     word-break: break-word;
     border: 1px solid var(--border);
@@ -984,7 +985,7 @@
         <button class="media-btn" id="refreshBtnLocal" onclick="refreshScreen()">↺ Refresh</button>
         <button class="media-btn" id="flipBtn" onclick="flipCamera()">⟳ Flip</button>
         <button class="speaker-btn speaker-on" id="speakerBtnLocal" onclick="toggleSpeaker()">🔊 Speaker</button>
-        <button class="media-btn" id="recBtn" onclick="toggleRecordLocal()">⏺ Record Local</button>
+        <button class="media-btn" id="recBtn" onclick="toggleRecord()">⏺ Record</button>
       </div>
       <div class="zoom-row">
         <span>ZOOM</span>
@@ -1018,7 +1019,7 @@
         <button class="media-btn" id="refreshBtn" onclick="refreshScreen()">↺ Refresh</button>
         <button class="media-btn" id="flipBtn2" onclick="flipCamera()">⟳ Flip</button>
         <button class="speaker-btn speaker-on" id="speakerBtnRemote" onclick="toggleSpeaker()">🔊 Speaker</button>
-        <button class="media-btn" id="recBtn2" onclick="toggleRecordRemote()">⏺ Record Remote</button>
+        <button class="media-btn" id="recBtn2" onclick="toggleRecord()">⏺ Record</button>
       </div>
       <div class="video-panel">
         <div class="panel-label">REMOTE — BRAVO</div>
@@ -1448,6 +1449,11 @@ function syncControls() {
   // Keep remote tab's channel row in sync with local tab's
   const d2 = document.getElementById('duplexBar2');
   if (d2) { d2.textContent = duplexBar.textContent; d2.className = duplexBar.className; }
+  ['recBtn'].forEach(id => {
+    const src = document.getElementById(id);
+    const dst = document.getElementById(id + '2');
+    if (src && dst) { dst.textContent = src.textContent; dst.className = src.className; }
+  });
 }
 
 function switchTab(tab) {
@@ -1859,8 +1865,8 @@ function setupTooltips() {
     refreshBtnLocal: 'Reconnect the remote screen',
     flipBtn: 'Switch camera',
     flipBtn2: 'Switch camera',
-    recBtn: 'Record local feed — includes mini remote overlay if mini is on',
-    recBtn2: 'Record remote feed — includes mini local overlay if mini is on',
+    recBtn: 'Start or stop recording',
+    recBtn2: 'Start or stop recording',
     attachBtn: 'Attach file / photo / video',
     speakerBtnLocal: 'Toggle speaker / earphone output',
     speakerBtnRemote: 'Toggle speaker / earphone output',
@@ -2401,20 +2407,14 @@ function attachCall(c) {
 
 // ── Save recording if a disconnection interrupts it ──────────
 function saveRecordingIfActive() {
-  if (mediaRecorderRemote && mediaRecorderRemote.state === 'recording') {
-    entry('Connection lost — auto-saving remote recording…', 'sys');
-    const btn2 = document.getElementById('recBtn2');
-    if (btn2) { btn2.textContent = '⏺ Record Remote'; btn2.classList.remove('recording'); }
-    recBusyRemote = true;
-    mediaRecorderRemote.stop();
-  }
-  if (mediaRecorderLocal && mediaRecorderLocal.state === 'recording') {
-    entry('Connection lost — auto-saving local recording…', 'sys');
-    const btn = document.getElementById('recBtn');
-    if (btn) { btn.textContent = '⏺ Record Local'; btn.classList.remove('recording'); }
-    recBusyLocal = true;
-    mediaRecorderLocal.stop();
-  }
+  if (!mediaRecorder || mediaRecorder.state !== 'recording') return;
+  entry('Connection lost — auto-saving recording…', 'sys');
+  const btn  = document.getElementById('recBtn');
+  const btn2 = document.getElementById('recBtn2');
+  if (btn)  { btn.textContent  = '⏺ Record'; btn.classList.remove('recording'); }
+  if (btn2) { btn2.textContent = '⏺ Record'; btn2.classList.remove('recording'); }
+  recBusy = true;
+  mediaRecorder.stop(); // triggers onstop → saves file automatically
 }
 
 function onDrop() {
@@ -2495,200 +2495,96 @@ function resetLockTimer() {
 resetLockTimer();
 
 // ── Video+Mixed Audio Recording ───────────────────────────────
-let mediaRecorderRemote = null;
-let mediaRecorderLocal  = null;
-let recordChunksRemote  = [];
-let recordChunksLocal   = [];
-let audioCtxRemote      = null;
-let mixDestRemote       = null;
-let audioCtxLocal       = null;
-let mixDestLocal        = null;
-let recBusyRemote       = false;
-let recBusyLocal        = false;
+let mediaRecorder = null;
+let recordChunks  = [];
+let audioCtx      = null;
+let mixDest       = null;
+let recBusy       = false; // guard against double-trigger during onstop
 
-function getMixerFor(which) {
-  if (which === 'remote') {
-    if (!audioCtxRemote) {
-      audioCtxRemote = new (window.AudioContext || window.webkitAudioContext)();
-      mixDestRemote  = audioCtxRemote.createMediaStreamDestination();
-    }
-    return { ctx: audioCtxRemote, dest: mixDestRemote };
-  } else {
-    if (!audioCtxLocal) {
-      audioCtxLocal = new (window.AudioContext || window.webkitAudioContext)();
-      mixDestLocal  = audioCtxLocal.createMediaStreamDestination();
-    }
-    return { ctx: audioCtxLocal, dest: mixDestLocal };
+function getMixer() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    mixDest  = audioCtx.createMediaStreamDestination();
   }
+  return mixDest;
 }
 
-function mixStreamInto(stream, ctx, dest) {
-  const src = ctx.createMediaStreamSource(stream);
+function mixStream(stream) {
+  const dest = getMixer();
+  const src  = audioCtx.createMediaStreamSource(stream);
   src.connect(dest);
 }
 
-// Record Remote: main video = remoteVideo; mini = local (miniLocalOverlay) if mini visible
-function toggleRecordRemote() {
-  const btn = document.getElementById('recBtn2');
-  if (recBusyRemote) return;
+function toggleRecord() {
+  const btn  = document.getElementById('recBtn');
+  const btn2 = document.getElementById('recBtn2');
+  if (recBusy) return;
 
-  if (mediaRecorderRemote && mediaRecorderRemote.state === 'recording') {
-    recBusyRemote = true;
-    mediaRecorderRemote.stop();
-    btn.textContent = '⏺ Record Remote'; btn.classList.remove('recording');
-    entry('Remote recording stopped — saving…', 'sys');
+  if (mediaRecorder && mediaRecorder.state === 'recording') {
+    recBusy = true;
+    mediaRecorder.stop();
+    btn.textContent  = '⏺ Record'; btn.classList.remove('recording');
+    if (btn2) { btn2.textContent = '⏺ Record'; btn2.classList.remove('recording'); }
+    entry('Recording stopped — saving…', 'sys');
     return;
   }
-  if (mediaRecorderRemote && mediaRecorderRemote.state !== 'inactive') return;
 
-  const remoteVideo = document.getElementById('remoteVideo');
-  const hasRemote = remoteVideo.srcObject && remoteVideo.srcObject.getVideoTracks().length > 0;
-  if (!hasRemote) { entry('No remote stream to record', 'err'); return; }
-
-  if (audioCtxRemote) { audioCtxRemote.close(); audioCtxRemote = null; mixDestRemote = null; }
-  const { ctx, dest } = getMixerFor('remote');
-
-  if (remoteVideo.srcObject) mixStreamInto(remoteVideo.srcObject, ctx, dest);
-  if (miniVideoVisible && localStream) mixStreamInto(localStream, ctx, dest);
-
-  const canvas = document.createElement('canvas');
-  canvas.width  = 1280; canvas.height = 720;
-  const canCtx  = canvas.getContext('2d');
-  const miniLocalVideo = document.getElementById('miniLocalVideo');
-
-  function drawFrame() {
-    if (!mediaRecorderRemote || mediaRecorderRemote.state !== 'recording') return;
-    canCtx.drawImage(remoteVideo, 0, 0, canvas.width, canvas.height);
-    if (miniVideoVisible && miniLocalVideo && !miniLocalVideo.paused) {
-      const mw = Math.round(canvas.width * 0.25);
-      const mh = Math.round(mw * 9 / 16);
-      const mx = canvas.width  - mw - 16;
-      const my = canvas.height - mh - 16;
-      canCtx.drawImage(miniLocalVideo, mx, my, mw, mh);
-      canCtx.strokeStyle = 'rgba(0,212,255,0.7)';
-      canCtx.lineWidth   = 2;
-      canCtx.strokeRect(mx, my, mw, mh);
-    }
-    requestAnimationFrame(drawFrame);
-  }
-
-  const canvasStream = canvas.captureStream(30);
-  const recStream = new MediaStream([
-    ...canvasStream.getVideoTracks(),
-    ...dest.stream.getAudioTracks()
-  ]);
-
-  const mimeType = [
-    'video/mp4;codecs=avc1,mp4a.40.2', 'video/mp4',
-    'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'
-  ].find(t => MediaRecorder.isTypeSupported(t)) || 'video/webm';
-  const ext = mimeType.startsWith('video/mp4') ? 'mp4' : 'webm';
-
-  recordChunksRemote  = [];
-  mediaRecorderRemote = new MediaRecorder(recStream, { mimeType });
-  mediaRecorderRemote.ondataavailable = e => { if (e.data.size > 0) recordChunksRemote.push(e.data); };
-  mediaRecorderRemote.onstop = () => {
-    recBusyRemote = false;
-    audioCtxRemote.close(); audioCtxRemote = null; mixDestRemote = null;
-    if (recordChunksRemote.length === 0) { entry('Remote recording empty — nothing saved', 'sys'); return; }
-    const blob = new Blob(recordChunksRemote, { type: mimeType });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    const ts   = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
-    a.href = url; a.download = `alpha-remote-${ts}.${ext}`;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
-    entry(`Remote recording saved (${ext})`, 'ok');
-  };
-  mediaRecorderRemote.start(1000);
-  requestAnimationFrame(drawFrame);
-  btn.textContent = '⏹ Stop & Save'; btn.classList.add('recording');
-  const miniNote = miniVideoVisible ? ' + mini local' : '';
-  entry(`Remote recording started${miniNote} (${mimeType})…`, 'ok');
-}
-
-// Record Local: main video = localVideo; mini = remote (miniRemoteOverlay) if mini visible
-function toggleRecordLocal() {
-  const btn = document.getElementById('recBtn');
-  if (recBusyLocal) return;
-
-  if (mediaRecorderLocal && mediaRecorderLocal.state === 'recording') {
-    recBusyLocal = true;
-    mediaRecorderLocal.stop();
-    btn.textContent = '⏺ Record Local'; btn.classList.remove('recording');
-    entry('Local recording stopped — saving…', 'sys');
-    return;
-  }
-  if (mediaRecorderLocal && mediaRecorderLocal.state !== 'inactive') return;
+  // Guard: don't start if already set up but not yet 'recording'
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') return;
 
   if (!localStream) { entry('No local stream to record', 'err'); return; }
 
-  if (audioCtxLocal) { audioCtxLocal.close(); audioCtxLocal = null; mixDestLocal = null; }
-  const { ctx, dest } = getMixerFor('local');
+  // Always start a fresh mixer
+  if (audioCtx) { audioCtx.close(); audioCtx = null; mixDest = null; }
+  getMixer();
+  mixStream(localStream);
 
-  mixStreamInto(localStream, ctx, dest);
   const remoteVideo = document.getElementById('remoteVideo');
-  if (miniVideoVisible && remoteVideo.srcObject) mixStreamInto(remoteVideo.srcObject, ctx, dest);
+  const hasRemote = remoteVideo.srcObject && remoteVideo.srcObject.getTracks().length > 0;
+  if (hasRemote) mixStream(remoteVideo.srcObject);
 
-  const canvas   = document.createElement('canvas');
-  canvas.width   = 1280; canvas.height = 720;
-  const canCtx   = canvas.getContext('2d');
-  const localVideo      = document.getElementById('localVideo');
-  const miniRemoteVideo = document.getElementById('miniRemoteVideo');
+  // Use remote video if available, otherwise fall back to local camera
+  const videoTracks = hasRemote
+    ? remoteVideo.srcObject.getVideoTracks()
+    : localStream.getVideoTracks();
 
-  function drawFrame() {
-    if (!mediaRecorderLocal || mediaRecorderLocal.state !== 'recording') return;
-    canCtx.drawImage(localVideo, 0, 0, canvas.width, canvas.height);
-    if (miniVideoVisible && miniRemoteVideo && !miniRemoteVideo.paused) {
-      const mw = Math.round(canvas.width * 0.25);
-      const mh = Math.round(mw * 9 / 16);
-      const mx = canvas.width  - mw - 16;
-      const my = canvas.height - mh - 16;
-      canCtx.drawImage(miniRemoteVideo, mx, my, mw, mh);
-      canCtx.strokeStyle = 'rgba(0,212,255,0.7)';
-      canCtx.lineWidth   = 2;
-      canCtx.strokeRect(mx, my, mw, mh);
-    }
-    requestAnimationFrame(drawFrame);
-  }
-
-  const canvasStream = canvas.captureStream(30);
   const recStream = new MediaStream([
-    ...canvasStream.getVideoTracks(),
-    ...dest.stream.getAudioTracks()
+    ...videoTracks,
+    ...mixDest.stream.getAudioTracks()
   ]);
 
+  // Prefer MP4, fall back to WebM
   const mimeType = [
-    'video/mp4;codecs=avc1,mp4a.40.2', 'video/mp4',
-    'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'
+    'video/mp4;codecs=avc1,mp4a.40.2',
+    'video/mp4',
+    'video/webm;codecs=vp9,opus',
+    'video/webm;codecs=vp8,opus',
+    'video/webm'
   ].find(t => MediaRecorder.isTypeSupported(t)) || 'video/webm';
+
   const ext = mimeType.startsWith('video/mp4') ? 'mp4' : 'webm';
 
-  recordChunksLocal  = [];
-  mediaRecorderLocal = new MediaRecorder(recStream, { mimeType });
-  mediaRecorderLocal.ondataavailable = e => { if (e.data.size > 0) recordChunksLocal.push(e.data); };
-  mediaRecorderLocal.onstop = () => {
-    recBusyLocal = false;
-    audioCtxLocal.close(); audioCtxLocal = null; mixDestLocal = null;
-    if (recordChunksLocal.length === 0) { entry('Local recording empty — nothing saved', 'sys'); return; }
-    const blob = new Blob(recordChunksLocal, { type: mimeType });
+  recordChunks  = [];
+  mediaRecorder = new MediaRecorder(recStream, { mimeType });
+  mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordChunks.push(e.data); };
+  mediaRecorder.onstop = () => {
+    recBusy = false;
+    audioCtx.close(); audioCtx = null; mixDest = null;
+    if (recordChunks.length === 0) { entry('Recording empty — nothing saved', 'sys'); return; }
+    const blob = new Blob(recordChunks, { type: mimeType });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
     const ts   = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
-    a.href = url; a.download = `alpha-local-${ts}.${ext}`;
+    a.href = url; a.download = `alpha-recording-${ts}.${ext}`;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 5000);
-    entry(`Local recording saved (${ext})`, 'ok');
+    entry(`Recording saved (${ext})`, 'ok');
   };
-  mediaRecorderLocal.start(1000);
-  requestAnimationFrame(drawFrame);
-  btn.textContent = '⏹ Stop & Save'; btn.classList.add('recording');
-  const miniNote = miniVideoVisible ? ' + mini remote' : '';
-  entry(`Local recording started${miniNote} (${mimeType})…`, 'ok');
+  mediaRecorder.start(1000);
+  btn.textContent  = '⏹ Stop & Save'; btn.classList.add('recording');
+  if (btn2) { btn2.textContent = '⏹ Stop & Save'; btn2.classList.add('recording'); }
+  entry(`Recording started (${mimeType})…`, 'ok');
 }
-
-// Legacy alias — kept so any stale onclick still works
-function toggleRecord() { toggleRecordRemote(); }
 
 function toggleVideo() {
   if (!localStream) return;
