@@ -2496,13 +2496,18 @@ function preferredMime() {
   ].find(t => MediaRecorder.isTypeSupported(t)) || 'video/webm';
 }
 
-function buildAudioMix(...streams) {
+async function buildAudioMix(...streams) {
   const ctx  = new (window.AudioContext || window.webkitAudioContext)();
+  await ctx.resume();
   const dest = ctx.createMediaStreamDestination();
   streams.forEach(s => {
-    if (s && s.getAudioTracks && s.getAudioTracks().length) {
-      try { ctx.createMediaStreamSource(s).connect(dest); } catch(e) {}
-    }
+    if (!s) return;
+    const tracks = s.getAudioTracks ? s.getAudioTracks() : [];
+    if (!tracks.length) return;
+    try {
+      const audioOnly = new MediaStream(tracks);
+      ctx.createMediaStreamSource(audioOnly).connect(dest);
+    } catch(e) { entry('Audio mix warn: ' + e.message, 'sys'); }
   });
   return { ctx, dest };
 }
@@ -2517,10 +2522,11 @@ function buildCompositeStream(mainVideo, overlayVideo, audioTracks) {
   const pipH = Math.round(pipW * 9 / 16);
   const pipX = W - pipW - 14;
   const pipY = 14;
+  const showPip = !!overlayVideo;
   let afId;
   function draw() {
     c.drawImage(mainVideo, 0, 0, W, H);
-    if (overlayVideo && overlayVideo.readyState >= 2) {
+    if (showPip && overlayVideo.readyState >= 2) {
       c.save();
       c.beginPath();
       if (c.roundRect) c.roundRect(pipX, pipY, pipW, pipH, 4);
@@ -2555,7 +2561,7 @@ function saveRec(chunks, mimeType, label) {
   entry(`${label} recording saved (${ext})`, 'ok');
 }
 
-function toggleRecordRemote() {
+async function toggleRecordRemote() {
   const btn = document.getElementById('recBtn2');
   if (recRemoteBusy) return;
 
@@ -2569,14 +2575,20 @@ function toggleRecordRemote() {
   if (recRemote && recRemote.state !== 'inactive') return;
 
   const remoteVideo = document.getElementById('remoteVideo');
+  const remoteAudio = document.getElementById('remoteAudio');
   const hasRemote = remoteVideo.srcObject && remoteVideo.srcObject.getVideoTracks().length > 0;
   if (!hasRemote) { entry('No remote video to record', 'err'); return; }
 
-  const { ctx: aCtx, dest: aDest } = buildAudioMix(localStream, remoteVideo.srcObject);
+  const { ctx: aCtx, dest: aDest } = await buildAudioMix(
+    localStream,
+    remoteAudio ? remoteAudio.srcObject : remoteVideo.srcObject
+  );
+
   const mimeType = preferredMime();
   let stopLoop = null, recStream;
+  const withMini = !!miniVideoVisible;
 
-  if (miniVideoVisible) {
+  if (withMini) {
     const miniLocalVideo = document.getElementById('miniLocalVideo');
     const comp = buildCompositeStream(remoteVideo, miniLocalVideo, aDest.stream.getAudioTracks());
     recStream = comp.stream; stopLoop = comp.stopLoop;
@@ -2598,10 +2610,10 @@ function toggleRecordRemote() {
   };
   recRemote.start(1000);
   btn.textContent = '⏹ Stop & Save'; btn.classList.add('recording');
-  entry(`Remote recording started${miniVideoVisible ? ' (with local mini overlay)' : ''}…`, 'ok');
+  entry(`Remote recording started${withMini ? ' (with local mini overlay)' : ''}…`, 'ok');
 }
 
-function toggleRecordLocal() {
+async function toggleRecordLocal() {
   const btn = document.getElementById('recBtn');
   if (recLocalBusy) return;
 
@@ -2618,12 +2630,18 @@ function toggleRecordLocal() {
     entry('No local video to record', 'err'); return;
   }
 
+  const remoteAudio = document.getElementById('remoteAudio');
   const remoteVideo = document.getElementById('remoteVideo');
-  const { ctx: aCtx, dest: aDest } = buildAudioMix(localStream, remoteVideo ? remoteVideo.srcObject : null);
+  const { ctx: aCtx, dest: aDest } = await buildAudioMix(
+    localStream,
+    remoteAudio ? remoteAudio.srcObject : (remoteVideo ? remoteVideo.srcObject : null)
+  );
+
   const mimeType = preferredMime();
   let stopLoop = null, recStream;
+  const withMini = !!miniVideoVisible;
 
-  if (miniVideoVisible) {
+  if (withMini) {
     const localVideo      = document.getElementById('localVideo');
     const miniRemoteVideo = document.getElementById('miniRemoteVideo');
     const comp = buildCompositeStream(localVideo, miniRemoteVideo, aDest.stream.getAudioTracks());
@@ -2646,7 +2664,7 @@ function toggleRecordLocal() {
   };
   recLocal.start(1000);
   btn.textContent = '⏹ Stop & Save'; btn.classList.add('recording');
-  entry(`Local recording started${miniVideoVisible ? ' (with remote mini overlay)' : ''}…`, 'ok');
+  entry(`Local recording started${withMini ? ' (with remote mini overlay)' : ''}…`, 'ok');
 }
 
 function toggleRecord() {}
