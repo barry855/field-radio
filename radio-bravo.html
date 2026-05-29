@@ -1,11 +1,11 @@
 
 <!DOCTYPE html>
-<!-- saved from url=(0052)file:///C:/Users/barry/Downloads/radio-alpha_23.html -->
+<!-- saved from url=(0052)file:///C:/Users/barry/Downloads/radio-bravo_21.html -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="google" content="notranslate">
-<title>ALPHA — Field Radio v6</title>
+<title>BRAVO — Field Radio v6</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
 
@@ -69,20 +69,20 @@
   header {
     display: flex; align-items: center; gap: 16px;
     background: var(--panel); border: 1px solid var(--border);
-    border-radius: 8px; border-top: 2px solid var(--accent);
+    border-radius: 8px; border-top: 2px solid var(--accent2);
     padding: 10px 14px;
     flex-shrink: 0;
   }
   .logo {
     font-family: 'Orbitron', sans-serif; font-size: 20px; font-weight: 900;
-    color: var(--accent); letter-spacing: 4px;
-    text-shadow: 0 0 20px rgba(0,212,255,0.5); white-space: nowrap;
+    color: var(--accent2); letter-spacing: 4px;
+    text-shadow: 0 0 20px rgba(0,255,159,0.5); white-space: nowrap;
   }
   .logo .greek {
     font-family: 'Georgia', serif; font-size: 26px; font-weight: 700;
     vertical-align: middle; line-height: 1;
   }
-  .logo span { color: var(--accent2); }
+  .logo span { color: var(--accent); }
 
   .statusbar { display: flex; align-items: center; gap: 16px; flex: 1; flex-wrap: wrap; }
   .status-item {
@@ -97,10 +97,8 @@
   }
   .led.on-green  { background: var(--accent2); box-shadow: 0 0 6px var(--accent2); }
   .led.on-cyan   { background: var(--accent);  box-shadow: 0 0 6px var(--accent);  }
-  .led.on-yellow { background: var(--warn);    box-shadow: 0 0 6px var(--warn);    animation: blink 0.8s step-end infinite; }
+  .led.on-yellow { background: var(--warn);    box-shadow: 0 0 6px var(--warn); }
   .led.on-amber  { background: #ffaa00;       box-shadow: 0 0 8px #ffaa00; }  /* reachable — solid amber */
-
-  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.35} }
 
   .chat-panel {
     flex: 1;
@@ -139,22 +137,22 @@
   }
   .bubble.mine {
     align-self: flex-end;
-    background: rgba(0,212,255,0.15);
-    border-color: var(--accent);
+    background: rgba(0,255,159,0.15);
+    border-color: var(--accent2);
     color: #0a1520;
   }
   .bubble.theirs {
     align-self: flex-start;
-    background: rgba(0,255,159,0.12);
-    border-color: var(--accent2);
+    background: rgba(0,212,255,0.12);
+    border-color: var(--accent);
     color: #0a1520;
   }
   .bubble .who {
     font-size: 12px; letter-spacing: 2px; margin-bottom: 5px;
     text-transform: uppercase; font-family: 'Orbitron', sans-serif;
   }
-  .bubble.mine .who   { color: #0077aa; }
-  .bubble.theirs .who { color: #007744; }
+  .bubble.mine .who   { color: #007744; }
+  .bubble.theirs .who { color: #0077aa; }
 
   .bubble .ts {
     font-size: 11px; color: #888; letter-spacing: 0.5px;
@@ -190,7 +188,7 @@
     font-family: 'Share Tech Mono', monospace; font-size: 16px;
     outline: none; transition: border-color 0.2s;
   }
-  .chat-input:focus   { border-color: var(--accent); }
+  .chat-input:focus   { border-color: var(--accent2); }
   .chat-input:disabled { opacity: 0.4; cursor: not-allowed; }
   .chat-input::placeholder { color: var(--text-dim); }
 
@@ -226,7 +224,7 @@
     opacity: 0.45;
     transition: opacity 0.15s, border-color 0.15s;
   }
-  .save-chat-btn:hover, .save-chat-btn:active { opacity: 1; border-color: var(--accent, #00d4ff); }
+  .save-chat-btn:hover, .save-chat-btn:active { opacity: 1; border-color: var(--accent2, #00ffaa); }
 
   .find-chat-btn {
     position: absolute;
@@ -243,11 +241,13 @@
     opacity: 0.45;
     transition: opacity 0.15s, border-color 0.15s;
   }
-  .find-chat-btn:hover, .find-chat-btn:active { opacity: 1; border-color: var(--accent, #00d4ff); color: var(--accent); }
-  .find-chat-btn.active { opacity: 1; border-color: var(--accent, #00d4ff); color: var(--accent); }
+  .find-chat-btn:hover, .find-chat-btn:active { opacity: 1; border-color: var(--accent2, #00ffaa); color: var(--accent2); }
+  .find-chat-btn.active { opacity: 1; border-color: var(--accent2, #00ffaa); color: var(--accent2); }
+
+  /* ── Chat find bar ──────────────────────────────────────── */
   .chat-find-bar {
     display: none; align-items: center; gap: 6px;
-    background: #0c1520; border: 1px solid var(--accent);
+    background: #0c1520; border: 1px solid var(--accent2);
     border-radius: 4px; padding: 4px 8px;
     margin-bottom: 6px; flex-shrink: 0;
   }
@@ -267,7 +267,7 @@
     font-size: 14px; cursor: pointer; padding: 2px 5px; border-radius: 3px;
     transition: color 0.15s, background 0.15s;
   }
-  .chat-find-nav:hover { color: var(--accent); background: rgba(0,212,255,0.1); }
+  .chat-find-nav:hover { color: var(--accent2); background: rgba(0,255,159,0.1); }
   .chat-find-close {
     background: none; border: none; color: var(--text-dim);
     font-size: 14px; cursor: pointer; padding: 2px 5px; border-radius: 3px;
@@ -280,25 +280,23 @@
   mark.find-highlight.current {
     background: rgba(255,140,0,0.8); outline: 1px solid #ff8c00;
   }
-  .find-chat-btn:hover { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
-  .find-chat-btn.active { border-color: var(--accent); color: var(--accent); }
 
   /* ── Drag-and-drop overlay ───────────────────────────────── */
   .chat-panel { position: relative; }
   .drop-overlay {
     position: absolute; inset: 0; z-index: 20;
-    background: rgba(0,212,255,0.12);
-    border: 2px dashed var(--accent);
+    background: rgba(0,255,159,0.12);
+    border: 2px dashed var(--accent2);
     border-radius: 8px;
     display: none; align-items: center; justify-content: center;
     flex-direction: column; gap: 8px;
     pointer-events: none;
   }
   .drop-overlay.active { display: flex; }
-  .drop-overlay-icon { font-size: 32px; filter: drop-shadow(0 0 8px var(--accent)); }
+  .drop-overlay-icon { font-size: 32px; filter: drop-shadow(0 0 8px var(--accent2)); }
   .drop-overlay-label {
     font-family: 'Orbitron', sans-serif; font-size: 11px;
-    letter-spacing: 3px; color: var(--accent);
+    letter-spacing: 3px; color: var(--accent2);
     text-transform: uppercase;
   }
 
@@ -310,7 +308,7 @@
     transition: background 0.15s, border-color 0.15s, color 0.15s;
     flex-shrink: 0; line-height: 1;
   }
-  .attach-btn:hover { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
+  .attach-btn:hover { background: var(--btn-hover); border-color: var(--accent2); color: var(--accent2); }
 
   /* ── File preview strip ─────────────────────────────────── */
   .file-preview-strip {
@@ -320,9 +318,9 @@
   .file-preview-strip.has-files { display: flex; }
   .file-chip {
     display: flex; align-items: center; gap: 5px;
-    background: rgba(0,212,255,0.1); border: 1px solid var(--accent);
+    background: rgba(0,255,159,0.1); border: 1px solid var(--accent2);
     border-radius: 4px; padding: 3px 6px;
-    font-size: 10px; color: var(--accent); max-width: 180px;
+    font-size: 10px; color: var(--accent2); max-width: 180px;
     position: relative;
   }
   .file-chip-thumb {
@@ -353,7 +351,7 @@
   }
   .bubble .file-attach-link {
     display: inline-flex; align-items: center; gap: 5px;
-    margin-top: 4px; color: var(--accent);
+    margin-top: 4px; color: var(--accent2);
     font-size: 11px; text-decoration: none; letter-spacing: 0.5px;
   }
   .bubble .file-attach-link:hover { text-decoration: underline; }
@@ -365,7 +363,7 @@
     cursor: zoom-out;
   }
   #lightbox.open { display: flex; }
-  #lightbox img { max-width: 90vw; max-height: 90vh; border-radius: 6px; box-shadow: 0 0 40px rgba(0,212,255,0.3); }
+  #lightbox img { max-width: 90vw; max-height: 90vh; border-radius: 6px; box-shadow: 0 0 40px rgba(0,255,159,0.3); }
 
   .btn {
     background: var(--btn-bg); border: 1px solid var(--border);
@@ -417,12 +415,12 @@
   }
   .media-btn:hover { background: var(--btn-hover); }
   .media-btn.screen-active {
-    background: rgba(0,212,255,0.15);
-    border-color: var(--accent);
-    color: var(--accent);
-    box-shadow: 0 0 8px rgba(0,212,255,0.3);
+    background: rgba(0,255,159,0.15);
+    border-color: var(--accent2);
+    color: var(--accent2);
+    box-shadow: 0 0 8px rgba(0,255,159,0.3);
   }
-  .media-btn.screen-active:hover { background: rgba(0,212,255,0.25); }
+  .media-btn.screen-active:hover { background: rgba(0,255,159,0.25); }
   .media-btn.disabled-state {
     background: rgba(255,68,68,0.15);
     border-color: var(--danger);
@@ -430,9 +428,9 @@
   }
   .media-btn.disabled-state:hover { background: rgba(255,68,68,0.25); }
   .media-btn.video-on {
-    border-color: var(--accent2);
-    color: var(--accent2);
-    box-shadow: 0 0 8px rgba(0,255,159,0.22);
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 0 8px rgba(0,212,255,0.22);
   }
   .media-btn.recording {
     background: rgba(255,68,68,0.2);
@@ -472,12 +470,12 @@
   }
   .session-box {
     background: var(--panel); border: 1px solid var(--border);
-    border-top: 2px solid var(--accent); border-radius: 8px; padding: 24px 28px; width: 280px;
+    border-top: 2px solid var(--accent2); border-radius: 8px; padding: 24px 28px; width: 280px;
   }
   .session-title {
     font-family: 'Orbitron', sans-serif; font-size: 18px; font-weight: 900;
-    color: var(--accent); letter-spacing: 4px; margin-bottom: 16px; display: block;
-    text-shadow: 0 0 20px rgba(0,212,255,0.5);
+    color: var(--accent2); letter-spacing: 4px; margin-bottom: 16px; display: block;
+    text-shadow: 0 0 20px rgba(0,255,159,0.5);
   }
   .session-box label {
     display: block; font-size: 10px; color: var(--text-dim);
@@ -489,14 +487,15 @@
     font-family: 'Orbitron', sans-serif; font-size: 16px; letter-spacing: 4px;
     text-transform: uppercase; outline: none; margin-bottom: 14px;
   }
-  .session-box input[type=text]:focus { border-color: var(--accent); }
-  .session-go { width: 100%; padding: 10px; border-radius: 4px;
+  .session-box input[type=text]:focus { border-color: var(--accent2); }
+  .session-go {
+    width: 100%; padding: 10px; border-radius: 4px;
     background: var(--btn-bg); border: 1px solid var(--border);
     color: var(--text); font-family: 'Orbitron', sans-serif;
     font-size: 12px; letter-spacing: 2px; cursor: pointer;
     transition: background 0.15s, border-color 0.15s;
   }
-  .session-go:hover { background: var(--btn-hover); border-color: var(--accent); }
+  .session-go:hover { background: var(--btn-hover); border-color: var(--accent2); }
 
   /* login checkboxes */
   .session-checks {
@@ -508,7 +507,7 @@
     letter-spacing: 1px; text-transform: uppercase; cursor: pointer;
   }
   .session-check-item input[type=checkbox] {
-    width: 14px; height: 14px; accent-color: var(--accent);
+    width: 14px; height: 14px; accent-color: var(--accent2);
     cursor: pointer; margin: 0;
   }
 
@@ -526,12 +525,13 @@
     width: 100%; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden;
   }
   .login-timeout-fill {
-    height: 100%; background: var(--accent); border-radius: 2px;
+    height: 100%; background: var(--accent2); border-radius: 2px;
     transition: width 1s linear, background 0.5s;
     width: 100%;
   }
 
   /* 10-minute session countdown in header */
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.35} }
 
   /* ── video ── */
   .video-panel {
@@ -598,7 +598,7 @@
   .mini-video-overlay {
     position: absolute; top: 16px; right: 20px; z-index: 4;
     width: clamp(112px, 30%, 170px); aspect-ratio: 16/9;
-    background: #000; border: 1px solid var(--accent);
+    background: #000; border: 1px solid var(--accent2);
     border-radius: 4px; overflow: hidden;
     box-shadow: 0 8px 22px rgba(0,0,0,0.42);
   }
@@ -635,7 +635,7 @@
   .tab-btn:hover { background: var(--btn-hover); color: var(--text); }
   .tab-btn.active {
     background: var(--panel); border-color: var(--border);
-    color: var(--accent); border-bottom: 1px solid var(--panel);
+    color: var(--accent2); border-bottom: 1px solid var(--panel);
     margin-bottom: -1px; z-index: 1;
   }
   .tab-content {
@@ -650,7 +650,7 @@
     position: fixed; z-index: 1000; pointer-events: none;
     max-width: min(240px, calc(100vw - 16px));
     padding: 6px 8px; border-radius: 4px;
-    background: #050f15; border: 1px solid var(--accent);
+    background: #050f15; border: 1px solid var(--accent2);
     color: var(--text); font-size: 10px; line-height: 1.35;
     letter-spacing: 0.7px; text-transform: uppercase;
     box-shadow: 0 8px 22px rgba(0,0,0,0.35);
@@ -794,12 +794,12 @@
   .login-presence .ptxt.p-reachable { color: #ffaa00; }
   .login-presence .ptxt.p-offline   { color: #ff4444; }
 </style>
-<script src="./ALPHA — Field Radio v6_files/peerjs.min.js.download"></script></head>
+<script src="./BRAVO — Field Radio v6_files/peerjs.min.js.download"></script></head>
 <body>
 
 <div class="session-overlay" id="sessionOverlay">
   <div class="session-box">
-    <span class="session-title">α · 01</span>
+    <span class="session-title">β · 02</span>
     <label>Unit ID</label>
     <input type="text" id="sessionCode" maxlength="8" placeholder="ENTER CODE" autocomplete="off">
     <div class="session-checks">
@@ -814,7 +814,7 @@
       <div class="login-timeout-label">
         <span>Login Timeout</span><span id="loginTimeoutSec">43s</span>
       </div>
-      <div class="login-timeout-track"><div class="login-timeout-fill" id="loginTimeoutFill" style="width: 71.6667%; background: var(--accent);"></div></div>
+      <div class="login-timeout-track"><div class="login-timeout-fill" id="loginTimeoutFill" style="width: 71.6667%; background: var(--accent2);"></div></div>
     </div>
     <div class="login-presence" id="loginPresence">
       <div class="pled" id="loginPresenceLed"></div>
@@ -827,7 +827,7 @@
 <div class="shell">
 
   <header>
-    <div class="logo"><span class="greek">α</span><span>·</span>01</div>
+    <div class="logo"><span class="greek">β</span><span>·</span>02</div>
     <div class="statusbar">
       <div class="status-item">
         <div class="led" id="linkLed"></div>
@@ -835,7 +835,7 @@
       </div>
       <div class="status-item" id="unitIdDisplay" style="display:none;">
         <span style="color:var(--text-dim);font-size:10px;letter-spacing:1px;">UNIT ID</span>
-        <span id="unitIdValue" style="color:var(--accent);font-family:&#39;Orbitron&#39;,sans-serif;font-size:11px;letter-spacing:2px;"></span>
+        <span id="unitIdValue" style="color:var(--accent2);font-family:&#39;Orbitron&#39;,sans-serif;font-size:11px;letter-spacing:2px;"></span>
       </div>
       <div class="quality-item" id="qualityDisplay" style="display:none;">
         <div class="quality-bars">
@@ -976,7 +976,7 @@
       <div class="channel-row" style="flex-shrink:0; padding:4px 0;">
         <button class="media-btn" id="videoBtn" onclick="toggleVideo()">Disable Video</button>
         <button class="media-btn" id="miniBtn" onclick="toggleMiniVideo()">Show Mini</button>
-        <button class="media-btn" id="screenBtn" onclick="toggleScreenShare()" style="border-color:var(--accent);color:var(--accent);">Share</button>
+        <button class="media-btn" id="screenBtn" onclick="toggleScreenShare()" style="border-color:var(--accent2);color:var(--accent2);">Share</button>
         <button class="media-btn" id="audioBtn" onclick="toggleAudio()">Disable Audio</button>
       </div>
       <div class="channel-row" style="flex-shrink:0; padding:0 0 4px 0;">
@@ -991,17 +991,17 @@
         <span class="zoom-val" id="zoomValLocal">1.0×</span>
       </div>
       <div class="video-panel">
-        <div class="panel-label">LOCAL — ALPHA</div>
+        <div class="panel-label">LOCAL — BRAVO</div>
         <div class="video-grid">
           <div class="video-wrap" id="localWrap">
             <video id="localVideo" autoplay="" playsinline="" muted=""></video>
-            <span class="video-label">ALPHA</span>
+            <span class="video-label">BRAVO</span>
             <span class="duplex-overlay" id="duplexBar">OFFLINE</span>
           </div>
         </div>
         <div class="mini-video-overlay hidden" id="miniRemoteOverlay">
           <video id="miniRemoteVideo" autoplay="" playsinline=""></video>
-          <span class="video-label">BRAVO</span>
+          <span class="video-label">ALPHA</span>
         </div>
       </div>
     </div>
@@ -1010,7 +1010,7 @@
       <div class="channel-row" style="flex-shrink:0; padding:4px 0;">
         <button class="media-btn" id="videoBtn2" onclick="toggleVideo()">Disable Video</button>
         <button class="media-btn" id="miniBtn2" onclick="toggleMiniVideo()">Show Mini</button>
-        <button class="media-btn" id="screenBtn2" onclick="toggleScreenShare()" style="border-color:var(--accent);color:var(--accent);">Share</button>
+        <button class="media-btn" id="screenBtn2" onclick="toggleScreenShare()" style="border-color:var(--accent2);color:var(--accent2);">Share</button>
         <button class="media-btn" id="audioBtn2" onclick="toggleAudio()">Disable Audio</button>
       </div>
       <div class="channel-row" style="flex-shrink:0; padding:0 0 4px 0;">
@@ -1020,17 +1020,17 @@
         <button class="media-btn" id="recBtn2" onclick="toggleRecord()">⏺ Record</button>
       </div>
       <div class="video-panel">
-        <div class="panel-label">REMOTE — BRAVO</div>
+        <div class="panel-label">REMOTE — ALPHA</div>
         <div class="video-grid">
           <div class="video-wrap waiting" id="remoteWrap">
             <video id="remoteVideo" autoplay="" playsinline=""></video>
-            <span class="video-label">BRAVO</span>
+            <span class="video-label">ALPHA</span>
             <span class="duplex-overlay" id="duplexBar2">OFFLINE</span>
           </div>
         </div>
         <div class="mini-video-overlay hidden" id="miniLocalOverlay">
           <video id="miniLocalVideo" autoplay="" playsinline="" muted=""></video>
-          <span class="video-label">ALPHA</span>
+          <span class="video-label">BRAVO</span>
         </div>
       </div>
     </div>
@@ -1063,13 +1063,13 @@
       </div>
       <div class="log-panel">
         <div class="panel-label">SYS LOG</div>
-        <div class="log" id="log"><span class="log-entry sys">15:59:51  PREFILL: code=123 vid=false aud=false</span></div>
+        <div class="log" id="log"><span class="log-entry sys">16:00:39  PREFILL: code=null vid=false aud=false</span></div>
       </div>
     </div>
   </div>
 
 <audio id="remoteAudio" autoplay="" playsinline=""></audio>
-<div id="lightbox"><img id="lightboxImg" src="file:///C:/Users/barry/Downloads/radio-alpha_23.html" alt=""></div>
+<div id="lightbox"><img id="lightboxImg" src="file:///C:/Users/barry/Downloads/radio-bravo_21.html" alt=""></div>
 
 <script>
 // Load PeerJS with CDN fallback
@@ -1106,7 +1106,7 @@ let realAudioTrack = null;
 let silentCtx = null;
 let silentTrack = null;
 
-let peer, call, dataConn, localStream, linked = false, retryTimer;
+let peer, call, dataConn, localStream, linked = false;
 
 const linkLed   = document.getElementById('linkLed');
 const statusEl  = document.getElementById('statusText');
@@ -1125,19 +1125,17 @@ function startSession() {
   stopPresencePolling();
   const code = document.getElementById('sessionCode').value.trim().toUpperCase().replace(/\s+/g,'');
   if (!code) { document.getElementById('sessionCode').focus(); return; }
-  MY_ID     = 'alpha-' + code;
-  REMOTE_ID = 'bravo-' + code;
-  // Persist code and checkbox states for next load
+  MY_ID     = 'bravo-' + code;
+  REMOTE_ID = 'alpha-' + code;
   const disVidChecked = document.getElementById('loginDisableVideo').checked;
   const disAudChecked = document.getElementById('loginDisableAudio').checked;
   try {
-    localStorage.setItem('alpha_last_code', code);
-    localStorage.setItem('alpha_disable_video', disVidChecked ? '1' : '0');
-    localStorage.setItem('alpha_disable_audio', disAudChecked ? '1' : '0');
+    localStorage.setItem('bravo_last_code', code);
+    localStorage.setItem('bravo_disable_video', disVidChecked ? '1' : '0');
+    localStorage.setItem('bravo_disable_audio', disAudChecked ? '1' : '0');
   } catch(e) {}
   loginDisableVideoFlag = disVidChecked;
   loginDisableAudioFlag = disAudChecked;
-  // Always log the checkbox state so we can see it in the activity log
   entry('LOGIN: disableVideo=' + disVidChecked + ' disableAudio=' + disAudChecked, 'sys');
   clearInterval(loginTimeoutInterval);
   document.getElementById('sessionOverlay').style.display = 'none';
@@ -1180,9 +1178,9 @@ async function presencePoll(partnerKey, myKey) {
     const res = await fetch(FB_URL + '/presence/' + partnerKey + '.json');
     const data = await res.json();
     if (data && data.ts && (Date.now() - data.ts) < PRESENCE_STALE_MS) {
-      loginPresenceSetState('reachable', 'BRAVO REACHABLE');
+      loginPresenceSetState('reachable', 'ALPHA REACHABLE');
     } else {
-      loginPresenceSetState('offline', 'BRAVO OFFLINE');
+      loginPresenceSetState('offline', 'ALPHA OFFLINE');
     }
   } catch(e) {
     loginPresenceSetState('offline', 'NO NETWORK');
@@ -1198,9 +1196,9 @@ function startPresencePolling(code) {
     return;
   }
   presenceCode = code;
-  // ALPHA polls for bravo-CODE, writes alpha-CODE
-  const myKey      = 'alpha-' + code;
-  const partnerKey = 'bravo-' + code;
+  // BRAVO polls for alpha-CODE, writes bravo-CODE
+  const myKey      = 'bravo-' + code;
+  const partnerKey = 'alpha-' + code;
   loginPresenceSetState('searching', 'CHECKING…');
   presencePoll(partnerKey, myKey); // immediate first poll
   presencePollTimer = setInterval(() => presencePoll(partnerKey, myKey), 5000);
@@ -1307,7 +1305,7 @@ function applyTranslate(code, name) {
   document.querySelectorAll('#translateDropdown li').forEach(li => {
     li.classList.toggle('selected', li.dataset.lang === code);
   });
-  try { localStorage.setItem('alpha_translate_lang', JSON.stringify({code, name})); } catch(e) {}
+  try { localStorage.setItem('bravo_translate_lang', JSON.stringify({code, name})); } catch(e) {}
   resetLockTimer();  // prevent inactivity lock firing during selection
   entry('Translate active: ' + name + ' — applies to new incoming messages', 'sys');
   // Translate existing bubbles one at a time with a gap to avoid blocking the event loop
@@ -1317,7 +1315,7 @@ function applyTranslate(code, name) {
 function resetTranslate() {
   _translateLang = null;
   _translateName = null;
-  try { localStorage.removeItem('alpha_translate_lang'); } catch(e) {}
+  try { localStorage.removeItem('bravo_translate_lang'); } catch(e) {}
   document.getElementById('translateTrigger').textContent = 'SELECT LANGUAGE';
   // Clear selected state in dropdown
   document.querySelectorAll('#translateDropdown li').forEach(li => li.classList.remove('selected'));
@@ -1330,6 +1328,8 @@ function resetTranslate() {
   });
   entry('Chat restored to original — system language: ' + (navigator.language || 'unknown'), 'sys');
 }
+
+// Wire up list items
 document.querySelectorAll('#translateDropdown li').forEach(li => {
   li.addEventListener('click', () => applyTranslate(li.dataset.lang, li.textContent.trim()));
   li.addEventListener('keydown', e => { if (e.key === 'Enter') applyTranslate(li.dataset.lang, li.textContent.trim()); });
@@ -1342,9 +1342,9 @@ document.addEventListener('click', () => {
 
 function prefillLogin() {
   try {
-    const disVid = localStorage.getItem('alpha_disable_video') === '1';
-    const disAud = localStorage.getItem('alpha_disable_audio') === '1';
-    const last   = localStorage.getItem('alpha_last_code');
+    const disVid = localStorage.getItem('bravo_disable_video') === '1';
+    const disAud = localStorage.getItem('bravo_disable_audio') === '1';
+    const last   = localStorage.getItem('bravo_last_code');
     document.getElementById('loginDisableVideo').checked = disVid;
     document.getElementById('loginDisableAudio').checked = disAud;
     if (last) document.getElementById('sessionCode').value = last;
@@ -1352,7 +1352,7 @@ function prefillLogin() {
     // Start presence polling immediately if code was pre-filled
     if (last) startPresencePolling(last);
     // Restore saved translate language
-    const savedLang = localStorage.getItem('alpha_translate_lang');
+    const savedLang = localStorage.getItem('bravo_translate_lang');
     if (savedLang) {
       const { code, name } = JSON.parse(savedLang);
       _translateLang = code;
@@ -1375,7 +1375,7 @@ function startLoginTimeout() {
   const fill = document.getElementById('loginTimeoutFill');
   const sec  = document.getElementById('loginTimeoutSec');
   fill.style.width = '100%';
-  fill.style.background = 'var(--accent)';
+  fill.style.background = 'var(--accent2)';
   loginTimeoutInterval = setInterval(() => {
     loginSecsLeft--;
     const pct = (loginSecsLeft / 60) * 100;
@@ -1387,7 +1387,6 @@ function startLoginTimeout() {
       clearInterval(loginTimeoutInterval);
       sec.textContent = '0s';
       fill.style.width = '0%';
-      // Flash the connect button to indicate timeout
       const btn = document.querySelector('.session-go');
       btn.style.borderColor = 'var(--danger)';
       btn.style.color = 'var(--danger)';
@@ -1400,8 +1399,6 @@ function startLoginTimeout() {
 if (document.getElementById('sessionOverlay').style.display !== 'none') {
   startLoginTimeout();
 }
-
-// Restart login timer if overlay re-appears (handled inside resetLockTimer above)
 
 // 'input' + 'keyup' + 'change' — covers older Android WebViews where 'input' can be silent
 (function() {
@@ -1431,7 +1428,7 @@ function entry(msg, cls='sys') {
 
 function setStatus(state) {
   linkLed.className = 'led';
-  if (state === 'calling')      { linkLed.classList.add('on-yellow'); statusEl.textContent = 'CALLING…'; }
+  if (state === 'standby')      { linkLed.classList.add('on-cyan');   statusEl.textContent = 'STANDBY'; }
   else if (state === 'reachable') { linkLed.classList.add('on-amber');  statusEl.textContent = 'REACHABLE'; }
   else if (state === 'linked')    { linkLed.classList.add('on-green');  statusEl.textContent = 'LINKED'; }
   else                            { statusEl.textContent = 'OFFLINE'; }
@@ -1443,7 +1440,6 @@ let miniVideoVisible = false;
 const msgBadge = document.getElementById('msgBadge');
 
 function syncControls() {
-  // Keep remote tab's channel row in sync with local tab's
   const d2 = document.getElementById('duplexBar2');
   if (d2) { d2.textContent = duplexBar.textContent; d2.className = duplexBar.className; }
   ['recBtn'].forEach(id => {
@@ -1521,7 +1517,7 @@ function linkify(text) {
 }
 
 // ── Chat history (localStorage) ──────────────────────────────
-const HISTORY_KEY = () => 'alpha_chat_' + (MY_ID || 'unknown');
+const HISTORY_KEY = () => 'bravo_chat_' + (MY_ID || 'unknown');
 const HISTORY_MAX = 200;
 
 function saveMessage(text, mine) {
@@ -1560,13 +1556,12 @@ function saveChatToFile() {
   const chatEl = document.getElementById('chat');
   if (!chatEl) return;
 
-  // Collect bubbles into structured data
   const bubbles = [];
   chatEl.querySelectorAll('.bubble').forEach(bubble => {
     const whoEl  = bubble.querySelector('.who');
     const tsEl   = bubble.querySelector('.ts');
     const mine   = bubble.classList.contains('mine');
-    const who    = whoEl  ? whoEl.textContent.trim()  : (mine ? 'ALPHA' : 'BRAVO');
+    const who    = whoEl  ? whoEl.textContent.trim()  : (mine ? 'BRAVO' : 'ALPHA');
     const time   = tsEl   ? tsEl.textContent.trim()   : '';
     const msgDiv = bubble.querySelector('div:not(.who):not(.ts)');
     const imgEl  = bubble.querySelector('img.media-img');
@@ -1577,18 +1572,17 @@ function saveChatToFile() {
       const src  = imgEl.src || '';
       const name = 'image-' + Date.now() + '.jpg';
       html = '<img src="' + src + '" style="max-width:320px;max-height:240px;border-radius:6px;display:block;margin:6px 0;">';
-      if (src.startsWith('data:')) downloadHtml = '<a href="' + src + '" download="' + name + '" style="font-size:11px;color:#00d4ff;">⬇ Save image</a>';
+      if (src.startsWith('data:')) downloadHtml = '<a href="' + src + '" download="' + name + '" style="font-size:11px;color:#00ff9f;">⬇ Save image</a>';
     } else if (vidEl) {
       const src  = vidEl.src || '';
       const name = 'video-' + Date.now() + '.webm';
       html = '<video src="' + src + '" controls playsinline style="max-width:320px;max-height:240px;border-radius:6px;display:block;margin:6px 0;"></video>';
-      if (src.startsWith('data:')) downloadHtml = '<a href="' + src + '" download="' + name + '" style="font-size:11px;color:#00d4ff;">⬇ Save video</a>';
+      if (src.startsWith('data:')) downloadHtml = '<a href="' + src + '" download="' + name + '" style="font-size:11px;color:#00ff9f;">⬇ Save video</a>';
     } else if (fileEl) {
       const href = fileEl.href || '';
       const fname = fileEl.download || fileEl.textContent.trim();
-      html = '<a href="' + href + '" download="' + fname + '" style="color:#00d4ff;text-decoration:underline;font-size:13px;">📎 ' + fname + '</a>';
+      html = '<a href="' + href + '" download="' + fname + '" style="color:#00ff9f;text-decoration:underline;font-size:13px;">📎 ' + fname + '</a>';
     } else if (msgDiv) {
-      // preserve links
       const tmp = document.createElement('div');
       tmp.appendChild(msgDiv.cloneNode(true));
       html = tmp.innerHTML;
@@ -1598,14 +1592,14 @@ function saveChatToFile() {
 
   if (!bubbles.length) { entry('Nothing to save — chat is empty', 'sys'); return; }
 
-  const ts  = new Date().toISOString().slice(0,19).replace(/[:T]/g, '-');
+  const ts   = new Date().toISOString().slice(0,19).replace(/[:T]/g, '-');
   const date = new Date().toLocaleString();
 
   const rows = bubbles.map(b => {
     const align  = b.mine ? 'flex-end'  : 'flex-start';
-    const bg     = b.mine ? 'rgba(0,212,255,0.15)' : 'rgba(0,255,159,0.12)';
-    const border = b.mine ? '#00d4ff'   : '#00ff9f';
-    const whoCol = b.mine ? '#0077aa'   : '#007744';
+    const bg     = b.mine ? 'rgba(0,255,159,0.15)' : 'rgba(0,212,255,0.12)';
+    const border = b.mine ? '#00ff9f'   : '#00d4ff';
+    const whoCol = b.mine ? '#007744'   : '#0077aa';
     return `<div style="display:flex;justify-content:${align};margin:6px 0;">
   <div style="max-width:75%;padding:10px 14px;border-radius:6px;background:${bg};border:1px solid ${border};font-size:18px;font-weight:bold;color:#000;line-height:1.55;word-break:break-word;">
     <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;font-family:monospace;color:${whoCol};margin-bottom:5px;font-weight:bold;">${b.who}</div>
@@ -1621,19 +1615,19 @@ function saveChatToFile() {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ALPHA Chat — ${ts}</title>
+<title>BRAVO Chat — ${ts}</title>
 <style>
   body { margin:0; padding:16px; background:#0a1520; color:#c8d8e8; font-family:'Segoe UI',Arial,sans-serif; }
-  h2 { font-family:monospace; letter-spacing:3px; color:#00d4ff; margin:0 0 4px; font-size:16px; }
+  h2 { font-family:monospace; letter-spacing:3px; color:#00ff9f; margin:0 0 4px; font-size:16px; }
   .meta { font-size:11px; color:#556; letter-spacing:1px; margin-bottom:16px; }
   .chat-wrap { background:#fff; border-radius:8px; padding:12px; max-width:720px; margin:0 auto; }
-  a { color:#00d4ff; }
+  a { color:#00ff9f; }
   img, video { max-width:100%; }
 </style>
 </head>
 <body>
 <div style="max-width:720px;margin:0 auto;">
-  <h2>⚡ ALPHA — FIELD RADIO CHAT LOG</h2>
+  <h2>⚡ BRAVO — FIELD RADIO CHAT LOG</h2>
   <div class="meta">Saved: ${date}</div>
   <div class="chat-wrap">${rows}</div>
   <div style="font-size:10px;color:#334;text-align:center;margin-top:12px;letter-spacing:1px;">
@@ -1648,7 +1642,7 @@ function saveChatToFile() {
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
     a.href     = url;
-    a.download = 'chat-alpha-' + ts + '.html';
+    a.download = 'chat-bravo-' + ts + '.html';
     a.style.display = 'none';
     document.body.appendChild(a);
     a.click();
@@ -1678,15 +1672,12 @@ function saveChatToFile() {
     clearHighlights();
     if (!term) { document.getElementById('chatFindCount').textContent = ''; return; }
     const re = new RegExp('(' + escapeRe(term) + ')', 'gi');
-    // Walk text nodes inside message divs only (skip .who and .ts)
     const chatEl = document.getElementById('chat');
     const walker = document.createTreeWalker(chatEl, NodeFilter.SHOW_TEXT, {
       acceptNode: n => {
         const p = n.parentNode;
         if (!p) return NodeFilter.FILTER_REJECT;
-        // skip .who and .ts nodes
         if (p.classList && (p.classList.contains('who') || p.classList.contains('ts'))) return NodeFilter.FILTER_REJECT;
-        // skip inside <a> download links and media elements
         let anc = p;
         while (anc && anc !== chatEl) {
           if (anc.tagName === 'MARK' || anc.tagName === 'VIDEO' || anc.tagName === 'IMG') return NodeFilter.FILTER_REJECT;
@@ -1791,7 +1782,7 @@ function addBubble(text, mine, ts, save = true) {
   wrap.className = 'bubble ' + (mine ? 'mine' : 'theirs');
   const who = document.createElement('div');
   who.className = 'who';
-  who.textContent = mine ? 'ALPHA' : 'BRAVO';
+  who.textContent = mine ? 'BRAVO' : 'ALPHA';
   const msg = document.createElement('div');
   msg.appendChild(linkify(text));
   const time = document.createElement('div');
@@ -1841,13 +1832,13 @@ function sendChat() {
 // ── File attachment state ─────────────────────────────────────
 const pendingFiles = [];  // {file, dataUrl}
 
-const fileInput      = document.getElementById('fileInput');
-const attachBtn      = document.getElementById('attachBtn');
+const fileInput        = document.getElementById('fileInput');
+const attachBtn        = document.getElementById('attachBtn');
 const filePreviewStrip = document.getElementById('filePreviewStrip');
-const chatPanel      = document.getElementById('chatPanel');
-const dropOverlay    = document.getElementById('dropOverlay');
-const lightbox       = document.getElementById('lightbox');
-const lightboxImg    = document.getElementById('lightboxImg');
+const chatPanel        = document.getElementById('chatPanel');
+const dropOverlay      = document.getElementById('dropOverlay');
+const lightbox         = document.getElementById('lightbox');
+const lightboxImg      = document.getElementById('lightboxImg');
 
 function setupTooltips() {
   const labels = {
@@ -1989,7 +1980,6 @@ function removeFile(idx, chip) {
   pendingFiles.splice(idx, 1);
   chip.remove();
   if (pendingFiles.length === 0) filePreviewStrip.classList.remove('has-files');
-  // Re-index remaining chips
   [...filePreviewStrip.querySelectorAll('.file-chip')].forEach((c, i) => { c.dataset.idx = i; });
 }
 
@@ -2022,7 +2012,7 @@ function addMediaBubble(name, type, dataUrl, mine) {
   wrap.className = 'bubble ' + (mine ? 'mine' : 'theirs');
   const who = document.createElement('div');
   who.className = 'who';
-  who.textContent = mine ? 'ALPHA' : 'BRAVO';
+  who.textContent = mine ? 'BRAVO' : 'ALPHA';
   wrap.appendChild(who);
   if (type.startsWith('image/')) {
     const img = document.createElement('img');
@@ -2057,8 +2047,6 @@ function addMediaBubble(name, type, dataUrl, mine) {
 lightbox.addEventListener('click', () => { lightbox.classList.remove('open'); lightboxImg.src = ''; });
 
 chatInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); sendChat(); } });
-
-
 
 function init() {
   if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
@@ -2143,29 +2131,42 @@ function init() {
 function startPeer() {
   // Close any stale data connection from a previous peer instance
   if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
-  pendingDC = false;
   linked = false;
+  pendingDC = false;
 
   peer = new Peer(MY_ID, {
     
     config: { iceServers: ICE_SERVERS }
   });
 
-  peer.on('open', () => {
-    entry('Radio online', 'ok');
-    setStatus('calling');
-    dial();
+  let watchdog;
+  peer.on('open', id => {
+    entry('Radio online — waiting for Alpha [' + id + ']', 'ok');
+    setStatus('standby');
+    // Watchdog: if no call arrives in 30s, reconnect to signalling server to stay fresh
+    watchdog = setTimeout(() => {
+      if (!linked && !peer.destroyed) {
+        entry('Refreshing signalling connection…', 'sys');
+        if (peer.disconnected) peer.reconnect();
+      }
+    }, 30000);
   });
 
   peer.on('connection', dc => {
     if (dataConn || pendingDC) { dc.close(); return; }
-    entry('Inbound data channel from Bravo', 'sys');
+    entry('Inbound data channel from Alpha', 'sys');
     attachDataConn(dc);
   });
 
   peer.on('call', incoming => {
-    entry('Inbound call from Bravo', 'info');
-    answerCall(incoming);
+    entry('Inbound call from Alpha', 'info');
+    if (!localStream) {
+      entry('ERROR: no local stream — cannot answer', 'err');
+      incoming.close();
+      return;
+    }
+    attachCall(incoming);
+    incoming.answer(getCallStream());
   });
 
   peer.on('disconnected', () => {
@@ -2177,13 +2178,7 @@ function startPeer() {
   peer.on('error', e => {
     entry('Peer error [' + e.type + ']: ' + e.message, 'err');
     if (e.type === 'browser-incompatible') return;
-    if (e.type === 'peer-unavailable') {
-      entry('Bravo offline — retry in 5s', 'sys');
-      retryTimer = setTimeout(dial, 5000);
-      return;
-    }
     if (e.type === 'unavailable-id') {
-      // Stale session holds the preferred ID — claim a random suffix variant immediately
       const suffix = Math.random().toString(36).slice(2,6).toUpperCase();
       MY_ID = MY_ID.replace(/-[A-Z0-9]{4}$/, '') + '-' + suffix || MY_ID + '-' + suffix;
       entry('ID taken (stale session) — retrying as ' + MY_ID + '…', 'sys');
@@ -2191,37 +2186,19 @@ function startPeer() {
       setTimeout(startPeer, 1500);
       return;
     }
+    if (e.type === 'peer-unavailable') {
+      // Alpha not registered yet — ignore, we're waiting for Alpha to call us
+      entry('Alpha not yet visible — standing by…', 'sys');
+      return;
+    }
     // network / server-error / socket-error / socket-closed
     entry('Retrying in 6s…', 'sys');
-    retryTimer = setTimeout(() => { peer.destroy(); startPeer(); }, 6000);
+    setTimeout(() => { peer.destroy(); startPeer(); }, 6000);
   });
-}
-
-function getCallStream() {
-  const tracks = [...localStream.getVideoTracks()];
-  entry('STREAM: audioMuted=' + audioMuted + ' audioTracks=' + localStream.getAudioTracks().length, 'sys');
-  if (audioMuted) {
-    tracks.push(getSilentTrack());
-    entry('STREAM: using silent audio track', 'sys');
-  } else {
-    tracks.push(...localStream.getAudioTracks());
-    entry('STREAM: using real audio track', 'sys');
-  }
-  return new MediaStream(tracks);
-}
-
-function dial() {
-  clearTimeout(retryTimer);
-  if (linked || !localStream) return;
-  entry('Calling Bravo…', 'info');
-  const c = peer.call(REMOTE_ID, getCallStream());
-  attachCall(c);
-  openDataConn();
 }
 
 function attachDataConn(dc) {
   dc.on('open', () => {
-    pendingDC = false;
     dataConn = dc;
     entry('Chat channel open', 'ok');
     setStatus('reachable');
@@ -2258,13 +2235,11 @@ function attachDataConn(dc) {
     }
   });
   dc.on('close', () => {
-    pendingDC = false;
     dataConn = null;
     document.getElementById('sendBtn').disabled = true;
     entry('Chat channel closed', 'sys');
   });
   dc.on('error', e => {
-    pendingDC = false;
     entry('Data channel error: ' + (e.message || e), 'err');
   });
 }
@@ -2273,15 +2248,25 @@ let pendingDC = false;
 function openDataConn() {
   if (dataConn || pendingDC) return;
   pendingDC = true;
-  entry('Opening data channel…', 'sys');
+  entry('Opening data channel to Alpha…', 'sys');
   const dc = peer.connect(REMOTE_ID, { reliable: true });
+  dc.on('open',  () => { pendingDC = false; });
+  dc.on('close', () => { pendingDC = false; });
+  dc.on('error', () => { pendingDC = false; });
   attachDataConn(dc);
 }
 
-function answerCall(c) {
-  clearTimeout(retryTimer);
-  c.answer(getCallStream());
-  attachCall(c);
+function getCallStream() {
+  const tracks = [...localStream.getVideoTracks()];
+  entry('STREAM: audioMuted=' + audioMuted + ' audioTracks=' + localStream.getAudioTracks().length, 'sys');
+  if (audioMuted) {
+    tracks.push(getSilentTrack());
+    entry('STREAM: using silent audio track', 'sys');
+  } else {
+    tracks.push(...localStream.getAudioTracks());
+    entry('STREAM: using real audio track', 'sys');
+  }
+  return new MediaStream(tracks);
 }
 
 // ── Connection quality polling ────────────────────────────────
@@ -2325,7 +2310,6 @@ function updateQuality(rtt, lossPct) {
     label.style.color = 'var(--text-dim)';
     return;
   }
-  // Score: 3=good, 2=ok, 1=poor
   let score = 3;
   if (rtt > 300 || lossPct > 5)  score = 2;
   if (rtt > 600 || lossPct > 15) score = 1;
@@ -2391,13 +2375,18 @@ function attachCall(c) {
     if (linked) return;
     linked = true;
     setStatus('linked');
-    entry('Linked to Bravo — full duplex active', 'ok');
+    entry('Linked to Alpha — full duplex active', 'ok');
     duplexBar.textContent = '● LIVE';
     duplexBar.className = 'duplex-overlay live';
     syncControls();
     startQualityPolling();
-    // Ensure data channel is open (may have failed during retry storm)
+    // Ensure data channel is open
     openDataConn();
+    // Apply mute state now that senders are live
+    if (audioMuted) {
+      entry('DEBUG applying mute on stream event', 'sys');
+      applyMuteToSenders();
+    }
   });
   c.on('close', onDrop);
   c.on('error', e => { entry('Call error: ' + e.message, 'err'); onDrop(); });
@@ -2419,7 +2408,7 @@ function onDrop() {
   saveRecordingIfActive();
   linked = false;
   call = null;
-  // Reset data channel state so it re-opens cleanly on next dial
+  // Reset data channel state so it re-opens cleanly on reconnect
   if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
   pendingDC = false;
   stopQualityPolling();
@@ -2433,9 +2422,8 @@ function onDrop() {
   syncMiniVideos();
   document.getElementById('remoteWrap').classList.remove('video-off', 'no-video');
   document.getElementById('remoteWrap').classList.add('waiting');
-  setStatus('calling');
-  entry('Link lost — retrying in 5s', 'sys');
-  retryTimer = setTimeout(dial, 5000);
+  setStatus('standby');
+  entry('Link lost — waiting for Alpha', 'sys');
 }
 
 function muteLocal() {
@@ -2448,7 +2436,6 @@ let autoReconnectTimer;
 function resetLockTimer() {
   clearTimeout(lockTimer);
   lockTimer = setTimeout(() => {
-    // Re-show the session overlay to re-authenticate
     document.getElementById('sessionOverlay').style.display = 'flex';
     document.getElementById('unitIdDisplay').style.display = 'none';
     prefillLogin();
@@ -2497,7 +2484,7 @@ let mediaRecorder = null;
 let recordChunks  = [];
 let audioCtx      = null;
 let mixDest       = null;
-let recBusy       = false; // guard against double-trigger during onstop
+let recBusy       = false;
 
 function getMixer() {
   if (!audioCtx) {
@@ -2527,12 +2514,10 @@ function toggleRecord() {
     return;
   }
 
-  // Guard: don't start if already set up but not yet 'recording'
   if (mediaRecorder && mediaRecorder.state !== 'inactive') return;
 
   if (!localStream) { entry('No local stream to record', 'err'); return; }
 
-  // Always start a fresh mixer
   if (audioCtx) { audioCtx.close(); audioCtx = null; mixDest = null; }
   getMixer();
   mixStream(localStream);
@@ -2551,7 +2536,6 @@ function toggleRecord() {
     ...mixDest.stream.getAudioTracks()
   ]);
 
-  // Prefer MP4, fall back to WebM
   const mimeType = [
     'video/mp4;codecs=avc1,mp4a.40.2',
     'video/mp4',
@@ -2573,7 +2557,7 @@ function toggleRecord() {
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
     const ts   = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
-    a.href = url; a.download = `alpha-recording-${ts}.${ext}`;
+    a.href = url; a.download = `bravo-recording-${ts}.${ext}`;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 5000);
     entry(`Recording saved (${ext})`, 'ok');
@@ -2603,7 +2587,7 @@ function toggleVideo() {
 
 // ── Screen Share ──────────────────────────────────────────────
 let screenSharing = false;
-let cameraTrack = null;   // saved camera track while screen-sharing
+let cameraTrack = null;
 let screenTrack = null;
 
 // Hide share buttons on Android Chrome (no getDisplayMedia support).
@@ -2624,7 +2608,6 @@ document.addEventListener('DOMContentLoaded', function initScreenShareSupport() 
 async function toggleScreenShare() {
   const btns = [document.getElementById('screenBtn'), document.getElementById('screenBtn2')];
   if (!screenSharing) {
-    // ── Start screen share ──
     if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
       entry('Screen share not supported in this browser', 'err'); return;
     }
@@ -2632,21 +2615,16 @@ async function toggleScreenShare() {
       const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
       screenTrack = screenStream.getVideoTracks()[0];
 
-      // Save current camera track
       cameraTrack = localStream.getVideoTracks()[0] || null;
-
-      // Swap track in localStream
       if (cameraTrack) localStream.removeTrack(cameraTrack);
       localStream.addTrack(screenTrack);
 
-      // Update local preview
       document.getElementById('localVideo').srcObject = null;
       document.getElementById('localVideo').srcObject = localStream;
       syncMiniVideos();
       updateLocalVideoState();
       sendVideoState();
 
-      // Replace track in live call
       try {
         const pc = call && (call.peerConnection || call._pc);
         const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'video');
@@ -2657,7 +2635,6 @@ async function toggleScreenShare() {
       btns.forEach(b => { if(b){ b.textContent = 'CAMERA'; b.classList.add('screen-active'); }});
       entry('Screen share started', 'ok');
 
-      // Auto-stop when user ends via browser UI
       screenTrack.addEventListener('ended', () => {
         if (screenSharing) stopScreenShare();
       });
@@ -2674,13 +2651,9 @@ async function stopScreenShare() {
   const btns = [document.getElementById('screenBtn'), document.getElementById('screenBtn2')];
   screenSharing = false;
 
-  // Stop screen track
   if (screenTrack) { screenTrack.stop(); screenTrack = null; }
-
-  // Remove screen track from stream
   localStream.getVideoTracks().forEach(t => localStream.removeTrack(t));
 
-  // Restore camera track (or acquire a fresh one)
   let restoreTrack = cameraTrack && cameraTrack.readyState !== 'ended' ? cameraTrack : null;
   if (!restoreTrack) {
     try {
@@ -2694,14 +2667,12 @@ async function stopScreenShare() {
     cameraTrack = restoreTrack;
   }
 
-  // Update preview
   document.getElementById('localVideo').srcObject = null;
   document.getElementById('localVideo').srcObject = localStream;
   syncMiniVideos();
   updateLocalVideoState();
   sendVideoState();
 
-  // Replace track in live call
   try {
     const pc = call && (call.peerConnection || call._pc);
     const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'video');
@@ -2735,7 +2706,6 @@ function toggleAudio() {
   if (!audioMuted) {
     audioMuted = true;
     if (realAudioTrack) realAudioTrack.enabled = false;
-    // Best-effort replaceTrack on active call
     try {
       const pc = call && (call.peerConnection || call._pc);
       const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
@@ -2746,7 +2716,6 @@ function toggleAudio() {
   } else {
     audioMuted = false;
     if (realAudioTrack) realAudioTrack.enabled = true;
-    // Best-effort replaceTrack on active call
     try {
       const pc = call && (call.peerConnection || call._pc);
       const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
@@ -2851,10 +2820,7 @@ async function flipCamera() {
 
 
 // ── Speaker / Earphone toggle ─────────────────────────────────
-// Toggles between loudspeaker and earphone/headset output.
-// Uses setSinkId when available; falls back to a visual-only toggle
-// (earphone mode routes audio the same way but UI reminds user to use headset).
-let speakerMode = true; // true = loudspeaker, false = earphone
+let speakerMode = true;
 
 async function toggleSpeaker() {
   speakerMode = !speakerMode;
@@ -2864,15 +2830,12 @@ async function toggleSpeaker() {
   ];
   const ra = document.getElementById('remoteAudio');
   if (speakerMode) {
-    // Try to set default output device (loudspeaker)
     if (ra && ra.setSinkId) {
       try { await ra.setSinkId(''); } catch(e) { entry('setSinkId: ' + e.message, 'sys'); }
     }
     btns.forEach(b => { if(b){ b.textContent='🔊 Speaker'; b.classList.add('speaker-on'); b.classList.remove('speaker-ear'); }});
     entry('Audio: loudspeaker', 'sys');
   } else {
-    // Earphone — on devices with setSinkId, could enumerate and pick headset;
-    // here we surface a prompt-style UX since enumerateDevices labels need permission.
     if (ra && ra.setSinkId) {
       try {
         const devices = await navigator.mediaDevices.enumerateDevices();
@@ -2887,7 +2850,6 @@ async function toggleSpeaker() {
 }
 
 // ── Local video zoom ──────────────────────────────────────────
-// Zooms the local video element via CSS transform (scale + overflow:hidden).
 function applyZoom(val, channel) {
   const v = parseFloat(val);
   if (channel === 'local') {
@@ -2895,7 +2857,6 @@ function applyZoom(val, channel) {
     if (vid) vid.style.transform = v > 1 ? `scale(${v})` : '';
     const lbl = document.getElementById('zoomValLocal');
     if (lbl) lbl.textContent = v.toFixed(1) + '×';
-    // Sync remote-tab slider if it exists
     const s2 = document.getElementById('zoomSliderRemote');
     if (s2 && s2.value !== String(val)) { s2.value = val; applyZoom(val, 'remote-sync'); }
   } else if (channel === 'remote-sync') {
