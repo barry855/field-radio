@@ -196,7 +196,7 @@
 
   .clear-chat-btn {
     position: absolute;
-    top: 10px; right: 10px;
+    bottom: 58px; left: 10px;
     z-index: 10;
     background: rgba(5,15,21,0.55);
     border: 1px solid var(--border);
@@ -228,7 +228,23 @@
   }
   .save-chat-btn:hover, .save-chat-btn:active { opacity: 1; border-color: var(--accent, #00d4ff); }
 
-  /* ── Chat find bar ──────────────────────────────────────── */
+  .find-chat-btn {
+    position: absolute;
+    top: 10px; right: 10px;
+    z-index: 10;
+    background: rgba(5,15,21,0.55);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-dim);
+    font-size: 14px;
+    line-height: 1;
+    padding: 4px 6px;
+    cursor: pointer;
+    opacity: 0.45;
+    transition: opacity 0.15s, border-color 0.15s;
+  }
+  .find-chat-btn:hover, .find-chat-btn:active { opacity: 1; border-color: var(--accent, #00d4ff); color: var(--accent); }
+  .find-chat-btn.active { opacity: 1; border-color: var(--accent, #00d4ff); color: var(--accent); }
   .chat-find-bar {
     display: none; align-items: center; gap: 6px;
     background: #0c1520; border: 1px solid var(--accent);
@@ -263,13 +279,6 @@
   }
   mark.find-highlight.current {
     background: rgba(255,140,0,0.8); outline: 1px solid #ff8c00;
-  }
-  .find-chat-btn {
-    background: var(--btn-bg); border: 1px solid var(--border);
-    color: var(--text-dim); border-radius: 4px;
-    font-size: 15px; padding: 0 9px; cursor: pointer; flex-shrink: 0;
-    transition: background 0.15s, border-color 0.15s;
-    display: flex; align-items: center; justify-content: center;
   }
   .find-chat-btn:hover { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
   .find-chat-btn.active { border-color: var(--accent); color: var(--accent); }
@@ -1043,11 +1052,11 @@
         <div class="chat" id="chat"></div>
         <button class="clear-chat-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" title="Clear chat history">🗑</button>
         <button class="save-chat-btn" onclick="saveChatToFile()" title="Save chat as HTML">💾</button>
+        <button class="find-chat-btn" id="findChatBtn" title="Find in chat">🔍</button>
         <div class="file-preview-strip" id="filePreviewStrip"></div>
         <div class="chat-input-row">
           <button class="attach-btn" id="attachBtn" title="Attach file / photo / video">📎</button>
           <input type="file" id="fileInput" multiple="" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx" style="display:none">
-          <button class="find-chat-btn" id="findChatBtn" title="Find in chat">🔍</button>
           <input class="chat-input" id="chatInput" placeholder="TYPE MESSAGE…">
           <button class="btn" id="sendBtn">SEND</button>
         </div>
