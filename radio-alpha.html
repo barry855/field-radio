@@ -457,8 +457,19 @@
   .log-panel {
     background: var(--panel); border: 1px solid var(--border);
     border-radius: 8px; padding: 10px 14px; position: relative;
-    flex-shrink: 0;
+    flex-shrink: 0; transition: padding 0.2s;
   }
+  .log-panel.collapsed { padding-bottom: 10px; }
+  .log-panel.collapsed .log { display: none; }
+  .log-panel .panel-label {
+    cursor: pointer; user-select: none;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .log-panel .panel-label::after {
+    content: '▾'; font-size: 10px; color: var(--text-dim);
+    transition: transform 0.2s; margin-left: auto;
+  }
+  .log-panel.collapsed .panel-label::after { transform: rotate(-90deg); }
   .log {
     height: 76px;
     overflow-y: auto;
@@ -467,6 +478,7 @@
     background: #ffffff;
     border-radius: 4px;
     padding: 4px 8px;
+    margin-top: 6px;
   }
   .log-entry {
     font-size: 10px; line-height: 1.9; letter-spacing: 0.5px;
@@ -1073,8 +1085,8 @@
           <button class="btn" id="sendBtn">SEND</button>
         </div>
       </div>
-      <div class="log-panel">
-        <div class="panel-label">SYS LOG</div>
+      <div class="log-panel" id="logPanel">
+        <div class="panel-label" onclick="toggleLogPanel()">SYS LOG</div>
         <div class="log" id="log"><span class="log-entry sys">15:59:51  PREFILL: code=123 vid=false aud=false</span></div>
       </div>
     </div>
@@ -2139,6 +2151,11 @@ chatInput.addEventListener('keydown', e => {
 });
 
 
+
+function toggleLogPanel() {
+  const p = document.getElementById('logPanel');
+  p.classList.toggle('collapsed');
+}
 
 function init() {
   if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
