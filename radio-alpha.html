@@ -835,7 +835,7 @@
   .login-presence .ptxt.p-reachable { color: #ffaa00; }
   .login-presence .ptxt.p-offline   { color: #ff4444; }
 </style>
-<script src="./ALPHA — Field Radio v6_files/peerjs.min.js.download"></script></head>
+</head>
 <body>
 
 <div class="session-overlay" id="sessionOverlay">
@@ -2293,6 +2293,12 @@ function init() {
 }
 
 function startPeer() {
+  // Guard: PeerJS CDN may still be loading on slow mobile connections
+  if (typeof Peer === 'undefined') {
+    entry('PeerJS not ready yet — retrying in 500ms…', 'sys');
+    setTimeout(startPeer, 500);
+    return;
+  }
   // Close any stale data connection from a previous peer instance
   if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
   pendingDC = false;
