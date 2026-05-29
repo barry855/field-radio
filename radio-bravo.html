@@ -457,14 +457,14 @@
     border-radius: 8px; padding: 10px 14px; position: relative;
     flex-shrink: 0; transition: padding 0.2s;
   }
-  .log-panel.collapsed { padding-bottom: 10px; }
+  .log-panel.collapsed { padding-bottom: 10px; min-height: 44px; }
   .log-panel.collapsed .log { display: none; }
   .log-panel .panel-label {
     position: static; background: none; padding: 0;
     cursor: pointer; user-select: none;
     display: flex; align-items: center; gap: 6px;
     touch-action: manipulation; -webkit-tap-highlight-color: transparent;
-    min-height: 28px;
+    min-height: 28px; width: 100%;
   }
   .log-toggle-arrow {
     font-size: 10px; color: var(--text-dim);
