@@ -3247,7 +3247,7 @@ async function flipCamera() {
   // We must: (1) detach srcObject from all video elements, (2) stop & remove the
   // track, (3) wait for hardware to fully release, then (4) re-acquire.
   const localVideoEl = document.getElementById('localVideo');
-  const miniLocalEl  = document.getElementById('miniLocal');
+  const miniLocalEl  = document.getElementById('miniLocalVideo');
 
   // Detach video elements so the hardware lock is released
   if (localVideoEl) localVideoEl.srcObject = null;
@@ -3286,7 +3286,12 @@ async function flipCamera() {
     localStream.addTrack(newTrack);
     currentFacingMode = targetMode;
 
-    document.getElementById('localVideo').srcObject = localStream;
+    // Hard re-attach — null first so the browser treats it as a fresh assignment
+    // even if srcObject reference hasn't changed. This clears any frozen/blurred frame.
+    const _lv = document.getElementById('localVideo');
+    const _mlv = document.getElementById('miniLocalVideo');
+    if (_lv)  { _lv.srcObject  = null; _lv.srcObject  = localStream; }
+    if (_mlv) { _mlv.srcObject = null; _mlv.srcObject = localStream; }
     syncMiniVideos();
 
     // Replace track in active WebRTC call
@@ -3304,7 +3309,10 @@ async function flipCamera() {
       const recoveryStream = await tryAcquire(fallbackMode);
       const recoveryTrack  = recoveryStream.getVideoTracks()[0];
       localStream.addTrack(recoveryTrack);
-      document.getElementById('localVideo').srcObject = localStream;
+      const _lv2  = document.getElementById('localVideo');
+      const _mlv2 = document.getElementById('miniLocalVideo');
+      if (_lv2)  { _lv2.srcObject  = null; _lv2.srcObject  = localStream; }
+      if (_mlv2) { _mlv2.srcObject = null; _mlv2.srcObject = localStream; }
       syncMiniVideos();
       entry('Camera restored to original.', 'ok');
     } catch(re) {
