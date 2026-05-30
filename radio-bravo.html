@@ -875,9 +875,9 @@
     </div>
     <div class="login-timeout">
       <div class="login-timeout-label">
-        <span>Login Timeout</span><span id="loginTimeoutSec">43s</span>
+        <span>Login Timeout</span><span id="loginTimeoutSec">60s</span>
       </div>
-      <div class="login-timeout-track"><div class="login-timeout-fill" id="loginTimeoutFill" style="width: 71.6667%; background: var(--accent2);"></div></div>
+      <div class="login-timeout-track"><div class="login-timeout-fill" id="loginTimeoutFill" style="width: 100%; background: var(--accent2);"></div></div>
     </div>
     <div class="login-presence" id="loginPresence">
       <div class="pled" id="loginPresenceLed"></div>
@@ -1462,11 +1462,13 @@ prefillLogin();
 let loginTimeoutInterval;
 let loginSecsLeft = 60;
 function startLoginTimeout() {
+  clearInterval(loginTimeoutInterval);  // prevent double-interval from stale saved HTML
   loginSecsLeft = 60;
   const fill = document.getElementById('loginTimeoutFill');
   const sec  = document.getElementById('loginTimeoutSec');
   fill.style.width = '100%';
   fill.style.background = 'var(--accent2)';
+  sec.textContent = '60s';
   loginTimeoutInterval = setInterval(() => {
     loginSecsLeft--;
     const pct = (loginSecsLeft / 60) * 100;
