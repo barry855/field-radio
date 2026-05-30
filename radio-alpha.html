@@ -1143,10 +1143,10 @@
 const ICE_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
-  { urls: 'stun:openrelay.metered.ca:80' },
-  { urls: 'turn:openrelay.metered.ca:80',       username: 'openrelayproject', credential: 'openrelayproject' },
-  { urls: 'turn:openrelay.metered.ca:443',      username: 'openrelayproject', credential: 'openrelayproject' },
-  { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
+  { urls: 'stun:stun.cloudflare.com:3478' },
+  { urls: 'turn:turn.cloudflare.com:3478',      username: 'free',             credential: 'free' },
+  { urls: 'turn:turn.cloudflare.com:5349',      username: 'free',             credential: 'free' },
+  { urls: 'turn:turn.cloudflare.com:5349?transport=tcp', username: 'free',    credential: 'free' }
 ];
 
 let MY_ID, REMOTE_ID;
@@ -1709,7 +1709,7 @@ function saveChatToFile() {
     <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;font-family:monospace;color:${whoCol};margin-bottom:5px;font-weight:bold;">${b.who}</div>
     <div${b.orig ? ' title="' + b.orig.replace(/"/g, '&quot;') + '" style="cursor:help;"' : ''}>${b.html}</div>
     ${b.downloadHtml ? '<div style="margin-top:5px;">' + b.downloadHtml + '</div>' : ''}
-    ${b.orig ? '<div style="font-size:11px;color:#666;font-style:italic;margin-top:4px;border-top:1px dashed #ccc;padding-top:4px;font-weight:normal;">' + b.orig.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>' : ''}
+    ${b.orig ? '<div style="font-size:18px;color:#444;font-style:italic;margin-top:6px;border-top:1px dashed #ccc;padding-top:6px;font-weight:bold;line-height:1.55;">' + b.orig.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>' : ''}
     <div style="font-size:11px;color:#555;text-align:right;margin-top:5px;font-weight:normal;">${b.time}</div>
   </div>
 </div>`;
@@ -2669,6 +2669,7 @@ function saveRecordingIfActive() {
 }
 
 function onDrop() {
+  clearTimeout(retryTimer);
   saveRecordingIfActive();
   linked = false;
   call = null;
