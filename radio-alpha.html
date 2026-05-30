@@ -1531,6 +1531,63 @@ function scrollToBottom() {
   });
 }
 
+// ── Audio tone engine ─────────────────────────────────────────
+// Tones are generated via Web Audio API (no files needed).
+// playTone(type) types: 'msg_in', 'connected', 'linked', 'dropped',
+//                       'radio_online', 'call_in', 'file_in', 'error'
+let _audioCtx = null;
+function _getAudioCtx() {
+  if (!_audioCtx || _audioCtx.state === 'closed') {
+    try { _audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+  }
+  return _audioCtx;
+}
+function _beep(freqs, durs, type='sine', vol=0.18) {
+  const ctx = _getAudioCtx();
+  if (!ctx) return;
+  // Resume suspended context (browser autoplay policy)
+  const resume = ctx.state === 'suspended' ? ctx.resume() : Promise.resolve();
+  resume.then(() => {
+    let t = ctx.currentTime + 0.01;
+    freqs.forEach((f, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = type;
+      osc.frequency.setValueAtTime(f, t);
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(vol, t + 0.005);
+      gain.gain.setValueAtTime(vol, t + durs[i] - 0.01);
+      gain.gain.linearRampToValueAtTime(0, t + durs[i]);
+      osc.start(t);
+      osc.stop(t + durs[i]);
+      t += durs[i];
+    });
+  });
+}
+function playTone(type) {
+  try {
+    switch(type) {
+      // New incoming chat message — two quick ascending pips
+      case 'msg_in':      _beep([880, 1100], [0.07, 0.09], 'sine', 0.20); break;
+      // Data channel opened (chat ready)
+      case 'connected':   _beep([660, 880, 1046], [0.07, 0.07, 0.10], 'sine', 0.15); break;
+      // Full duplex voice link established — positive rising chord
+      case 'linked':      _beep([523, 659, 784], [0.10, 0.10, 0.18], 'triangle', 0.18); break;
+      // Link dropped — descending tone
+      case 'dropped':     _beep([660, 440, 330], [0.10, 0.10, 0.18], 'sine', 0.16); break;
+      // PeerJS radio comes online
+      case 'radio_online':_beep([440, 550], [0.06, 0.10], 'sine', 0.12); break;
+      // Inbound call received
+      case 'call_in':     _beep([880, 880, 880], [0.08, 0.05, 0.13], 'square', 0.10); break;
+      // Incoming file fully assembled
+      case 'file_in':     _beep([660, 880], [0.08, 0.14], 'triangle', 0.14); break;
+      // Error
+      case 'error':       _beep([300, 250], [0.12, 0.18], 'sawtooth', 0.14); break;
+    }
+  } catch(e) {}
+}
+
 function setStatus(state) {
   linkLed.className = 'led';
   if (state === 'calling')      { linkLed.classList.add('on-yellow'); statusEl.textContent = 'CALLING…'; }
@@ -1945,7 +2002,8 @@ function addBubble(text, mine, ts, save = true) {
   wrap.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') _togglePeek(wrap); });
   chat.appendChild(wrap);
   scrollToBottom();
-  // Badge: notify on video tab when a new incoming message arrives
+  // Tone + badge: notify on incoming message
+  if (!mine) { playTone('msg_in'); }
   if (!mine && activeTab !== 'chat') {
     unreadCount++;
     msgBadge.textContent = unreadCount;
@@ -2211,6 +2269,7 @@ function receiveChunk(f) {
     const dataUrl = rec.parts.join('');
     delete _incomingChunks[f.id];
     removeTransferProgress(f.id);
+    playTone('file_in');
     addMediaBubble(rec.name, rec.type, dataUrl, false);
   }
 }
@@ -2398,6 +2457,7 @@ function startPeer() {
   });
 
   peer.on('open', () => {
+    playTone('radio_online');
     entry('Radio online', 'ok');
     setStatus('calling');
     dial();
@@ -2410,6 +2470,7 @@ function startPeer() {
   });
 
   peer.on('call', incoming => {
+    playTone('call_in');
     entry('Inbound call from Bravo', 'info');
     answerCall(incoming);
   });
@@ -2421,6 +2482,7 @@ function startPeer() {
   });
 
   peer.on('error', e => {
+    playTone('error');
     entry('Peer error [' + e.type + ']: ' + e.message, 'err');
     if (e.type === 'browser-incompatible') return;
     if (e.type === 'peer-unavailable') {
@@ -2479,6 +2541,7 @@ function attachDataConn(dc) {
     if (dataConn === dc) return; // already handled
     pendingDC = false;
     dataConn = dc;
+    playTone('connected');
     entry('Chat channel open', 'ok');
     setStatus('reachable');
     document.getElementById('sendBtn').disabled = false;
@@ -2505,7 +2568,7 @@ function attachDataConn(dc) {
     }
     if (f) {
       if (f.__control === 'video') { updateRemoteVideoState(f.enabled, f.hasTrack !== false); return; }
-      if (f.__file  === true)      { addMediaBubble(f.name, f.type, f.data, false); return; }
+      if (f.__file  === true)      { playTone('file_in'); addMediaBubble(f.name, f.type, f.data, false); return; }
       if (f.__chunk === true)      { receiveChunk(f); return; }
       // Unknown control object — show as JSON text
       addBubble(msgStr || JSON.stringify(f), false);
@@ -2647,6 +2710,7 @@ function attachCall(c) {
     if (linked) return;
     linked = true;
     setStatus('linked');
+    playTone('linked');
     entry('Linked to Bravo — full duplex active', 'ok');
     duplexBar.textContent = '● LIVE';
     duplexBar.className = 'duplex-overlay live';
@@ -2699,6 +2763,7 @@ function onDrop() {
   document.getElementById('remoteWrap').classList.remove('video-off', 'no-video');
   document.getElementById('remoteWrap').classList.add('waiting');
   setStatus('calling');
+  playTone('dropped');
   entry('Link lost — retrying in 5s', 'sys');
   retryTimer = setTimeout(dial, 5000);
 }
