@@ -1170,9 +1170,9 @@
           <button class="chat-find-close" id="chatFindClose" title="Close">✕</button>
         </div>
         <div class="chat" id="chat"></div>
-        <button class="refresh-chat-btn" onclick="refreshScreen()" title="Refresh / Reconnect">↺</button>
-        <button class="save-chat-btn" onclick="saveChatToFile()" title="Save chat as HTML">💾</button>
-        <button class="clear-chat-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" title="Clear chat history">🗑</button>
+        <button class="refresh-chat-btn" id="refreshChatBtn" onclick="refreshScreen()" title="Refresh / Reconnect">↺</button>
+        <button class="save-chat-btn" id="saveChatBtn" onclick="saveChatToFile()" title="Save chat as HTML">💾</button>
+        <button class="clear-chat-btn" id="clearChatBtn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" title="Clear chat history">🗑</button>
         <button class="mini-chat-btn" id="miniChatBtn" onclick="toggleMiniChatOverlay()" title="Toggle mini remote screen">📺</button>
         <button class="find-chat-btn" id="findChatBtn" title="Find in chat">🔍</button>
         <div class="file-preview-strip" id="filePreviewStrip"></div>
@@ -2185,7 +2185,11 @@ function setupTooltips() {
     speakerBtnLocal: 'Toggle speaker / earphone output',
     speakerBtnRemote: 'Toggle speaker / earphone output',
     zoomSliderLocal: 'Zoom local camera',
-    translateResetBtn: 'Restore original — system language: ' + (navigator.language || 'unknown')
+    translateResetBtn: 'Restore original — system language: ' + (navigator.language || 'unknown'),
+    refreshChatBtn: 'Refresh / Reconnect',
+    saveChatBtn:    'Save chat as HTML',
+    clearChatBtn:   'Clear chat history',
+    miniChatBtn:    'Toggle mini remote screen'
   };
   Object.entries(labels).forEach(([id, label]) => {
     const el = document.getElementById(id);
