@@ -2852,7 +2852,12 @@ function onDrop() {
     if (el) { el.classList.remove('no-video'); el.classList.add('stale'); }
   });
   setStatus('standby');
-  entry('Link lost — waiting for Alpha', 'sys');
+  entry('Link lost — returning to login screen', 'sys');
+  // Show login overlay immediately and restart auto-login countdown
+  document.getElementById('sessionOverlay').style.display = 'flex';
+  document.getElementById('unitIdDisplay').style.display = 'none';
+  prefillLogin();
+  startLoginTimeout();
 }
 
 function muteLocal() {
