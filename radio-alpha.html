@@ -668,12 +668,20 @@
     background: rgba(0,0,0,0.72);
   }
   .video-wrap.no-video::after {
-    content: 'NO VIDEO';
+    content: 'VIDEO OFF';
     position: absolute; inset: 0;
     display: flex; align-items: center; justify-content: center;
     font-family: 'Orbitron', sans-serif; font-size: 10px;
-    letter-spacing: 3px; color: var(--text-dim);
+    letter-spacing: 3px; color: var(--warn);
     background: rgba(0,0,0,0.72);
+  }
+  .video-wrap.stale::after {
+    content: 'PLEASE REFRESH';
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Orbitron', sans-serif; font-size: 10px;
+    letter-spacing: 3px; color: var(--danger, #cc2222);
+    background: rgba(0,0,0,0.88);
   }
   .mini-video-overlay {
     position: absolute; top: 16px; right: 20px; z-index: 4;
@@ -692,12 +700,20 @@
     bottom: 4px; left: 6px; font-size: 8px; letter-spacing: 1px; pointer-events: none;
   }
   .mini-video-overlay.no-video::after {
-    content: 'NO VIDEO';
+    content: 'VIDEO OFF';
     position: absolute; inset: 0;
     display: flex; align-items: center; justify-content: center;
     font-family: 'Orbitron', sans-serif; font-size: 8px;
-    letter-spacing: 2px; color: var(--text-dim);
+    letter-spacing: 2px; color: var(--warn);
     background: rgba(0,0,0,0.72);
+  }
+  .mini-video-overlay.stale::after {
+    content: 'REFRESH';
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Orbitron', sans-serif; font-size: 8px;
+    letter-spacing: 2px; color: var(--danger, #cc2222);
+    background: rgba(0,0,0,0.88);
   }
 
   /* ── tab bar ── */
@@ -2761,8 +2777,12 @@ function updateLocalVideoState() {
 function updateRemoteVideoState(enabled, hasTrack = true) {
   const wrap = document.getElementById('remoteWrap');
   if (!wrap) return;
-  wrap.classList.toggle('no-video', !hasTrack);
-  wrap.classList.toggle('video-off', hasTrack && enabled === false);
+  // Clear stale — if we're receiving video state signals the connection is alive
+  wrap.classList.remove('stale', 'waiting');
+  // No track or disabled = VIDEO OFF (peer intentionally turned camera off)
+  wrap.classList.toggle('no-video', false);
+  wrap.classList.toggle('video-off', !hasTrack || enabled === false);
+  if (hasTrack && enabled) wrap.classList.remove('video-off');
 }
 
 function sendVideoState() {
@@ -2784,7 +2804,12 @@ function attachCall(c) {
     const remoteVideo = document.getElementById('remoteVideo');
     remoteVideo.srcObject = stream;
     syncMiniVideos();
-    document.getElementById('remoteWrap').classList.remove('waiting');
+    document.getElementById('remoteWrap').classList.remove('waiting', 'stale');
+    // Clear stale from mini overlays when stream reconnects
+    ['miniRemoteOverlay', 'miniChatOverlay'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.remove('stale');
+    });
     updateRemoteVideoState(true, stream.getVideoTracks().length > 0);
     stream.getVideoTracks().forEach(track => {
       track.addEventListener('mute', () => updateRemoteVideoState(false, true));
@@ -2843,8 +2868,13 @@ function onDrop() {
   const _rv = document.getElementById('remoteVideo');
   if (_rv) { try { _rv.srcObject = null; _rv.load(); } catch(e){} }
   syncMiniVideos();
-  document.getElementById('remoteWrap').classList.remove('video-off', 'no-video');
-  document.getElementById('remoteWrap').classList.add('waiting');
+  document.getElementById('remoteWrap').classList.remove('video-off', 'no-video', 'waiting');
+  document.getElementById('remoteWrap').classList.add('stale');
+  // Mark mini remote overlays as stale too
+  ['miniRemoteOverlay', 'miniChatOverlay'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.classList.remove('no-video'); el.classList.add('stale'); }
+  });
   setStatus('calling');
   entry('Link lost — retrying in 5s', 'sys');
   retryTimer = setTimeout(dial, 5000);
