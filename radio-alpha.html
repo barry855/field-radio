@@ -487,6 +487,18 @@
     box-shadow: 0 0 8px rgba(0,212,255,0.3);
   }
   .media-btn.screen-active:hover { background: rgba(0,212,255,0.25); }
+  .media-btn.sys-audio-on {
+    background: rgba(0,255,159,0.15);
+    border-color: var(--accent2);
+    color: var(--accent2);
+    box-shadow: 0 0 10px rgba(0,255,159,0.45);
+    animation: sysaudio-pulse 1.8s ease-in-out infinite;
+  }
+  .media-btn.sys-audio-on:hover { background: rgba(0,255,159,0.28); }
+  @keyframes sysaudio-pulse {
+    0%,100% { box-shadow: 0 0 6px rgba(0,255,159,0.35); }
+    50%      { box-shadow: 0 0 16px rgba(0,255,159,0.7); }
+  }
   .media-btn.disabled-state {
     background: rgba(255,68,68,0.15);
     border-color: var(--danger);
@@ -1081,7 +1093,7 @@
         <button class="media-btn" id="videoBtn" onclick="toggleVideo()">Disable Video</button>
         <button class="media-btn" id="miniBtn" onclick="toggleMiniVideo()">Show Mini</button>
         <button class="media-btn" id="screenBtn" onclick="toggleScreenShare()" style="border-color:var(--accent);color:var(--accent);">Share</button>
-        <button class="media-btn" id="sysAudioBtn" onclick="toggleSysAudio()" style="border-color:var(--accent);color:var(--accent);">🔊 Sys Audio</button>
+        <button class="media-btn" id="sysAudioBtn" onclick="toggleSysAudio()">🔊 Sys Audio Off</button>
         <button class="media-btn" id="audioBtn" onclick="toggleAudio()">Disable Audio</button>
       </div>
       <div class="channel-row" style="flex-shrink:0; padding:0 0 4px 0;">
@@ -1116,7 +1128,7 @@
         <button class="media-btn" id="videoBtn2" onclick="toggleVideo()">Disable Video</button>
         <button class="media-btn" id="miniBtn2" onclick="toggleMiniVideo()">Show Mini</button>
         <button class="media-btn" id="screenBtn2" onclick="toggleScreenShare()" style="border-color:var(--accent);color:var(--accent);">Share</button>
-        <button class="media-btn" id="sysAudioBtn2" onclick="toggleSysAudio()" style="border-color:var(--accent);color:var(--accent);">🔊 Sys Audio</button>
+        <button class="media-btn" id="sysAudioBtn2" onclick="toggleSysAudio()">🔊 Sys Audio Off</button>
         <button class="media-btn" id="audioBtn2" onclick="toggleAudio()">Disable Audio</button>
       </div>
       <div class="channel-row" style="flex-shrink:0; padding:0 0 4px 0;">
@@ -3282,10 +3294,9 @@ async function toggleSysAudio() {
     sysAudioStream.getTracks().forEach(t => t.stop());
     sysAudioStream = null;
     if (sysAudioNode) { try { sysAudioNode.disconnect(); } catch(e){} sysAudioNode = null; }
-    // Remove from playing set and restore mic if nothing else playing
     _mixPlayingSet.delete('__sysaudio__');
     if (_mixPlayingSet.size === 0) _deactivateMix();
-    btns.forEach(b => { if(b){ b.textContent = '🔊 Sys Audio'; b.classList.remove('screen-active'); }});
+    btns.forEach(b => { if(b){ b.textContent = '🔊 Sys Audio Off'; b.classList.remove('sys-audio-on'); }});
     entry('System audio capture stopped', 'sys');
     return;
   }
@@ -3295,13 +3306,19 @@ async function toggleSysAudio() {
     entry('getDisplayMedia not supported in this browser', 'err'); return;
   }
   try {
-    // Request audio-only — browser shows tab/window/screen picker.
-    // User must tick "Share tab audio" / "Share system audio" in the picker.
-    const stream = await navigator.mediaDevices.getDisplayMedia({ video: false, audio: true });
+    // Chrome requires video:true — we immediately stop the video track after capture.
+    // The audio track is what we actually want.
+    const stream = await navigator.mediaDevices.getDisplayMedia({
+      video: true,
+      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+    });
+
+    // Stop video immediately — we only want audio
+    stream.getVideoTracks().forEach(t => t.stop());
+
     const audioTracks = stream.getAudioTracks();
     if (!audioTracks.length) {
-      stream.getTracks().forEach(t => t.stop());
-      entry('No audio track captured — did you tick "Share tab audio"?', 'err');
+      entry('No audio track captured — tick "Share tab audio" or "Share system audio" in the picker', 'err');
       return;
     }
     sysAudioStream = stream;
@@ -3312,18 +3329,16 @@ async function toggleSysAudio() {
 
     const sysOnly = new MediaStream(audioTracks);
     sysAudioNode = _mixCtx.createMediaStreamSource(sysOnly);
-    sysAudioNode.connect(_mixDest);           // → call stream
+    sysAudioNode.connect(_mixDest);            // → call stream
     sysAudioNode.connect(_mixCtx.destination); // → local speakers
 
     _mixPlayingSet.add('__sysaudio__');
     await _activateMix();
 
-    // Auto-stop when the user clicks "Stop sharing" in the browser UI
-    audioTracks[0].addEventListener('ended', () => {
-      if (sysAudioStream) toggleSysAudio();
-    });
+    // Auto-stop when user clicks "Stop sharing" in the browser bar
+    audioTracks[0].addEventListener('ended', () => { if (sysAudioStream) toggleSysAudio(); });
 
-    btns.forEach(b => { if(b){ b.textContent = '🔊 Stop Sys Audio'; b.classList.add('screen-active'); }});
+    btns.forEach(b => { if(b){ b.textContent = '🔊 Sys Audio On'; b.classList.add('sys-audio-on'); }});
     entry('System audio capture active — mixed into call', 'ok');
   } catch(e) {
     entry('System audio capture failed: ' + e.message, 'err');
