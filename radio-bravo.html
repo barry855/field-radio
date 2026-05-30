@@ -1278,8 +1278,7 @@ sendBtn.addEventListener('pointerdown', e => {
 sendBtn.disabled = true;
 sendBtn.addEventListener('click', e => {
   // Only handle mouse clicks here; touch is handled by pointerdown above
-  if (!e.isTrusted || e.detail === 0) return; // synthetic / AT events still go through
-  if (e.pointerType === 'touch' || e.pointerType === 'pen') return;
+  if (!e.isTrusted) return;
   sendChat();
 });
 
