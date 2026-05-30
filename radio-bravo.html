@@ -3216,64 +3216,75 @@ async function stopScreenShare() {
 }
 
 // ── Media-to-call audio mix ───────────────────────────────────
-let _mixCtx = null, _mixDest = null, _mixMicNode = null;
-let _mixMediaNodes = new Map();
-let _mixOutTrack = null;
+let _mixCtx  = null;
+let _mixDest = null;
+let _mixMicNode = null;
+const _mixSourceNodes  = new WeakMap();
+const _mixPlayingSet   = new Set();
+let   _mixOutTrack     = null;
 
-async function _ensureMixContext() {
-  if (_mixCtx && _mixCtx.state !== 'closed') return;
+function _ensureMixContext() {
+  if (_mixCtx) return;
   _mixCtx  = new (window.AudioContext || window.webkitAudioContext)();
-  await _mixCtx.resume();
   _mixDest = _mixCtx.createMediaStreamDestination();
   if (localStream) {
     try {
-      const micOnly = new MediaStream(localStream.getAudioTracks());
-      _mixMicNode = _mixCtx.createMediaStreamSource(micOnly);
+      _mixMicNode = _mixCtx.createMediaStreamSource(new MediaStream(localStream.getAudioTracks()));
       _mixMicNode.connect(_mixDest);
-    } catch(e) { entry('Mix mic warn: ' + e.message, 'sys'); }
+    } catch(e) { entry('Mix mic init warn: ' + e.message, 'sys'); }
   }
 }
 
-async function _replaceCallAudioWith(track) {
+async function _setCallAudioTrack(track) {
   try {
-    const pc = call && (call.peerConnection || call._pc);
+    const pc     = call && (call.peerConnection || call._pc);
     const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
     if (sender) await sender.replaceTrack(track);
   } catch(e) { entry('replaceTrack warn: ' + e.message, 'sys'); }
 }
 
+async function _activateMix() {
+  const track = _mixDest.stream.getAudioTracks()[0];
+  if (track && track !== _mixOutTrack) {
+    _mixOutTrack = track;
+    await _setCallAudioTrack(track);
+    entry('Call audio → mic + media mix', 'sys');
+  }
+}
+
+async function _deactivateMix() {
+  const micTrack = localStream && localStream.getAudioTracks()[0];
+  if (micTrack) {
+    await _setCallAudioTrack(micTrack);
+    entry('Call audio → mic only', 'sys');
+  }
+  _mixOutTrack = null;
+}
+
 async function attachMediaToCallAudio(mediaEl) {
   if (audioMuted) return;
-  await _ensureMixContext();
-  if (_mixMediaNodes.has(mediaEl)) return;
-  try {
-    const src = _mixCtx.createMediaElementSource(mediaEl);
-    src.connect(_mixDest);
-    src.connect(_mixCtx.destination);
-    _mixMediaNodes.set(mediaEl, src);
-    entry('Media file wired into call audio mix', 'sys');
-  } catch(e) { entry('Media attach warn: ' + e.message, 'sys'); return; }
-  const newTrack = _mixDest.stream.getAudioTracks()[0];
-  if (newTrack && newTrack !== _mixOutTrack) {
-    _mixOutTrack = newTrack;
-    await _replaceCallAudioWith(newTrack);
-    entry('Call audio: now using mic + media mix', 'sys');
+  _ensureMixContext();
+  if (_mixCtx.state === 'suspended') await _mixCtx.resume();
+  if (!_mixSourceNodes.has(mediaEl)) {
+    try {
+      const src = _mixCtx.createMediaElementSource(mediaEl);
+      src.connect(_mixDest);
+      src.connect(_mixCtx.destination);
+      _mixSourceNodes.set(mediaEl, src);
+      entry('Media element wired into mix', 'sys');
+    } catch(e) { entry('Media wire warn: ' + e.message, 'sys'); return; }
   }
-  function onStop() {
-    mediaEl.removeEventListener('ended', onStop);
-    mediaEl.removeEventListener('pause', onStop);
-    const node = _mixMediaNodes.get(mediaEl);
-    if (node) { try { node.disconnect(); } catch(e){} _mixMediaNodes.delete(mediaEl); }
-    entry('Media file removed from call audio mix', 'sys');
-    if (_mixMediaNodes.size === 0) {
-      const micTrack = localStream && localStream.getAudioTracks()[0];
-      if (micTrack) { _replaceCallAudioWith(micTrack); entry('Call audio: restored to mic only', 'sys'); }
-      _mixOutTrack = null;
-      if (_mixCtx) { _mixCtx.close().catch(()=>{}); _mixCtx = null; }
-    }
+  _mixPlayingSet.add(mediaEl);
+  await _activateMix();
+  function onPause() {
+    mediaEl.removeEventListener('pause', onPause);
+    mediaEl.removeEventListener('ended', onPause);
+    _mixPlayingSet.delete(mediaEl);
+    entry('Media paused/ended — playing count: ' + _mixPlayingSet.size, 'sys');
+    if (_mixPlayingSet.size === 0) _deactivateMix();
   }
-  mediaEl.addEventListener('ended', onStop);
-  mediaEl.addEventListener('pause', onStop);
+  mediaEl.addEventListener('pause', onPause, { once: true });
+  mediaEl.addEventListener('ended', onPause, { once: true });
 }
 
 // ── Silent audio track used when muted ───────────────────────
