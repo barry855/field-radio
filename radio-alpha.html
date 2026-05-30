@@ -1991,7 +1991,7 @@ function addBubble(text, mine, ts, save = true) {
   chat.appendChild(wrap);
   scrollToBottom();
   // Tone + badge: notify on incoming message
-  if (!mine) { playTone('msg_in'); }
+  if (!mine) { }
   if (!mine && activeTab !== 'chat') {
     unreadCount++;
     msgBadge.textContent = unreadCount;
@@ -2257,7 +2257,6 @@ function receiveChunk(f) {
     const dataUrl = rec.parts.join('');
     delete _incomingChunks[f.id];
     removeTransferProgress(f.id);
-    playTone('file_in');
     addMediaBubble(rec.name, rec.type, dataUrl, false);
   }
 }
@@ -2445,7 +2444,6 @@ function startPeer() {
   });
 
   peer.on('open', () => {
-    playTone('radio_online');
     entry('Radio online', 'ok');
     setStatus('calling');
     dial();
@@ -2458,7 +2456,6 @@ function startPeer() {
   });
 
   peer.on('call', incoming => {
-    playTone('call_in');
     entry('Inbound call from Bravo', 'info');
     answerCall(incoming);
   });
@@ -2470,7 +2467,6 @@ function startPeer() {
   });
 
   peer.on('error', e => {
-    playTone('error');
     entry('Peer error [' + e.type + ']: ' + e.message, 'err');
     if (e.type === 'browser-incompatible') return;
     if (e.type === 'peer-unavailable') {
@@ -2555,7 +2551,7 @@ function attachDataConn(dc) {
     }
     if (f) {
       if (f.__control === 'video') { updateRemoteVideoState(f.enabled, f.hasTrack !== false); return; }
-      if (f.__file  === true)      { playTone('file_in'); addMediaBubble(f.name, f.type, f.data, false); return; }
+      if (f.__file  === true)      { addMediaBubble(f.name, f.type, f.data, false); return; }
       if (f.__chunk === true)      { receiveChunk(f); return; }
       // Unknown control object — show as JSON text
       addBubble(msgStr || JSON.stringify(f), false);
@@ -2749,7 +2745,6 @@ function onDrop() {
   document.getElementById('remoteWrap').classList.remove('video-off', 'no-video');
   document.getElementById('remoteWrap').classList.add('waiting');
   setStatus('calling');
-  playTone('dropped');
   entry('Link lost — retrying in 5s', 'sys');
   retryTimer = setTimeout(dial, 5000);
 }
