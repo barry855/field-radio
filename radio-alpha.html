@@ -1887,9 +1887,11 @@ function _peekOrig(wrap) {
   if (currText === wrap.dataset.orig) return; // not translated, nothing to show
   wrap.querySelector('.orig-peek').textContent = wrap.dataset.orig;
   wrap.classList.add('show-orig');
+  scrollToBottom();
 }
 function _hidePeek(wrap) {
   wrap.classList.remove('show-orig');
+  scrollToBottom();
 }
 function _togglePeek(wrap) {
   if (wrap.classList.contains('show-orig')) { _hidePeek(wrap); } else { _peekOrig(wrap); }
