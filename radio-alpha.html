@@ -171,8 +171,11 @@
     display: none; font-style: italic; opacity: 0.72;
     font-size: 0.85em; margin-top: 4px;
     border-top: 1px dashed rgba(128,128,128,0.4); padding-top: 4px;
+    user-select: text; -webkit-user-select: text;
   }
   .bubble.show-orig .orig-peek { display: block; }
+  .bubble.peek-locked { outline: 2px solid rgba(255,200,0,0.55); outline-offset: 2px; }
+  .bubble.peek-locked .orig-peek { opacity: 1; }
 
   /* connection quality */
   .quality-item {
@@ -1890,11 +1893,28 @@ function _peekOrig(wrap) {
   scrollToBottom();
 }
 function _hidePeek(wrap) {
+  if (wrap.classList.contains('peek-locked')) return; // locked — don't hide
   wrap.classList.remove('show-orig');
   scrollToBottom();
 }
 function _togglePeek(wrap) {
   if (wrap.classList.contains('show-orig')) { _hidePeek(wrap); } else { _peekOrig(wrap); }
+}
+function _toggleLock(wrap) {
+  const curr = wrap.querySelector('.msg-text');
+  if (!curr || !wrap.dataset.orig) return;
+  const currText = curr.innerText || curr.textContent;
+  if (currText === wrap.dataset.orig) return; // not translated, nothing to lock
+  if (wrap.classList.contains('peek-locked')) {
+    // Unlock — close the peek
+    wrap.classList.remove('peek-locked');
+    wrap.classList.remove('show-orig');
+    scrollToBottom();
+  } else {
+    // Lock open
+    wrap.classList.add('peek-locked');
+    _peekOrig(wrap);
+  }
 }
 
 function addBubble(text, mine, ts, save = true) {
@@ -1918,9 +1938,10 @@ function addBubble(text, mine, ts, save = true) {
   wrap.appendChild(msg);
   wrap.appendChild(origPeek);
   wrap.appendChild(time);
-  // Show original text on hover (desktop) or tap (mobile)
+  // Show original text on hover (desktop) or tap (mobile); click to lock open for copying
   wrap.addEventListener('mouseenter', () => _peekOrig(wrap));
   wrap.addEventListener('mouseleave', () => _hidePeek(wrap));
+  wrap.addEventListener('click', () => _toggleLock(wrap));
   wrap.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') _togglePeek(wrap); });
   chat.appendChild(wrap);
   scrollToBottom();
