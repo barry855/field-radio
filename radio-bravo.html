@@ -858,7 +858,7 @@
   .login-presence .ptxt.p-reachable { color: #ffaa00; }
   .login-presence .ptxt.p-offline   { color: #ff4444; }
 </style>
-<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script></head>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js"></script></head>
 <body>
 
 <div class="session-overlay" id="sessionOverlay">
@@ -2377,7 +2377,7 @@ function startPeer() {
   pendingDC = false;
 
   peer = new Peer(MY_ID, {
-    
+    host: '0.peerjs.com', port: 443, path: '/', secure: true, pingInterval: 5000,
     config: { iceServers: ICE_SERVERS }
   });
 
@@ -2406,6 +2406,12 @@ function startPeer() {
       entry('ERROR: no local stream — cannot answer', 'err');
       incoming.close();
       return;
+    }
+    // If already linked, close the previous call cleanly before answering the new one
+    if (call) {
+      try { call.close(); } catch(e) {}
+      call = null;
+      linked = false;
     }
     incoming.answer(getCallStream());
     attachCall(incoming);
@@ -2630,8 +2636,8 @@ function attachCall(c) {
       applyMuteToSenders();
     }
   });
-  c.on('close', onDrop);
-  c.on('error', e => { entry('Call error: ' + e.message, 'err'); onDrop(); });
+  c.on('close', () => { if (call === c) onDrop(); });
+  c.on('error', e => { entry('Call error: ' + e.message, 'err'); if (call === c) onDrop(); });
 }
 
 // ── Save recording if a disconnection interrupts it ──────────
