@@ -860,7 +860,7 @@
   .login-presence .ptxt.p-reachable { color: #ffaa00; }
   .login-presence .ptxt.p-offline   { color: #ff4444; }
 </style>
-<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script></head>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js"></script></head>
 <body>
 
 <div class="session-overlay" id="sessionOverlay">
@@ -2393,7 +2393,7 @@ function startPeer() {
   linked = false;
 
   peer = new Peer(MY_ID, {
-    
+    host: '0.peerjs.com', port: 443, path: '/', secure: true, pingInterval: 5000,
     config: { iceServers: ICE_SERVERS }
   });
 
@@ -2425,6 +2425,9 @@ function startPeer() {
     if (e.type === 'browser-incompatible') return;
     if (e.type === 'peer-unavailable') {
       entry('Bravo offline — retry in 5s', 'sys');
+      // Close the dead outgoing call so its 'close' event doesn't trigger a
+      // competing onDrop → retryTimer chain alongside this one
+      if (call) { try { call.close(); } catch(ex) {} call = null; }
       retryTimer = setTimeout(dial, 5000);
       return;
     }
@@ -2459,6 +2462,12 @@ function getCallStream() {
 function dial() {
   clearTimeout(retryTimer);
   if (linked || !localStream) return;
+  // Close stale outgoing call before redialling — prevents its 'close' event
+  // from triggering a competing onDrop → retryTimer race
+  if (call) {
+    try { call.off('close', onDrop); call.close(); } catch(e) {}
+    call = null;
+  }
   entry('Calling Bravo…', 'info');
   const c = peer.call(REMOTE_ID, getCallStream());
   attachCall(c);
@@ -2646,8 +2655,10 @@ function attachCall(c) {
     // Ensure data channel is open (may have failed during retry storm)
     openDataConn();
   });
-  c.on('close', onDrop);
-  c.on('error', e => { entry('Call error: ' + e.message, 'err'); onDrop(); });
+  // Only trigger onDrop if this is still the active call (guards against stale calls
+  // from a previous dial attempt closing and racing with the current one)
+  c.on('close', () => { if (call === c) onDrop(); });
+  c.on('error', e => { entry('Call error: ' + e.message, 'err'); if (call === c) onDrop(); });
 }
 
 // ── Save recordings if a disconnection interrupts them ────────
