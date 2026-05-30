@@ -1977,7 +1977,7 @@ function addBubble(text, mine, ts, save = true) {
   chat.appendChild(wrap);
   scrollToBottom();
   // Tone + badge: notify on incoming message
-  if (!mine) { playTone('msg_in'); }
+  if (!mine) { }
   if (!mine && activeTab !== 'chat') {
     unreadCount++;
     msgBadge.textContent = unreadCount;
@@ -2242,7 +2242,6 @@ function receiveChunk(f) {
     const dataUrl = rec.parts.join('');
     delete _incomingChunks[f.id];
     removeTransferProgress(f.id);
-    playTone('file_in');
     addMediaBubble(rec.name, rec.type, dataUrl, false);
   }
 }
@@ -2429,7 +2428,6 @@ function startPeer() {
 
   let watchdog;
   peer.on('open', id => {
-    playTone('radio_online');
     entry('Radio online — waiting for Alpha [' + id + ']', 'ok');
     setStatus('standby');
     // Watchdog: if no call arrives in 30s, reconnect to signalling server to stay fresh
@@ -2448,7 +2446,6 @@ function startPeer() {
   });
 
   peer.on('call', incoming => {
-    playTone('call_in');
     entry('Inbound call from Alpha', 'info');
     if (!localStream) {
       entry('ERROR: no local stream — cannot answer', 'err');
@@ -2472,7 +2469,6 @@ function startPeer() {
   });
 
   peer.on('error', e => {
-    playTone('error');
     entry('Peer error [' + e.type + ']: ' + e.message, 'err');
     if (e.type === 'browser-incompatible') return;
     if (e.type === 'unavailable-id') {
@@ -2524,7 +2520,7 @@ function attachDataConn(dc) {
     }
     if (f) {
       if (f.__control === 'video') { updateRemoteVideoState(f.enabled, f.hasTrack !== false); return; }
-      if (f.__file  === true)      { playTone('file_in'); addMediaBubble(f.name, f.type, f.data, false); return; }
+      if (f.__file  === true)      { addMediaBubble(f.name, f.type, f.data, false); return; }
       if (f.__chunk === true)      { receiveChunk(f); return; }
       // Unknown control object — show as JSON text
       addBubble(msgStr || JSON.stringify(f), false);
@@ -2726,7 +2722,6 @@ function onDrop() {
   document.getElementById('remoteWrap').classList.remove('video-off', 'no-video');
   document.getElementById('remoteWrap').classList.add('waiting');
   setStatus('standby');
-  playTone('dropped');
   entry('Link lost — waiting for Alpha', 'sys');
 }
 
