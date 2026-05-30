@@ -213,7 +213,7 @@
 
   .clear-chat-btn {
     position: absolute;
-    bottom: 58px; left: 10px;
+    bottom: 58px; right: 10px;
     z-index: 10;
     background: rgba(5,15,21,0.55);
     border: 1px solid var(--border);
@@ -230,7 +230,7 @@
 
   .save-chat-btn {
     position: absolute;
-    bottom: 58px; right: 10px;
+    bottom: 58px; left: 10px;
     z-index: 10;
     background: rgba(5,15,21,0.55);
     border: 1px solid var(--border);
@@ -244,6 +244,23 @@
     transition: opacity 0.15s, border-color 0.15s;
   }
   .save-chat-btn:hover, .save-chat-btn:active { opacity: 1; border-color: var(--accent, #00d4ff); }
+
+  .refresh-chat-btn {
+    position: absolute;
+    top: 10px; left: 10px;
+    z-index: 10;
+    background: rgba(5,15,21,0.55);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-dim);
+    font-size: 14px;
+    line-height: 1;
+    padding: 4px 6px;
+    cursor: pointer;
+    opacity: 0.45;
+    transition: opacity 0.15s, border-color 0.15s;
+  }
+  .refresh-chat-btn:hover, .refresh-chat-btn:active { opacity: 1; border-color: var(--accent, #00d4ff); color: var(--accent); }
 
   .find-chat-btn {
     position: absolute;
@@ -1096,6 +1113,7 @@
           <button class="chat-find-close" id="chatFindClose" title="Close">✕</button>
         </div>
         <div class="chat" id="chat"></div>
+        <button class="refresh-chat-btn" onclick="refreshScreen()" title="Refresh">↺</button>
         <button class="save-chat-btn" onclick="saveChatToFile()" title="Save chat as HTML">💾</button>
         <button class="clear-chat-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" title="Clear chat history">🗑</button>
         <button class="find-chat-btn" id="findChatBtn" title="Find in chat">🔍</button>
