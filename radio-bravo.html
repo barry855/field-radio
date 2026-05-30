@@ -99,8 +99,9 @@
   }
   .led.on-green  { background: var(--accent2); box-shadow: 0 0 6px var(--accent2); }
   .led.on-cyan   { background: var(--accent);  box-shadow: 0 0 6px var(--accent);  }
-  .led.on-yellow { background: var(--warn);    box-shadow: 0 0 6px var(--warn); }
+  .led.on-yellow { background: var(--warn);    box-shadow: 0 0 6px var(--warn);    animation: blink 0.8s step-end infinite; }
   .led.on-amber  { background: #ffaa00;       box-shadow: 0 0 8px #ffaa00; }  /* reachable — solid amber */
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.35} }
 
   .chat-panel {
     flex: 1;
@@ -589,9 +590,6 @@
     transition: width 1s linear, background 0.5s;
     width: 100%;
   }
-
-  /* 10-minute session countdown in header */
-  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.35} }
 
   /* ── video ── */
   .video-panel {
@@ -1143,10 +1141,10 @@
 const ICE_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
-  { urls: 'stun:openrelay.metered.ca:80' },
-  { urls: 'turn:openrelay.metered.ca:80',       username: 'openrelayproject', credential: 'openrelayproject' },
-  { urls: 'turn:openrelay.metered.ca:443',      username: 'openrelayproject', credential: 'openrelayproject' },
-  { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
+  { urls: 'stun:stun.cloudflare.com:3478' },
+  { urls: 'turn:turn.cloudflare.com:3478',      username: 'free',             credential: 'free' },
+  { urls: 'turn:turn.cloudflare.com:5349',      username: 'free',             credential: 'free' },
+  { urls: 'turn:turn.cloudflare.com:5349?transport=tcp', username: 'free',    credential: 'free' }
 ];
 
 let MY_ID, REMOTE_ID;
@@ -1157,7 +1155,7 @@ let realAudioTrack = null;
 let silentCtx = null;
 let silentTrack = null;
 
-let peer, call, dataConn, localStream, linked = false;
+let peer, call, dataConn, localStream, linked = false, retryTimer;
 
 const linkLed   = document.getElementById('linkLed');
 const statusEl  = document.getElementById('statusText');
@@ -1703,7 +1701,7 @@ function saveChatToFile() {
     <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;font-family:monospace;color:${whoCol};margin-bottom:5px;font-weight:bold;">${b.who}</div>
     <div${b.orig ? ' title="' + b.orig.replace(/"/g, '&quot;') + '" style="cursor:help;"' : ''}>${b.html}</div>
     ${b.downloadHtml ? '<div style="margin-top:5px;">' + b.downloadHtml + '</div>' : ''}
-    ${b.orig ? '<div style="font-size:11px;color:#666;font-style:italic;margin-top:4px;border-top:1px dashed #ccc;padding-top:4px;font-weight:normal;">' + b.orig.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>' : ''}
+    ${b.orig ? '<div style="font-size:18px;color:#444;font-style:italic;margin-top:6px;border-top:1px dashed #ccc;padding-top:6px;font-weight:bold;line-height:1.55;">' + b.orig.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>' : ''}
     <div style="font-size:11px;color:#555;text-align:right;margin-top:5px;font-weight:normal;">${b.time}</div>
   </div>
 </div>`;
@@ -2497,9 +2495,6 @@ function openDataConn() {
   pendingDC = true;
   entry('Opening data channel to Alpha…', 'sys');
   const dc = peer.connect(REMOTE_ID, { reliable: true, serialization: 'json' });
-  dc.on('open',  () => { pendingDC = false; });
-  dc.on('close', () => { pendingDC = false; });
-  dc.on('error', () => { pendingDC = false; });
   attachDataConn(dc);
 }
 
