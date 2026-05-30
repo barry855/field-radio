@@ -2410,12 +2410,14 @@ function addMediaBubble(name, type, dataUrl, mine) {
     img.src = dataUrl;
     img.addEventListener('click', () => { lightboxImg.src = dataUrl; lightbox.classList.add('open'); });
     wrap.appendChild(img);
-  } else if (type.startsWith('video/')) {
-    const vid = document.createElement('video');
-    vid.className = 'media-vid';
+  } else if (type.startsWith('video/') || type.startsWith('audio/')) {
+    const isAudio = type.startsWith('audio/');
+    const vid = document.createElement(isAudio ? 'audio' : 'video');
+    vid.className = isAudio ? 'media-aud' : 'media-vid';
     vid.src = dataUrl;
     vid.controls = true;
-    vid.playsInline = true;
+    if (!isAudio) vid.playsInline = true;
+    vid.addEventListener('play', () => attachMediaToCallAudio(vid), { once: false });
     wrap.appendChild(vid);
   } else {
     const a = document.createElement('a');
@@ -3262,6 +3264,84 @@ async function stopScreenShare() {
 
   btns.forEach(b => { if(b){ b.textContent = 'Share'; b.classList.remove('screen-active'); }});
   entry('Screen share stopped — camera restored', 'ok');
+}
+
+// ── Media-to-call audio mix ───────────────────────────────────
+// When a video/audio file is played in chat, its audio is mixed with the
+// microphone and sent out through the live call so the remote side hears it.
+let _mixCtx = null, _mixDest = null, _mixMicNode = null;
+let _mixMediaNodes = new Map(); // mediaEl → sourceNode
+let _mixOutTrack = null;        // the track currently sent in the call
+
+async function _ensureMixContext() {
+  if (_mixCtx && _mixCtx.state !== 'closed') return;
+  _mixCtx  = new (window.AudioContext || window.webkitAudioContext)();
+  await _mixCtx.resume();
+  _mixDest = _mixCtx.createMediaStreamDestination();
+  // Connect live mic into the mix
+  if (localStream) {
+    try {
+      const micOnly = new MediaStream(localStream.getAudioTracks());
+      _mixMicNode = _mixCtx.createMediaStreamSource(micOnly);
+      _mixMicNode.connect(_mixDest);
+    } catch(e) { entry('Mix mic warn: ' + e.message, 'sys'); }
+  }
+}
+
+async function _replaceCallAudioWith(track) {
+  try {
+    const pc = call && (call.peerConnection || call._pc);
+    const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
+    if (sender) await sender.replaceTrack(track);
+  } catch(e) { entry('replaceTrack warn: ' + e.message, 'sys'); }
+}
+
+async function attachMediaToCallAudio(mediaEl) {
+  if (audioMuted) return; // don't mix if mic is muted
+  await _ensureMixContext();
+
+  if (_mixMediaNodes.has(mediaEl)) return; // already wired
+
+  try {
+    const src = _mixCtx.createMediaElementSource(mediaEl);
+    src.connect(_mixDest);
+    // Also connect to speakers so local user still hears the file
+    src.connect(_mixCtx.destination);
+    _mixMediaNodes.set(mediaEl, src);
+    entry('Media file wired into call audio mix', 'sys');
+  } catch(e) {
+    entry('Media attach warn: ' + e.message, 'sys');
+    return;
+  }
+
+  // Hot-swap outgoing audio track to the mixed track
+  const newTrack = _mixDest.stream.getAudioTracks()[0];
+  if (newTrack && newTrack !== _mixOutTrack) {
+    _mixOutTrack = newTrack;
+    await _replaceCallAudioWith(newTrack);
+    entry('Call audio: now using mic + media mix', 'sys');
+  }
+
+  function onStop() {
+    mediaEl.removeEventListener('ended', onStop);
+    mediaEl.removeEventListener('pause', onStop);
+    const node = _mixMediaNodes.get(mediaEl);
+    if (node) { try { node.disconnect(); } catch(e){} _mixMediaNodes.delete(mediaEl); }
+    entry('Media file removed from call audio mix', 'sys');
+
+    // If no more media playing, restore plain mic track
+    if (_mixMediaNodes.size === 0) {
+      const micTrack = localStream && localStream.getAudioTracks()[0];
+      if (micTrack) {
+        _replaceCallAudioWith(micTrack);
+        entry('Call audio: restored to mic only', 'sys');
+      }
+      _mixOutTrack = null;
+      if (_mixCtx) { _mixCtx.close().catch(()=>{}); _mixCtx = null; }
+    }
+  }
+  mediaEl.addEventListener('ended', onStop);
+  mediaEl.addEventListener('pause', onStop);
 }
 
 // ── Silent audio track used when muted ───────────────────────
