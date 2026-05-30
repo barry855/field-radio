@@ -928,7 +928,7 @@
     </div>
     <div class="login-timeout">
       <div class="login-timeout-label">
-        <span>Auto Login</span><span id="loginTimeoutSec">10s</span>
+        <span>Auto Login</span><span id="loginTimeoutSec">15s</span>
       </div>
       <div class="login-timeout-track"><div class="login-timeout-fill" id="loginTimeoutFill" style="width: 100%; background: var(--accent);"></div></div>
     </div>
@@ -1559,23 +1559,23 @@ function prefillLogin() {
 }
 prefillLogin();
 
-// ── 10-second auto-login countdown ───────────────────────────
+// ── 15-second auto-login countdown ───────────────────────────
 let loginTimeoutInterval;
-let loginSecsLeft = 10;
+let loginSecsLeft = 15;
 function startLoginTimeout() {
   clearInterval(loginTimeoutInterval);  // prevent double-interval from stale saved HTML
-  loginSecsLeft = 10;
+  loginSecsLeft = 15;
   const fill = document.getElementById('loginTimeoutFill');
   const sec  = document.getElementById('loginTimeoutSec');
   fill.style.width = '100%';
   fill.style.background = 'var(--accent)';
-  sec.textContent = '10s';
+  sec.textContent = '15s';
   loginTimeoutInterval = setInterval(() => {
     loginSecsLeft--;
-    const pct = (loginSecsLeft / 10) * 100;
+    const pct = (loginSecsLeft / 15) * 100;
     fill.style.width = pct + '%';
     sec.textContent = loginSecsLeft + 's';
-    if (loginSecsLeft <= 5) fill.style.background = 'var(--warn)';
+    if (loginSecsLeft <= 7) fill.style.background = 'var(--warn)';
     if (loginSecsLeft <= 3) fill.style.background = 'var(--danger)';
     if (loginSecsLeft <= 0) {
       clearInterval(loginTimeoutInterval);
