@@ -2745,6 +2745,7 @@ function onDrop() {
   document.getElementById('remoteWrap').classList.remove('video-off', 'no-video');
   document.getElementById('remoteWrap').classList.add('waiting');
   setStatus('calling');
+  playTone('dropped');
   entry('Link lost — retrying in 5s', 'sys');
   retryTimer = setTimeout(dial, 5000);
 }
