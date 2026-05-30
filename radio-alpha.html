@@ -2874,8 +2874,12 @@ function onDrop() {
     if (el) { el.classList.remove('no-video'); el.classList.add('stale'); }
   });
   setStatus('calling');
-  entry('Link lost — retrying in 5s', 'sys');
-  retryTimer = setTimeout(dial, 5000);
+  entry('Link lost — returning to login screen', 'sys');
+  // Show login overlay immediately and restart auto-login countdown
+  document.getElementById('sessionOverlay').style.display = 'flex';
+  document.getElementById('unitIdDisplay').style.display = 'none';
+  prefillLogin();
+  startLoginTimeout();
 }
 
 function muteLocal() {
