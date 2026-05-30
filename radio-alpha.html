@@ -2230,12 +2230,37 @@ function setupTooltips() {
   };
   const hide = () => tip.classList.remove('visible');
 
+  let _lpTimer = null;
+  const cancelLp = () => { clearTimeout(_lpTimer); _lpTimer = null; };
+
   document.querySelectorAll('[data-tooltip]').forEach(el => {
+    // Desktop
     el.addEventListener('mouseenter', () => place(el));
-    el.addEventListener('focus', () => place(el));
+    el.addEventListener('focus',      () => place(el));
     el.addEventListener('mouseleave', hide);
-    el.addEventListener('blur', hide);
-    el.addEventListener('click', hide);
+    el.addEventListener('blur',       hide);
+    el.addEventListener('click',      hide);
+    // Android long-press (600 ms)
+    let _lpFired = false;
+    el.addEventListener('touchstart', e => {
+      cancelLp();
+      _lpFired = false;
+      e.preventDefault(); // must be here (not in the timer) to block Android context menu
+      _lpTimer = setTimeout(() => {
+        _lpFired = true;
+        place(el);
+      }, 600);
+    }, { passive: false });
+    el.addEventListener('touchend', e => {
+      cancelLp();
+      if (_lpFired) {
+        // Tooltip is showing — block the click that would hide it, then hide after delay
+        e.preventDefault();
+        setTimeout(hide, 1200);
+        _lpFired = false;
+      }
+    }, { passive: false });
+    el.addEventListener('touchmove', () => { cancelLp(); _lpFired = false; hide(); }, { passive: true });
   });
 }
 setupTooltips();
