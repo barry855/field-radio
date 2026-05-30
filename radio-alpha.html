@@ -916,7 +916,7 @@
     </div>
     <div class="login-timeout">
       <div class="login-timeout-label">
-        <span>Login Timeout</span><span id="loginTimeoutSec">60s</span>
+        <span>Auto Login</span><span id="loginTimeoutSec">10s</span>
       </div>
       <div class="login-timeout-track"><div class="login-timeout-fill" id="loginTimeoutFill" style="width: 100%; background: var(--accent);"></div></div>
     </div>
@@ -1546,34 +1546,30 @@ function prefillLogin() {
 }
 prefillLogin();
 
-// ── 60-second login timeout indicator ────────────────────────
+// ── 10-second auto-login countdown ───────────────────────────
 let loginTimeoutInterval;
-let loginSecsLeft = 60;
+let loginSecsLeft = 10;
 function startLoginTimeout() {
   clearInterval(loginTimeoutInterval);  // prevent double-interval from stale saved HTML
-  loginSecsLeft = 60;
+  loginSecsLeft = 10;
   const fill = document.getElementById('loginTimeoutFill');
   const sec  = document.getElementById('loginTimeoutSec');
   fill.style.width = '100%';
   fill.style.background = 'var(--accent)';
-  sec.textContent = '60s';
+  sec.textContent = '10s';
   loginTimeoutInterval = setInterval(() => {
     loginSecsLeft--;
-    const pct = (loginSecsLeft / 60) * 100;
+    const pct = (loginSecsLeft / 10) * 100;
     fill.style.width = pct + '%';
     sec.textContent = loginSecsLeft + 's';
-    if (loginSecsLeft <= 15) fill.style.background = 'var(--warn)';
-    if (loginSecsLeft <= 5)  fill.style.background = 'var(--danger)';
+    if (loginSecsLeft <= 5) fill.style.background = 'var(--warn)';
+    if (loginSecsLeft <= 3) fill.style.background = 'var(--danger)';
     if (loginSecsLeft <= 0) {
       clearInterval(loginTimeoutInterval);
       sec.textContent = '0s';
       fill.style.width = '0%';
-      // Flash the connect button to indicate timeout
-      const btn = document.querySelector('.session-go');
-      btn.style.borderColor = 'var(--danger)';
-      btn.style.color = 'var(--danger)';
-      btn.textContent = 'TIMED OUT — RETRY';
-      setTimeout(() => { startLoginTimeout(); btn.style.borderColor=''; btn.style.color=''; btn.textContent='CONNECT'; }, 2000);
+      // Auto-connect
+      startSession();
     }
   }, 1000);
 }
