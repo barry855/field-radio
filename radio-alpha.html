@@ -320,6 +320,25 @@
   }
   .find-chat-btn:hover { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
   .find-chat-btn.active { border-color: var(--accent); color: var(--accent); }
+  .mini-chat-btn {
+    position: absolute;
+    top: 10px; right: 46px;
+    z-index: 10;
+    background: rgba(5,15,21,0.55);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-dim);
+    font-size: 11px;
+    font-family: 'Orbitron', sans-serif;
+    letter-spacing: 1px;
+    line-height: 1;
+    padding: 4px 7px;
+    cursor: pointer;
+    opacity: 0.45;
+    transition: opacity 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .mini-chat-btn:hover, .mini-chat-btn:active { opacity: 1; border-color: var(--accent, #00d4ff); color: var(--accent); }
+  .mini-chat-btn.active { opacity: 1; border-color: var(--accent, #00d4ff); color: var(--accent); }
 
   /* ── Drag-and-drop overlay ───────────────────────────────── */
   .chat-panel { position: relative; }
@@ -662,13 +681,15 @@
     background: #000; border: 1px solid var(--accent);
     border-radius: 4px; overflow: hidden;
     box-shadow: 0 8px 22px rgba(0,0,0,0.42);
+    cursor: grab; user-select: none;
   }
+  .mini-video-overlay.dragging { cursor: grabbing; box-shadow: 0 12px 32px rgba(0,212,255,0.25); }
   .mini-video-overlay.hidden { display: none; }
   .mini-video-overlay video {
-    width: 100%; height: 100%; object-fit: cover; display: block;
+    width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none;
   }
   .mini-video-overlay .video-label {
-    bottom: 4px; left: 6px; font-size: 8px; letter-spacing: 1px;
+    bottom: 4px; left: 6px; font-size: 8px; letter-spacing: 1px; pointer-events: none;
   }
   .mini-video-overlay.no-video::after {
     content: 'NO VIDEO';
@@ -1105,6 +1126,10 @@
     <div class="tab-pane" id="paneChat">
       <div class="chat-panel" style="flex:1" id="chatPanel">
         <div class="panel-label">COMMS</div>
+        <div class="mini-video-overlay hidden" id="miniChatOverlay" style="top:40px;right:16px;z-index:20;">
+          <video id="miniChatVideo" autoplay="" playsinline=""></video>
+          <span class="video-label">REMOTE</span>
+        </div>
         <div class="drop-overlay" id="dropOverlay">
           <div class="drop-overlay-icon">📎</div>
           <div class="drop-overlay-label">Drop file to attach</div>
@@ -1120,6 +1145,7 @@
         <button class="refresh-chat-btn" onclick="refreshScreen()" title="Refresh / Reconnect">↺</button>
         <button class="save-chat-btn" onclick="saveChatToFile()" title="Save chat as HTML">💾</button>
         <button class="clear-chat-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" title="Clear chat history">🗑</button>
+        <button class="mini-chat-btn" id="miniChatBtn" onclick="toggleMiniChatOverlay()" title="Toggle mini remote screen">📺</button>
         <button class="find-chat-btn" id="findChatBtn" title="Find in chat">🔍</button>
         <div class="file-preview-strip" id="filePreviewStrip"></div>
         <div class="chat-input-row">
@@ -1626,6 +1652,13 @@ function syncMiniVideos() {
   }
   if (miniLocalOverlay) miniLocalOverlay.classList.toggle('no-video', !localStream);
   if (miniRemoteOverlay) miniRemoteOverlay.classList.toggle('no-video', !(remoteVideo && remoteVideo.srcObject));
+  // sync mini chat overlay
+  const miniChatVideo = document.getElementById('miniChatVideo');
+  const miniChatOverlay = document.getElementById('miniChatOverlay');
+  if (miniChatVideo && remoteVideo && miniChatVideo.srcObject !== remoteVideo.srcObject) {
+    miniChatVideo.srcObject = remoteVideo.srcObject;
+  }
+  if (miniChatOverlay) miniChatOverlay.classList.toggle('no-video', !(remoteVideo && remoteVideo.srcObject));
 }
 
 function updateMiniVideoVisibility() {
@@ -1644,6 +1677,74 @@ function toggleMiniVideo() {
   updateMiniVideoVisibility();
 }
 updateMiniVideoVisibility();
+
+// ── Draggable mini video overlays ────────────────────────────
+function makeDraggable(el) {
+  let startX, startY, origLeft, origTop;
+  el.addEventListener('mousedown', onDragStart);
+  el.addEventListener('touchstart', onDragStart, {passive: false});
+  function onDragStart(e) {
+    e.preventDefault();
+    const touch = e.touches ? e.touches[0] : e;
+    const rect = el.getBoundingClientRect();
+    const parent = el.offsetParent || document.body;
+    const pr = parent.getBoundingClientRect();
+    origLeft = rect.left - pr.left;
+    origTop  = rect.top  - pr.top;
+    startX = touch.clientX;
+    startY = touch.clientY;
+    el.style.right = 'auto';
+    el.style.bottom = 'auto';
+    el.style.left = origLeft + 'px';
+    el.style.top  = origTop  + 'px';
+    el.classList.add('dragging');
+    document.addEventListener('mousemove', onDragMove);
+    document.addEventListener('touchmove', onDragMove, {passive: false});
+    document.addEventListener('mouseup', onDragEnd);
+    document.addEventListener('touchend', onDragEnd);
+  }
+  function onDragMove(e) {
+    e.preventDefault();
+    const touch = e.touches ? e.touches[0] : e;
+    const dx = touch.clientX - startX;
+    const dy = touch.clientY - startY;
+    const parent = el.offsetParent || document.body;
+    const pr = parent.getBoundingClientRect();
+    const maxLeft = pr.width  - el.offsetWidth;
+    const maxTop  = pr.height - el.offsetHeight;
+    el.style.left = Math.max(0, Math.min(maxLeft, origLeft + dx)) + 'px';
+    el.style.top  = Math.max(0, Math.min(maxTop,  origTop  + dy)) + 'px';
+  }
+  function onDragEnd() {
+    el.classList.remove('dragging');
+    document.removeEventListener('mousemove', onDragMove);
+    document.removeEventListener('touchmove', onDragMove);
+    document.removeEventListener('mouseup', onDragEnd);
+    document.removeEventListener('touchend', onDragEnd);
+  }
+}
+['miniLocalOverlay','miniRemoteOverlay','miniChatOverlay'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) makeDraggable(el);
+});
+
+// ── Mini remote screen in Chat tab ───────────────────────────
+let miniChatVisible = false;
+function toggleMiniChatOverlay() {
+  miniChatVisible = !miniChatVisible;
+  const overlay = document.getElementById('miniChatOverlay');
+  const btn     = document.getElementById('miniChatBtn');
+  if (!overlay) return;
+  overlay.classList.toggle('hidden', !miniChatVisible);
+  if (btn) btn.classList.toggle('active', miniChatVisible);
+  if (miniChatVisible) {
+    const miniChatVideo = document.getElementById('miniChatVideo');
+    const remoteVideo   = document.getElementById('remoteVideo');
+    if (miniChatVideo && remoteVideo && miniChatVideo.srcObject !== remoteVideo.srcObject) {
+      miniChatVideo.srcObject = remoteVideo.srcObject;
+    }
+  }
+}
 
 function linkify(text) {
   const frag = document.createDocumentFragment();
@@ -2745,7 +2846,6 @@ function onDrop() {
   document.getElementById('remoteWrap').classList.remove('video-off', 'no-video');
   document.getElementById('remoteWrap').classList.add('waiting');
   setStatus('calling');
-  playTone('dropped');
   entry('Link lost — retrying in 5s', 'sys');
   retryTimer = setTimeout(dial, 5000);
 }
