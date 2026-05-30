@@ -1096,8 +1096,8 @@
           <button class="chat-find-close" id="chatFindClose" title="Close">✕</button>
         </div>
         <div class="chat" id="chat"></div>
-        <button class="clear-chat-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" title="Clear chat history">🗑</button>
         <button class="save-chat-btn" onclick="saveChatToFile()" title="Save chat as HTML">💾</button>
+        <button class="clear-chat-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" title="Clear chat history">🗑</button>
         <button class="find-chat-btn" id="findChatBtn" title="Find in chat">🔍</button>
         <div class="file-preview-strip" id="filePreviewStrip"></div>
         <div class="chat-input-row">
@@ -1499,6 +1499,12 @@ function entry(msg, cls='sys') {
   logEl.scrollTop = logEl.scrollHeight;
 }
 
+function scrollToBottom() {
+  requestAnimationFrame(() => {
+    chat.scrollTop = chat.scrollHeight;
+  });
+}
+
 function setStatus(state) {
   linkLed.className = 'led';
   if (state === 'standby')      { linkLed.classList.add('on-cyan');   statusEl.textContent = 'STANDBY'; }
@@ -1612,7 +1618,7 @@ function loadHistory() {
     divider2.style.cssText = 'text-align:center;font-size:9px;color:#888;letter-spacing:2px;padding:4px 0;';
     divider2.textContent = '— NOW —';
     chat.appendChild(divider2);
-    chat.scrollTop = chat.scrollHeight;
+    scrollToBottom();
   } catch(e) {}
 }
 
@@ -1886,7 +1892,7 @@ function addBubble(text, mine, ts, save = true) {
   wrap.addEventListener('mouseleave', () => _hidePeek(wrap));
   wrap.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') _togglePeek(wrap); });
   chat.appendChild(wrap);
-  chat.scrollTop = chat.scrollHeight;
+  scrollToBottom();
   // Badge: notify on video tab when a new incoming message arrives
   if (!mine && activeTab !== 'chat') {
     unreadCount++;
@@ -2163,7 +2169,7 @@ function addTransferProgress(id, name) {
   el.id = 'xfer-' + id;
   el.innerHTML = '<div class="who">ALPHA</div><div class="xfer-label">📥 ' + name + ' — <span class="xfer-pct">0%</span></div>';
   chat.appendChild(el);
-  chat.scrollTop = chat.scrollHeight;
+  scrollToBottom();
 }
 function updateTransferProgress(id, received, total) {
   const el = document.getElementById('xfer-' + id);
@@ -2208,7 +2214,7 @@ function addMediaBubble(name, type, dataUrl, mine) {
   time.textContent = formatTs(Date.now());
   wrap.appendChild(time);
   chat.appendChild(wrap);
-  chat.scrollTop = chat.scrollHeight;
+  scrollToBottom();
 }
 
 // ── Lightbox close ────────────────────────────────────────────
