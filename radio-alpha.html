@@ -34,6 +34,8 @@
     font-family: 'Share Tech Mono', monospace;
     font-size: 13px;
     height: 100vh;
+    height: -webkit-fill-available;
+    height: 100dvh;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -126,6 +128,7 @@
     border-radius: 4px;
     padding: 8px;
     margin-bottom: 2px;
+    position: relative;
   }
 
   .bubble {
@@ -161,6 +164,19 @@
     font-size: 11px; color: #888; letter-spacing: 0.5px;
     margin-top: 5px; text-align: right;
   }
+  /* Original-text peek on hover / tap */
+  .bubble[data-orig] { cursor: default; }
+  .bubble[data-orig] .msg-text { transition: opacity 0.15s; }
+  .bubble.show-orig .msg-text  { opacity: 0.25; }
+  .bubble .orig-peek {
+    display: none; font-style: italic; opacity: 0.72;
+    font-size: 0.85em; margin-top: 4px;
+    border-top: 1px dashed rgba(128,128,128,0.4); padding-top: 4px;
+    user-select: text; -webkit-user-select: text;
+  }
+  .bubble.show-orig .orig-peek { display: block; }
+  .bubble.peek-locked { outline: 2px solid rgba(255,200,0,0.55); outline-offset: 2px; }
+  .bubble.peek-locked .orig-peek { opacity: 1; }
 
   /* connection quality */
   .quality-item {
@@ -182,7 +198,7 @@
   .quality-bars span.lit-bad  { background: var(--danger); }
 
   .chat-input-row {
-    display: flex; gap: 8px; margin-top: 10px; flex-shrink: 0;
+    display: flex; gap: 8px; margin-top: 10px; flex-shrink: 0; align-items: flex-end;
   }
   .chat-input {
     flex: 1;
@@ -190,6 +206,10 @@
     color: var(--text); padding: 7px 10px; border-radius: 4px;
     font-family: 'Share Tech Mono', monospace; font-size: 16px;
     outline: none; transition: border-color 0.2s;
+    resize: none; overflow-y: hidden; line-height: 1.4;
+    min-height: 34px; max-height: 160px; overflow-y: auto;
+    word-wrap: break-word; white-space: pre-wrap;
+    align-self: flex-end;
   }
   .chat-input:focus   { border-color: var(--accent); }
   .chat-input:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -197,7 +217,7 @@
 
   .clear-chat-btn {
     position: absolute;
-    bottom: 58px; left: 10px;
+    bottom: 58px; right: 10px;
     z-index: 10;
     background: rgba(5,15,21,0.55);
     border: 1px solid var(--border);
@@ -214,7 +234,7 @@
 
   .save-chat-btn {
     position: absolute;
-    bottom: 58px; right: 10px;
+    bottom: 58px; left: 10px;
     z-index: 10;
     background: rgba(5,15,21,0.55);
     border: 1px solid var(--border);
@@ -228,6 +248,23 @@
     transition: opacity 0.15s, border-color 0.15s;
   }
   .save-chat-btn:hover, .save-chat-btn:active { opacity: 1; border-color: var(--accent, #00d4ff); }
+
+  .refresh-chat-btn {
+    position: absolute;
+    top: 10px; left: 10px;
+    z-index: 10;
+    background: rgba(5,15,21,0.55);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-dim);
+    font-size: 14px;
+    line-height: 1;
+    padding: 4px 6px;
+    cursor: pointer;
+    opacity: 0.45;
+    transition: opacity 0.15s, border-color 0.15s;
+  }
+  .refresh-chat-btn:hover, .refresh-chat-btn:active { opacity: 1; border-color: var(--accent, #00d4ff); color: var(--accent); }
 
   .find-chat-btn {
     position: absolute;
@@ -453,8 +490,23 @@
   .log-panel {
     background: var(--panel); border: 1px solid var(--border);
     border-radius: 8px; padding: 10px 14px; position: relative;
-    flex-shrink: 0;
+    flex-shrink: 0; transition: padding 0.2s;
   }
+  .log-panel.collapsed { padding-bottom: 10px; min-height: 44px; }
+  .log-panel.collapsed .log { display: none; }
+  .log-panel .panel-label {
+    position: static; background: none; padding: 0;
+    cursor: pointer; user-select: none;
+    display: flex; align-items: center; gap: 6px;
+    touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+    min-height: 28px; width: 100%;
+  }
+  .log-toggle-arrow {
+    font-size: 10px; color: var(--text-dim);
+    margin-left: auto; transition: transform 0.2s;
+    display: inline-block; line-height: 1;
+  }
+  .log-panel.collapsed .log-toggle-arrow { transform: rotate(-90deg); }
   .log {
     height: 76px;
     overflow-y: auto;
@@ -463,6 +515,7 @@
     background: #ffffff;
     border-radius: 4px;
     padding: 4px 8px;
+    margin-top: 6px;
   }
   .log-entry {
     font-size: 10px; line-height: 1.9; letter-spacing: 0.5px;
@@ -703,14 +756,20 @@
     transition: border-color 0.15s;
   }
   #translateTrigger:hover { border-color: var(--accent); }
-  #translateDropdown {
-    display: none; position: fixed;
+  #translateDropdownWrap {
+    display: none; position: absolute;
+    top: 100%; left: 0; right: 0;
     background: #0d1b2a; border: 1px solid var(--accent);
     border-radius: 6px; z-index: 99999;
-    max-height: 260px; overflow-y: auto;
     min-width: 200px; box-shadow: 0 8px 32px rgba(0,0,0,0.7);
+    padding: 0;
   }
-  #translateDropdown.open { display: block; }
+  #translateDropdownWrap.open { display: block; }
+  #translateDropdown {
+    display: block;
+    max-height: 220px; overflow-y: auto;
+    margin: 0; padding: 0;
+  }
   #translateDropdown li {
     list-style: none; padding: 7px 14px;
     font-size: 13px; font-family: 'Share Tech Mono', monospace;
@@ -802,7 +861,7 @@
   .login-presence .ptxt.p-reachable { color: #ffaa00; }
   .login-presence .ptxt.p-offline   { color: #ff4444; }
 </style>
-<script src="./ALPHA — Field Radio v6_files/peerjs.min.js.download"></script></head>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js"></script></head>
 <body>
 
 <div class="session-overlay" id="sessionOverlay">
@@ -820,9 +879,9 @@
     </div>
     <div class="login-timeout">
       <div class="login-timeout-label">
-        <span>Login Timeout</span><span id="loginTimeoutSec">43s</span>
+        <span>Login Timeout</span><span id="loginTimeoutSec">60s</span>
       </div>
-      <div class="login-timeout-track"><div class="login-timeout-fill" id="loginTimeoutFill" style="width: 71.6667%; background: var(--accent);"></div></div>
+      <div class="login-timeout-track"><div class="login-timeout-fill" id="loginTimeoutFill" style="width: 100%; background: var(--accent);"></div></div>
     </div>
     <div class="login-presence" id="loginPresence">
       <div class="pled" id="loginPresenceLed"></div>
@@ -860,8 +919,7 @@
     <label>🌐 TRANSLATE</label>
     <button id="translateTrigger" onclick="toggleTranslateDrop(event)">SELECT LANGUAGE</button>
     <button id="translateResetBtn" onclick="resetTranslate()">ORIGINAL</button>
-    <ul id="translateDropdown">
-      <input id="translateSearch" type="text" placeholder="Search language…" oninput="filterLangs(this.value)" autocomplete="off">
+    <div id="translateDropdownWrap"><input id="translateSearch" type="text" placeholder="Search language…" oninput="filterLangs(this.value)" autocomplete="off"><ul id="translateDropdown">
           <li data-lang="af" tabindex="0">Afrikaans</li>
           <li data-lang="sq" tabindex="0">Albanian</li>
           <li data-lang="am" tabindex="0">Amharic</li>
@@ -973,6 +1031,7 @@
           <li data-lang="zu" tabindex="0">Zulu</li>
     </ul>
   </div>
+  </div>
   <div class="tab-bar">
     <button class="tab-btn" id="tabLocalBtn" onclick="switchTab(&#39;local&#39;)">LOCAL</button>
     <button class="tab-btn active" id="tabRemoteBtn" onclick="switchTab(&#39;remote&#39;)">REMOTE</button>
@@ -1057,20 +1116,20 @@
           <button class="chat-find-nav" id="chatFindNext" title="Next match">▼</button>
           <button class="chat-find-close" id="chatFindClose" title="Close">✕</button>
         </div>
-        <div class="chat" id="chat"></div>
-        <button class="clear-chat-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" title="Clear chat history">🗑</button>
+        <div class="chat" id="chat"><button onclick="refreshScreen()" title="Refresh / Reconnect" style="position:sticky; top:0; left:0; align-self:flex-start; background:rgba(30,58,95,0.82); border:1px solid #00d4ff; color:#00d4ff; border-radius:4px; padding:3px 9px; font-size:12px; font-family:'Share Tech Mono',monospace; cursor:pointer; letter-spacing:1px; z-index:10; flex-shrink:0;">↺</button></div>
         <button class="save-chat-btn" onclick="saveChatToFile()" title="Save chat as HTML">💾</button>
+        <button class="clear-chat-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" title="Clear chat history">🗑</button>
         <button class="find-chat-btn" id="findChatBtn" title="Find in chat">🔍</button>
         <div class="file-preview-strip" id="filePreviewStrip"></div>
         <div class="chat-input-row">
           <button class="attach-btn" id="attachBtn" title="Attach file / photo / video">📎</button>
           <input type="file" id="fileInput" multiple="" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx" style="display:none">
-          <input class="chat-input" id="chatInput" placeholder="TYPE MESSAGE…">
+          <textarea class="chat-input" id="chatInput" placeholder="TYPE MESSAGE…" rows="1"></textarea>
           <button class="btn" id="sendBtn">SEND</button>
         </div>
       </div>
-      <div class="log-panel">
-        <div class="panel-label">SYS LOG</div>
+      <div class="log-panel collapsed" id="logPanel">
+        <div class="panel-label" onclick="toggleLogPanel()">SYS LOG<span class="log-toggle-arrow" id="logToggleArrow">▾</span></div>
         <div class="log" id="log"><span class="log-entry sys">15:59:51  PREFILL: code=123 vid=false aud=false</span></div>
       </div>
     </div>
@@ -1080,30 +1139,56 @@
 <div id="lightbox"><img id="lightboxImg" src="file:///C:/Users/barry/Downloads/radio-alpha_23.html" alt=""></div>
 
 <script>
-// Load PeerJS with CDN fallback
-(function loadPeerJS(urls, idx) {
-  if (idx >= urls.length) {
-    entry('ERROR: Could not load PeerJS from any CDN — check internet connection', 'err');
-    return;
-  }
-  const s = document.createElement('script');
-  s.src = urls[idx];
-  s.onload = () => { entry('PeerJS ready (' + urls[idx].split('/')[2] + ')', 'sys'); };
-  s.onerror = () => { entry('CDN failed: ' + urls[idx].split('/')[2] + ' — trying next…', 'sys'); loadPeerJS(urls, idx + 1); };
-  document.head.appendChild(s);
-})([
-  'https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js',
-  'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js'
-], 0);
+// ── Audio tone engine (defined first so all code can call playTone) ──────────
+const _tones = {
+  msg_in:       { freqs:[880,1100],       durs:[0.07,0.09],       wave:'sine',     vol:0.22 },
+  connected:    { freqs:[660,880,1046],   durs:[0.07,0.07,0.10],  wave:'sine',     vol:0.16 },
+  linked:       { freqs:[523,659,784],    durs:[0.10,0.10,0.18],  wave:'triangle', vol:0.18 },
+  dropped:      { freqs:[660,440,330],    durs:[0.10,0.10,0.18],  wave:'sine',     vol:0.16 },
+  radio_online: { freqs:[440,550],        durs:[0.06,0.10],       wave:'sine',     vol:0.13 },
+  call_in:      { freqs:[880,880,880],    durs:[0.08,0.05,0.13],  wave:'square',   vol:0.10 },
+  file_in:      { freqs:[660,880],        durs:[0.08,0.14],       wave:'triangle', vol:0.14 },
+  error:        { freqs:[300,250],        durs:[0.12,0.18],       wave:'sawtooth', vol:0.14 },
+};
+var _actx = null;
+function playTone(name) {
+  var t = _tones[name]; if (!t) return;
+  try {
+    if (!_actx) _actx = new (window.AudioContext || window.webkitAudioContext)();
+    var play = function() {
+      var when = _actx.currentTime + 0.015;
+      t.freqs.forEach(function(hz, i) {
+        var osc  = _actx.createOscillator();
+        var gain = _actx.createGain();
+        osc.connect(gain);
+        gain.connect(_actx.destination);
+        osc.type = t.wave;
+        osc.frequency.value = hz;
+        gain.gain.setValueAtTime(0, when);
+        gain.gain.linearRampToValueAtTime(t.vol, when + 0.008);
+        gain.gain.setValueAtTime(t.vol, when + t.durs[i] - 0.012);
+        gain.gain.linearRampToValueAtTime(0, when + t.durs[i]);
+        osc.start(when);
+        osc.stop(when + t.durs[i] + 0.05);
+        when += t.durs[i];
+      });
+    };
+    if (_actx.state === 'suspended') { _actx.resume().then(play); } else { play(); }
+  } catch(e) { console.warn('playTone:', e); }
+}
+// Unlock on first user gesture
+document.addEventListener('click', function() {
+  if (_actx && _actx.state === 'suspended') _actx.resume();
+}, true);
 
 // Free public TURN servers (Open Relay Project) — essential for mobile/carrier-NAT networks
 const ICE_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
-  { urls: 'stun:openrelay.metered.ca:80' },
-  { urls: 'turn:openrelay.metered.ca:80',       username: 'openrelayproject', credential: 'openrelayproject' },
-  { urls: 'turn:openrelay.metered.ca:443',      username: 'openrelayproject', credential: 'openrelayproject' },
-  { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
+  { urls: 'stun:stun.cloudflare.com:3478' },
+  { urls: 'turn:turn.cloudflare.com:3478',      username: 'free',             credential: 'free' },
+  { urls: 'turn:turn.cloudflare.com:5349',      username: 'free',             credential: 'free' },
+  { urls: 'turn:turn.cloudflare.com:5349?transport=tcp', username: 'free',    credential: 'free' }
 ];
 
 let MY_ID, REMOTE_ID;
@@ -1123,12 +1208,26 @@ const logEl     = document.getElementById('log');
 const chat      = document.getElementById('chat');
 const chatInput = document.getElementById('chatInput');
 const sendBtn   = document.getElementById('sendBtn');
-// Use click only — touchstart+preventDefault was swallowing the input value
-// on Android Chrome before the keyboard blur resolved. touch-action:manipulation
-// on the button (set in CSS) eliminates the 300ms tap delay without needing
-// touchstart at all.
+// On Android, tapping Send while the keyboard is open causes the browser to
+// blur the textarea first, then fire click — but if the keyboard dismiss
+// animation interrupts the tap sequence the click is swallowed entirely and
+// the button appears frozen. Fix: intercept pointerdown, call preventDefault()
+// (stops the blur/keyboard-dismiss from happening mid-tap), read the input
+// value while focus is still live, then send. The click listener is kept as
+// a fallback for mouse users and assistive technology.
+sendBtn.addEventListener('pointerdown', e => {
+  if (e.pointerType !== 'mouse') {
+    e.preventDefault(); // keeps keyboard open, prevents blur swallowing the click
+    sendChat();
+  }
+});
 sendBtn.disabled = true;
-sendBtn.addEventListener('click', sendChat);
+sendBtn.addEventListener('click', e => {
+  // Only handle mouse clicks here; touch is handled by pointerdown above
+  if (!e.isTrusted || e.detail === 0) return; // synthetic / AT events still go through
+  if (e.pointerType === 'touch' || e.pointerType === 'pen') return;
+  sendChat();
+});
 
 function startSession() {
   stopPresencePolling();
@@ -1231,21 +1330,17 @@ let _translateName = null;
 
 function toggleTranslateDrop(e) {
   e.stopPropagation();
-  const dd = document.getElementById('translateDropdown');
-  const trigger = document.getElementById('translateTrigger');
-  const rect = trigger.getBoundingClientRect();
-  dd.classList.toggle('open');
-  if (dd.classList.contains('open')) {
-    dd.style.left  = rect.left + 'px';
-    dd.style.top   = (rect.bottom + 4) + 'px';
-    dd.style.width = Math.max(rect.width, 200) + 'px';
+  const wrap = document.getElementById('translateDropdownWrap');
+  wrap.classList.toggle('open');
+  if (wrap.classList.contains('open')) {
     const search = document.getElementById('translateSearch');
     search.value = '';
     filterLangs('');
     // Scroll to the currently selected language
+    const dd = document.getElementById('translateDropdown');
     const selected = dd.querySelector('li.selected');
     if (selected) setTimeout(() => selected.scrollIntoView({ block: 'nearest' }), 30);
-    setTimeout(() => search.focus(), 50);
+    setTimeout(() => search.focus(), 30);
   }
 }
 
@@ -1265,22 +1360,54 @@ async function translateText(text, targetLang) {
       + encodeURIComponent(targetLang) + '&dt=t&q=' + encodeURIComponent(text);
     const res = await fetch(url);
     const data = await res.json();
-    if (data && data[0] && data[0][0] && data[0][0][0]) {
-      return data[0][0][0];
+    if (data && data[0]) {
+      const joined = data[0].map(seg => (seg && seg[0]) ? seg[0] : '').join('');
+      if (joined) return joined;
     }
   } catch(e) {
     entry('Translate (Google) error: ' + e.message, 'err');
   }
-  // Fallback: MyMemory
+  // Fallback: MyMemory (500-char limit per request — chunk long text)
   try {
-    const url2 = 'https://api.mymemory.translated.net/get?q='
-      + encodeURIComponent(text) + '&langpair=auto|' + encodeURIComponent(targetLang);
-    const res2 = await fetch(url2);
-    const data2 = await res2.json();
-    if (data2.responseStatus === 200 && data2.responseData && data2.responseData.translatedText) {
-      return data2.responseData.translatedText;
+    const CHUNK = 490;
+    if (text.length <= CHUNK) {
+      const url2 = 'https://api.mymemory.translated.net/get?q='
+        + encodeURIComponent(text) + '&langpair=auto|' + encodeURIComponent(targetLang);
+      const res2 = await fetch(url2);
+      const data2 = await res2.json();
+      if (data2.responseStatus === 200 && data2.responseData && data2.responseData.translatedText) {
+        return data2.responseData.translatedText;
+      } else {
+        entry('Translate (MyMemory) failed: ' + (data2.responseDetails || data2.responseStatus), 'err');
+      }
     } else {
-      entry('Translate (MyMemory) failed: ' + (data2.responseDetails || data2.responseStatus), 'err');
+      // Split into ≤490-char word-boundary chunks, translate each, rejoin
+      const words = text.split(' ');
+      const chunks = [];
+      let current = '';
+      for (const word of words) {
+        if ((current + (current ? ' ' : '') + word).length > CHUNK) {
+          if (current) chunks.push(current);
+          current = word;
+        } else {
+          current = current ? current + ' ' + word : word;
+        }
+      }
+      if (current) chunks.push(current);
+      const parts = [];
+      for (const chunk of chunks) {
+        const url2 = 'https://api.mymemory.translated.net/get?q='
+          + encodeURIComponent(chunk) + '&langpair=auto|' + encodeURIComponent(targetLang);
+        const res2 = await fetch(url2);
+        const data2 = await res2.json();
+        if (data2.responseStatus === 200 && data2.responseData && data2.responseData.translatedText) {
+          parts.push(data2.responseData.translatedText);
+        } else {
+          entry('Translate (MyMemory) chunk failed: ' + (data2.responseDetails || data2.responseStatus), 'err');
+          parts.push(chunk); // keep original for failed chunk
+        }
+      }
+      return parts.join(' ');
     }
   } catch(e2) {
     entry('Translate (MyMemory) error: ' + e2.message, 'err');
@@ -1295,7 +1422,7 @@ async function translateBubblesSequentially(langCode) {
   let count = 0;
   for (const b of bubbles) {
     if (_translateLang !== langCode) return;  // user changed/reset — abort
-    const msgDiv = b.querySelector('div:not(.who):not(.ts)');
+    const msgDiv = b.querySelector('.msg-text');
     if (!msgDiv) continue;
     if (!b.dataset.orig) b.dataset.orig = msgDiv.innerText;
     if (!b.dataset.orig.trim()) continue;
@@ -1311,7 +1438,7 @@ function applyTranslate(code, name) {
   _translateLang = code;
   _translateName = name;
   document.getElementById('translateTrigger').textContent = name.toUpperCase();
-  document.getElementById('translateDropdown').classList.remove('open');
+  document.getElementById('translateDropdownWrap').classList.remove('open');
   // Mark selected item in dropdown
   document.querySelectorAll('#translateDropdown li').forEach(li => {
     li.classList.toggle('selected', li.dataset.lang === code);
@@ -1333,7 +1460,7 @@ function resetTranslate() {
   // Restore original text in all bubbles
   document.querySelectorAll('#chat .bubble').forEach(b => {
     if (b.dataset.orig) {
-      const msgDiv = b.querySelector('div:not(.who):not(.ts)');
+      const msgDiv = b.querySelector('.msg-text');
       if (msgDiv) msgDiv.textContent = b.dataset.orig;
     }
   });
@@ -1346,7 +1473,7 @@ document.querySelectorAll('#translateDropdown li').forEach(li => {
 
 // Close dropdown on outside click
 document.addEventListener('click', () => {
-  document.getElementById('translateDropdown').classList.remove('open');
+  document.getElementById('translateDropdownWrap').classList.remove('open');
 });
 
 function prefillLogin() {
@@ -1380,11 +1507,13 @@ prefillLogin();
 let loginTimeoutInterval;
 let loginSecsLeft = 60;
 function startLoginTimeout() {
+  clearInterval(loginTimeoutInterval);  // prevent double-interval from stale saved HTML
   loginSecsLeft = 60;
   const fill = document.getElementById('loginTimeoutFill');
   const sec  = document.getElementById('loginTimeoutSec');
   fill.style.width = '100%';
   fill.style.background = 'var(--accent)';
+  sec.textContent = '60s';
   loginTimeoutInterval = setInterval(() => {
     loginSecsLeft--;
     const pct = (loginSecsLeft / 60) * 100;
@@ -1437,6 +1566,14 @@ function entry(msg, cls='sys') {
   logEl.appendChild(d);
   logEl.scrollTop = logEl.scrollHeight;
 }
+
+function scrollToBottom() {
+  requestAnimationFrame(() => {
+    chat.scrollTop = chat.scrollHeight;
+  });
+}
+
+
 
 function setStatus(state) {
   linkLed.className = 'led';
@@ -1552,7 +1689,7 @@ function loadHistory() {
     divider2.style.cssText = 'text-align:center;font-size:9px;color:#888;letter-spacing:2px;padding:4px 0;';
     divider2.textContent = '— NOW —';
     chat.appendChild(divider2);
-    chat.scrollTop = chat.scrollHeight;
+    scrollToBottom();
   } catch(e) {}
 }
 
@@ -1572,7 +1709,7 @@ function saveChatToFile() {
     const mine   = bubble.classList.contains('mine');
     const who    = whoEl  ? whoEl.textContent.trim()  : (mine ? 'ALPHA' : 'BRAVO');
     const time   = tsEl   ? tsEl.textContent.trim()   : '';
-    const msgDiv = bubble.querySelector('div:not(.who):not(.ts)');
+    const msgDiv = bubble.querySelector('.msg-text');
     const imgEl  = bubble.querySelector('img.media-img');
     const vidEl  = bubble.querySelector('video.media-vid');
     const fileEl = bubble.querySelector('a.file-attach-link');
@@ -1597,7 +1734,8 @@ function saveChatToFile() {
       tmp.appendChild(msgDiv.cloneNode(true));
       html = tmp.innerHTML;
     }
-    if (html) bubbles.push({ who, time, mine, html, downloadHtml: downloadHtml || '' });
+    const orig = (bubble.dataset.orig && bubble.dataset.orig !== (msgDiv && msgDiv.textContent)) ? bubble.dataset.orig : '';
+    if (html) bubbles.push({ who, time, mine, html, downloadHtml: downloadHtml || '', orig });
   });
 
   if (!bubbles.length) { entry('Nothing to save — chat is empty', 'sys'); return; }
@@ -1613,8 +1751,9 @@ function saveChatToFile() {
     return `<div style="display:flex;justify-content:${align};margin:6px 0;">
   <div style="max-width:75%;padding:10px 14px;border-radius:6px;background:${bg};border:1px solid ${border};font-size:18px;font-weight:bold;color:#000;line-height:1.55;word-break:break-word;">
     <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;font-family:monospace;color:${whoCol};margin-bottom:5px;font-weight:bold;">${b.who}</div>
-    <div>${b.html}</div>
+    <div${b.orig ? ' title="' + b.orig.replace(/"/g, '&quot;') + '" style="cursor:help;"' : ''}>${b.html}</div>
     ${b.downloadHtml ? '<div style="margin-top:5px;">' + b.downloadHtml + '</div>' : ''}
+    ${b.orig ? '<div style="font-size:18px;color:#444;font-style:italic;margin-top:6px;border-top:1px dashed #ccc;padding-top:6px;font-weight:bold;line-height:1.55;">' + b.orig.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>' : ''}
     <div style="font-size:11px;color:#555;text-align:right;margin-top:5px;font-weight:normal;">${b.time}</div>
   </div>
 </div>`;
@@ -1787,6 +1926,41 @@ function formatTs(ts) {
   return d.toTimeString().slice(0,5);
 }
 
+// ── Original-text peek helpers ────────────────────────────────
+function _peekOrig(wrap) {
+  const curr = wrap.querySelector('.msg-text');
+  if (!curr || !wrap.dataset.orig) return;
+  const currText = curr.innerText || curr.textContent;
+  if (currText === wrap.dataset.orig) return; // not translated, nothing to show
+  wrap.querySelector('.orig-peek').textContent = wrap.dataset.orig;
+  wrap.classList.add('show-orig');
+  scrollToBottom();
+}
+function _hidePeek(wrap) {
+  if (wrap.classList.contains('peek-locked')) return; // locked — don't hide
+  wrap.classList.remove('show-orig');
+  scrollToBottom();
+}
+function _togglePeek(wrap) {
+  if (wrap.classList.contains('show-orig')) { _hidePeek(wrap); } else { _peekOrig(wrap); }
+}
+function _toggleLock(wrap) {
+  const curr = wrap.querySelector('.msg-text');
+  if (!curr || !wrap.dataset.orig) return;
+  const currText = curr.innerText || curr.textContent;
+  if (currText === wrap.dataset.orig) return; // not translated, nothing to lock
+  if (wrap.classList.contains('peek-locked')) {
+    // Unlock — close the peek
+    wrap.classList.remove('peek-locked');
+    wrap.classList.remove('show-orig');
+    scrollToBottom();
+  } else {
+    // Lock open
+    wrap.classList.add('peek-locked');
+    _peekOrig(wrap);
+  }
+}
+
 function addBubble(text, mine, ts, save = true) {
   if (save) saveMessage(text, mine);
   const now = ts || Date.now();
@@ -1796,16 +1970,27 @@ function addBubble(text, mine, ts, save = true) {
   who.className = 'who';
   who.textContent = mine ? 'ALPHA' : 'BRAVO';
   const msg = document.createElement('div');
+  msg.className = 'msg-text';
   msg.appendChild(linkify(text));
+  const origPeek = document.createElement('div');
+  origPeek.className = 'orig-peek';
   const time = document.createElement('div');
   time.className = 'ts';
   time.textContent = formatTs(now);
+  wrap.dataset.orig = text;
   wrap.appendChild(who);
   wrap.appendChild(msg);
+  wrap.appendChild(origPeek);
   wrap.appendChild(time);
+  // Show original text on hover (desktop) or tap (mobile); click to lock open for copying
+  wrap.addEventListener('mouseenter', () => _peekOrig(wrap));
+  wrap.addEventListener('mouseleave', () => _hidePeek(wrap));
+  wrap.addEventListener('click', () => _toggleLock(wrap));
+  wrap.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') _togglePeek(wrap); });
   chat.appendChild(wrap);
-  chat.scrollTop = chat.scrollHeight;
-  // Badge: notify on video tab when a new incoming message arrives
+  scrollToBottom();
+  // Tone + badge: notify on incoming message
+  if (!mine) { playTone('msg_in'); }
   if (!mine && activeTab !== 'chat') {
     unreadCount++;
     msgBadge.textContent = unreadCount;
@@ -1817,7 +2002,7 @@ function addBubble(text, mine, ts, save = true) {
   if (_translateLang) {
     wrap.dataset.orig = text;
     translateText(text, _translateLang).then(t => {
-      if (t) { const md = wrap.querySelector('div:not(.who):not(.ts)'); if (md) md.textContent = t; }
+      if (t) { const md = wrap.querySelector('.msg-text'); if (md) md.textContent = t; }
     });
   }
 }
@@ -1830,11 +2015,25 @@ function sendChat() {
   const txt = chatInput.value.trim();
   const hasFiles = pendingFiles.length > 0;
   if (!txt && !hasFiles) return;
-  if (!dataConn) { return; }  // button is disabled when not connected — silent guard
+  if (!dataConn || !dataConn.open) {
+    if (dataConn && !dataConn.open) {
+      entry('Chat channel lost — reconnecting…', 'sys');
+      try { dataConn.close(); } catch(e) {}
+      dataConn = null;
+      openDataConn();
+    }
+    entry('Message not sent — channel not ready', 'err');
+    return;
+  }
   if (txt) {
-    dataConn.send(txt);
+    try {
+      dataConn.send(txt);
+    } catch(e) {
+      entry('Send failed: ' + e.message, 'err');
+      return;
+    }
     addBubble(txt, true);
-    chatInput.value = '';
+    chatInput.value = ''; chatInput.style.height = 'auto';
   }
   if (hasFiles) {
     sendPendingFiles();
@@ -2013,7 +2212,7 @@ function fileIcon(type) {
 }
 
 // ── Send pending files over data channel (chunked) ───────────
-const FILE_CHUNK = 48 * 1024; // ~48KB base64 chars — safely under JSON channel limit
+const FILE_CHUNK = 8 * 1024; // 8KB base64 chars — safe for all platforms incl. Android WebView
 
 function sendPendingFiles() {
   [...pendingFiles].forEach(item => sendFileChunked(item));
@@ -2029,11 +2228,11 @@ function sendFileChunked(item) {
   try {
     for (let i = 0; i < total; i++) {
       const chunk = data.slice(i * FILE_CHUNK, (i + 1) * FILE_CHUNK);
-      dataConn.send(JSON.stringify({
+      dataConn.send({
         __chunk: true, id,
         name: item.file.name, type: item.file.type,
         index: i, total, data: chunk
-      }));
+      });
     }
     addMediaBubble(item.file.name, item.file.type, item.dataUrl, true);
   } catch(e) {
@@ -2057,6 +2256,7 @@ function receiveChunk(f) {
     const dataUrl = rec.parts.join('');
     delete _incomingChunks[f.id];
     removeTransferProgress(f.id);
+    playTone('file_in');
     addMediaBubble(rec.name, rec.type, dataUrl, false);
   }
 }
@@ -2068,7 +2268,7 @@ function addTransferProgress(id, name) {
   el.id = 'xfer-' + id;
   el.innerHTML = '<div class="who">BRAVO</div><div class="xfer-label">📥 ' + name + ' — <span class="xfer-pct">0%</span></div>';
   chat.appendChild(el);
-  chat.scrollTop = chat.scrollHeight;
+  scrollToBottom();
 }
 function updateTransferProgress(id, received, total) {
   const el = document.getElementById('xfer-' + id);
@@ -2113,15 +2313,38 @@ function addMediaBubble(name, type, dataUrl, mine) {
   time.textContent = formatTs(Date.now());
   wrap.appendChild(time);
   chat.appendChild(wrap);
-  chat.scrollTop = chat.scrollHeight;
+  scrollToBottom();
 }
 
 // ── Lightbox close ────────────────────────────────────────────
 lightbox.addEventListener('click', () => { lightbox.classList.remove('open'); lightboxImg.src = ''; });
 
-chatInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); sendChat(); } });
+// Auto-resize textarea as user types
+function resizeChatInput() {
+  chatInput.style.height = 'auto';
+  chatInput.style.height = Math.min(chatInput.scrollHeight, 160) + 'px';
+}
+chatInput.addEventListener('input', resizeChatInput);
+
+// Enter sends, Shift+Enter inserts newline
+chatInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendChat();
+  }
+});
 
 
+
+function toggleLogPanel() {
+  const p = document.getElementById('logPanel');
+  p.classList.toggle('collapsed');
+  // If expanding, scroll log to bottom so latest entry is visible
+  if (!p.classList.contains('collapsed')) {
+    const l = document.getElementById('log');
+    if (l) setTimeout(() => { l.scrollTop = l.scrollHeight; }, 50);
+  }
+}
 
 function init() {
   if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
@@ -2204,17 +2427,24 @@ function init() {
 }
 
 function startPeer() {
+  // Guard: PeerJS CDN may still be loading on slow mobile connections
+  if (typeof Peer === 'undefined') {
+    entry('PeerJS not ready yet — retrying in 500ms…', 'sys');
+    setTimeout(startPeer, 500);
+    return;
+  }
   // Close any stale data connection from a previous peer instance
   if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
   pendingDC = false;
   linked = false;
 
   peer = new Peer(MY_ID, {
-    
+    host: '0.peerjs.com', port: 443, path: '/', secure: true, pingInterval: 5000,
     config: { iceServers: ICE_SERVERS }
   });
 
   peer.on('open', () => {
+    playTone('radio_online');
     entry('Radio online', 'ok');
     setStatus('calling');
     dial();
@@ -2227,6 +2457,7 @@ function startPeer() {
   });
 
   peer.on('call', incoming => {
+    playTone('call_in');
     entry('Inbound call from Bravo', 'info');
     answerCall(incoming);
   });
@@ -2238,10 +2469,14 @@ function startPeer() {
   });
 
   peer.on('error', e => {
+    playTone('error');
     entry('Peer error [' + e.type + ']: ' + e.message, 'err');
     if (e.type === 'browser-incompatible') return;
     if (e.type === 'peer-unavailable') {
       entry('Bravo offline — retry in 5s', 'sys');
+      // Close the dead outgoing call so its 'close' event doesn't trigger a
+      // competing onDrop → retryTimer chain alongside this one
+      if (call) { try { call.close(); } catch(ex) {} call = null; }
       retryTimer = setTimeout(dial, 5000);
       return;
     }
@@ -2276,6 +2511,12 @@ function getCallStream() {
 function dial() {
   clearTimeout(retryTimer);
   if (linked || !localStream) return;
+  // Close stale outgoing call before redialling — prevents its 'close' event
+  // from triggering a competing onDrop → retryTimer race
+  if (call) {
+    try { call.off('close', onDrop); call.close(); } catch(e) {}
+    call = null;
+  }
   entry('Calling Bravo…', 'info');
   const c = peer.call(REMOTE_ID, getCallStream());
   attachCall(c);
@@ -2287,6 +2528,7 @@ function attachDataConn(dc) {
     if (dataConn === dc) return; // already handled
     pendingDC = false;
     dataConn = dc;
+    playTone('connected');
     entry('Chat channel open', 'ok');
     setStatus('reachable');
     document.getElementById('sendBtn').disabled = false;
@@ -2296,36 +2538,29 @@ function attachDataConn(dc) {
   // Android/WebView fallback: 'open' sometimes fires before the handler is attached
   if (dc.open) { setTimeout(onDcOpen, 0); }
   dc.on('data', msg => {
-    // Normalise to string — older Android/PeerJS may deliver as object or ArrayBuffer
-    let msgStr;
-    if (typeof msg === 'string') {
-      msgStr = msg;
-    } else if (msg instanceof ArrayBuffer) {
-      msgStr = new TextDecoder().decode(msg);
-    } else if (typeof msg === 'object' && msg !== null) {
-      try { msgStr = JSON.stringify(msg); } catch(e) { msgStr = String(msg); }
+    // PeerJS json mode delivers objects directly; binary/legacy paths deliver string/ArrayBuffer
+    let f = null;
+    let msgStr = null;
+    if (typeof msg === 'object' && msg !== null && !(msg instanceof ArrayBuffer)) {
+      f = msg; // already a parsed object — fast path
     } else {
-      msgStr = String(msg);
+      if (msg instanceof ArrayBuffer) {
+        msgStr = new TextDecoder().decode(msg);
+      } else {
+        msgStr = String(msg);
+      }
+      if (msgStr.startsWith('{')) {
+        try { f = JSON.parse(msgStr); } catch(e) {}
+      }
     }
-    if (msgStr.startsWith('{')) {
-      try {
-        const f = JSON.parse(msgStr);
-        if (f.__control === 'video') {
-          updateRemoteVideoState(f.enabled, f.hasTrack !== false);
-          return;
-        }
-        if (f.__file === true) {
-          addMediaBubble(f.name, f.type, f.data, false);
-          return;
-        }
-        if (f.__chunk === true) {
-          receiveChunk(f);
-          return;
-        }
-      } catch(e) {}
-      addBubble(msgStr, false);
+    if (f) {
+      if (f.__control === 'video') { updateRemoteVideoState(f.enabled, f.hasTrack !== false); return; }
+      if (f.__file  === true)      { playTone('file_in'); addMediaBubble(f.name, f.type, f.data, false); return; }
+      if (f.__chunk === true)      { receiveChunk(f); return; }
+      // Unknown control object — show as JSON text
+      addBubble(msgStr || JSON.stringify(f), false);
     } else {
-      addBubble(msgStr, false);
+      addBubble(msgStr || String(msg), false);
     }
   });
   dc.on('close', () => {
@@ -2437,11 +2672,11 @@ function sendVideoState() {
   if (!dataConn || !localStream) return;
   const track = localStream.getVideoTracks()[0];
   try {
-    dataConn.send(JSON.stringify({
+    dataConn.send({
       __control: 'video',
       enabled: !!(track && track.enabled),
       hasTrack: !!track
-    }));
+    });
   } catch(e) {}
 }
 
@@ -2462,6 +2697,7 @@ function attachCall(c) {
     if (linked) return;
     linked = true;
     setStatus('linked');
+    playTone('linked');
     entry('Linked to Bravo — full duplex active', 'ok');
     duplexBar.textContent = '● LIVE';
     duplexBar.className = 'duplex-overlay live';
@@ -2470,8 +2706,10 @@ function attachCall(c) {
     // Ensure data channel is open (may have failed during retry storm)
     openDataConn();
   });
-  c.on('close', onDrop);
-  c.on('error', e => { entry('Call error: ' + e.message, 'err'); onDrop(); });
+  // Only trigger onDrop if this is still the active call (guards against stale calls
+  // from a previous dial attempt closing and racing with the current one)
+  c.on('close', () => { if (call === c) onDrop(); });
+  c.on('error', e => { entry('Call error: ' + e.message, 'err'); if (call === c) onDrop(); });
 }
 
 // ── Save recordings if a disconnection interrupts them ────────
@@ -2493,6 +2731,7 @@ function saveRecordingIfActive() {
 }
 
 function onDrop() {
+  clearTimeout(retryTimer);
   saveRecordingIfActive();
   linked = false;
   call = null;
@@ -2511,6 +2750,7 @@ function onDrop() {
   document.getElementById('remoteWrap').classList.remove('video-off', 'no-video');
   document.getElementById('remoteWrap').classList.add('waiting');
   setStatus('calling');
+  playTone('dropped');
   entry('Link lost — retrying in 5s', 'sys');
   retryTimer = setTimeout(dial, 5000);
 }
