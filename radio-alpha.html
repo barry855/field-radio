@@ -928,7 +928,7 @@
     </div>
     <div class="login-timeout">
       <div class="login-timeout-label">
-        <span>Auto Login</span><span id="loginTimeoutSec">15s</span>
+        <span>Auto Login</span><span id="loginTimeoutSec">10s</span>
       </div>
       <div class="login-timeout-track"><div class="login-timeout-fill" id="loginTimeoutFill" style="width: 100%; background: var(--accent);"></div></div>
     </div>
@@ -1172,9 +1172,9 @@
           <button class="chat-find-close" id="chatFindClose" title="Close">✕</button>
         </div>
         <div class="chat" id="chat"></div>
-        <button class="refresh-chat-btn" id="refreshChatBtn" onclick="refreshScreen()" title="Refresh / Reconnect">↺</button>
-        <button class="save-chat-btn" id="saveChatBtn" onclick="saveChatToFile()" title="Save chat as HTML">💾</button>
-        <button class="clear-chat-btn" id="clearChatBtn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" title="Clear chat history">🗑</button>
+        <button class="refresh-chat-btn" onclick="refreshScreen()" title="Refresh / Reconnect">↺</button>
+        <button class="save-chat-btn" onclick="saveChatToFile()" title="Save chat as HTML">💾</button>
+        <button class="clear-chat-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" title="Clear chat history">🗑</button>
         <button class="mini-chat-btn" id="miniChatBtn" onclick="toggleMiniChatOverlay()" title="Toggle mini remote screen">📺</button>
         <button class="find-chat-btn" id="findChatBtn" title="Find in chat">🔍</button>
         <div class="file-preview-strip" id="filePreviewStrip"></div>
@@ -1272,16 +1272,21 @@ const sendBtn   = document.getElementById('sendBtn');
 // (stops the blur/keyboard-dismiss from happening mid-tap), read the input
 // value while focus is still live, then send. The click listener is kept as
 // a fallback for mouse users and assistive technology.
+// Single unified send-button handler that works on all platforms.
+// pointerdown fires first on touch — preventDefault() suppresses the
+// subsequent click entirely (no double-send) and keeps the soft keyboard open.
+// On mouse, we defer to click so normal desktop UX is preserved.
+let _sendBtnTouched = false;
 sendBtn.addEventListener('pointerdown', e => {
   if (e.pointerType !== 'mouse') {
-    e.preventDefault(); // keeps keyboard open, prevents blur swallowing the click
+    _sendBtnTouched = true;
+    e.preventDefault();
     sendChat();
   }
 });
 sendBtn.disabled = true;
 sendBtn.addEventListener('click', e => {
-  // Only handle mouse clicks here; touch is handled by pointerdown above
-  if (!e.isTrusted) return;
+  if (_sendBtnTouched) { _sendBtnTouched = false; return; }
   sendChat();
 });
 
@@ -1559,23 +1564,23 @@ function prefillLogin() {
 }
 prefillLogin();
 
-// ── 15-second auto-login countdown ───────────────────────────
+// ── 10-second auto-login countdown ───────────────────────────
 let loginTimeoutInterval;
-let loginSecsLeft = 15;
+let loginSecsLeft = 10;
 function startLoginTimeout() {
   clearInterval(loginTimeoutInterval);  // prevent double-interval from stale saved HTML
-  loginSecsLeft = 15;
+  loginSecsLeft = 10;
   const fill = document.getElementById('loginTimeoutFill');
   const sec  = document.getElementById('loginTimeoutSec');
   fill.style.width = '100%';
   fill.style.background = 'var(--accent)';
-  sec.textContent = '15s';
+  sec.textContent = '10s';
   loginTimeoutInterval = setInterval(() => {
     loginSecsLeft--;
-    const pct = (loginSecsLeft / 15) * 100;
+    const pct = (loginSecsLeft / 10) * 100;
     fill.style.width = pct + '%';
     sec.textContent = loginSecsLeft + 's';
-    if (loginSecsLeft <= 7) fill.style.background = 'var(--warn)';
+    if (loginSecsLeft <= 5) fill.style.background = 'var(--warn)';
     if (loginSecsLeft <= 3) fill.style.background = 'var(--danger)';
     if (loginSecsLeft <= 0) {
       clearInterval(loginTimeoutInterval);
@@ -2154,7 +2159,7 @@ function sendChat() {
   }
   if (txt) {
     try {
-      dataConn.send(txt);
+      dcSend(txt);
     } catch(e) {
       entry('Send failed: ' + e.message, 'err');
       return;
@@ -2198,11 +2203,7 @@ function setupTooltips() {
     speakerBtnLocal: 'Toggle speaker / earphone output',
     speakerBtnRemote: 'Toggle speaker / earphone output',
     zoomSliderLocal: 'Zoom local camera',
-    translateResetBtn: 'Restore original — system language: ' + (navigator.language || 'unknown'),
-    refreshChatBtn: 'Refresh / Reconnect',
-    saveChatBtn:    'Save chat as HTML',
-    clearChatBtn:   'Clear chat history',
-    miniChatBtn:    'Toggle mini remote screen'
+    translateResetBtn: 'Restore original — system language: ' + (navigator.language || 'unknown')
   };
   Object.entries(labels).forEach(([id, label]) => {
     const el = document.getElementById(id);
@@ -2230,48 +2231,15 @@ function setupTooltips() {
   };
   const hide = () => tip.classList.remove('visible');
 
-  let _lpTimer = null;
-  const cancelLp = () => { clearTimeout(_lpTimer); _lpTimer = null; };
-
   document.querySelectorAll('[data-tooltip]').forEach(el => {
-    // Desktop
     el.addEventListener('mouseenter', () => place(el));
-    el.addEventListener('focus',      () => place(el));
+    el.addEventListener('focus', () => place(el));
     el.addEventListener('mouseleave', hide);
-    el.addEventListener('blur',       hide);
-    el.addEventListener('click',      hide);
-    // Android long-press (600 ms)
-    let _lpFired = false;
-    el.addEventListener('touchstart', e => {
-      cancelLp();
-      _lpFired = false;
-      e.preventDefault(); // must be here (not in the timer) to block Android context menu
-      _lpTimer = setTimeout(() => {
-        _lpFired = true;
-        place(el);
-      }, 600);
-    }, { passive: false });
-    el.addEventListener('touchend', e => {
-      cancelLp();
-      if (_lpFired) {
-        // Tooltip is showing — block the click that would hide it, then hide after delay
-        e.preventDefault();
-        setTimeout(hide, 1200);
-        _lpFired = false;
-      }
-    }, { passive: false });
-    el.addEventListener('touchmove', () => { cancelLp(); _lpFired = false; hide(); }, { passive: true });
+    el.addEventListener('blur', hide);
+    el.addEventListener('click', hide);
   });
 }
 setupTooltips();
-
-// Hide Sys Audio button on Android (feature uses desktop audio capture APIs not available on Android)
-if (/android/i.test(navigator.userAgent)) {
-  ['sysAudioBtn', 'sysAudioBtn2'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = 'none';
-  });
-}
 
 // Attach button → open file picker
 attachBtn.addEventListener('click', () => fileInput.click());
@@ -2392,7 +2360,7 @@ function sendFileChunked(item) {
   try {
     for (let i = 0; i < total; i++) {
       const chunk = data.slice(i * FILE_CHUNK, (i + 1) * FILE_CHUNK);
-      dataConn.send({
+      dcSend({
         __chunk: true, id,
         name: item.file.name, type: item.file.type,
         index: i, total, data: chunk
@@ -2699,29 +2667,17 @@ function attachDataConn(dc) {
   // Android/WebView fallback: 'open' sometimes fires before the handler is attached
   if (dc.open) { setTimeout(onDcOpen, 0); }
   dc.on('data', msg => {
-    // PeerJS json mode delivers objects directly; binary/legacy paths deliver string/ArrayBuffer
-    let f = null;
-    let msgStr = null;
-    if (typeof msg === 'object' && msg !== null && !(msg instanceof ArrayBuffer)) {
-      f = msg; // already a parsed object — fast path
-    } else {
-      if (msg instanceof ArrayBuffer) {
-        msgStr = new TextDecoder().decode(msg);
-      } else {
-        msgStr = String(msg);
-      }
-      if (msgStr.startsWith('{')) {
-        try { f = JSON.parse(msgStr); } catch(e) {}
-      }
-    }
+    const decoded = dcDecode(msg);
+    if (!decoded) return;
+    const { text, obj } = decoded;
+    const f = obj || null;
     if (f) {
       if (f.__control === 'video') { updateRemoteVideoState(f.enabled, f.hasTrack !== false); return; }
       if (f.__file  === true)      { addMediaBubble(f.name, f.type, f.data, false); return; }
       if (f.__chunk === true)      { receiveChunk(f); return; }
-      // Unknown control object — show as JSON text
-      addBubble(msgStr || JSON.stringify(f), false);
+      addBubble(JSON.stringify(f), false);
     } else {
-      addBubble(msgStr || String(msg), false);
+      addBubble(text, false);
     }
   });
   dc.on('close', () => {
@@ -2737,11 +2693,43 @@ function attachDataConn(dc) {
 }
 
 let pendingDC = false;
+
+// dcSend — always sends a UTF-8 string so raw-mode DataChannel works
+// cross-platform (desktop Chrome ↔ Android Chrome/WebView).
+// Plain text is prefixed with 'T:'; JSON objects with 'J:'.
+function dcSend(payload) {
+  if (!dataConn || !dataConn.open) return;
+  const wire = (typeof payload === 'string')
+    ? 'T:' + payload
+    : 'J:' + JSON.stringify(payload);
+  dataConn.send(wire);
+}
+
+// dcDecode — inverse of dcSend; returns { text } or { obj } or null
+function dcDecode(raw) {
+  let s;
+  if (raw instanceof ArrayBuffer)   s = new TextDecoder().decode(raw);
+  else if (raw instanceof Blob)     return null; // handle async elsewhere if needed
+  else                              s = String(raw);
+
+  if (s.startsWith('T:')) return { text: s.slice(2) };
+  if (s.startsWith('J:')) {
+    try { return { obj: JSON.parse(s.slice(2)) }; } catch(e) { return { text: s }; }
+  }
+  // Legacy fallback — other side may still use json serialization mode
+  if (s.startsWith('{')) {
+    try { return { obj: JSON.parse(s) }; } catch(e) {}
+  }
+  return { text: s };
+}
+
 function openDataConn() {
   if (dataConn || pendingDC) return;
   pendingDC = true;
   entry('Opening data channel…', 'sys');
-  const dc = peer.connect(REMOTE_ID, { reliable: true, serialization: 'json' });
+  // Use 'raw' serialization — 'json' mode has known cross-platform failures
+  // between desktop Chrome and Android Chrome/WebView. We JSON-encode manually.
+  const dc = peer.connect(REMOTE_ID, { reliable: true, serialization: 'raw' });
   attachDataConn(dc);
 }
 
@@ -2837,7 +2825,7 @@ function sendVideoState() {
   if (!dataConn || !localStream) return;
   const track = localStream.getVideoTracks()[0];
   try {
-    dataConn.send({
+    dcSend({
       __control: 'video',
       enabled: !!(track && track.enabled),
       hasTrack: !!track
@@ -2877,7 +2865,7 @@ function attachCall(c) {
   });
   // Only trigger onDrop if this is still the active call (guards against stale calls
   // from a previous dial attempt closing and racing with the current one)
-  c.on('close', () => { if (call === c && !_replacingTrack) onDrop(); });
+  c.on('close', () => { if (call === c) onDrop(); });
   c.on('error', e => { entry('Call error: ' + e.message, 'err'); if (call === c) onDrop(); });
 }
 
@@ -3415,20 +3403,12 @@ function _ensureMixContext() {
   }
 }
 
-let _replacingTrack = false;
 async function _setCallAudioTrack(track) {
   try {
     const pc     = call && (call.peerConnection || call._pc);
     const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
-    if (sender) {
-      _replacingTrack = true;
-      await sender.replaceTrack(track);
-      _replacingTrack = false;
-    }
-  } catch(e) {
-    _replacingTrack = false;
-    entry('replaceTrack warn: ' + e.message, 'sys');
-  }
+    if (sender) await sender.replaceTrack(track);
+  } catch(e) { entry('replaceTrack warn: ' + e.message, 'sys'); }
 }
 
 async function _activateMix() {
@@ -3510,8 +3490,6 @@ function toggleAudio() {
   if (!audioMuted) {
     audioMuted = true;
     if (realAudioTrack) realAudioTrack.enabled = false;
-    // Disconnect mic from mix so it doesn't leak through sys audio / media mix
-    if (_mixMicNode) { try { _mixMicNode.disconnect(_mixDest); } catch(e) {} }
     // Best-effort replaceTrack on active call
     try {
       const pc = call && (call.peerConnection || call._pc);
@@ -3523,18 +3501,11 @@ function toggleAudio() {
   } else {
     audioMuted = false;
     if (realAudioTrack) realAudioTrack.enabled = true;
-    // Reconnect mic into mix
-    if (_mixMicNode && _mixDest) { try { _mixMicNode.connect(_mixDest); } catch(e) {} }
-    // Best-effort replaceTrack on active call — restore mix track if mix is active,
-    // otherwise restore the raw mic track
+    // Best-effort replaceTrack on active call
     try {
       const pc = call && (call.peerConnection || call._pc);
       const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
-      if (sender) {
-        const mixTrack = _mixDest && _mixDest.stream.getAudioTracks()[0];
-        const restoreTrack = (_mixPlayingSet.size > 0 && mixTrack) ? mixTrack : realAudioTrack;
-        if (restoreTrack) sender.replaceTrack(restoreTrack).catch(() => {});
-      }
+      if (sender && realAudioTrack) sender.replaceTrack(realAudioTrack).catch(() => {});
     } catch(e) {}
     btns.forEach(b => { if(b){ b.textContent = 'Disable Audio'; b.classList.remove('disabled-state'); }});
     entry('Local audio unmuted', 'sys');
