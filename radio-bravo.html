@@ -1092,6 +1092,7 @@
         <button class="media-btn" id="miniBtn" onclick="toggleMiniVideo()">Show Mini</button>
         <button class="media-btn" id="screenBtn" onclick="toggleScreenShare()" style="border-color:var(--accent2);color:var(--accent2);">Share</button>
         <button class="media-btn" id="sysAudioBtn" onclick="toggleSysAudio()">🔊 Sys Audio Off</button>
+        <button class="media-btn" id="sysMonitorBtn" onclick="toggleSysMonitor()">🎧 Monitor Off</button>
         <button class="media-btn" id="audioBtn" onclick="toggleAudio()">Disable Audio</button>
       </div>
       <div class="channel-row" style="flex-shrink:0; padding:0 0 4px 0;">
@@ -1127,6 +1128,7 @@
         <button class="media-btn" id="miniBtn2" onclick="toggleMiniVideo()">Show Mini</button>
         <button class="media-btn" id="screenBtn2" onclick="toggleScreenShare()" style="border-color:var(--accent2);color:var(--accent2);">Share</button>
         <button class="media-btn" id="sysAudioBtn2" onclick="toggleSysAudio()">🔊 Sys Audio Off</button>
+        <button class="media-btn" id="sysMonitorBtn2" onclick="toggleSysMonitor()">🎧 Monitor Off</button>
         <button class="media-btn" id="audioBtn2" onclick="toggleAudio()">Disable Audio</button>
       </div>
       <div class="channel-row" style="flex-shrink:0; padding:0 0 4px 0;">
@@ -3242,8 +3244,10 @@ async function stopScreenShare() {
 }
 
 // ── System Audio capture (getDisplayMedia audio-only) ─────────
-let sysAudioStream = null;
-let sysAudioNode   = null;
+let sysAudioStream  = null;
+let sysAudioNode    = null;
+let sysMonitorGain  = null;
+let sysMonitorOn    = false;
 
 async function toggleSysAudio() {
   const btns = [document.getElementById('sysAudioBtn'), document.getElementById('sysAudioBtn2')];
@@ -3251,6 +3255,7 @@ async function toggleSysAudio() {
     sysAudioStream.getTracks().forEach(t => t.stop());
     sysAudioStream = null;
     if (sysAudioNode) { try { sysAudioNode.disconnect(); } catch(e){} sysAudioNode = null; }
+    if (sysMonitorGain) { try { sysMonitorGain.disconnect(); } catch(e){} sysMonitorGain = null; }
     _mixPlayingSet.delete('__sysaudio__');
     if (_mixPlayingSet.size === 0) _deactivateMix();
     btns.forEach(b => { if(b){ b.textContent = '🔊 Sys Audio Off'; b.classList.remove('sys-audio-on'); }});
@@ -3283,7 +3288,11 @@ async function toggleSysAudio() {
     sysGain.gain.value = 1.0;
     sysAudioNode.connect(sysGain);
     sysGain.connect(_mixDest);
-    sysGain.connect(_mixCtx.destination);
+
+    sysMonitorGain = _mixCtx.createGain();
+    sysMonitorGain.gain.value = sysMonitorOn ? 1.0 : 0.0;
+    sysGain.connect(sysMonitorGain);
+    sysMonitorGain.connect(_mixCtx.destination);
     _mixPlayingSet.add('__sysaudio__');
     await _activateMix();
     audioTracks[0].addEventListener('ended', () => { if (sysAudioStream) toggleSysAudio(); });
@@ -3292,6 +3301,23 @@ async function toggleSysAudio() {
   } catch(e) {
     entry('System audio capture failed: ' + e.message, 'err');
   }
+}
+
+function toggleSysMonitor() {
+  sysMonitorOn = !sysMonitorOn;
+  if (sysMonitorGain) sysMonitorGain.gain.value = sysMonitorOn ? 1.0 : 0.0;
+  const btns = [document.getElementById('sysMonitorBtn'), document.getElementById('sysMonitorBtn2')];
+  btns.forEach(b => {
+    if (!b) return;
+    if (sysMonitorOn) {
+      b.textContent = '🎧 Monitor On';
+      b.classList.add('sys-audio-on');
+    } else {
+      b.textContent = '🎧 Monitor Off';
+      b.classList.remove('sys-audio-on');
+    }
+  });
+  entry('Sys audio local monitor: ' + (sysMonitorOn ? 'ON' : 'OFF'), 'sys');
 }
 // ── Media-to-call audio mix ───────────────────────────────────
 let _mixCtx  = null;
