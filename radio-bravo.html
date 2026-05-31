@@ -3277,8 +3277,13 @@ async function toggleSysAudio() {
     if (_mixCtx.state === 'suspended') await _mixCtx.resume();
     const sysOnly = new MediaStream(audioTracks);
     sysAudioNode = _mixCtx.createMediaStreamSource(sysOnly);
-    sysAudioNode.connect(_mixDest);
-    sysAudioNode.connect(_mixCtx.destination);
+    // GainNode locks sys audio at a fixed unity level so WebRTC's per-packet
+    // gain adjustments on the blended track don't cause amplitude fluctuation.
+    const sysGain = _mixCtx.createGain();
+    sysGain.gain.value = 1.0;
+    sysAudioNode.connect(sysGain);
+    sysGain.connect(_mixDest);
+    sysGain.connect(_mixCtx.destination);
     _mixPlayingSet.add('__sysaudio__');
     await _activateMix();
     audioTracks[0].addEventListener('ended', () => { if (sysAudioStream) toggleSysAudio(); });
@@ -3303,13 +3308,28 @@ function _ensureMixContext() {
   if (localStream) {
     try {
       _mixMicNode = _mixCtx.createMediaStreamSource(new MediaStream(localStream.getAudioTracks()));
-      _mixMicNode.connect(_mixDest);
+      // GainNode isolates the mic from WebRTC's AGC so it doesn't pull the
+      // blended mix level up/down while sys audio is active.
+      const micGain = _mixCtx.createGain();
+      micGain.gain.value = 1.0;
+      _mixMicNode.connect(micGain);
+      micGain.connect(_mixDest);
     } catch(e) { entry('Mix mic init warn: ' + e.message, 'sys'); }
   }
 }
 
 async function _setCallAudioTrack(track) {
   try {
+    // Disable all WebRTC-level audio processing on the track before sending.
+    // Without this, Chrome's internal AudioProcessingModule re-adapts its AGC
+    // to the mixed track over ~10-30s and gradually pulls the level down.
+    try {
+      await track.applyConstraints({
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl:  false
+      });
+    } catch(ce) { /* applyConstraints not supported on this track type — ignore */ }
     const pc     = call && (call.peerConnection || call._pc);
     const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
     if (sender) await sender.replaceTrack(track);
