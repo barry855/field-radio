@@ -3415,6 +3415,16 @@ function _ensureMixContext() {
 
 async function _setCallAudioTrack(track) {
   try {
+    // Disable all WebRTC-level audio processing on the track before sending.
+    // Without this, Chrome's internal AudioProcessingModule re-adapts its AGC
+    // to the mixed track over ~10-30s and gradually pulls the level down.
+    try {
+      await track.applyConstraints({
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl:  false
+      });
+    } catch(ce) { /* applyConstraints not supported on this track type — ignore */ }
     const pc     = call && (call.peerConnection || call._pc);
     const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
     if (sender) await sender.replaceTrack(track);
