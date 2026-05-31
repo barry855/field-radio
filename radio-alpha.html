@@ -528,27 +528,29 @@
   .media-btn.active-on:hover { background: rgba(0,212,255,0.1); }
   .leave-btn {
     flex: 0 0 auto; height: 36px; padding: 0 10px;
-    background: rgba(255,68,68,0.15); border: 1px solid var(--danger);
-    color: var(--danger); border-radius: 4px;
+    background: rgba(0,212,255,0.15); border: 1px solid var(--accent);
+    color: var(--accent); border-radius: 4px;
     font-family: 'Share Tech Mono', monospace; font-size: 11px;
     letter-spacing: 0.5px; cursor: pointer;
     transition: background 0.15s, border-color 0.15s, color 0.15s;
     white-space: nowrap;
   }
-  .leave-btn:hover { background: rgba(255,68,68,0.3); }
+  .leave-btn:hover { background: rgba(0,212,255,0.3); }
   .user-left-notice {
     display: none; align-items: center; gap: 8px;
     font-family: 'Share Tech Mono', monospace; font-size: 11px;
-    color: var(--warn); letter-spacing: 0.5px;
+    color: var(--accent2); letter-spacing: 0.5px;
+    animation: blink 0.8s step-end infinite;
   }
   .user-left-notice.visible { display: flex; }
   .user-left-notice .leave-chat-btn {
-    background: rgba(255,68,68,0.15); border: 1px solid var(--danger);
-    color: var(--danger); border-radius: 4px; padding: 2px 8px;
+    background: rgba(0,212,255,0.15); border: 1px solid var(--accent);
+    color: var(--accent); border-radius: 4px; padding: 2px 8px;
     font-family: 'Share Tech Mono', monospace; font-size: 11px;
     cursor: pointer; transition: background 0.15s;
+    animation: none;
   }
-  .user-left-notice .leave-chat-btn:hover { background: rgba(255,68,68,0.3); }
+  .user-left-notice .leave-chat-btn:hover { background: rgba(0,212,255,0.3); }
 
   .log-panel {
     background: var(--panel); border: 1px solid var(--border);
