@@ -3335,7 +3335,8 @@ async function _deactivateMix() {
 }
 
 async function attachMediaToCallAudio(mediaEl) {
-  if (audioMuted) return;
+  // Note: audioMuted only gates the local mic input — sys audio and chat
+  // media mixing are independent and must remain active regardless.
   _ensureMixContext();
   if (_mixCtx.state === 'suspended') await _mixCtx.resume();
   if (!_mixSourceNodes.has(mediaEl)) {
