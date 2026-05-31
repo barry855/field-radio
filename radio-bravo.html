@@ -1089,11 +1089,11 @@
     <div class="tab-pane" id="paneLocal">
       <div class="channel-row" style="flex-shrink:0; padding:4px 0;">
         <button class="media-btn" id="videoBtn" onclick="toggleVideo()">Disable Video</button>
-        <button class="media-btn" id="miniBtn" onclick="toggleMiniVideo()">Mini On</button>
-        <button class="media-btn" id="screenBtn" onclick="toggleScreenShare()" style="border-color:var(--accent2);color:var(--accent2);">Share Off</button>
-        <button class="media-btn" id="sysAudioBtn" onclick="toggleSysAudio()" style="display:none;">🔊 Sys Audio Off</button>
-        <button class="media-btn" id="sysMonitorBtn" onclick="toggleSysMonitor()" style="display:none;">🎧 Monitor Off</button>
-        <button class="media-btn" id="audioBtn" onclick="toggleAudio()">Audio On</button>
+        <button class="media-btn" id="miniBtn" onclick="toggleMiniVideo()">Show Mini</button>
+        <button class="media-btn" id="screenBtn" onclick="toggleScreenShare()" style="border-color:var(--accent2);color:var(--accent2);">Share</button>
+        <button class="media-btn" id="sysAudioBtn" onclick="toggleSysAudio()">🔊 Sys Audio Off</button>
+        <button class="media-btn" id="sysMonitorBtn" onclick="toggleSysMonitor()">🎧 Monitor Off</button>
+        <button class="media-btn" id="audioBtn" onclick="toggleAudio()">Disable Audio</button>
       </div>
       <div class="channel-row" style="flex-shrink:0; padding:0 0 4px 0;">
         <button class="media-btn" id="recBtn" onclick="toggleRecordLocal()">⏺ Record Local</button>
@@ -1125,11 +1125,11 @@
     <div class="tab-pane active" id="paneRemote">
       <div class="channel-row" style="flex-shrink:0; padding:4px 0;">
         <button class="media-btn" id="videoBtn2" onclick="toggleVideo()">Disable Video</button>
-        <button class="media-btn" id="miniBtn2" onclick="toggleMiniVideo()">Mini On</button>
-        <button class="media-btn" id="screenBtn2" onclick="toggleScreenShare()" style="border-color:var(--accent2);color:var(--accent2);">Share Off</button>
-        <button class="media-btn" id="sysAudioBtn2" onclick="toggleSysAudio()" style="display:none;">🔊 Sys Audio Off</button>
-        <button class="media-btn" id="sysMonitorBtn2" onclick="toggleSysMonitor()" style="display:none;">🎧 Monitor Off</button>
-        <button class="media-btn" id="audioBtn2" onclick="toggleAudio()">Audio On</button>
+        <button class="media-btn" id="miniBtn2" onclick="toggleMiniVideo()">Show Mini</button>
+        <button class="media-btn" id="screenBtn2" onclick="toggleScreenShare()" style="border-color:var(--accent2);color:var(--accent2);">Share</button>
+        <button class="media-btn" id="sysAudioBtn2" onclick="toggleSysAudio()">🔊 Sys Audio Off</button>
+        <button class="media-btn" id="sysMonitorBtn2" onclick="toggleSysMonitor()">🎧 Monitor Off</button>
+        <button class="media-btn" id="audioBtn2" onclick="toggleAudio()">Disable Audio</button>
       </div>
       <div class="channel-row" style="flex-shrink:0; padding:0 0 4px 0;">
         <button class="media-btn" id="recBtn2" onclick="toggleRecordRemote()">⏺ Record Remote</button>
@@ -1242,7 +1242,9 @@ const ICE_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
   { urls: 'stun:stun.cloudflare.com:3478' },
-  { urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turn:openrelay.metered.ca:443?transport=tcp'], username: 'openrelayproject', credential: 'openrelayproject' }
+  { urls: 'turn:turn.cloudflare.com:3478',      username: 'free',             credential: 'free' },
+  { urls: 'turn:turn.cloudflare.com:5349',      username: 'free',             credential: 'free' },
+  { urls: 'turn:turn.cloudflare.com:5349?transport=tcp', username: 'free',    credential: 'free' }
 ];
 
 let MY_ID, REMOTE_ID;
@@ -1633,7 +1635,7 @@ function setStatus(state) {
 
 let activeTab = 'remote';
 let unreadCount = 0;
-let miniVideoVisible = true;
+let miniVideoVisible = false;
 const msgBadge = document.getElementById('msgBadge');
 
 function syncControls() {
@@ -1687,7 +1689,7 @@ function updateMiniVideoVisibility() {
     if (el) el.classList.toggle('hidden', !miniVideoVisible);
   });
   [document.getElementById('miniBtn'), document.getElementById('miniBtn2')].forEach(btn => {
-    if (btn) btn.textContent = miniVideoVisible ? 'Mini On' : 'Mini Off';
+    if (btn) btn.textContent = miniVideoVisible ? 'Hide Mini' : 'Show Mini';
   });
   syncMiniVideos();
 }
@@ -2497,8 +2499,8 @@ function init() {
       entry('AUDIO FLAG: track=' + (at ? at.label : 'none') + ' enabled=' + (at ? at.enabled : 'n/a'), 'sys');
       if (at) { realAudioTrack = at; at.enabled = false; audioMuted = true; }
       entry('AUDIO FLAG: audioMuted now=' + audioMuted, 'sys');
-      const ab = document.getElementById('audioBtn'); if(ab){ab.textContent='Audio Off';ab.classList.add('disabled-state');}
-      const ab2 = document.getElementById('audioBtn2'); if(ab2){ab2.textContent='Audio Off';ab2.classList.add('disabled-state');}
+      const ab = document.getElementById('audioBtn'); if(ab){ab.textContent='Enable Audio';ab.classList.add('disabled-state');}
+      const ab2 = document.getElementById('audioBtn2'); if(ab2){ab2.textContent='Enable Audio';ab2.classList.add('disabled-state');}
       entry('Audio disabled (login setting)', 'sys');
     } else {
       entry('AUDIO FLAG: not set, audio stays on', 'sys');
@@ -2826,10 +2828,11 @@ function attachCall(c) {
     startQualityPolling();
     // Ensure data channel is open
     openDataConn();
-    // Re-enforce mute/unmute state now that WebRTC senders are live.
-    // A link drop + reconnect resets the sender track to whatever getCallStream()
-    // supplied; applyMuteToSenders brings it back in line with audioMuted.
-    applyMuteToSenders();
+    // Apply mute state now that senders are live
+    if (audioMuted) {
+      entry('DEBUG applying mute on stream event', 'sys');
+      applyMuteToSenders();
+    }
   });
   c.on('close', () => { if (call === c) onDrop(); });
   c.on('error', e => { entry('Call error: ' + e.message, 'err'); if (call === c) onDrop(); });
@@ -3236,7 +3239,7 @@ async function stopScreenShare() {
     if (sender && restoreTrack) await sender.replaceTrack(restoreTrack);
   } catch(e) {}
 
-  btns.forEach(b => { if(b){ b.textContent = 'Share Off'; b.classList.remove('screen-active'); }});
+  btns.forEach(b => { if(b){ b.textContent = 'Share'; b.classList.remove('screen-active'); }});
   entry('Screen share stopped — camera restored', 'ok');
 }
 
@@ -3388,17 +3391,10 @@ async function _activateMix() {
 }
 
 async function _deactivateMix() {
-  // If the user has muted, restoring the raw mic track would un-mute them.
-  // Put a silent track on the sender instead and let toggleAudio own the state.
-  if (audioMuted) {
-    await _setCallAudioTrack(getSilentTrack());
-    entry('Call audio → silent (muted, mix stopped)', 'sys');
-  } else {
-    const micTrack = localStream && localStream.getAudioTracks()[0];
-    if (micTrack) {
-      await _setCallAudioTrack(micTrack);
-      entry('Call audio → mic only', 'sys');
-    }
+  const micTrack = localStream && localStream.getAudioTracks()[0];
+  if (micTrack) {
+    await _setCallAudioTrack(micTrack);
+    entry('Call audio → mic only', 'sys');
   }
   _mixOutTrack = null;
 }
@@ -3466,7 +3462,7 @@ function toggleAudio() {
         if (sender) sender.replaceTrack(getSilentTrack()).catch(() => {});
       } catch(e) {}
     }
-    btns.forEach(b => { if(b){ b.textContent = 'Audio Off'; b.classList.add('disabled-state'); }});
+    btns.forEach(b => { if(b){ b.textContent = 'Enable Audio'; b.classList.add('disabled-state'); }});
     entry('Local audio muted', 'sys');
   } else {
     audioMuted = false;
@@ -3481,7 +3477,7 @@ function toggleAudio() {
         if (sender && realAudioTrack) sender.replaceTrack(realAudioTrack).catch(() => {});
       } catch(e) {}
     }
-    btns.forEach(b => { if(b){ b.textContent = 'Audio On'; b.classList.remove('disabled-state'); }});
+    btns.forEach(b => { if(b){ b.textContent = 'Disable Audio'; b.classList.remove('disabled-state'); }});
     entry('Local audio unmuted', 'sys');
   }
 }
@@ -3634,32 +3630,18 @@ function applyZoom(val, channel) {
 }
 
 // ── applyMuteToSenders ───────────────────────────────────────
-// Enforces the current mute/unmute state on the live WebRTC sender.
-// Called after a stream event (reconnect) so state survives link drops.
-// Mix-aware: if the mix is active we leave the mix track in place and only
-// adjust _mixMicGain; we never blindly restore realAudioTrack over the mix.
+// Called after a stream event to enforce the current audioMuted state on the
+// live WebRTC sender. Was missing from BRAVO, causing a crash on connect when
+// loginDisableAudio was set.
 function applyMuteToSenders() {
   try {
     const pc = call && (call.peerConnection || call._pc);
     const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
     if (!sender) return;
     if (audioMuted) {
-      if (_mixMicGain) {
-        // Mix is active — silence the mic gain node; mix track stays on sender.
-        _mixMicGain.gain.value = 0.0;
-      } else {
-        sender.replaceTrack(getSilentTrack()).catch(() => {});
-      }
-    } else {
-      if (_mixMicGain) {
-        // Mix is active — restore mic gain; mix track stays on sender.
-        _mixMicGain.gain.value = 1.0;
-      } else {
-        // No mix — restore raw mic track only if sender doesn't already hold it.
-        if (realAudioTrack && sender.track !== realAudioTrack) {
-          sender.replaceTrack(realAudioTrack).catch(() => {});
-        }
-      }
+      sender.replaceTrack(getSilentTrack()).catch(() => {});
+    } else if (realAudioTrack) {
+      sender.replaceTrack(realAudioTrack).catch(() => {});
     }
   } catch(e) { entry('applyMuteToSenders warn: ' + e.message, 'sys'); }
 }
