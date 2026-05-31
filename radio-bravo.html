@@ -2252,6 +2252,14 @@ function setupTooltips() {
 }
 setupTooltips();
 
+// Hide Sys Audio button on Android (feature uses desktop audio capture APIs not available on Android)
+if (/android/i.test(navigator.userAgent)) {
+  ['sysAudioBtn', 'sysAudioBtn2'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+}
+
 // Attach button → open file picker
 attachBtn.addEventListener('click', () => fileInput.click());
 fileInput.addEventListener('change', e => { addFiles([...e.target.files]); fileInput.value=''; });
