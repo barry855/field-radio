@@ -1089,11 +1089,11 @@
     <div class="tab-pane" id="paneLocal">
       <div class="channel-row" style="flex-shrink:0; padding:4px 0;">
         <button class="media-btn" id="videoBtn" onclick="toggleVideo()">Disable Video</button>
-        <button class="media-btn" id="miniBtn" onclick="toggleMiniVideo()">Show Mini</button>
-        <button class="media-btn" id="screenBtn" onclick="toggleScreenShare()" style="border-color:var(--accent2);color:var(--accent2);">Share</button>
+        <button class="media-btn" id="miniBtn" onclick="toggleMiniVideo()">Mini On</button>
+        <button class="media-btn" id="screenBtn" onclick="toggleScreenShare()" style="border-color:var(--accent2);color:var(--accent2);">Share Off</button>
         <button class="media-btn" id="sysAudioBtn" onclick="toggleSysAudio()" style="display:none;">🔊 Sys Audio Off</button>
         <button class="media-btn" id="sysMonitorBtn" onclick="toggleSysMonitor()" style="display:none;">🎧 Monitor Off</button>
-        <button class="media-btn" id="audioBtn" onclick="toggleAudio()">Disable Audio</button>
+        <button class="media-btn" id="audioBtn" onclick="toggleAudio()">Audio On</button>
       </div>
       <div class="channel-row" style="flex-shrink:0; padding:0 0 4px 0;">
         <button class="media-btn" id="recBtn" onclick="toggleRecordLocal()">⏺ Record Local</button>
@@ -1125,11 +1125,11 @@
     <div class="tab-pane active" id="paneRemote">
       <div class="channel-row" style="flex-shrink:0; padding:4px 0;">
         <button class="media-btn" id="videoBtn2" onclick="toggleVideo()">Disable Video</button>
-        <button class="media-btn" id="miniBtn2" onclick="toggleMiniVideo()">Show Mini</button>
-        <button class="media-btn" id="screenBtn2" onclick="toggleScreenShare()" style="border-color:var(--accent2);color:var(--accent2);">Share</button>
+        <button class="media-btn" id="miniBtn2" onclick="toggleMiniVideo()">Mini On</button>
+        <button class="media-btn" id="screenBtn2" onclick="toggleScreenShare()" style="border-color:var(--accent2);color:var(--accent2);">Share Off</button>
         <button class="media-btn" id="sysAudioBtn2" onclick="toggleSysAudio()" style="display:none;">🔊 Sys Audio Off</button>
         <button class="media-btn" id="sysMonitorBtn2" onclick="toggleSysMonitor()" style="display:none;">🎧 Monitor Off</button>
-        <button class="media-btn" id="audioBtn2" onclick="toggleAudio()">Disable Audio</button>
+        <button class="media-btn" id="audioBtn2" onclick="toggleAudio()">Audio On</button>
       </div>
       <div class="channel-row" style="flex-shrink:0; padding:0 0 4px 0;">
         <button class="media-btn" id="recBtn2" onclick="toggleRecordRemote()">⏺ Record Remote</button>
@@ -1635,7 +1635,7 @@ function setStatus(state) {
 
 let activeTab = 'remote';
 let unreadCount = 0;
-let miniVideoVisible = false;
+let miniVideoVisible = true;
 const msgBadge = document.getElementById('msgBadge');
 
 function syncControls() {
@@ -1689,7 +1689,7 @@ function updateMiniVideoVisibility() {
     if (el) el.classList.toggle('hidden', !miniVideoVisible);
   });
   [document.getElementById('miniBtn'), document.getElementById('miniBtn2')].forEach(btn => {
-    if (btn) btn.textContent = miniVideoVisible ? 'Hide Mini' : 'Show Mini';
+    if (btn) btn.textContent = miniVideoVisible ? 'Mini On' : 'Mini Off';
   });
   syncMiniVideos();
 }
@@ -2499,8 +2499,8 @@ function init() {
       entry('AUDIO FLAG: track=' + (at ? at.label : 'none') + ' enabled=' + (at ? at.enabled : 'n/a'), 'sys');
       if (at) { realAudioTrack = at; at.enabled = false; audioMuted = true; }
       entry('AUDIO FLAG: audioMuted now=' + audioMuted, 'sys');
-      const ab = document.getElementById('audioBtn'); if(ab){ab.textContent='Enable Audio';ab.classList.add('disabled-state');}
-      const ab2 = document.getElementById('audioBtn2'); if(ab2){ab2.textContent='Enable Audio';ab2.classList.add('disabled-state');}
+      const ab = document.getElementById('audioBtn'); if(ab){ab.textContent='Audio Off';ab.classList.add('disabled-state');}
+      const ab2 = document.getElementById('audioBtn2'); if(ab2){ab2.textContent='Audio Off';ab2.classList.add('disabled-state');}
       entry('Audio disabled (login setting)', 'sys');
     } else {
       entry('AUDIO FLAG: not set, audio stays on', 'sys');
@@ -3238,7 +3238,7 @@ async function stopScreenShare() {
     if (sender && restoreTrack) await sender.replaceTrack(restoreTrack);
   } catch(e) {}
 
-  btns.forEach(b => { if(b){ b.textContent = 'Share'; b.classList.remove('screen-active'); }});
+  btns.forEach(b => { if(b){ b.textContent = 'Share Off'; b.classList.remove('screen-active'); }});
   entry('Screen share stopped — camera restored', 'ok');
 }
 
@@ -3468,7 +3468,7 @@ function toggleAudio() {
         if (sender) sender.replaceTrack(getSilentTrack()).catch(() => {});
       } catch(e) {}
     }
-    btns.forEach(b => { if(b){ b.textContent = 'Enable Audio'; b.classList.add('disabled-state'); }});
+    btns.forEach(b => { if(b){ b.textContent = 'Audio Off'; b.classList.add('disabled-state'); }});
     entry('Local audio muted', 'sys');
   } else {
     audioMuted = false;
@@ -3483,7 +3483,7 @@ function toggleAudio() {
         if (sender && realAudioTrack) sender.replaceTrack(realAudioTrack).catch(() => {});
       } catch(e) {}
     }
-    btns.forEach(b => { if(b){ b.textContent = 'Disable Audio'; b.classList.remove('disabled-state'); }});
+    btns.forEach(b => { if(b){ b.textContent = 'Audio On'; b.classList.remove('disabled-state'); }});
     entry('Local audio unmuted', 'sys');
   }
 }
