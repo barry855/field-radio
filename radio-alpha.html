@@ -1,5 +1,4 @@
 
-
 <!DOCTYPE html>
 <!-- saved from url=(0052)file:///C:/Users/barry/Downloads/radio-alpha_23.html -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -3034,12 +3033,17 @@ function onDrop() {
   setStatus('calling');
   if (leftPermanently) return; // permanent leave handled by leaveSession()
   if (remotePeerLeft) return;  // remote sent leave signal — stay on screen, notice already shown
-  entry('Link lost — returning to login screen', 'sys');
-  // Show login overlay immediately and restart auto-login countdown
-  document.getElementById('sessionOverlay').style.display = 'flex';
-  document.getElementById('unitIdDisplay').style.display = 'none';
-  prefillLogin();
-  startLoginTimeout();
+  // Delay redirect slightly to allow a pending data-channel 'leave' message to arrive first
+  // (the DC message and call-close event can race; the leave flag may not be set yet)
+  setTimeout(() => {
+    if (remotePeerLeft) return; // DC message arrived in time — stay on screen
+    entry('Link lost — returning to login screen', 'sys');
+    // Show login overlay immediately and restart auto-login countdown
+    document.getElementById('sessionOverlay').style.display = 'flex';
+    document.getElementById('unitIdDisplay').style.display = 'none';
+    prefillLogin();
+    startLoginTimeout();
+  }, 600);
 }
 
 function muteLocal() {
