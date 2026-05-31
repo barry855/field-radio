@@ -1129,12 +1129,12 @@
     <div class="tab-pane" id="paneLocal">
       <div class="channel-row" style="flex-shrink:0; padding:4px 0;">
         <button class="media-btn video-off-state" id="videoBtn" onclick="toggleVideo()">Video Off</button>
+        <button class="media-btn" id="audioBtn" onclick="toggleAudio()">Audio On</button>
         <button class="media-btn" id="miniBtn" onclick="toggleMiniVideo()">Mini Off</button>
         <button class="media-btn" id="screenBtn" onclick="toggleScreenShare()">Share Off</button>
         <button class="media-btn" id="sysAudioBtn" onclick="toggleSysAudio()" style="display:none;">🔊 Sys Audio Off</button>
         <button class="media-btn" id="sysMonitorBtn" onclick="toggleSysMonitor()" style="display:none;">🎧 Monitor Off</button>
         <button class="leave-btn" id="leaveBtn" onclick="leaveSession()">✕ Leave</button>
-        <button class="media-btn" id="audioBtn" onclick="toggleAudio()">Audio On</button>
       </div>
       <div class="channel-row" style="flex-shrink:0; padding:0 0 4px 0;">
         <button class="media-btn" id="recBtn" onclick="toggleRecordLocal()">⏺ Record Local</button>
@@ -1166,12 +1166,12 @@
     <div class="tab-pane active" id="paneRemote">
       <div class="channel-row" style="flex-shrink:0; padding:4px 0;">
         <button class="media-btn video-off-state" id="videoBtn2" onclick="toggleVideo()">Video Off</button>
+        <button class="media-btn" id="audioBtn2" onclick="toggleAudio()">Audio On</button>
         <button class="media-btn" id="miniBtn2" onclick="toggleMiniVideo()">Mini Off</button>
         <button class="media-btn" id="screenBtn2" onclick="toggleScreenShare()">Share Off</button>
         <button class="media-btn" id="sysAudioBtn2" onclick="toggleSysAudio()" style="display:none;">🔊 Sys Audio Off</button>
         <button class="media-btn" id="sysMonitorBtn2" onclick="toggleSysMonitor()" style="display:none;">🎧 Monitor Off</button>
         <button class="leave-btn" id="leaveBtn2" onclick="leaveSession()">✕ Leave</button>
-        <button class="media-btn" id="audioBtn2" onclick="toggleAudio()">Audio On</button>
       </div>
       <div class="channel-row" style="flex-shrink:0; padding:0 0 4px 0;">
         <button class="media-btn" id="recBtn2" onclick="toggleRecordRemote()">Record Remote On</button>
@@ -2911,8 +2911,8 @@ function leaveSession() {
   leftPermanently = true;
   // Notify remote peer before disconnecting
   try { dcSend({ __control: 'leave' }); } catch(e) {}
-  // Small delay so the message can transmit
-  setTimeout(_doLeave, 200);
+  // Longer delay over HTTPS/relayed WebRTC — DC message must transmit before peer tears down
+  setTimeout(_doLeave, 1500);
 }
 
 function _doLeave() {
@@ -2996,12 +2996,18 @@ function onDrop() {
   setStatus('standby');
   if (leftPermanently) return; // permanent leave handled by leaveSession()
   if (remotePeerLeft) return;  // remote sent leave signal — stay on screen, notice already shown
-  entry('Link lost — returning to login screen', 'sys');
-  // Show login overlay immediately and restart auto-login countdown
-  document.getElementById('sessionOverlay').style.display = 'flex';
-  document.getElementById('unitIdDisplay').style.display = 'none';
-  prefillLogin();
-  startLoginTimeout();
+  // Delay redirect to allow a pending data-channel 'leave' message to arrive first.
+  // Over HTTPS/relayed WebRTC the DC message and call-close event race each other;
+  // we wait long enough for the leave flag to be set before deciding it's a real drop.
+  setTimeout(() => {
+    if (remotePeerLeft) return; // leave message arrived — stay on screen
+    entry('Link lost — returning to login screen', 'sys');
+    // Show login overlay immediately and restart auto-login countdown
+    document.getElementById('sessionOverlay').style.display = 'flex';
+    document.getElementById('unitIdDisplay').style.display = 'none';
+    prefillLogin();
+    startLoginTimeout();
+  }, 2000);
 }
 
 function muteLocal() {
