@@ -2828,11 +2828,10 @@ function attachCall(c) {
     startQualityPolling();
     // Ensure data channel is open
     openDataConn();
-    // Apply mute state now that senders are live
-    if (audioMuted) {
-      entry('DEBUG applying mute on stream event', 'sys');
-      applyMuteToSenders();
-    }
+    // Re-enforce mute/unmute state now that WebRTC senders are live.
+    // A link drop + reconnect resets the sender track to whatever getCallStream()
+    // supplied; applyMuteToSenders brings it back in line with audioMuted.
+    applyMuteToSenders();
   });
   c.on('close', () => { if (call === c) onDrop(); });
   c.on('error', e => { entry('Call error: ' + e.message, 'err'); if (call === c) onDrop(); });
@@ -3391,10 +3390,17 @@ async function _activateMix() {
 }
 
 async function _deactivateMix() {
-  const micTrack = localStream && localStream.getAudioTracks()[0];
-  if (micTrack) {
-    await _setCallAudioTrack(micTrack);
-    entry('Call audio → mic only', 'sys');
+  // If the user has muted, restoring the raw mic track would un-mute them.
+  // Put a silent track on the sender instead and let toggleAudio own the state.
+  if (audioMuted) {
+    await _setCallAudioTrack(getSilentTrack());
+    entry('Call audio → silent (muted, mix stopped)', 'sys');
+  } else {
+    const micTrack = localStream && localStream.getAudioTracks()[0];
+    if (micTrack) {
+      await _setCallAudioTrack(micTrack);
+      entry('Call audio → mic only', 'sys');
+    }
   }
   _mixOutTrack = null;
 }
@@ -3630,18 +3636,32 @@ function applyZoom(val, channel) {
 }
 
 // ── applyMuteToSenders ───────────────────────────────────────
-// Called after a stream event to enforce the current audioMuted state on the
-// live WebRTC sender. Was missing from BRAVO, causing a crash on connect when
-// loginDisableAudio was set.
+// Enforces the current mute/unmute state on the live WebRTC sender.
+// Called after a stream event (reconnect) so state survives link drops.
+// Mix-aware: if the mix is active we leave the mix track in place and only
+// adjust _mixMicGain; we never blindly restore realAudioTrack over the mix.
 function applyMuteToSenders() {
   try {
     const pc = call && (call.peerConnection || call._pc);
     const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
     if (!sender) return;
     if (audioMuted) {
-      sender.replaceTrack(getSilentTrack()).catch(() => {});
-    } else if (realAudioTrack) {
-      sender.replaceTrack(realAudioTrack).catch(() => {});
+      if (_mixMicGain) {
+        // Mix is active — silence the mic gain node; mix track stays on sender.
+        _mixMicGain.gain.value = 0.0;
+      } else {
+        sender.replaceTrack(getSilentTrack()).catch(() => {});
+      }
+    } else {
+      if (_mixMicGain) {
+        // Mix is active — restore mic gain; mix track stays on sender.
+        _mixMicGain.gain.value = 1.0;
+      } else {
+        // No mix — restore raw mic track only if sender doesn't already hold it.
+        if (realAudioTrack && sender.track !== realAudioTrack) {
+          sender.replaceTrack(realAudioTrack).catch(() => {});
+        }
+      }
     }
   } catch(e) { entry('applyMuteToSenders warn: ' + e.message, 'sys'); }
 }
