@@ -3439,6 +3439,7 @@ function toggleSysMonitor() {
 let _mixCtx  = null;   // single shared AudioContext, never closed
 let _mixDest = null;   // MediaStreamDestination — mixed output
 let _mixMicNode = null;
+let _mixMicGain = null;   // module-level so toggleAudio can zero it to mute mic within the mix graph
 const _mixSourceNodes  = new WeakMap(); // mediaEl → AudioNode (created once)
 const _mixPlayingSet   = new Set();     // mediaEl currently playing
 let   _mixOutTrack     = null;          // track currently sent in call
@@ -3457,10 +3458,12 @@ function _ensureMixContext() {
       _mixMicNode = _mixCtx.createMediaStreamSource(new MediaStream(localStream.getAudioTracks()));
       // GainNode isolates the mic from WebRTC's AGC so it doesn't pull the
       // blended mix level up/down while sys audio is active.
-      const micGain = _mixCtx.createGain();
-      micGain.gain.value = 1.0;
-      _mixMicNode.connect(micGain);
-      micGain.connect(_mixDest);
+      // Also used by toggleAudio to mute/unmute the mic within the mix graph,
+      // because track.enabled=false does NOT silence an AudioContext source node.
+      _mixMicGain = _mixCtx.createGain();
+      _mixMicGain.gain.value = audioMuted ? 0.0 : 1.0;
+      _mixMicNode.connect(_mixMicGain);
+      _mixMicGain.connect(_mixDest);
     } catch(e) { entry('Mix mic init warn: ' + e.message, 'sys'); }
   }
 }
@@ -3563,23 +3566,36 @@ function toggleAudio() {
   if (!audioMuted) {
     audioMuted = true;
     if (realAudioTrack) realAudioTrack.enabled = false;
-    // Best-effort replaceTrack on active call
-    try {
-      const pc = call && (call.peerConnection || call._pc);
-      const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
-      if (sender) sender.replaceTrack(getSilentTrack()).catch(() => {});
-    } catch(e) {}
+    // When the mix is active (_mixMicGain exists), zero the gain node so the mic
+    // is silenced within the AudioContext graph.  track.enabled=false alone does
+    // NOT silence an AudioContext source node that has already captured the track.
+    if (_mixMicGain) {
+      _mixMicGain.gain.value = 0.0;
+      // Mix track stays on the sender — no replaceTrack needed; sys audio keeps flowing.
+    } else {
+      // No mix active — replace with a silent track on the WebRTC sender directly.
+      try {
+        const pc = call && (call.peerConnection || call._pc);
+        const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
+        if (sender) sender.replaceTrack(getSilentTrack()).catch(() => {});
+      } catch(e) {}
+    }
     btns.forEach(b => { if(b){ b.textContent = 'Enable Audio'; b.classList.add('disabled-state'); }});
     entry('Local audio muted', 'sys');
   } else {
     audioMuted = false;
     if (realAudioTrack) realAudioTrack.enabled = true;
-    // Best-effort replaceTrack on active call
-    try {
-      const pc = call && (call.peerConnection || call._pc);
-      const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
-      if (sender && realAudioTrack) sender.replaceTrack(realAudioTrack).catch(() => {});
-    } catch(e) {}
+    if (_mixMicGain) {
+      // Restore mic gain in the mix graph — the mix track is already on the sender.
+      _mixMicGain.gain.value = 1.0;
+    } else {
+      // No mix active — restore the real mic track on the WebRTC sender directly.
+      try {
+        const pc = call && (call.peerConnection || call._pc);
+        const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
+        if (sender && realAudioTrack) sender.replaceTrack(realAudioTrack).catch(() => {});
+      } catch(e) {}
+    }
     btns.forEach(b => { if(b){ b.textContent = 'Disable Audio'; b.classList.remove('disabled-state'); }});
     entry('Local audio unmuted', 'sys');
   }
