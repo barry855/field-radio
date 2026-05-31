@@ -523,6 +523,29 @@
     box-shadow: 0 0 8px rgba(0,212,255,0.3);
   }
   .media-btn.active-on:hover { background: rgba(0,212,255,0.1); }
+  .leave-btn {
+    flex: 0 0 auto; height: 36px; padding: 0 10px;
+    background: rgba(255,68,68,0.15); border: 1px solid var(--danger);
+    color: var(--danger); border-radius: 4px;
+    font-family: 'Share Tech Mono', monospace; font-size: 11px;
+    letter-spacing: 0.5px; cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+  .leave-btn:hover { background: rgba(255,68,68,0.3); }
+  .user-left-notice {
+    display: none; align-items: center; gap: 8px;
+    font-family: 'Share Tech Mono', monospace; font-size: 11px;
+    color: var(--warn); letter-spacing: 0.5px;
+  }
+  .user-left-notice.visible { display: flex; }
+  .user-left-notice .leave-chat-btn {
+    background: rgba(255,68,68,0.15); border: 1px solid var(--danger);
+    color: var(--danger); border-radius: 4px; padding: 2px 8px;
+    font-family: 'Share Tech Mono', monospace; font-size: 11px;
+    cursor: pointer; transition: background 0.15s;
+  }
+  .user-left-notice .leave-chat-btn:hover { background: rgba(255,68,68,0.3); }
 
   .log-panel {
     background: var(--panel); border: 1px solid var(--border);
@@ -966,6 +989,10 @@
         </div>
         <span id="qualityLabel" style="color:var(--text-dim);font-size:10px;">--</span>
       </div>
+      <div class="user-left-notice" id="userLeftNotice">
+        <span>User left chat</span>
+        <button class="leave-chat-btn" onclick="leaveSession()">Leave Chat</button>
+      </div>
     </div>
   </header>
 
@@ -1095,11 +1122,12 @@
     <!-- LOCAL TAB -->
     <div class="tab-pane" id="paneLocal">
       <div class="channel-row" style="flex-shrink:0; padding:4px 0;">
-        <button class="media-btn" id="videoBtn" onclick="toggleVideo()">Video Off</button>
+        <button class="media-btn video-off-state" id="videoBtn" onclick="toggleVideo()">Video Off</button>
         <button class="media-btn" id="miniBtn" onclick="toggleMiniVideo()">Mini Off</button>
         <button class="media-btn" id="screenBtn" onclick="toggleScreenShare()">Share Off</button>
         <button class="media-btn" id="sysAudioBtn" onclick="toggleSysAudio()" style="display:none;">🔊 Sys Audio Off</button>
         <button class="media-btn" id="sysMonitorBtn" onclick="toggleSysMonitor()" style="display:none;">🎧 Monitor Off</button>
+        <button class="leave-btn" id="leaveBtn" onclick="leaveSession()">✕ Leave</button>
         <button class="media-btn" id="audioBtn" onclick="toggleAudio()">Audio On</button>
       </div>
       <div class="channel-row" style="flex-shrink:0; padding:0 0 4px 0;">
@@ -1131,11 +1159,12 @@
     <!-- REMOTE TAB -->
     <div class="tab-pane active" id="paneRemote">
       <div class="channel-row" style="flex-shrink:0; padding:4px 0;">
-        <button class="media-btn" id="videoBtn2" onclick="toggleVideo()">Video Off</button>
+        <button class="media-btn video-off-state" id="videoBtn2" onclick="toggleVideo()">Video Off</button>
         <button class="media-btn" id="miniBtn2" onclick="toggleMiniVideo()">Mini Off</button>
         <button class="media-btn" id="screenBtn2" onclick="toggleScreenShare()">Share Off</button>
         <button class="media-btn" id="sysAudioBtn2" onclick="toggleSysAudio()" style="display:none;">🔊 Sys Audio Off</button>
         <button class="media-btn" id="sysMonitorBtn2" onclick="toggleSysMonitor()" style="display:none;">🎧 Monitor Off</button>
+        <button class="leave-btn" id="leaveBtn2" onclick="leaveSession()">✕ Leave</button>
         <button class="media-btn" id="audioBtn2" onclick="toggleAudio()">Audio On</button>
       </div>
       <div class="channel-row" style="flex-shrink:0; padding:0 0 4px 0;">
@@ -1311,6 +1340,8 @@ function startSession() {
   clearInterval(loginTimeoutInterval);
   document.getElementById('sessionOverlay').style.display = 'none';
   document.getElementById('unitIdDisplay').style.display = 'flex';
+  const _uln = document.getElementById('userLeftNotice'); if (_uln) _uln.classList.remove('visible');
+  leftPermanently = false;
   document.getElementById('unitIdValue').textContent = code;
   document.getElementById('qualityDisplay').style.display = 'flex';
   init();
@@ -2648,6 +2679,7 @@ function attachDataConn(dc) {
     const f = obj || null;
     if (f) {
       if (f.__control === 'video') { updateRemoteVideoState(f.enabled, f.hasTrack !== false); return; }
+      if (f.__control === 'leave') { handleRemoteLeave(); return; }
       if (f.__file  === true)      { addMediaBubble(f.name, f.type, f.data, false); return; }
       if (f.__chunk === true)      { receiveChunk(f); return; }
       addBubble(JSON.stringify(f), false);
@@ -2771,6 +2803,7 @@ function setVideoButtons(enabled) {
     b.textContent = enabled ? 'Video On' : 'Video Off';
     b.classList.toggle('video-on', enabled);
     b.classList.toggle('disabled-state', !enabled);
+    b.classList.toggle('video-off-state', !enabled);
   });
 }
 
@@ -2862,6 +2895,72 @@ function saveRecordingIfActive() {
   }
 }
 
+
+// ── Leave session ─────────────────────────────────────────────
+let leftPermanently = false;
+
+function leaveSession() {
+  leftPermanently = true;
+  // Notify remote peer before disconnecting
+  try { dcSend({ __control: 'leave' }); } catch(e) {}
+  // Small delay so the message can transmit
+  setTimeout(_doLeave, 200);
+}
+
+function _doLeave() {
+  saveRecordingIfActive();
+  // Stop all local media
+  if (localStream) {
+    localStream.getTracks().forEach(t => { try { t.stop(); } catch(e){} });
+    localStream = null;
+  }
+  // Clear all video elements immediately — no stale frames
+  ['localVideo','remoteVideo','miniRemoteVideo','miniLocalVideo','miniChatVideo'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { try { el.pause(); el.srcObject = null; el.load(); } catch(e){} }
+  });
+  const ra = document.getElementById('remoteAudio');
+  if (ra) { try { ra.pause(); ra.srcObject = null; } catch(e){} }
+  // Close peer connection
+  if (call)  { try { call.close();  } catch(e){} call = null; }
+  if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
+  if (peer)  { try { peer.destroy(); } catch(e){} peer = null; }
+  linked = false;
+  // Close window
+  window.close();
+  // Fallback if window.close() is blocked (e.g. not opener)
+  setTimeout(() => {
+    document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0a1520;color:#f1f5f9;font-family:monospace;font-size:14px;">Session ended. You may close this tab.</div>';
+  }, 300);
+}
+
+function handleRemoteLeave() {
+  // Remote user left — show notice, clear stale video, do NOT auto-reconnect
+  leftPermanently = false; // we haven't left yet, remote did
+  // Clear remote video immediately
+  ['remoteVideo','miniRemoteVideo','miniChatVideo'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { try { el.pause(); el.srcObject = null; el.load(); } catch(e){} }
+  });
+  const ra = document.getElementById('remoteAudio');
+  if (ra) { try { ra.pause(); ra.srcObject = null; } catch(e){} }
+  // Remove stale/waiting classes, keep video wrap clean
+  const rw = document.getElementById('remoteWrap');
+  if (rw) rw.className = 'video-wrap';
+  ['miniRemoteOverlay','miniChatOverlay'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('stale','no-video');
+  });
+  // Stop quality polling
+  stopQualityPolling();
+  // Show "User left chat" notice in header
+  const notice = document.getElementById('userLeftNotice');
+  if (notice) notice.classList.add('visible');
+  entry('Remote user left the session', 'sys');
+  // Hide login overlay if it was showing — stay on current screen
+  document.getElementById('sessionOverlay').style.display = 'none';
+}
+
 function onDrop() {
   saveRecordingIfActive();
   linked = false;
@@ -2886,6 +2985,7 @@ function onDrop() {
     if (el) { el.classList.remove('no-video'); el.classList.add('stale'); }
   });
   setStatus('standby');
+  if (leftPermanently) return; // permanent leave handled by leaveSession()
   entry('Link lost — returning to login screen', 'sys');
   // Show login overlay immediately and restart auto-login countdown
   document.getElementById('sessionOverlay').style.display = 'flex';
