@@ -3722,6 +3722,17 @@ function applyZoom(val, channel) {
     if (lbl2) lbl2.textContent = parseFloat(val).toFixed(1) + '×';
   }
 }
+
+// ── Android / tab-backgrounding recovery ─────────────────────
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') return;
+  if (!peer || peer.destroyed) return;
+  if (peer.disconnected) {
+    entry('Tab resumed — reconnecting signalling server…', 'sys');
+    peer.reconnect();
+  }
+});
+
 window.addEventListener('beforeunload', () => { peer?.destroy(); });
 </script>
 
