@@ -499,23 +499,30 @@
     50%      { box-shadow: 0 0 16px rgba(0,255,159,0.7); }
   }
   .media-btn.disabled-state {
-    background: rgba(255,68,68,0.15);
-    border-color: var(--danger);
-    color: var(--danger);
+    background: var(--btn-bg);
+    border-color: var(--border);
+    color: var(--text);
   }
-  .media-btn.disabled-state:hover { background: rgba(255,68,68,0.25); }
+  .media-btn.disabled-state:hover { background: var(--btn-hover); }
   .media-btn.video-on {
     border-color: var(--accent);
     color: var(--accent);
     box-shadow: 0 0 8px rgba(0,212,255,0.22);
   }
   .media-btn.recording {
-    background: rgba(255,68,68,0.2);
-    border-color: #ff4444;
-    color: #ff4444;
+    background: rgba(0,212,255,0.15);
+    border-color: var(--accent);
+    color: var(--accent);
     animation: rec-blink 1.2s ease-in-out infinite;
   }
   @keyframes rec-blink { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+  .media-btn.active-on {
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 0 8px rgba(0,212,255,0.3);
+  }
+  .media-btn.active-on:hover { background: rgba(0,212,255,0.1); }
 
   .log-panel {
     background: var(--panel); border: 1px solid var(--border);
@@ -861,8 +868,8 @@
   }
   .speaker-btn:hover { background: var(--btn-hover); }
   .speaker-btn.speaker-on {
-    border-color: var(--accent2); color: var(--accent2);
-    box-shadow: 0 0 7px rgba(0,255,159,0.25);
+    border-color: var(--border);
+    color: var(--text);
   }
   .speaker-btn.speaker-ear {
     border-color: var(--accent); color: var(--accent);
@@ -1088,9 +1095,9 @@
     <!-- LOCAL TAB -->
     <div class="tab-pane" id="paneLocal">
       <div class="channel-row" style="flex-shrink:0; padding:4px 0;">
-        <button class="media-btn" id="videoBtn" onclick="toggleVideo()">Disable Video</button>
-        <button class="media-btn" id="miniBtn" onclick="toggleMiniVideo()">Mini On</button>
-        <button class="media-btn" id="screenBtn" onclick="toggleScreenShare()" style="border-color:var(--accent2);color:var(--accent2);">Share Off</button>
+        <button class="media-btn" id="videoBtn" onclick="toggleVideo()">Video Off</button>
+        <button class="media-btn" id="miniBtn" onclick="toggleMiniVideo()">Mini Off</button>
+        <button class="media-btn" id="screenBtn" onclick="toggleScreenShare()">Share Off</button>
         <button class="media-btn" id="sysAudioBtn" onclick="toggleSysAudio()" style="display:none;">🔊 Sys Audio Off</button>
         <button class="media-btn" id="sysMonitorBtn" onclick="toggleSysMonitor()" style="display:none;">🎧 Monitor Off</button>
         <button class="media-btn" id="audioBtn" onclick="toggleAudio()">Audio On</button>
@@ -1124,15 +1131,15 @@
     <!-- REMOTE TAB -->
     <div class="tab-pane active" id="paneRemote">
       <div class="channel-row" style="flex-shrink:0; padding:4px 0;">
-        <button class="media-btn" id="videoBtn2" onclick="toggleVideo()">Disable Video</button>
-        <button class="media-btn" id="miniBtn2" onclick="toggleMiniVideo()">Mini On</button>
-        <button class="media-btn" id="screenBtn2" onclick="toggleScreenShare()" style="border-color:var(--accent2);color:var(--accent2);">Share Off</button>
+        <button class="media-btn" id="videoBtn2" onclick="toggleVideo()">Video Off</button>
+        <button class="media-btn" id="miniBtn2" onclick="toggleMiniVideo()">Mini Off</button>
+        <button class="media-btn" id="screenBtn2" onclick="toggleScreenShare()">Share Off</button>
         <button class="media-btn" id="sysAudioBtn2" onclick="toggleSysAudio()" style="display:none;">🔊 Sys Audio Off</button>
         <button class="media-btn" id="sysMonitorBtn2" onclick="toggleSysMonitor()" style="display:none;">🎧 Monitor Off</button>
         <button class="media-btn" id="audioBtn2" onclick="toggleAudio()">Audio On</button>
       </div>
       <div class="channel-row" style="flex-shrink:0; padding:0 0 4px 0;">
-        <button class="media-btn" id="recBtn2" onclick="toggleRecordRemote()">⏺ Record Remote</button>
+        <button class="media-btn" id="recBtn2" onclick="toggleRecordRemote()">Record Remote On</button>
         <button class="media-btn" id="refreshBtn" onclick="refreshScreen()">↺ Refresh</button>
         <button class="media-btn" id="flipBtn2" onclick="flipCamera()">⟳ Flip</button>
         <button class="speaker-btn speaker-on" id="speakerBtnRemote" onclick="toggleSpeaker()">🔊 Speaker</button>
@@ -1689,7 +1696,7 @@ function updateMiniVideoVisibility() {
     if (el) el.classList.toggle('hidden', !miniVideoVisible);
   });
   [document.getElementById('miniBtn'), document.getElementById('miniBtn2')].forEach(btn => {
-    if (btn) btn.textContent = miniVideoVisible ? 'Mini On' : 'Mini Off';
+    if (btn) { btn.textContent = miniVideoVisible ? 'Mini Off' : 'Mini On'; btn.classList.toggle('active-on', !miniVideoVisible); }
   });
   syncMiniVideos();
 }
@@ -2499,8 +2506,8 @@ function init() {
       entry('AUDIO FLAG: track=' + (at ? at.label : 'none') + ' enabled=' + (at ? at.enabled : 'n/a'), 'sys');
       if (at) { realAudioTrack = at; at.enabled = false; audioMuted = true; }
       entry('AUDIO FLAG: audioMuted now=' + audioMuted, 'sys');
-      const ab = document.getElementById('audioBtn'); if(ab){ab.textContent='Audio Off';ab.classList.add('disabled-state');}
-      const ab2 = document.getElementById('audioBtn2'); if(ab2){ab2.textContent='Audio Off';ab2.classList.add('disabled-state');}
+      const ab = document.getElementById('audioBtn'); if(ab){ab.textContent='Audio Off';ab.classList.remove('disabled-state');ab.classList.add('active-on');}
+      const ab2 = document.getElementById('audioBtn2'); if(ab2){ab2.textContent='Audio Off';ab2.classList.remove('disabled-state');ab2.classList.add('active-on');}
       entry('Audio disabled (login setting)', 'sys');
     } else {
       entry('AUDIO FLAG: not set, audio stays on', 'sys');
@@ -2842,7 +2849,7 @@ function saveRecordingIfActive() {
   if (recRemote && recRemote.state === 'recording') {
     entry('Connection lost — auto-saving remote recording…', 'sys');
     const btn2 = document.getElementById('recBtn2');
-    if (btn2) { btn2.textContent = '⏺ Record Remote'; btn2.classList.remove('recording'); }
+    if (btn2) { btn2.textContent = 'Record Remote On'; btn2.classList.remove('recording'); }
     recRemoteBusy = true;
     recRemote.stop();
   }
@@ -3026,7 +3033,7 @@ async function toggleRecordRemote() {
   if (recRemote && recRemote.state === 'recording') {
     recRemoteBusy = true;
     recRemote.stop();
-    btn.textContent = '⏺ Record Remote'; btn.classList.remove('recording');
+    btn.textContent = 'Record Remote On'; btn.classList.remove('recording');
     entry('Remote recording stopped — saving…', 'sys');
     return;
   }
@@ -3067,7 +3074,7 @@ async function toggleRecordRemote() {
     saveRec(recRemoteChunks, mimeType, 'remote');
   };
   recRemote.start(1000);
-  btn.textContent = '⏹ Stop & Save'; btn.classList.add('recording');
+  btn.textContent = 'Record Remote Off'; btn.classList.add('recording');
   entry(`Remote recording started${withMini ? ' (with local mini overlay)' : ''}…`, 'ok');
 }
 
@@ -3191,7 +3198,7 @@ async function toggleScreenShare() {
       } catch(e) { entry('Screen share track replace error: ' + e.message, 'err'); }
 
       screenSharing = true;
-      btns.forEach(b => { if(b){ b.textContent = 'CAMERA'; b.classList.add('screen-active'); }});
+      btns.forEach(b => { if(b){ b.textContent = 'Share On'; b.classList.add('screen-active'); }});
       entry('Screen share started', 'ok');
 
       screenTrack.addEventListener('ended', () => {
@@ -3468,7 +3475,7 @@ function toggleAudio() {
         if (sender) sender.replaceTrack(getSilentTrack()).catch(() => {});
       } catch(e) {}
     }
-    btns.forEach(b => { if(b){ b.textContent = 'Audio Off'; b.classList.add('disabled-state'); }});
+    btns.forEach(b => { if(b){ b.textContent = 'Audio Off'; b.classList.remove('disabled-state'); b.classList.add('active-on'); }});
     entry('Local audio muted', 'sys');
   } else {
     audioMuted = false;
@@ -3483,7 +3490,7 @@ function toggleAudio() {
         if (sender && realAudioTrack) sender.replaceTrack(realAudioTrack).catch(() => {});
       } catch(e) {}
     }
-    btns.forEach(b => { if(b){ b.textContent = 'Audio On'; b.classList.remove('disabled-state'); }});
+    btns.forEach(b => { if(b){ b.textContent = 'Audio On'; b.classList.remove('disabled-state'); b.classList.remove('active-on'); }});
     entry('Local audio unmuted', 'sys');
   }
 }
