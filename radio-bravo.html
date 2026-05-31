@@ -1170,9 +1170,9 @@
           <button class="chat-find-close" id="chatFindClose" title="Close">✕</button>
         </div>
         <div class="chat" id="chat"></div>
-        <button class="refresh-chat-btn" id="refreshChatBtn" onclick="refreshScreen()" title="Refresh / Reconnect">↺</button>
-        <button class="save-chat-btn" id="saveChatBtn" onclick="saveChatToFile()" title="Save chat as HTML">💾</button>
-        <button class="clear-chat-btn" id="clearChatBtn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" title="Clear chat history">🗑</button>
+        <button class="refresh-chat-btn" onclick="refreshScreen()" title="Refresh / Reconnect">↺</button>
+        <button class="save-chat-btn" onclick="saveChatToFile()" title="Save chat as HTML">💾</button>
+        <button class="clear-chat-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" title="Clear chat history">🗑</button>
         <button class="mini-chat-btn" id="miniChatBtn" onclick="toggleMiniChatOverlay()" title="Toggle mini remote screen">📺</button>
         <button class="find-chat-btn" id="findChatBtn" title="Find in chat">🔍</button>
         <div class="file-preview-strip" id="filePreviewStrip"></div>
@@ -1278,7 +1278,8 @@ sendBtn.addEventListener('pointerdown', e => {
 sendBtn.disabled = true;
 sendBtn.addEventListener('click', e => {
   // Only handle mouse clicks here; touch is handled by pointerdown above
-  if (!e.isTrusted) return;
+  if (!e.isTrusted || e.detail === 0) return; // synthetic / AT events still go through
+  if (e.pointerType === 'touch' || e.pointerType === 'pen') return;
   sendChat();
 });
 
@@ -2185,11 +2186,7 @@ function setupTooltips() {
     speakerBtnLocal: 'Toggle speaker / earphone output',
     speakerBtnRemote: 'Toggle speaker / earphone output',
     zoomSliderLocal: 'Zoom local camera',
-    translateResetBtn: 'Restore original — system language: ' + (navigator.language || 'unknown'),
-    refreshChatBtn: 'Refresh / Reconnect',
-    saveChatBtn:    'Save chat as HTML',
-    clearChatBtn:   'Clear chat history',
-    miniChatBtn:    'Toggle mini remote screen'
+    translateResetBtn: 'Restore original — system language: ' + (navigator.language || 'unknown')
   };
   Object.entries(labels).forEach(([id, label]) => {
     const el = document.getElementById(id);
@@ -2217,37 +2214,12 @@ function setupTooltips() {
   };
   const hide = () => tip.classList.remove('visible');
 
-  let _lpTimer = null;
-  const cancelLp = () => { clearTimeout(_lpTimer); _lpTimer = null; };
-
   document.querySelectorAll('[data-tooltip]').forEach(el => {
-    // Desktop
     el.addEventListener('mouseenter', () => place(el));
-    el.addEventListener('focus',      () => place(el));
+    el.addEventListener('focus', () => place(el));
     el.addEventListener('mouseleave', hide);
-    el.addEventListener('blur',       hide);
-    el.addEventListener('click',      hide);
-    // Android long-press (600 ms)
-    let _lpFired = false;
-    el.addEventListener('touchstart', e => {
-      cancelLp();
-      _lpFired = false;
-      e.preventDefault(); // must be here (not in the timer) to block Android context menu
-      _lpTimer = setTimeout(() => {
-        _lpFired = true;
-        place(el);
-      }, 600);
-    }, { passive: false });
-    el.addEventListener('touchend', e => {
-      cancelLp();
-      if (_lpFired) {
-        // Tooltip is showing — block the click that would hide it, then hide after delay
-        e.preventDefault();
-        setTimeout(hide, 1200);
-        _lpFired = false;
-      }
-    }, { passive: false });
-    el.addEventListener('touchmove', () => { cancelLp(); _lpFired = false; hide(); }, { passive: true });
+    el.addEventListener('blur', hide);
+    el.addEventListener('click', hide);
   });
 }
 setupTooltips();
