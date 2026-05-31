@@ -2947,8 +2947,8 @@ function leaveSession() {
   leftPermanently = true;
   // Notify remote peer before disconnecting
   try { dcSend({ __control: 'leave' }); } catch(e) {}
-  // Small delay so the message can transmit
-  setTimeout(_doLeave, 200);
+  // Longer delay over HTTPS/relayed WebRTC — DC message must transmit before peer tears down
+  setTimeout(_doLeave, 1500);
 }
 
 function _doLeave() {
@@ -3033,17 +3033,18 @@ function onDrop() {
   setStatus('calling');
   if (leftPermanently) return; // permanent leave handled by leaveSession()
   if (remotePeerLeft) return;  // remote sent leave signal — stay on screen, notice already shown
-  // Delay redirect slightly to allow a pending data-channel 'leave' message to arrive first
-  // (the DC message and call-close event can race; the leave flag may not be set yet)
+  // Delay redirect to allow a pending data-channel 'leave' message to arrive first.
+  // Over HTTPS/relayed WebRTC the DC message and call-close event race each other;
+  // we wait long enough for the leave flag to be set before deciding it's a real drop.
   setTimeout(() => {
-    if (remotePeerLeft) return; // DC message arrived in time — stay on screen
+    if (remotePeerLeft) return; // leave message arrived — stay on screen
     entry('Link lost — returning to login screen', 'sys');
     // Show login overlay immediately and restart auto-login countdown
     document.getElementById('sessionOverlay').style.display = 'flex';
     document.getElementById('unitIdDisplay').style.display = 'none';
     prefillLogin();
     startLoginTimeout();
-  }, 600);
+  }, 2000);
 }
 
 function muteLocal() {
