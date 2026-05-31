@@ -2864,6 +2864,10 @@ function attachCall(c) {
     startQualityPolling();
     // Ensure data channel is open (may have failed during retry storm)
     openDataConn();
+    // Re-enforce mute/unmute state now that WebRTC senders are live.
+    // A link drop + reconnect resets the sender track to whatever getCallStream()
+    // supplied; applyMuteToSenders brings it back in line with audioMuted.
+    applyMuteToSenders();
   });
   // Only trigger onDrop if this is still the active call (guards against stale calls
   // from a previous dial attempt closing and racing with the current one)
@@ -3496,10 +3500,17 @@ async function _activateMix() {
 }
 
 async function _deactivateMix() {
-  const micTrack = localStream && localStream.getAudioTracks()[0];
-  if (micTrack) {
-    await _setCallAudioTrack(micTrack);
-    entry('Call audio → mic only', 'sys');
+  // If the user has muted, restoring the raw mic track would un-mute them.
+  // Put a silent track on the sender instead and let toggleAudio own the state.
+  if (audioMuted) {
+    await _setCallAudioTrack(getSilentTrack());
+    entry('Call audio → silent (muted, mix stopped)', 'sys');
+  } else {
+    const micTrack = localStream && localStream.getAudioTracks()[0];
+    if (micTrack) {
+      await _setCallAudioTrack(micTrack);
+      entry('Call audio → mic only', 'sys');
+    }
   }
   _mixOutTrack = null;
 }
@@ -3541,6 +3552,37 @@ async function attachMediaToCallAudio(mediaEl) {
   }
   mediaEl.addEventListener('pause',  onPause, { once: true });
   mediaEl.addEventListener('ended',  onPause, { once: true });
+}
+
+// ── applyMuteToSenders ───────────────────────────────────────
+// Enforces the current mute/unmute state on the live WebRTC sender.
+// Called after a stream event (reconnect) so state survives link drops.
+// Mix-aware: if the mix is active we leave the mix track in place and only
+// adjust _mixMicGain; we never blindly restore realAudioTrack over the mix.
+function applyMuteToSenders() {
+  try {
+    const pc = call && (call.peerConnection || call._pc);
+    const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
+    if (!sender) return;
+    if (audioMuted) {
+      if (_mixMicGain) {
+        // Mix is active — silence the mic gain node; mix track stays on sender.
+        _mixMicGain.gain.value = 0.0;
+      } else {
+        sender.replaceTrack(getSilentTrack()).catch(() => {});
+      }
+    } else {
+      if (_mixMicGain) {
+        // Mix is active — restore mic gain; mix track stays on sender.
+        _mixMicGain.gain.value = 1.0;
+      } else {
+        // No mix — restore raw mic track only if sender doesn't already hold it.
+        if (realAudioTrack && sender.track !== realAudioTrack) {
+          sender.replaceTrack(realAudioTrack).catch(() => {});
+        }
+      }
+    }
+  } catch(e) { entry('applyMuteToSenders warn: ' + e.message, 'sys'); }
 }
 
 // ── Silent audio track used when muted ───────────────────────
