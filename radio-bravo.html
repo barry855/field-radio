@@ -3600,6 +3600,37 @@ function applyZoom(val, channel) {
     if (lbl2) lbl2.textContent = parseFloat(val).toFixed(1) + '×';
   }
 }
+
+// ── applyMuteToSenders ───────────────────────────────────────
+// Called after a stream event to enforce the current audioMuted state on the
+// live WebRTC sender. Was missing from BRAVO, causing a crash on connect when
+// loginDisableAudio was set.
+function applyMuteToSenders() {
+  try {
+    const pc = call && (call.peerConnection || call._pc);
+    const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
+    if (!sender) return;
+    if (audioMuted) {
+      sender.replaceTrack(getSilentTrack()).catch(() => {});
+    } else if (realAudioTrack) {
+      sender.replaceTrack(realAudioTrack).catch(() => {});
+    }
+  } catch(e) { entry('applyMuteToSenders warn: ' + e.message, 'sys'); }
+}
+
+// ── Android / tab-backgrounding recovery ─────────────────────
+// Android kills the WebSocket to the PeerJS signalling server when the tab is
+// backgrounded. Without this handler the peer silently goes stale and never
+// receives Alpha's call when the user returns to the tab.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') return;
+  if (!peer || peer.destroyed) return;
+  if (peer.disconnected) {
+    entry('Tab resumed — reconnecting signalling server…', 'sys');
+    peer.reconnect();
+  }
+});
+
 window.addEventListener('beforeunload', () => { peer?.destroy(); });
 </script>
 
