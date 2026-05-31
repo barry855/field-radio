@@ -3314,6 +3314,10 @@ async function toggleSysAudio() {
 
 function toggleSysMonitor() {
   sysMonitorOn = !sysMonitorOn;
+  // Ensure the AudioContext exists and is running — gain nodes are useless
+  // if the context is suspended or hasn't been created yet.
+  _ensureMixContext();
+  if (_mixCtx.state === 'suspended') _mixCtx.resume();
   if (sysMonitorGain)   sysMonitorGain.gain.value   = sysMonitorOn ? 1.0 : 0.0;
   if (mediaMonitorGain) mediaMonitorGain.gain.value  = sysMonitorOn ? 1.0 : 0.0;
   const btns = [document.getElementById('sysMonitorBtn'), document.getElementById('sysMonitorBtn2')];
