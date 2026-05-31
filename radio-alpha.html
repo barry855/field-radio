@@ -3353,8 +3353,13 @@ async function toggleSysAudio() {
 
     const sysOnly = new MediaStream(audioTracks);
     sysAudioNode = _mixCtx.createMediaStreamSource(sysOnly);
-    sysAudioNode.connect(_mixDest);            // → call stream
-    sysAudioNode.connect(_mixCtx.destination); // → local speakers
+    // GainNode locks sys audio at a fixed unity level so WebRTC's per-packet
+    // gain adjustments on the blended track don't cause amplitude fluctuation.
+    const sysGain = _mixCtx.createGain();
+    sysGain.gain.value = 1.0;
+    sysAudioNode.connect(sysGain);
+    sysGain.connect(_mixDest);            // → call stream
+    sysGain.connect(_mixCtx.destination); // → local speakers
 
     _mixPlayingSet.add('__sysaudio__');
     await _activateMix();
@@ -3398,7 +3403,12 @@ function _ensureMixContext() {
   if (localStream) {
     try {
       _mixMicNode = _mixCtx.createMediaStreamSource(new MediaStream(localStream.getAudioTracks()));
-      _mixMicNode.connect(_mixDest);
+      // GainNode isolates the mic from WebRTC's AGC so it doesn't pull the
+      // blended mix level up/down while sys audio is active.
+      const micGain = _mixCtx.createGain();
+      micGain.gain.value = 1.0;
+      _mixMicNode.connect(micGain);
+      micGain.connect(_mixDest);
     } catch(e) { entry('Mix mic init warn: ' + e.message, 'sys'); }
   }
 }
@@ -3431,7 +3441,8 @@ async function _deactivateMix() {
 
 // Called on every 'play' event from a chat media element.
 async function attachMediaToCallAudio(mediaEl) {
-  if (audioMuted) return;
+  // Note: audioMuted only gates the local mic input — sys audio and chat
+  // media mixing are independent and must remain active regardless.
 
   // Resume context if suspended (browsers suspend on creation until a user gesture)
   _ensureMixContext();
