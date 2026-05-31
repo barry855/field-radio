@@ -3246,7 +3246,8 @@ async function stopScreenShare() {
 // ── System Audio capture (getDisplayMedia audio-only) ─────────
 let sysAudioStream  = null;
 let sysAudioNode    = null;
-let sysMonitorGain  = null;
+let sysMonitorGain  = null;  // controls local speaker passthrough for sys audio (independent of call stream)
+let mediaMonitorGain = null; // controls local speaker passthrough for media elements
 let sysMonitorOn    = false;
 
 async function toggleSysAudio() {
@@ -3309,7 +3310,8 @@ async function toggleSysAudio() {
 
 function toggleSysMonitor() {
   sysMonitorOn = !sysMonitorOn;
-  if (sysMonitorGain) sysMonitorGain.gain.value = sysMonitorOn ? 1.0 : 0.0;
+  if (sysMonitorGain)   sysMonitorGain.gain.value   = sysMonitorOn ? 1.0 : 0.0;
+  if (mediaMonitorGain) mediaMonitorGain.gain.value  = sysMonitorOn ? 1.0 : 0.0;
   const btns = [document.getElementById('sysMonitorBtn'), document.getElementById('sysMonitorBtn2')];
   btns.forEach(b => {
     if (!b) return;
@@ -3335,6 +3337,10 @@ function _ensureMixContext() {
   if (_mixCtx) return;
   _mixCtx  = new (window.AudioContext || window.webkitAudioContext)();
   _mixDest = _mixCtx.createMediaStreamDestination();
+  // Gate node for media-element local monitor — respects the Monitor toggle
+  mediaMonitorGain = _mixCtx.createGain();
+  mediaMonitorGain.gain.value = sysMonitorOn ? 1.0 : 0.0;
+  mediaMonitorGain.connect(_mixCtx.destination);
   if (localStream) {
     try {
       _mixMicNode = _mixCtx.createMediaStreamSource(new MediaStream(localStream.getAudioTracks()));
@@ -3393,7 +3399,7 @@ async function attachMediaToCallAudio(mediaEl) {
     try {
       const src = _mixCtx.createMediaElementSource(mediaEl);
       src.connect(_mixDest);
-      src.connect(_mixCtx.destination);
+      src.connect(mediaMonitorGain);    // → local speakers (gated by monitor toggle)
       _mixSourceNodes.set(mediaEl, src);
       entry('Media element wired into mix', 'sys');
     } catch(e) { entry('Media wire warn: ' + e.message, 'sys'); return; }
