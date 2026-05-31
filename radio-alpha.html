@@ -2538,6 +2538,10 @@ function init() {
     entry('Mic + camera ready', 'ok');
     syncMiniVideos();
     updateLocalVideoState();
+    // Pre-initialise the audio mix context now so the mic is wired before any call.
+    // This means getCallStream() can use the mix destination track from the first dial,
+    // avoiding a mid-call replaceTrack() when sys audio or media mixing is activated.
+    _ensureMixContext();
     if (loginDisableVideoFlag) {
       const vt = stream.getVideoTracks()[0];
       if (vt) { vt.enabled = false; }
@@ -2664,8 +2668,17 @@ function getCallStream() {
     tracks.push(getSilentTrack());
     entry('STREAM: using silent audio track', 'sys');
   } else {
-    tracks.push(...localStream.getAudioTracks());
-    entry('STREAM: using real audio track', 'sys');
+    // Use the mix destination track if the context is ready — this means the sender
+    // track never changes after the call starts, avoiding a renegotiation/drop when
+    // sys audio or media mixing is activated mid-call via replaceTrack.
+    const mixTrack = _mixDest && _mixDest.stream.getAudioTracks()[0];
+    if (mixTrack) {
+      tracks.push(mixTrack);
+      entry('STREAM: using mix destination track', 'sys');
+    } else {
+      tracks.push(...localStream.getAudioTracks());
+      entry('STREAM: using raw mic track (mix not ready)', 'sys');
+    }
   }
   return new MediaStream(tracks);
 }
@@ -3424,21 +3437,26 @@ async function _setCallAudioTrack(track) {
 }
 
 async function _activateMix() {
-  const track = _mixDest.stream.getAudioTracks()[0];
+  const track = _mixDest && _mixDest.stream.getAudioTracks()[0];
   if (track && track !== _mixOutTrack) {
     _mixOutTrack = track;
-    await _setCallAudioTrack(track);
+    // If the call is already using the mix dest track (set up in getCallStream),
+    // no replaceTrack needed — the AudioContext graph change is sufficient.
+    // Only replace if somehow the sender has a different track (e.g. after reconnect).
+    const pc     = call && (call.peerConnection || call._pc);
+    const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
+    if (sender && sender.track !== track) {
+      await _setCallAudioTrack(track);
+    }
     entry('Call audio → mic + media mix', 'sys');
   }
 }
 
 async function _deactivateMix() {
-  const micTrack = localStream && localStream.getAudioTracks()[0];
-  if (micTrack) {
-    await _setCallAudioTrack(micTrack);
-    entry('Call audio → mic only', 'sys');
-  }
+  // Mix dest track stays in the sender — deactivating just means the mic node
+  // is the only source feeding it, so no replaceTrack is needed.
   _mixOutTrack = null;
+  entry('Call audio → mic only (mix sources removed)', 'sys');
 }
 
 // Called on every 'play' event from a chat media element.
