@@ -1342,6 +1342,7 @@ function startSession() {
   document.getElementById('unitIdDisplay').style.display = 'flex';
   const _uln = document.getElementById('userLeftNotice'); if (_uln) _uln.classList.remove('visible');
   leftPermanently = false;
+  remotePeerLeft = false;
   document.getElementById('unitIdValue').textContent = code;
   document.getElementById('qualityDisplay').style.display = 'flex';
   init();
@@ -2898,6 +2899,7 @@ function saveRecordingIfActive() {
 
 // ── Leave session ─────────────────────────────────────────────
 let leftPermanently = false;
+let remotePeerLeft = false;
 
 function leaveSession() {
   leftPermanently = true;
@@ -2937,6 +2939,7 @@ function _doLeave() {
 function handleRemoteLeave() {
   // Remote user left — show notice, clear stale video, do NOT auto-reconnect
   leftPermanently = false; // we haven't left yet, remote did
+  remotePeerLeft = true;  // flag so onDrop doesn't redirect to login
   // Clear remote video immediately
   ['remoteVideo','miniRemoteVideo','miniChatVideo'].forEach(id => {
     const el = document.getElementById(id);
@@ -2986,6 +2989,7 @@ function onDrop() {
   });
   setStatus('standby');
   if (leftPermanently) return; // permanent leave handled by leaveSession()
+  if (remotePeerLeft) return;  // remote sent leave signal — stay on screen, notice already shown
   entry('Link lost — returning to login screen', 'sys');
   // Show login overlay immediately and restart auto-login countdown
   document.getElementById('sessionOverlay').style.display = 'flex';
