@@ -2265,14 +2265,6 @@ function setupTooltips() {
 }
 setupTooltips();
 
-// Hide Sys Audio button on Android (feature uses desktop audio capture APIs not available on Android)
-if (/android/i.test(navigator.userAgent)) {
-  ['sysAudioBtn', 'sysAudioBtn2'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = 'none';
-  });
-}
-
 // Attach button → open file picker
 attachBtn.addEventListener('click', () => fileInput.click());
 fileInput.addEventListener('change', e => { addFiles([...e.target.files]); fileInput.value=''; });
@@ -2877,7 +2869,7 @@ function attachCall(c) {
   });
   // Only trigger onDrop if this is still the active call (guards against stale calls
   // from a previous dial attempt closing and racing with the current one)
-  c.on('close', () => { if (call === c && !_replacingTrack) onDrop(); });
+  c.on('close', () => { if (call === c) onDrop(); });
   c.on('error', e => { entry('Call error: ' + e.message, 'err'); if (call === c) onDrop(); });
 }
 
@@ -3415,20 +3407,12 @@ function _ensureMixContext() {
   }
 }
 
-let _replacingTrack = false;
 async function _setCallAudioTrack(track) {
   try {
     const pc     = call && (call.peerConnection || call._pc);
     const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
-    if (sender) {
-      _replacingTrack = true;
-      await sender.replaceTrack(track);
-      _replacingTrack = false;
-    }
-  } catch(e) {
-    _replacingTrack = false;
-    entry('replaceTrack warn: ' + e.message, 'sys');
-  }
+    if (sender) await sender.replaceTrack(track);
+  } catch(e) { entry('replaceTrack warn: ' + e.message, 'sys'); }
 }
 
 async function _activateMix() {
@@ -3510,8 +3494,6 @@ function toggleAudio() {
   if (!audioMuted) {
     audioMuted = true;
     if (realAudioTrack) realAudioTrack.enabled = false;
-    // Disconnect mic from mix so it doesn't leak through sys audio / media mix
-    if (_mixMicNode) { try { _mixMicNode.disconnect(_mixDest); } catch(e) {} }
     // Best-effort replaceTrack on active call
     try {
       const pc = call && (call.peerConnection || call._pc);
@@ -3523,18 +3505,11 @@ function toggleAudio() {
   } else {
     audioMuted = false;
     if (realAudioTrack) realAudioTrack.enabled = true;
-    // Reconnect mic into mix
-    if (_mixMicNode && _mixDest) { try { _mixMicNode.connect(_mixDest); } catch(e) {} }
-    // Best-effort replaceTrack on active call — restore mix track if mix is active,
-    // otherwise restore the raw mic track
+    // Best-effort replaceTrack on active call
     try {
       const pc = call && (call.peerConnection || call._pc);
       const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
-      if (sender) {
-        const mixTrack = _mixDest && _mixDest.stream.getAudioTracks()[0];
-        const restoreTrack = (_mixPlayingSet.size > 0 && mixTrack) ? mixTrack : realAudioTrack;
-        if (restoreTrack) sender.replaceTrack(restoreTrack).catch(() => {});
-      }
+      if (sender && realAudioTrack) sender.replaceTrack(realAudioTrack).catch(() => {});
     } catch(e) {}
     btns.forEach(b => { if(b){ b.textContent = 'Disable Audio'; b.classList.remove('disabled-state'); }});
     entry('Local audio unmuted', 'sys');
