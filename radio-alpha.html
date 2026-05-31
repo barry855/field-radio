@@ -3325,6 +3325,9 @@ async function toggleSysAudio() {
     if (sysMonitorGain) { try { sysMonitorGain.disconnect(); } catch(e){} sysMonitorGain = null; }
     _mixPlayingSet.delete('__sysaudio__');
     if (_mixPlayingSet.size === 0) _deactivateMix();
+    // Restore remoteAudio playback now that sys capture is stopped
+    const ra = document.getElementById('remoteAudio');
+    if (ra) ra.muted = false;
     btns.forEach(b => { if(b){ b.textContent = '🔊 Sys Audio Off'; b.classList.remove('sys-audio-on'); }});
     entry('System audio capture stopped', 'sys');
     return;
@@ -3373,6 +3376,11 @@ async function toggleSysAudio() {
 
     _mixPlayingSet.add('__sysaudio__');
     await _activateMix();
+
+    // Mute the remoteAudio element to prevent the captured sys audio from
+    // picking up the incoming call audio via OS loopback, creating feedback.
+    const ra = document.getElementById('remoteAudio');
+    if (ra) ra.muted = true;
 
     // Auto-stop when user clicks "Stop sharing" in the browser bar
     audioTracks[0].addEventListener('ended', () => { if (sysAudioStream) toggleSysAudio(); });
