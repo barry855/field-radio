@@ -2620,9 +2620,10 @@ function startPeer() {
     }
     // If already linked, close the previous call cleanly before answering the new one
     if (call) {
-      try { call.close(); } catch(e) {}
-      call = null;
+      const stale = call;
+      call = null;    // null first so the close event's guard (call === c) never fires onDrop
       linked = false;
+      try { stale.close(); } catch(e) {}
     }
     incoming.answer(getCallStream());
     attachCall(incoming);
@@ -2848,8 +2849,7 @@ function attachCall(c) {
     duplexBar.className = 'duplex-overlay live';
     syncControls();
     startQualityPolling();
-    // Ensure data channel is open
-    openDataConn();
+    // Data channel is initiated by Alpha; Bravo waits for inbound connection via peer.on('connection')
     // Apply mute state now that senders are live
     if (audioMuted) {
       entry('DEBUG applying mute on stream event', 'sys');
