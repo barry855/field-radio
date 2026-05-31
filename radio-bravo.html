@@ -3258,6 +3258,8 @@ async function toggleSysAudio() {
     if (sysMonitorGain) { try { sysMonitorGain.disconnect(); } catch(e){} sysMonitorGain = null; }
     _mixPlayingSet.delete('__sysaudio__');
     if (_mixPlayingSet.size === 0) _deactivateMix();
+    const ra = document.getElementById('remoteAudio');
+    if (ra) ra.muted = false;
     btns.forEach(b => { if(b){ b.textContent = '🔊 Sys Audio Off'; b.classList.remove('sys-audio-on'); }});
     entry('System audio capture stopped', 'sys');
     return;
@@ -3295,6 +3297,8 @@ async function toggleSysAudio() {
     sysMonitorGain.connect(_mixCtx.destination);
     _mixPlayingSet.add('__sysaudio__');
     await _activateMix();
+    const ra = document.getElementById('remoteAudio');
+    if (ra) ra.muted = true;
     audioTracks[0].addEventListener('ended', () => { if (sysAudioStream) toggleSysAudio(); });
     btns.forEach(b => { if(b){ b.textContent = '🔊 Sys Audio On'; b.classList.add('sys-audio-on'); }});
     entry('System audio capture active — mixed into call', 'ok');
