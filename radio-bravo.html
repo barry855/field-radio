@@ -1091,7 +1091,8 @@
         <button class="media-btn" id="videoBtn" onclick="toggleVideo()">Disable Video</button>
         <button class="media-btn" id="miniBtn" onclick="toggleMiniVideo()">Show Mini</button>
         <button class="media-btn" id="screenBtn" onclick="toggleScreenShare()" style="border-color:var(--accent2);color:var(--accent2);">Share</button>
-        <button class="media-btn" id="sysAudioBtn" onclick="toggleSysAudio()">🔊 Sys Audio Off</button>
+        <button class="media-btn" id="sysAudioBtn" onclick="toggleSysAudio()" style="display:none;">🔊 Sys Audio Off</button>
+        <button class="media-btn" id="sysMonitorBtn" onclick="toggleSysMonitor()" style="display:none;">🎧 Monitor Off</button>
         <button class="media-btn" id="audioBtn" onclick="toggleAudio()">Disable Audio</button>
       </div>
       <div class="channel-row" style="flex-shrink:0; padding:0 0 4px 0;">
@@ -1126,7 +1127,8 @@
         <button class="media-btn" id="videoBtn2" onclick="toggleVideo()">Disable Video</button>
         <button class="media-btn" id="miniBtn2" onclick="toggleMiniVideo()">Show Mini</button>
         <button class="media-btn" id="screenBtn2" onclick="toggleScreenShare()" style="border-color:var(--accent2);color:var(--accent2);">Share</button>
-        <button class="media-btn" id="sysAudioBtn2" onclick="toggleSysAudio()">🔊 Sys Audio Off</button>
+        <button class="media-btn" id="sysAudioBtn2" onclick="toggleSysAudio()" style="display:none;">🔊 Sys Audio Off</button>
+        <button class="media-btn" id="sysMonitorBtn2" onclick="toggleSysMonitor()" style="display:none;">🎧 Monitor Off</button>
         <button class="media-btn" id="audioBtn2" onclick="toggleAudio()">Disable Audio</button>
       </div>
       <div class="channel-row" style="flex-shrink:0; padding:0 0 4px 0;">
@@ -1170,9 +1172,9 @@
           <button class="chat-find-close" id="chatFindClose" title="Close">✕</button>
         </div>
         <div class="chat" id="chat"></div>
-        <button class="refresh-chat-btn" id="refreshChatBtn" onclick="refreshScreen()" title="Refresh / Reconnect">↺</button>
-        <button class="save-chat-btn" id="saveChatBtn" onclick="saveChatToFile()" title="Save chat as HTML">💾</button>
-        <button class="clear-chat-btn" id="clearChatBtn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" title="Clear chat history">🗑</button>
+        <button class="refresh-chat-btn" onclick="refreshScreen()" title="Refresh / Reconnect">↺</button>
+        <button class="save-chat-btn" onclick="saveChatToFile()" title="Save chat as HTML">💾</button>
+        <button class="clear-chat-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" title="Clear chat history">🗑</button>
         <button class="mini-chat-btn" id="miniChatBtn" onclick="toggleMiniChatOverlay()" title="Toggle mini remote screen">📺</button>
         <button class="find-chat-btn" id="findChatBtn" title="Find in chat">🔍</button>
         <div class="file-preview-strip" id="filePreviewStrip"></div>
@@ -1269,16 +1271,17 @@ const sendBtn   = document.getElementById('sendBtn');
 // (stops the blur/keyboard-dismiss from happening mid-tap), read the input
 // value while focus is still live, then send. The click listener is kept as
 // a fallback for mouse users and assistive technology.
+let _sendBtnTouched = false;
 sendBtn.addEventListener('pointerdown', e => {
   if (e.pointerType !== 'mouse') {
-    e.preventDefault(); // keeps keyboard open, prevents blur swallowing the click
+    _sendBtnTouched = true;
+    e.preventDefault();
     sendChat();
   }
 });
 sendBtn.disabled = true;
 sendBtn.addEventListener('click', e => {
-  // Only handle mouse clicks here; touch is handled by pointerdown above
-  if (!e.isTrusted) return;
+  if (_sendBtnTouched) { _sendBtnTouched = false; return; }
   sendChat();
 });
 
@@ -2141,7 +2144,7 @@ function sendChat() {
   }
   if (txt) {
     try {
-      dataConn.send(txt);
+      dcSend(txt);
     } catch(e) {
       entry('Send failed: ' + e.message, 'err');
       return;
@@ -2185,11 +2188,7 @@ function setupTooltips() {
     speakerBtnLocal: 'Toggle speaker / earphone output',
     speakerBtnRemote: 'Toggle speaker / earphone output',
     zoomSliderLocal: 'Zoom local camera',
-    translateResetBtn: 'Restore original — system language: ' + (navigator.language || 'unknown'),
-    refreshChatBtn: 'Refresh / Reconnect',
-    saveChatBtn:    'Save chat as HTML',
-    clearChatBtn:   'Clear chat history',
-    miniChatBtn:    'Toggle mini remote screen'
+    translateResetBtn: 'Restore original — system language: ' + (navigator.language || 'unknown')
   };
   Object.entries(labels).forEach(([id, label]) => {
     const el = document.getElementById(id);
@@ -2217,48 +2216,15 @@ function setupTooltips() {
   };
   const hide = () => tip.classList.remove('visible');
 
-  let _lpTimer = null;
-  const cancelLp = () => { clearTimeout(_lpTimer); _lpTimer = null; };
-
   document.querySelectorAll('[data-tooltip]').forEach(el => {
-    // Desktop
     el.addEventListener('mouseenter', () => place(el));
-    el.addEventListener('focus',      () => place(el));
+    el.addEventListener('focus', () => place(el));
     el.addEventListener('mouseleave', hide);
-    el.addEventListener('blur',       hide);
-    el.addEventListener('click',      hide);
-    // Android long-press (600 ms)
-    let _lpFired = false;
-    el.addEventListener('touchstart', e => {
-      cancelLp();
-      _lpFired = false;
-      e.preventDefault(); // must be here (not in the timer) to block Android context menu
-      _lpTimer = setTimeout(() => {
-        _lpFired = true;
-        place(el);
-      }, 600);
-    }, { passive: false });
-    el.addEventListener('touchend', e => {
-      cancelLp();
-      if (_lpFired) {
-        // Tooltip is showing — block the click that would hide it, then hide after delay
-        e.preventDefault();
-        setTimeout(hide, 1200);
-        _lpFired = false;
-      }
-    }, { passive: false });
-    el.addEventListener('touchmove', () => { cancelLp(); _lpFired = false; hide(); }, { passive: true });
+    el.addEventListener('blur', hide);
+    el.addEventListener('click', hide);
   });
 }
 setupTooltips();
-
-// Hide Sys Audio button on Android (feature uses desktop audio capture APIs not available on Android)
-if (/android/i.test(navigator.userAgent)) {
-  ['sysAudioBtn', 'sysAudioBtn2'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = 'none';
-  });
-}
 
 // Attach button → open file picker
 attachBtn.addEventListener('click', () => fileInput.click());
@@ -2378,7 +2344,7 @@ function sendFileChunked(item) {
   try {
     for (let i = 0; i < total; i++) {
       const chunk = data.slice(i * FILE_CHUNK, (i + 1) * FILE_CHUNK);
-      dataConn.send({
+      dcSend({
         __chunk: true, id,
         name: item.file.name, type: item.file.type,
         index: i, total, data: chunk
@@ -2620,10 +2586,9 @@ function startPeer() {
     }
     // If already linked, close the previous call cleanly before answering the new one
     if (call) {
-      const stale = call;
-      call = null;    // null first so the close event's guard (call === c) never fires onDrop
+      try { call.close(); } catch(e) {}
+      call = null;
       linked = false;
-      try { stale.close(); } catch(e) {}
     }
     incoming.answer(getCallStream());
     attachCall(incoming);
@@ -2670,29 +2635,17 @@ function attachDataConn(dc) {
   // Android/WebView fallback: 'open' sometimes fires before the handler is attached
   if (dc.open) { setTimeout(onDcOpen, 0); }
   dc.on('data', msg => {
-    // PeerJS json mode delivers objects directly; binary/legacy paths deliver string/ArrayBuffer
-    let f = null;
-    let msgStr = null;
-    if (typeof msg === 'object' && msg !== null && !(msg instanceof ArrayBuffer)) {
-      f = msg; // already a parsed object — fast path
-    } else {
-      if (msg instanceof ArrayBuffer) {
-        msgStr = new TextDecoder().decode(msg);
-      } else {
-        msgStr = String(msg);
-      }
-      if (msgStr.startsWith('{')) {
-        try { f = JSON.parse(msgStr); } catch(e) {}
-      }
-    }
+    const decoded = dcDecode(msg);
+    if (!decoded) return;
+    const { text, obj } = decoded;
+    const f = obj || null;
     if (f) {
       if (f.__control === 'video') { updateRemoteVideoState(f.enabled, f.hasTrack !== false); return; }
       if (f.__file  === true)      { addMediaBubble(f.name, f.type, f.data, false); return; }
       if (f.__chunk === true)      { receiveChunk(f); return; }
-      // Unknown control object — show as JSON text
-      addBubble(msgStr || JSON.stringify(f), false);
+      addBubble(JSON.stringify(f), false);
     } else {
-      addBubble(msgStr || String(msg), false);
+      addBubble(text, false);
     }
   });
   dc.on('close', () => {
@@ -2708,11 +2661,35 @@ function attachDataConn(dc) {
 }
 
 let pendingDC = false;
+
+function dcSend(payload) {
+  if (!dataConn || !dataConn.open) return;
+  const wire = (typeof payload === 'string')
+    ? 'T:' + payload
+    : 'J:' + JSON.stringify(payload);
+  dataConn.send(wire);
+}
+
+function dcDecode(raw) {
+  let s;
+  if (raw instanceof ArrayBuffer)   s = new TextDecoder().decode(raw);
+  else if (raw instanceof Blob)     return null;
+  else                              s = String(raw);
+  if (s.startsWith('T:')) return { text: s.slice(2) };
+  if (s.startsWith('J:')) {
+    try { return { obj: JSON.parse(s.slice(2)) }; } catch(e) { return { text: s }; }
+  }
+  if (s.startsWith('{')) {
+    try { return { obj: JSON.parse(s) }; } catch(e) {}
+  }
+  return { text: s };
+}
+
 function openDataConn() {
   if (dataConn || pendingDC) return;
   pendingDC = true;
   entry('Opening data channel to Alpha…', 'sys');
-  const dc = peer.connect(REMOTE_ID, { reliable: true, serialization: 'json' });
+  const dc = peer.connect(REMOTE_ID, { reliable: true, serialization: 'raw' });
   attachDataConn(dc);
 }
 
@@ -2814,7 +2791,7 @@ function sendVideoState() {
   if (!dataConn || !localStream) return;
   const track = localStream.getVideoTracks()[0];
   try {
-    dataConn.send({
+    dcSend({
       __control: 'video',
       enabled: !!(track && track.enabled),
       hasTrack: !!track
@@ -2849,12 +2826,12 @@ function attachCall(c) {
     duplexBar.className = 'duplex-overlay live';
     syncControls();
     startQualityPolling();
-    // Data channel is initiated by Alpha; Bravo waits for inbound connection via peer.on('connection')
-    // Apply mute state now that senders are live
-    if (audioMuted) {
-      entry('DEBUG applying mute on stream event', 'sys');
-      applyMuteToSenders();
-    }
+    // Ensure data channel is open
+    openDataConn();
+    // Re-enforce mute/unmute state now that WebRTC senders are live.
+    // A link drop + reconnect resets the sender track to whatever getCallStream()
+    // supplied; applyMuteToSenders brings it back in line with audioMuted.
+    applyMuteToSenders();
   });
   c.on('close', () => { if (call === c) onDrop(); });
   c.on('error', e => { entry('Call error: ' + e.message, 'err'); if (call === c) onDrop(); });
@@ -3266,8 +3243,11 @@ async function stopScreenShare() {
 }
 
 // ── System Audio capture (getDisplayMedia audio-only) ─────────
-let sysAudioStream = null;
-let sysAudioNode   = null;
+let sysAudioStream  = null;
+let sysAudioNode    = null;
+let sysMonitorGain  = null;  // controls local speaker passthrough for sys audio (independent of call stream)
+let mediaMonitorGain = null; // controls local speaker passthrough for media elements
+let sysMonitorOn    = false;
 
 async function toggleSysAudio() {
   const btns = [document.getElementById('sysAudioBtn'), document.getElementById('sysAudioBtn2')];
@@ -3275,8 +3255,13 @@ async function toggleSysAudio() {
     sysAudioStream.getTracks().forEach(t => t.stop());
     sysAudioStream = null;
     if (sysAudioNode) { try { sysAudioNode.disconnect(); } catch(e){} sysAudioNode = null; }
+    if (sysMonitorGain) { try { sysMonitorGain.disconnect(); } catch(e){} sysMonitorGain = null; }
     _mixPlayingSet.delete('__sysaudio__');
     if (_mixPlayingSet.size === 0) _deactivateMix();
+    ['remoteAudio', 'miniRemoteVideo', 'miniChatVideo'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.muted = false;
+    });
     btns.forEach(b => { if(b){ b.textContent = '🔊 Sys Audio Off'; b.classList.remove('sys-audio-on'); }});
     entry('System audio capture stopped', 'sys');
     return;
@@ -3301,10 +3286,23 @@ async function toggleSysAudio() {
     if (_mixCtx.state === 'suspended') await _mixCtx.resume();
     const sysOnly = new MediaStream(audioTracks);
     sysAudioNode = _mixCtx.createMediaStreamSource(sysOnly);
-    sysAudioNode.connect(_mixDest);
-    sysAudioNode.connect(_mixCtx.destination);
+    // GainNode locks sys audio at a fixed unity level so WebRTC's per-packet
+    // gain adjustments on the blended track don't cause amplitude fluctuation.
+    const sysGain = _mixCtx.createGain();
+    sysGain.gain.value = 1.0;
+    sysAudioNode.connect(sysGain);
+    sysGain.connect(_mixDest);
+
+    sysMonitorGain = _mixCtx.createGain();
+    sysMonitorGain.gain.value = sysMonitorOn ? 1.0 : 0.0;
+    sysGain.connect(sysMonitorGain);
+    sysMonitorGain.connect(_mixCtx.destination);
     _mixPlayingSet.add('__sysaudio__');
     await _activateMix();
+    ['remoteAudio', 'miniRemoteVideo', 'miniChatVideo'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.muted = true;
+    });
     audioTracks[0].addEventListener('ended', () => { if (sysAudioStream) toggleSysAudio(); });
     btns.forEach(b => { if(b){ b.textContent = '🔊 Sys Audio On'; b.classList.add('sys-audio-on'); }});
     entry('System audio capture active — mixed into call', 'ok');
@@ -3312,10 +3310,33 @@ async function toggleSysAudio() {
     entry('System audio capture failed: ' + e.message, 'err');
   }
 }
+
+function toggleSysMonitor() {
+  sysMonitorOn = !sysMonitorOn;
+  // Ensure the AudioContext exists and is running — gain nodes are useless
+  // if the context is suspended or hasn't been created yet.
+  _ensureMixContext();
+  if (_mixCtx.state === 'suspended') _mixCtx.resume();
+  if (sysMonitorGain)   sysMonitorGain.gain.value   = sysMonitorOn ? 1.0 : 0.0;
+  if (mediaMonitorGain) mediaMonitorGain.gain.value  = sysMonitorOn ? 1.0 : 0.0;
+  const btns = [document.getElementById('sysMonitorBtn'), document.getElementById('sysMonitorBtn2')];
+  btns.forEach(b => {
+    if (!b) return;
+    if (sysMonitorOn) {
+      b.textContent = '🎧 Monitor On';
+      b.classList.add('sys-audio-on');
+    } else {
+      b.textContent = '🎧 Monitor Off';
+      b.classList.remove('sys-audio-on');
+    }
+  });
+  entry('Sys audio local monitor: ' + (sysMonitorOn ? 'ON' : 'OFF'), 'sys');
+}
 // ── Media-to-call audio mix ───────────────────────────────────
 let _mixCtx  = null;
 let _mixDest = null;
 let _mixMicNode = null;
+let _mixMicGain = null;   // module-level so toggleAudio can zero it to mute mic in the mix graph
 const _mixSourceNodes  = new WeakMap();
 const _mixPlayingSet   = new Set();
 let   _mixOutTrack     = null;
@@ -3324,16 +3345,35 @@ function _ensureMixContext() {
   if (_mixCtx) return;
   _mixCtx  = new (window.AudioContext || window.webkitAudioContext)();
   _mixDest = _mixCtx.createMediaStreamDestination();
+  // Gate node for media-element local monitor — respects the Monitor toggle
+  mediaMonitorGain = _mixCtx.createGain();
+  mediaMonitorGain.gain.value = sysMonitorOn ? 1.0 : 0.0;
+  mediaMonitorGain.connect(_mixCtx.destination);
   if (localStream) {
     try {
       _mixMicNode = _mixCtx.createMediaStreamSource(new MediaStream(localStream.getAudioTracks()));
-      _mixMicNode.connect(_mixDest);
+      // GainNode isolates the mic from WebRTC's AGC so it doesn't pull the
+      // blended mix level up/down while sys audio is active.
+      _mixMicGain = _mixCtx.createGain();
+      _mixMicGain.gain.value = audioMuted ? 0.0 : 1.0;  // honour mute state if mix starts after mute
+      _mixMicNode.connect(_mixMicGain);
+      _mixMicGain.connect(_mixDest);
     } catch(e) { entry('Mix mic init warn: ' + e.message, 'sys'); }
   }
 }
 
 async function _setCallAudioTrack(track) {
   try {
+    // Disable all WebRTC-level audio processing on the track before sending.
+    // Without this, Chrome's internal AudioProcessingModule re-adapts its AGC
+    // to the mixed track over ~10-30s and gradually pulls the level down.
+    try {
+      await track.applyConstraints({
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl:  false
+      });
+    } catch(ce) { /* applyConstraints not supported on this track type — ignore */ }
     const pc     = call && (call.peerConnection || call._pc);
     const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
     if (sender) await sender.replaceTrack(track);
@@ -3350,23 +3390,31 @@ async function _activateMix() {
 }
 
 async function _deactivateMix() {
-  const micTrack = localStream && localStream.getAudioTracks()[0];
-  if (micTrack) {
-    await _setCallAudioTrack(micTrack);
-    entry('Call audio → mic only', 'sys');
+  // If the user has muted, restoring the raw mic track would un-mute them.
+  // Put a silent track on the sender instead and let toggleAudio own the state.
+  if (audioMuted) {
+    await _setCallAudioTrack(getSilentTrack());
+    entry('Call audio → silent (muted, mix stopped)', 'sys');
+  } else {
+    const micTrack = localStream && localStream.getAudioTracks()[0];
+    if (micTrack) {
+      await _setCallAudioTrack(micTrack);
+      entry('Call audio → mic only', 'sys');
+    }
   }
   _mixOutTrack = null;
 }
 
 async function attachMediaToCallAudio(mediaEl) {
-  if (audioMuted) return;
+  // Note: audioMuted only gates the local mic input — sys audio and chat
+  // media mixing are independent and must remain active regardless.
   _ensureMixContext();
   if (_mixCtx.state === 'suspended') await _mixCtx.resume();
   if (!_mixSourceNodes.has(mediaEl)) {
     try {
       const src = _mixCtx.createMediaElementSource(mediaEl);
       src.connect(_mixDest);
-      src.connect(_mixCtx.destination);
+      src.connect(mediaMonitorGain);    // → local speakers (gated by monitor toggle)
       _mixSourceNodes.set(mediaEl, src);
       entry('Media element wired into mix', 'sys');
     } catch(e) { entry('Media wire warn: ' + e.message, 'sys'); return; }
@@ -3407,21 +3455,34 @@ function toggleAudio() {
   if (!audioMuted) {
     audioMuted = true;
     if (realAudioTrack) realAudioTrack.enabled = false;
-    try {
-      const pc = call && (call.peerConnection || call._pc);
-      const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
-      if (sender) sender.replaceTrack(getSilentTrack()).catch(() => {});
-    } catch(e) {}
+    // When the mix is active (_mixMicGain exists), zero the gain node so the mic
+    // is silenced within the AudioContext graph.  track.enabled=false alone does
+    // NOT silence an AudioContext source node that has already captured the track.
+    if (_mixMicGain) {
+      _mixMicGain.gain.value = 0.0;
+      // Mix track stays on the sender — no replaceTrack needed; sys audio keeps flowing.
+    } else {
+      try {
+        const pc = call && (call.peerConnection || call._pc);
+        const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
+        if (sender) sender.replaceTrack(getSilentTrack()).catch(() => {});
+      } catch(e) {}
+    }
     btns.forEach(b => { if(b){ b.textContent = 'Enable Audio'; b.classList.add('disabled-state'); }});
     entry('Local audio muted', 'sys');
   } else {
     audioMuted = false;
     if (realAudioTrack) realAudioTrack.enabled = true;
-    try {
-      const pc = call && (call.peerConnection || call._pc);
-      const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
-      if (sender && realAudioTrack) sender.replaceTrack(realAudioTrack).catch(() => {});
-    } catch(e) {}
+    if (_mixMicGain) {
+      // Restore mic gain in the mix graph — the mix track is already on the sender.
+      _mixMicGain.gain.value = 1.0;
+    } else {
+      try {
+        const pc = call && (call.peerConnection || call._pc);
+        const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
+        if (sender && realAudioTrack) sender.replaceTrack(realAudioTrack).catch(() => {});
+      } catch(e) {}
+    }
     btns.forEach(b => { if(b){ b.textContent = 'Disable Audio'; b.classList.remove('disabled-state'); }});
     entry('Local audio unmuted', 'sys');
   }
@@ -3573,6 +3634,51 @@ function applyZoom(val, channel) {
     if (lbl2) lbl2.textContent = parseFloat(val).toFixed(1) + '×';
   }
 }
+
+// ── applyMuteToSenders ───────────────────────────────────────
+// Enforces the current mute/unmute state on the live WebRTC sender.
+// Called after a stream event (reconnect) so state survives link drops.
+// Mix-aware: if the mix is active we leave the mix track in place and only
+// adjust _mixMicGain; we never blindly restore realAudioTrack over the mix.
+function applyMuteToSenders() {
+  try {
+    const pc = call && (call.peerConnection || call._pc);
+    const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
+    if (!sender) return;
+    if (audioMuted) {
+      if (_mixMicGain) {
+        // Mix is active — silence the mic gain node; mix track stays on sender.
+        _mixMicGain.gain.value = 0.0;
+      } else {
+        sender.replaceTrack(getSilentTrack()).catch(() => {});
+      }
+    } else {
+      if (_mixMicGain) {
+        // Mix is active — restore mic gain; mix track stays on sender.
+        _mixMicGain.gain.value = 1.0;
+      } else {
+        // No mix — restore raw mic track only if sender doesn't already hold it.
+        if (realAudioTrack && sender.track !== realAudioTrack) {
+          sender.replaceTrack(realAudioTrack).catch(() => {});
+        }
+      }
+    }
+  } catch(e) { entry('applyMuteToSenders warn: ' + e.message, 'sys'); }
+}
+
+// ── Android / tab-backgrounding recovery ─────────────────────
+// Android kills the WebSocket to the PeerJS signalling server when the tab is
+// backgrounded. Without this handler the peer silently goes stale and never
+// receives Alpha's call when the user returns to the tab.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') return;
+  if (!peer || peer.destroyed) return;
+  if (peer.disconnected) {
+    entry('Tab resumed — reconnecting signalling server…', 'sys');
+    peer.reconnect();
+  }
+});
+
 window.addEventListener('beforeunload', () => { peer?.destroy(); });
 </script>
 
