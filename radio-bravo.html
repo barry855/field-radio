@@ -2252,14 +2252,6 @@ function setupTooltips() {
 }
 setupTooltips();
 
-// Hide Sys Audio button on Android (feature uses desktop audio capture APIs not available on Android)
-if (/android/i.test(navigator.userAgent)) {
-  ['sysAudioBtn', 'sysAudioBtn2'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = 'none';
-  });
-}
-
 // Attach button → open file picker
 attachBtn.addEventListener('click', () => fileInput.click());
 fileInput.addEventListener('change', e => { addFiles([...e.target.files]); fileInput.value=''; });
@@ -2620,10 +2612,9 @@ function startPeer() {
     }
     // If already linked, close the previous call cleanly before answering the new one
     if (call) {
-      const stale = call;
-      call = null;    // null first so the close event's guard (call === c) never fires onDrop
+      try { call.close(); } catch(e) {}
+      call = null;
       linked = false;
-      try { stale.close(); } catch(e) {}
     }
     incoming.answer(getCallStream());
     attachCall(incoming);
@@ -2849,7 +2840,8 @@ function attachCall(c) {
     duplexBar.className = 'duplex-overlay live';
     syncControls();
     startQualityPolling();
-    // Data channel is initiated by Alpha; Bravo waits for inbound connection via peer.on('connection')
+    // Ensure data channel is open
+    openDataConn();
     // Apply mute state now that senders are live
     if (audioMuted) {
       entry('DEBUG applying mute on stream event', 'sys');
