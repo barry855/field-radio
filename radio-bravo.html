@@ -2670,6 +2670,7 @@ function startPeer() {
 function attachDataConn(dc) {
   function onDcOpen() {
     if (dataConn === dc) return; // already handled
+    pendingDC = false;
     dataConn = dc;
     entry('Chat channel open', 'ok');
     setStatus('reachable');
@@ -2687,6 +2688,7 @@ function attachDataConn(dc) {
     if (f) {
       if (f.__control === 'video') { updateRemoteVideoState(f.enabled, f.hasTrack !== false); return; }
       if (f.__control === 'leave') { handleRemoteLeave(); return; }
+      if (f.__control === 'refresh') { entry('Remote refreshed — reloading…', 'sys'); setTimeout(() => window.location.reload(), 400); return; }
       if (f.__file  === true)      { addMediaBubble(f.name, f.type, f.data, false); return; }
       if (f.__chunk === true)      { receiveChunk(f); return; }
       addBubble(JSON.stringify(f), false);
@@ -3613,7 +3615,9 @@ function toggleAudio() {
 
 // ── Refresh Screen — reloads page (Unit ID pre-fills from localStorage) ──
 function refreshScreen() {
-  window.location.reload();
+  // Notify remote peer so they auto-refresh in sync
+  try { dcSend({ __control: 'refresh' }); } catch(e) {}
+  setTimeout(() => window.location.reload(), 400);
 }
 
 // ── Camera flip (Android front/back) ─────────────────────────
