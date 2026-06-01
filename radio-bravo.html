@@ -3067,9 +3067,9 @@ function _doLeave() {
 }
 
 function handleRemoteLeave() {
-  // Remote user left — show notice, clear stale video, do NOT auto-reconnect
+  // Remote user left — show leave screen immediately
   leftPermanently = false; // we haven't left yet, remote did
-  remotePeerLeft = true;  // flag so onDrop doesn't redirect to login
+  remotePeerLeft = true;  // flag so onDrop doesn't redirect again
   // Clear remote video immediately
   ['remoteVideo','miniRemoteVideo','miniChatVideo'].forEach(id => {
     const el = document.getElementById(id);
@@ -3086,12 +3086,14 @@ function handleRemoteLeave() {
   });
   // Stop quality polling
   stopQualityPolling();
-  // Show "User left chat" notice in header
-  const notice = document.getElementById('userLeftNotice');
-  if (notice) notice.classList.add('visible');
   entry('Remote user left the session', 'sys');
-  // Hide login overlay if it was showing — stay on current screen
-  document.getElementById('sessionOverlay').style.display = 'none';
+  // Go to leave screen immediately — show session overlay (login box) so user sees the other side left
+  document.getElementById('sessionOverlay').style.display = 'flex';
+  document.getElementById('unitIdDisplay').style.display = 'none';
+  prefillLogin();
+  // Do NOT show reconnect spinner — show plain login screen so user knows remote left intentionally
+  document.getElementById('reconnectOverlay').classList.remove('active');
+  startLoginTimeout();
 }
 
 function onDrop() {
@@ -3119,22 +3121,22 @@ function onDrop() {
   });
   setStatus('standby');
   if (leftPermanently) return; // permanent leave handled by leaveSession()
-  if (remotePeerLeft) return;  // remote sent leave signal — stay on screen, notice already shown
+  if (remotePeerLeft) return;  // remote sent leave signal — stay on leave screen
   if (peerRefreshing)  return;  // a refresh-reload is in progress — do not show login
-  // Delay redirect to allow a pending data-channel 'leave' message to arrive first.
-  // Over HTTPS/relayed WebRTC the DC message and call-close event race each other;
-  // we wait long enough for the leave flag to be set before deciding it's a real drop.
+  // Show reconnect screen immediately on disconnect.
+  // A short delay (400 ms) allows a racing data-channel 'leave' message to arrive
+  // so we can distinguish a clean leave from a real drop before committing to reconnect.
   setTimeout(() => {
-    if (remotePeerLeft) return; // leave message arrived — stay on screen
+    if (remotePeerLeft) return; // leave message arrived — handled by handleRemoteLeave
     if (peerRefreshing)  return; // refresh in progress — do not show login
-    entry('Link lost — returning to login screen', 'sys');
-    // Show login overlay immediately and restart auto-login countdown
+    entry('Link lost — returning to reconnect screen', 'sys');
+    // Show login overlay and reconnect overlay immediately
     document.getElementById('sessionOverlay').style.display = 'flex';
     document.getElementById('unitIdDisplay').style.display = 'none';
     prefillLogin();
     showReconnecting();
     startLoginTimeout();
-  }, 2000);
+  }, 400);
 }
 
 function muteLocal() {
