@@ -1,11 +1,11 @@
 
 <!DOCTYPE html>
-<!-- saved from url=(0052)file:///C:/Users/barry/Downloads/radio-alpha_23.html -->
+<!-- saved from url=(0052)file:///C:/Users/barry/Downloads/radio-bravo_21.html -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="google" content="notranslate">
-<title>ALPHA — Field Radio v6</title>
+<title>BRAVO — Field Radio v6</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
 
@@ -71,20 +71,20 @@
   header {
     display: flex; align-items: center; gap: 16px;
     background: var(--panel); border: 1px solid var(--border);
-    border-radius: 8px; border-top: 2px solid var(--accent);
+    border-radius: 8px; border-top: 2px solid var(--accent2);
     padding: 10px 14px;
     flex-shrink: 0;
   }
   .logo {
     font-family: 'Orbitron', sans-serif; font-size: 20px; font-weight: 900;
-    color: var(--accent); letter-spacing: 4px;
-    text-shadow: 0 0 20px rgba(0,212,255,0.5); white-space: nowrap;
+    color: var(--accent2); letter-spacing: 4px;
+    text-shadow: 0 0 20px rgba(0,255,159,0.5); white-space: nowrap;
   }
   .logo .greek {
     font-family: 'Georgia', serif; font-size: 26px; font-weight: 700;
     vertical-align: middle; line-height: 1;
   }
-  .logo span { color: var(--accent2); }
+  .logo span { color: var(--accent); }
 
   .statusbar { display: flex; align-items: center; gap: 16px; flex: 1; flex-wrap: wrap; }
   .status-item {
@@ -101,7 +101,6 @@
   .led.on-cyan   { background: var(--accent);  box-shadow: 0 0 6px var(--accent);  }
   .led.on-yellow { background: var(--warn);    box-shadow: 0 0 6px var(--warn);    animation: blink 0.8s step-end infinite; }
   .led.on-amber  { background: #ffaa00;       box-shadow: 0 0 8px #ffaa00; }  /* reachable — solid amber */
-
   @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.35} }
 
   .chat-panel {
@@ -143,22 +142,22 @@
   }
   .bubble.mine {
     align-self: flex-end;
-    background: rgba(0,212,255,0.15);
-    border-color: var(--accent);
+    background: rgba(0,255,159,0.15);
+    border-color: var(--accent2);
     color: #0a1520;
   }
   .bubble.theirs {
     align-self: flex-start;
-    background: rgba(0,255,159,0.12);
-    border-color: var(--accent2);
+    background: rgba(0,212,255,0.12);
+    border-color: var(--accent);
     color: #0a1520;
   }
   .bubble .who {
     font-size: 12px; letter-spacing: 2px; margin-bottom: 5px;
     text-transform: uppercase; font-family: 'Orbitron', sans-serif;
   }
-  .bubble.mine .who   { color: #0077aa; }
-  .bubble.theirs .who { color: #007744; }
+  .bubble.mine .who   { color: #007744; }
+  .bubble.theirs .who { color: #0077aa; }
 
   .bubble .ts {
     font-size: 11px; color: #888; letter-spacing: 0.5px;
@@ -211,7 +210,7 @@
     word-wrap: break-word; white-space: pre-wrap;
     align-self: flex-end;
   }
-  .chat-input:focus   { border-color: var(--accent); }
+  .chat-input:focus   { border-color: var(--accent2); }
   .chat-input:disabled { opacity: 0.4; cursor: not-allowed; }
   .chat-input::placeholder { color: var(--text-dim); }
 
@@ -225,83 +224,56 @@
   .clear-chat-btn:hover, .clear-chat-btn:active { border-color: var(--danger, #cc2222); }
 
   .save-chat-btn {
-    background: #000; border: 1px solid #444;
-    border-radius: 4px; color: #fff;
-    font-size: 14px; line-height: 1;
-    padding: 4px 8px; cursor: pointer;
-    transition: border-color 0.15s;
+    position: absolute;
+    bottom: 58px; left: 10px;
+    z-index: 10;
+    background: rgba(5,15,21,0.55);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-dim);
+    font-size: 14px;
+    line-height: 1;
+    padding: 4px 6px;
+    cursor: pointer;
+    opacity: 0.45;
+    transition: opacity 0.15s, border-color 0.15s;
   }
-  .save-chat-btn:hover, .save-chat-btn:active { border-color: var(--accent, #00d4ff); }
+  .save-chat-btn:hover, .save-chat-btn:active { opacity: 1; border-color: var(--accent2, #00ffaa); }
 
   .refresh-chat-btn {
-    background: #000; border: 1px solid #444;
-    border-radius: 4px; color: #fff;
-    font-size: 14px; line-height: 1;
-    padding: 4px 8px; cursor: pointer;
-    transition: border-color 0.15s, color 0.15s;
+    position: absolute;
+    top: 10px; left: 10px;
+    z-index: 10;
+    background: rgba(5,15,21,0.55);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-dim);
+    font-size: 14px;
+    line-height: 1;
+    padding: 4px 6px;
+    cursor: pointer;
+    opacity: 0.45;
+    transition: opacity 0.15s, border-color 0.15s;
   }
-  .refresh-chat-btn:hover, .refresh-chat-btn:active { border-color: var(--accent, #00d4ff); color: var(--accent); }
+  .refresh-chat-btn:hover, .refresh-chat-btn:active { opacity: 1; border-color: var(--accent2, #00ffaa); color: var(--accent2); }
 
   .find-chat-btn {
-    background: #000; border: 1px solid #444;
-    border-radius: 4px; color: #fff;
-    font-size: 14px; line-height: 1;
-    padding: 4px 8px; cursor: pointer;
-    transition: border-color 0.15s, color 0.15s;
+    position: absolute;
+    top: 10px; right: 10px;
+    z-index: 10;
+    background: rgba(5,15,21,0.55);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-dim);
+    font-size: 14px;
+    line-height: 1;
+    padding: 4px 6px;
+    cursor: pointer;
+    opacity: 0.45;
+    transition: opacity 0.15s, border-color 0.15s;
   }
-  .find-chat-btn:hover, .find-chat-btn:active { border-color: var(--accent, #00d4ff); color: var(--accent); }
-  .find-chat-btn.active { border-color: var(--accent, #00d4ff); color: var(--accent); }
-
-  /* ── Chat button bar (above message area) ──────────────────── */
-  .chat-btn-bar {
-    display: flex; gap: 6px; flex-shrink: 0;
-    margin-bottom: 6px; align-items: center;
-  }
-  .chat-btn-bar .mini-chat-wrapper {
-    margin-bottom: 0; margin-left: auto;
-    flex-direction: row; align-items: center; gap: 6px;
-  }
-  .chat-btn-bar .mini-chat-wrapper .mini-video-overlay {
-    position: relative; top: auto; left: auto; right: auto;
-    width: 80px; flex-shrink: 0;
-  }
-  .chat-find-bar {
-    display: none; align-items: center; gap: 6px;
-    background: #0c1520; border: 1px solid var(--accent);
-    border-radius: 4px; padding: 4px 8px;
-    margin-bottom: 6px; flex-shrink: 0;
-  }
-  .chat-find-bar.open { display: flex; }
-  .chat-find-input {
-    flex: 1; background: transparent; border: none; outline: none;
-    color: var(--text); font-family: 'Share Tech Mono', monospace;
-    font-size: 13px; min-width: 0;
-  }
-  .chat-find-input::placeholder { color: var(--text-dim); }
-  .chat-find-count {
-    font-size: 11px; color: var(--text-dim); letter-spacing: 0.5px;
-    white-space: nowrap; min-width: 48px; text-align: center;
-  }
-  .chat-find-nav {
-    background: none; border: none; color: var(--text-dim);
-    font-size: 14px; cursor: pointer; padding: 2px 5px; border-radius: 3px;
-    transition: color 0.15s, background 0.15s;
-  }
-  .chat-find-nav:hover { color: var(--accent); background: rgba(0,212,255,0.1); }
-  .chat-find-close {
-    background: none; border: none; color: var(--text-dim);
-    font-size: 14px; cursor: pointer; padding: 2px 5px; border-radius: 3px;
-    transition: color 0.15s;
-  }
-  .chat-find-close:hover { color: var(--danger, #cc2222); }
-  mark.find-highlight {
-    background: rgba(255,220,0,0.55); color: inherit; border-radius: 2px; padding: 0 1px;
-  }
-  mark.find-highlight.current {
-    background: rgba(255,140,0,0.8); outline: 1px solid #ff8c00;
-  }
-  .find-chat-btn:hover { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
-  .find-chat-btn.active { border-color: var(--accent); color: var(--accent); }
+  .find-chat-btn:hover, .find-chat-btn:active { opacity: 1; border-color: var(--accent2, #00ffaa); color: var(--accent2); }
+  .find-chat-btn.active { opacity: 1; border-color: var(--accent2, #00ffaa); color: var(--accent2); }
   .mini-chat-wrapper {
     display: flex;
     flex-direction: column;
@@ -324,25 +296,76 @@
     transition: opacity 0.15s, border-color 0.15s, color 0.15s;
     margin-bottom: 4px;
   }
-  .mini-chat-btn:hover, .mini-chat-btn:active { opacity: 1; border-color: var(--accent, #00d4ff); color: var(--accent); }
-  .mini-chat-btn.active { opacity: 1; border-color: var(--accent, #00d4ff); color: var(--accent); }
+  .mini-chat-btn:hover, .mini-chat-btn:active { opacity: 1; border-color: var(--accent2, #00ffaa); color: var(--accent2); }
+  .mini-chat-btn.active { opacity: 1; border-color: var(--accent2, #00ffaa); color: var(--accent2); }
+
+  /* ── Chat find bar ──────────────────────────────────────── */
+
+  /* ── Chat button bar (above message area) ──────────────────── */
+  .chat-btn-bar {
+    display: flex; gap: 6px; flex-shrink: 0;
+    margin-bottom: 6px; align-items: center;
+  }
+  .chat-btn-bar .mini-chat-wrapper {
+    margin-bottom: 0; margin-left: auto;
+    flex-direction: row; align-items: center; gap: 6px;
+  }
+  .chat-btn-bar .mini-chat-wrapper .mini-video-overlay {
+    position: relative; top: auto; left: auto; right: auto;
+    width: 80px; flex-shrink: 0;
+  }
+  .chat-find-bar {
+    display: none; align-items: center; gap: 6px;
+    background: #0c1520; border: 1px solid var(--accent2);
+    border-radius: 4px; padding: 4px 8px;
+    margin-bottom: 6px; flex-shrink: 0;
+  }
+  .chat-find-bar.open { display: flex; }
+  .chat-find-input {
+    flex: 1; background: transparent; border: none; outline: none;
+    color: var(--text); font-family: 'Share Tech Mono', monospace;
+    font-size: 13px; min-width: 0;
+  }
+  .chat-find-input::placeholder { color: var(--text-dim); }
+  .chat-find-count {
+    font-size: 11px; color: var(--text-dim); letter-spacing: 0.5px;
+    white-space: nowrap; min-width: 48px; text-align: center;
+  }
+  .chat-find-nav {
+    background: none; border: none; color: var(--text-dim);
+    font-size: 14px; cursor: pointer; padding: 2px 5px; border-radius: 3px;
+    transition: color 0.15s, background 0.15s;
+  }
+  .chat-find-nav:hover { color: var(--accent2); background: rgba(0,255,159,0.1); }
+  .chat-find-close {
+    background: none; border: none; color: var(--text-dim);
+    font-size: 14px; cursor: pointer; padding: 2px 5px; border-radius: 3px;
+    transition: color 0.15s;
+  }
+  .chat-find-close:hover { color: var(--danger, #cc2222); }
+  mark.find-highlight {
+    background: rgba(255,220,0,0.55); color: inherit; border-radius: 2px; padding: 0 1px;
+  }
+  mark.find-highlight.current {
+    background: rgba(255,140,0,0.8); outline: 1px solid #ff8c00;
+  }
 
   /* ── Drag-and-drop overlay ───────────────────────────────── */
   .chat-panel { position: relative; }
   .drop-overlay {
     position: absolute; inset: 0; z-index: 20;
-    background: rgba(0,212,255,0.12);
-    border: 2px dashed var(--accent);
+    background: rgba(0,255,159,0.12);
+    border: 2px dashed var(--accent2);
     border-radius: 8px;
     display: none; align-items: center; justify-content: center;
     flex-direction: column; gap: 8px;
     pointer-events: none;
   }
   .drop-overlay.active { display: flex; }
-  .drop-overlay-icon { font-size: 32px; filter: drop-shadow(0 0 8px var(--accent)); }
+  .drop-overlay-icon { font-size: 32px; filter: drop-shadow(0 0 8px var(--accent2)); }
   .drop-overlay-label {
     font-family: 'Orbitron', sans-serif; font-size: 11px;
-    letter-spacing: 3px; color: var(--accent);
+    letter-spacing: 3px; color: var(--accent2);
     text-transform: uppercase;
   }
 
@@ -354,7 +377,7 @@
     transition: background 0.15s, border-color 0.15s, color 0.15s;
     flex-shrink: 0; line-height: 1;
   }
-  .attach-btn:hover { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
+  .attach-btn:hover { background: var(--btn-hover); border-color: var(--accent2); color: var(--accent2); }
 
   /* ── File preview strip ─────────────────────────────────── */
   .file-preview-strip {
@@ -364,9 +387,9 @@
   .file-preview-strip.has-files { display: flex; }
   .file-chip {
     display: flex; align-items: center; gap: 5px;
-    background: rgba(0,212,255,0.1); border: 1px solid var(--accent);
+    background: rgba(0,255,159,0.1); border: 1px solid var(--accent2);
     border-radius: 4px; padding: 3px 6px;
-    font-size: 10px; color: var(--accent); max-width: 180px;
+    font-size: 10px; color: var(--accent2); max-width: 180px;
     position: relative;
   }
   .file-chip-thumb {
@@ -403,7 +426,7 @@
   }
   .bubble .file-attach-link {
     display: inline-flex; align-items: center; gap: 5px;
-    margin-top: 4px; color: var(--accent);
+    margin-top: 4px; color: var(--accent2);
     font-size: 11px; text-decoration: none; letter-spacing: 0.5px;
   }
   .bubble .file-attach-link:hover { text-decoration: underline; }
@@ -415,7 +438,7 @@
     cursor: zoom-out;
   }
   #lightbox.open { display: flex; }
-  #lightbox img { max-width: 90vw; max-height: 90vh; border-radius: 6px; box-shadow: 0 0 40px rgba(0,212,255,0.3); }
+  #lightbox img { max-width: 90vw; max-height: 90vh; border-radius: 6px; box-shadow: 0 0 40px rgba(0,255,159,0.3); }
 
   .btn {
     background: var(--btn-bg); border: 1px solid var(--border);
@@ -468,12 +491,12 @@
   }
   .media-btn:hover { background: var(--btn-hover); }
   .media-btn.screen-active {
-    background: rgba(0,212,255,0.15);
-    border-color: var(--accent);
-    color: var(--accent);
-    box-shadow: 0 0 8px rgba(0,212,255,0.3);
+    background: rgba(0,255,159,0.15);
+    border-color: var(--accent2);
+    color: var(--accent2);
+    box-shadow: 0 0 8px rgba(0,255,159,0.3);
   }
-  .media-btn.screen-active:hover { background: rgba(0,212,255,0.25); }
+  .media-btn.screen-active:hover { background: rgba(0,255,159,0.25); }
   .media-btn.sys-audio-on {
     background: rgba(0,255,159,0.15);
     border-color: var(--accent2);
@@ -507,6 +530,8 @@
     color: var(--accent);
     animation: rec-blink 1.2s ease-in-out infinite;
   }
+  @keyframes rec-blink { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
   .media-btn.active-on {
     border-color: var(--accent);
     color: var(--accent);
@@ -585,13 +610,12 @@
   }
   .session-box {
     background: var(--panel); border: 1px solid var(--border);
-    border-top: 2px solid var(--accent); border-radius: 8px; padding: 24px 28px; width: 280px;
-    position: relative;
+    border-top: 2px solid var(--accent2); border-radius: 8px; padding: 24px 28px; width: 280px;
   }
   .session-title {
     font-family: 'Orbitron', sans-serif; font-size: 18px; font-weight: 900;
-    color: var(--accent); letter-spacing: 4px; margin-bottom: 16px; display: block;
-    text-shadow: 0 0 20px rgba(0,212,255,0.5);
+    color: var(--accent2); letter-spacing: 4px; margin-bottom: 16px; display: block;
+    text-shadow: 0 0 20px rgba(0,255,159,0.5);
   }
   .session-box label {
     display: block; font-size: 10px; color: var(--text-dim);
@@ -603,14 +627,15 @@
     font-family: 'Orbitron', sans-serif; font-size: 16px; letter-spacing: 4px;
     text-transform: uppercase; outline: none; margin-bottom: 14px;
   }
-  .session-box input[type=text]:focus { border-color: var(--accent); }
-  .session-go { width: 100%; padding: 10px; border-radius: 4px;
+  .session-box input[type=text]:focus { border-color: var(--accent2); }
+  .session-go {
+    width: 100%; padding: 10px; border-radius: 4px;
     background: var(--btn-bg); border: 1px solid var(--border);
     color: var(--text); font-family: 'Orbitron', sans-serif;
     font-size: 12px; letter-spacing: 2px; cursor: pointer;
     transition: background 0.15s, border-color 0.15s;
   }
-  .session-go:hover { background: var(--btn-hover); border-color: var(--accent); }
+  .session-go:hover { background: var(--btn-hover); border-color: var(--accent2); }
 
   /* ── Reconnect overlay (hides login box on auto-disconnect) ── */
   .reconnect-overlay {
@@ -641,7 +666,7 @@
     letter-spacing: 1px; text-transform: uppercase; cursor: pointer;
   }
   .session-check-item input[type=checkbox] {
-    width: 14px; height: 14px; accent-color: var(--accent);
+    width: 14px; height: 14px; accent-color: var(--accent2);
     cursor: pointer; margin: 0;
   }
 
@@ -659,12 +684,10 @@
     width: 100%; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden;
   }
   .login-timeout-fill {
-    height: 100%; background: var(--accent); border-radius: 2px;
+    height: 100%; background: var(--accent2); border-radius: 2px;
     transition: width 1s linear, background 0.5s;
     width: 100%;
   }
-
-  /* 10-minute session countdown in header */
 
   /* ── video ── */
   .video-panel {
@@ -739,19 +762,12 @@
   .mini-video-overlay {
     position: absolute; top: 16px; left: 16px; z-index: 4;
     width: clamp(112px, 30%, 170px); aspect-ratio: 16/9;
-    background: #000; border: 1px solid var(--accent);
+    background: #000; border: 1px solid var(--accent2);
     border-radius: 4px; overflow: hidden;
     box-shadow: 0 8px 22px rgba(0,0,0,0.42);
     cursor: grab; user-select: none;
   }
-  /* Chat tab mini video sits inline below the toggle button */
-  .mini-chat-wrapper #miniChatOverlay {
-    position: relative; top: auto; right: auto; left: auto;
-    width: 100%; max-width: 320px; aspect-ratio: 16/9;
-    cursor: default;
-  }
-  .mini-chat-wrapper #miniChatOverlay.hidden { display: none; }
-  .mini-video-overlay.dragging { cursor: grabbing; box-shadow: 0 12px 32px rgba(0,212,255,0.25); }
+  .mini-video-overlay.dragging { cursor: grabbing; box-shadow: 0 12px 32px rgba(0,255,159,0.25); }
   .mini-video-overlay.hidden { display: none; }
   .mini-video-overlay video {
     width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none;
@@ -793,7 +809,7 @@
   .tab-btn:hover { background: var(--btn-hover); color: var(--text); }
   .tab-btn.active {
     background: var(--panel); border-color: var(--border);
-    color: var(--accent); border-bottom: 1px solid var(--panel);
+    color: var(--accent2); border-bottom: 1px solid var(--panel);
     margin-bottom: -1px; z-index: 1;
   }
   .tab-content {
@@ -808,7 +824,7 @@
     position: fixed; z-index: 1000; pointer-events: none;
     max-width: min(240px, calc(100vw - 16px));
     padding: 6px 8px; border-radius: 4px;
-    background: #050f15; border: 1px solid var(--accent);
+    background: #050f15; border: 1px solid var(--accent2);
     color: var(--text); font-size: 10px; line-height: 1.35;
     letter-spacing: 0.7px; text-transform: uppercase;
     box-shadow: 0 8px 22px rgba(0,0,0,0.35);
@@ -990,7 +1006,7 @@
 <div class="session-overlay" id="sessionOverlay">
   <div class="session-box">
     <div class="reconnect-overlay" id="reconnectOverlay"><p>Please wait while I<br>try to reconnect…</p></div>
-    <span class="session-title">α · 01</span>
+    <span class="session-title">β · 02</span>
     <label>Unit ID</label>
     <input type="text" id="sessionCode" maxlength="8" placeholder="ENTER CODE" autocomplete="off">
     <div class="session-checks">
@@ -1005,7 +1021,7 @@
       <div class="login-timeout-label">
         <span>Auto Login</span><span id="loginTimeoutSec">10s</span>
       </div>
-      <div class="login-timeout-track"><div class="login-timeout-fill" id="loginTimeoutFill" style="width: 100%; background: var(--accent);"></div></div>
+      <div class="login-timeout-track"><div class="login-timeout-fill" id="loginTimeoutFill" style="width: 100%; background: var(--accent2);"></div></div>
     </div>
     <div class="login-presence" id="loginPresence">
       <div class="pled" id="loginPresenceLed"></div>
@@ -1018,7 +1034,7 @@
 <div class="shell">
 
   <header>
-    <div class="logo"><span class="greek">α</span><span>·</span>01</div>
+    <div class="logo"><span class="greek">β</span><span>·</span>02</div>
     <div class="statusbar">
       <div class="status-item">
         <div class="led" id="linkLed"></div>
@@ -1026,7 +1042,7 @@
       </div>
       <div class="status-item" id="unitIdDisplay" style="display:none;">
         <span style="color:var(--text-dim);font-size:10px;letter-spacing:1px;">UNIT ID</span>
-        <span id="unitIdValue" style="color:var(--accent);font-family:&#39;Orbitron&#39;,sans-serif;font-size:11px;letter-spacing:2px;"></span>
+        <span id="unitIdValue" style="color:var(--accent2);font-family:&#39;Orbitron&#39;,sans-serif;font-size:11px;letter-spacing:2px;"></span>
       </div>
       <div class="quality-item" id="qualityDisplay" style="display:none;">
         <div class="quality-bars">
@@ -1189,17 +1205,17 @@
         <span class="zoom-val" id="zoomValLocal">1.0×</span>
       </div>
       <div class="video-panel">
-        <div class="panel-label">LOCAL — ALPHA</div>
+        <div class="panel-label">LOCAL — BRAVO</div>
         <div class="video-grid">
           <div class="video-wrap" id="localWrap">
             <video id="localVideo" autoplay="" playsinline="" muted=""></video>
-            <span class="video-label">ALPHA</span>
+            <span class="video-label">BRAVO</span>
             <span class="duplex-overlay" id="duplexBar">OFFLINE</span>
           </div>
         </div>
         <div class="mini-video-overlay hidden" id="miniRemoteOverlay">
           <video id="miniRemoteVideo" autoplay="" playsinline=""></video>
-          <span class="video-label">BRAVO</span>
+          <span class="video-label">ALPHA</span>
         </div>
       </div>
     </div>
@@ -1226,17 +1242,17 @@
         <span class="gain-val" id="micGainVal">1.00×</span>
       </div>
       <div class="video-panel">
-        <div class="panel-label">REMOTE — BRAVO</div>
+        <div class="panel-label">REMOTE — ALPHA</div>
         <div class="video-grid">
           <div class="video-wrap waiting" id="remoteWrap">
             <video id="remoteVideo" autoplay="" playsinline=""></video>
-            <span class="video-label">BRAVO</span>
+            <span class="video-label">ALPHA</span>
             <span class="duplex-overlay" id="duplexBar2">OFFLINE</span>
           </div>
         </div>
         <div class="mini-video-overlay hidden" id="miniLocalOverlay">
           <video id="miniLocalVideo" autoplay="" playsinline="" muted=""></video>
-          <span class="video-label">ALPHA</span>
+          <span class="video-label">BRAVO</span>
         </div>
       </div>
     </div>
@@ -1280,13 +1296,13 @@
       </div>
       <div class="log-panel collapsed" id="logPanel">
         <div class="panel-label" onclick="toggleLogPanel()">SYS LOG<span class="log-toggle-arrow" id="logToggleArrow">▾</span></div>
-        <div class="log" id="log"><span class="log-entry sys">15:59:51  PREFILL: code=123 vid=false aud=false</span></div>
+        <div class="log" id="log"><span class="log-entry sys">16:00:39  PREFILL: code=null vid=false aud=false</span></div>
       </div>
     </div>
   </div>
 
 <audio id="remoteAudio" autoplay="" playsinline=""></audio>
-<div id="lightbox"><img id="lightboxImg" src="file:///C:/Users/barry/Downloads/radio-alpha_23.html" alt=""></div>
+<div id="lightbox"><img id="lightboxImg" src="file:///C:/Users/barry/Downloads/radio-bravo_21.html" alt=""></div>
 
 <script>
 // ── Audio tone engine (defined first so all code can call playTone) ──────────
@@ -1326,7 +1342,6 @@ function playTone(name) {
     if (_actx.state === 'suspended') { _actx.resume().then(play); } else { play(); }
   } catch(e) { console.warn('playTone:', e); }
 }
-// Unlock on first user gesture
 document.addEventListener('click', function() {
   if (_actx && _actx.state === 'suspended') _actx.resume();
 }, true);
@@ -1365,10 +1380,6 @@ const sendBtn   = document.getElementById('sendBtn');
 // (stops the blur/keyboard-dismiss from happening mid-tap), read the input
 // value while focus is still live, then send. The click listener is kept as
 // a fallback for mouse users and assistive technology.
-// Single unified send-button handler that works on all platforms.
-// pointerdown fires first on touch — preventDefault() suppresses the
-// subsequent click entirely (no double-send) and keeps the soft keyboard open.
-// On mouse, we defer to click so normal desktop UX is preserved.
 let _sendBtnTouched = false;
 sendBtn.addEventListener('pointerdown', e => {
   if (e.pointerType !== 'mouse') {
@@ -1387,15 +1398,14 @@ function startSession() {
   stopPresencePolling();
   const code = document.getElementById('sessionCode').value.trim().toUpperCase().replace(/\s+/g,'');
   if (!code) { document.getElementById('sessionCode').focus(); return; }
-  MY_ID     = 'alpha-' + code;
-  REMOTE_ID = 'bravo-' + code;
-  // Persist code and checkbox states for next load
+  MY_ID     = 'bravo-' + code;
+  REMOTE_ID = 'alpha-' + code;
   const disVidChecked = document.getElementById('loginDisableVideo').checked;
   const disAudChecked = document.getElementById('loginDisableAudio').checked;
   try {
-    localStorage.setItem('alpha_last_code', code);
-    localStorage.setItem('alpha_disable_video', disVidChecked ? '1' : '0');
-    localStorage.setItem('alpha_disable_audio', disAudChecked ? '1' : '0');
+    localStorage.setItem('bravo_last_code', code);
+    localStorage.setItem('bravo_disable_video', disVidChecked ? '1' : '0');
+    localStorage.setItem('bravo_disable_audio', disAudChecked ? '1' : '0');
   } catch(e) {}
   // Reset per-session state so reconnect honours current preferences
   audioMuted = false;
@@ -1409,7 +1419,6 @@ function startSession() {
   setVideoButtons(true);
   loginDisableVideoFlag = disVidChecked;
   loginDisableAudioFlag = disAudChecked;
-  // Always log the checkbox state so we can see it in the activity log
   entry('LOGIN: disableVideo=' + disVidChecked + ' disableAudio=' + disAudChecked, 'sys');
   clearInterval(loginTimeoutInterval);
   document.getElementById('sessionOverlay').style.display = 'none';
@@ -1456,9 +1465,9 @@ async function presencePoll(partnerKey, myKey) {
     const res = await fetch(FB_URL + '/presence/' + partnerKey + '.json');
     const data = await res.json();
     if (data && data.ts && (Date.now() - data.ts) < PRESENCE_STALE_MS) {
-      loginPresenceSetState('reachable', 'BRAVO REACHABLE');
+      loginPresenceSetState('reachable', 'ALPHA REACHABLE');
     } else {
-      loginPresenceSetState('offline', 'BRAVO OFFLINE');
+      loginPresenceSetState('offline', 'ALPHA OFFLINE');
     }
   } catch(e) {
     loginPresenceSetState('offline', 'NO NETWORK');
@@ -1474,9 +1483,9 @@ function startPresencePolling(code) {
     return;
   }
   presenceCode = code;
-  // ALPHA polls for bravo-CODE, writes alpha-CODE
-  const myKey      = 'alpha-' + code;
-  const partnerKey = 'bravo-' + code;
+  // BRAVO polls for alpha-CODE, writes bravo-CODE
+  const myKey      = 'bravo-' + code;
+  const partnerKey = 'alpha-' + code;
   loginPresenceSetState('searching', 'CHECKING…');
   presencePoll(partnerKey, myKey); // immediate first poll
   presencePollTimer = setInterval(() => presencePoll(partnerKey, myKey), 5000);
@@ -1611,7 +1620,7 @@ function applyTranslate(code, name) {
   document.querySelectorAll('#translateDropdown li').forEach(li => {
     li.classList.toggle('selected', li.dataset.lang === code);
   });
-  try { localStorage.setItem('alpha_translate_lang', JSON.stringify({code, name})); } catch(e) {}
+  try { localStorage.setItem('bravo_translate_lang', JSON.stringify({code, name})); } catch(e) {}
   resetLockTimer();  // prevent inactivity lock firing during selection
   entry('Translate active: ' + name + ' — applies to new incoming messages', 'sys');
   // Translate existing bubbles one at a time with a gap to avoid blocking the event loop
@@ -1621,7 +1630,7 @@ function applyTranslate(code, name) {
 function resetTranslate() {
   _translateLang = null;
   _translateName = null;
-  try { localStorage.removeItem('alpha_translate_lang'); } catch(e) {}
+  try { localStorage.removeItem('bravo_translate_lang'); } catch(e) {}
   document.getElementById('translateTrigger').textContent = 'SELECT LANGUAGE';
   // Clear selected state in dropdown
   document.querySelectorAll('#translateDropdown li').forEach(li => li.classList.remove('selected'));
@@ -1634,6 +1643,8 @@ function resetTranslate() {
   });
   entry('Chat restored to original — system language: ' + (navigator.language || 'unknown'), 'sys');
 }
+
+// Wire up list items
 document.querySelectorAll('#translateDropdown li').forEach(li => {
   li.addEventListener('click', () => applyTranslate(li.dataset.lang, li.textContent.trim()));
   li.addEventListener('keydown', e => { if (e.key === 'Enter') applyTranslate(li.dataset.lang, li.textContent.trim()); });
@@ -1646,9 +1657,9 @@ document.addEventListener('click', () => {
 
 function prefillLogin() {
   try {
-    const disVid = localStorage.getItem('alpha_disable_video') === '1';
-    const disAud = localStorage.getItem('alpha_disable_audio') === '1';
-    const last   = localStorage.getItem('alpha_last_code');
+    const disVid = localStorage.getItem('bravo_disable_video') === '1';
+    const disAud = localStorage.getItem('bravo_disable_audio') === '1';
+    const last   = localStorage.getItem('bravo_last_code');
     document.getElementById('loginDisableVideo').checked = disVid;
     document.getElementById('loginDisableAudio').checked = disAud;
     if (last) document.getElementById('sessionCode').value = last;
@@ -1656,13 +1667,13 @@ function prefillLogin() {
     // Start presence polling immediately if code was pre-filled
     if (last) startPresencePolling(last);
     // Prefill mic gain slider from saved value
-    const savedGain = parseFloat(localStorage.getItem('alpha_mic_gain') || '1');
+    const savedGain = parseFloat(localStorage.getItem('bravo_mic_gain') || '1');
     const gSlider = document.getElementById('micGainSlider');
     const gLabel  = document.getElementById('micGainVal');
     if (gSlider && isFinite(savedGain)) { gSlider.value = savedGain; }
     if (gLabel  && isFinite(savedGain)) { gLabel.textContent = savedGain.toFixed(2) + '×'; }
     // Restore saved translate language
-    const savedLang = localStorage.getItem('alpha_translate_lang');
+    const savedLang = localStorage.getItem('bravo_translate_lang');
     if (savedLang) {
       const { code, name } = JSON.parse(savedLang);
       _translateLang = code;
@@ -1693,7 +1704,7 @@ function startLoginTimeout() {
   const fill = document.getElementById('loginTimeoutFill');
   const sec  = document.getElementById('loginTimeoutSec');
   fill.style.width = '100%';
-  fill.style.background = 'var(--accent)';
+  fill.style.background = 'var(--accent2)';
   sec.textContent = '10s';
   loginTimeoutInterval = setInterval(() => {
     loginSecsLeft--;
@@ -1728,8 +1739,6 @@ function startLoginTimeout() {
 if (document.getElementById('sessionOverlay').style.display !== 'none') {
   startLoginTimeout();
 }
-
-// Restart login timer if overlay re-appears (handled inside resetLockTimer above)
 
 // 'input' + 'keyup' + 'change' — covers older Android WebViews where 'input' can be silent
 (function() {
@@ -1767,7 +1776,7 @@ function scrollToBottom() {
 
 function setStatus(state) {
   linkLed.className = 'led';
-  if (state === 'calling')      { linkLed.classList.add('on-yellow'); statusEl.textContent = 'CALLING…'; }
+  if (state === 'standby')      { linkLed.classList.add('on-cyan');   statusEl.textContent = 'STANDBY'; }
   else if (state === 'reachable') { linkLed.classList.add('on-amber');  statusEl.textContent = 'REACHABLE'; }
   else if (state === 'linked')    { linkLed.classList.add('on-green');  statusEl.textContent = 'LINKED'; }
   else                            { statusEl.textContent = 'OFFLINE'; }
@@ -1779,7 +1788,6 @@ let miniVideoVisible = true;
 const msgBadge = document.getElementById('msgBadge');
 
 function syncControls() {
-  // Keep remote tab's duplex bar in sync with local tab's
   const d2 = document.getElementById('duplexBar2');
   if (d2) { d2.textContent = duplexBar.textContent; d2.className = duplexBar.className; }
 }
@@ -1927,7 +1935,7 @@ function linkify(text) {
 }
 
 // ── Chat history (localStorage) ──────────────────────────────
-const HISTORY_KEY = () => 'alpha_chat_' + (MY_ID || 'unknown');
+const HISTORY_KEY = () => 'bravo_chat_' + (MY_ID || 'unknown');
 const HISTORY_MAX = 200;
 
 function saveMessage(text, mine) {
@@ -1966,13 +1974,12 @@ function saveChatToFile() {
   const chatEl = document.getElementById('chat');
   if (!chatEl) return;
 
-  // Collect bubbles into structured data
   const bubbles = [];
   chatEl.querySelectorAll('.bubble').forEach(bubble => {
     const whoEl  = bubble.querySelector('.who');
     const tsEl   = bubble.querySelector('.ts');
     const mine   = bubble.classList.contains('mine');
-    const who    = whoEl  ? whoEl.textContent.trim()  : (mine ? 'ALPHA' : 'BRAVO');
+    const who    = whoEl  ? whoEl.textContent.trim()  : (mine ? 'BRAVO' : 'ALPHA');
     const time   = tsEl   ? tsEl.textContent.trim()   : '';
     const msgDiv = bubble.querySelector('.msg-text');
     const imgEl  = bubble.querySelector('img.media-img');
@@ -1983,18 +1990,17 @@ function saveChatToFile() {
       const src  = imgEl.src || '';
       const name = 'image-' + Date.now() + '.jpg';
       html = '<img src="' + src + '" style="max-width:320px;max-height:240px;border-radius:6px;display:block;margin:6px 0;">';
-      if (src.startsWith('data:')) downloadHtml = '<a href="' + src + '" download="' + name + '" style="font-size:11px;color:#00d4ff;">⬇ Save image</a>';
+      if (src.startsWith('data:')) downloadHtml = '<a href="' + src + '" download="' + name + '" style="font-size:11px;color:#00ff9f;">⬇ Save image</a>';
     } else if (vidEl) {
       const src  = vidEl.src || '';
       const name = 'video-' + Date.now() + '.webm';
       html = '<video src="' + src + '" controls playsinline style="max-width:320px;max-height:240px;border-radius:6px;display:block;margin:6px 0;"></video>';
-      if (src.startsWith('data:')) downloadHtml = '<a href="' + src + '" download="' + name + '" style="font-size:11px;color:#00d4ff;">⬇ Save video</a>';
+      if (src.startsWith('data:')) downloadHtml = '<a href="' + src + '" download="' + name + '" style="font-size:11px;color:#00ff9f;">⬇ Save video</a>';
     } else if (fileEl) {
       const href = fileEl.href || '';
       const fname = fileEl.download || fileEl.textContent.trim();
-      html = '<a href="' + href + '" download="' + fname + '" style="color:#00d4ff;text-decoration:underline;font-size:13px;">📎 ' + fname + '</a>';
+      html = '<a href="' + href + '" download="' + fname + '" style="color:#00ff9f;text-decoration:underline;font-size:13px;">📎 ' + fname + '</a>';
     } else if (msgDiv) {
-      // preserve links
       const tmp = document.createElement('div');
       tmp.appendChild(msgDiv.cloneNode(true));
       html = tmp.innerHTML;
@@ -2005,14 +2011,14 @@ function saveChatToFile() {
 
   if (!bubbles.length) { entry('Nothing to save — chat is empty', 'sys'); return; }
 
-  const ts  = new Date().toISOString().slice(0,19).replace(/[:T]/g, '-');
+  const ts   = new Date().toISOString().slice(0,19).replace(/[:T]/g, '-');
   const date = new Date().toLocaleString();
 
   const rows = bubbles.map(b => {
     const align  = b.mine ? 'flex-end'  : 'flex-start';
-    const bg     = b.mine ? 'rgba(0,212,255,0.15)' : 'rgba(0,255,159,0.12)';
-    const border = b.mine ? '#00d4ff'   : '#00ff9f';
-    const whoCol = b.mine ? '#0077aa'   : '#007744';
+    const bg     = b.mine ? 'rgba(0,255,159,0.15)' : 'rgba(0,212,255,0.12)';
+    const border = b.mine ? '#00ff9f'   : '#00d4ff';
+    const whoCol = b.mine ? '#007744'   : '#0077aa';
     return `<div style="display:flex;justify-content:${align};margin:6px 0;">
   <div style="max-width:75%;padding:10px 14px;border-radius:6px;background:${bg};border:1px solid ${border};font-size:18px;font-weight:bold;color:#000;line-height:1.55;word-break:break-word;">
     <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;font-family:monospace;color:${whoCol};margin-bottom:5px;font-weight:bold;">${b.who}</div>
@@ -2029,19 +2035,19 @@ function saveChatToFile() {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ALPHA Chat — ${ts}</title>
+<title>BRAVO Chat — ${ts}</title>
 <style>
   body { margin:0; padding:16px; background:#0a1520; color:#c8d8e8; font-family:'Segoe UI',Arial,sans-serif; }
-  h2 { font-family:monospace; letter-spacing:3px; color:#00d4ff; margin:0 0 4px; font-size:16px; }
+  h2 { font-family:monospace; letter-spacing:3px; color:#00ff9f; margin:0 0 4px; font-size:16px; }
   .meta { font-size:11px; color:#556; letter-spacing:1px; margin-bottom:16px; }
   .chat-wrap { background:#fff; border-radius:8px; padding:12px; max-width:720px; margin:0 auto; }
-  a { color:#00d4ff; }
+  a { color:#00ff9f; }
   img, video { max-width:100%; }
 </style>
 </head>
 <body>
 <div style="max-width:720px;margin:0 auto;">
-  <h2>⚡ ALPHA — FIELD RADIO CHAT LOG</h2>
+  <h2>⚡ BRAVO — FIELD RADIO CHAT LOG</h2>
   <div class="meta">Saved: ${date}</div>
   <div class="chat-wrap">${rows}</div>
   <div style="font-size:10px;color:#334;text-align:center;margin-top:12px;letter-spacing:1px;">
@@ -2056,7 +2062,7 @@ function saveChatToFile() {
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
     a.href     = url;
-    a.download = 'chat-alpha-' + ts + '.html';
+    a.download = 'chat-bravo-' + ts + '.html';
     a.style.display = 'none';
     document.body.appendChild(a);
     a.click();
@@ -2086,15 +2092,12 @@ function saveChatToFile() {
     clearHighlights();
     if (!term) { document.getElementById('chatFindCount').textContent = ''; return; }
     const re = new RegExp('(' + escapeRe(term) + ')', 'gi');
-    // Walk text nodes inside message divs only (skip .who and .ts)
     const chatEl = document.getElementById('chat');
     const walker = document.createTreeWalker(chatEl, NodeFilter.SHOW_TEXT, {
       acceptNode: n => {
         const p = n.parentNode;
         if (!p) return NodeFilter.FILTER_REJECT;
-        // skip .who and .ts nodes
         if (p.classList && (p.classList.contains('who') || p.classList.contains('ts'))) return NodeFilter.FILTER_REJECT;
-        // skip inside <a> download links and media elements
         let anc = p;
         while (anc && anc !== chatEl) {
           if (anc.tagName === 'MARK' || anc.tagName === 'VIDEO' || anc.tagName === 'IMG') return NodeFilter.FILTER_REJECT;
@@ -2215,12 +2218,10 @@ function _toggleLock(wrap) {
   const currText = curr.innerText || curr.textContent;
   if (currText === wrap.dataset.orig) return; // not translated, nothing to lock
   if (wrap.classList.contains('peek-locked')) {
-    // Unlock — close the peek
     wrap.classList.remove('peek-locked');
     wrap.classList.remove('show-orig');
     scrollToBottom();
   } else {
-    // Lock open
     wrap.classList.add('peek-locked');
     _peekOrig(wrap);
   }
@@ -2233,7 +2234,7 @@ function addBubble(text, mine, ts, save = true) {
   wrap.className = 'bubble ' + (mine ? 'mine' : 'theirs');
   const who = document.createElement('div');
   who.className = 'who';
-  who.textContent = mine ? 'ALPHA' : 'BRAVO';
+  who.textContent = mine ? 'BRAVO' : 'ALPHA';
   const msg = document.createElement('div');
   msg.className = 'msg-text';
   msg.appendChild(linkify(text));
@@ -2308,13 +2309,13 @@ function sendChat() {
 // ── File attachment state ─────────────────────────────────────
 const pendingFiles = [];  // {file, dataUrl}
 
-const fileInput      = document.getElementById('fileInput');
-const attachBtn      = document.getElementById('attachBtn');
+const fileInput        = document.getElementById('fileInput');
+const attachBtn        = document.getElementById('attachBtn');
 const filePreviewStrip = document.getElementById('filePreviewStrip');
-const chatPanel      = document.getElementById('chatPanel');
-const dropOverlay    = document.getElementById('dropOverlay');
-const lightbox       = document.getElementById('lightbox');
-const lightboxImg    = document.getElementById('lightboxImg');
+const chatPanel        = document.getElementById('chatPanel');
+const dropOverlay      = document.getElementById('dropOverlay');
+const lightbox         = document.getElementById('lightbox');
+const lightboxImg      = document.getElementById('lightboxImg');
 
 function setupTooltips() {
   const labels = {
@@ -2465,7 +2466,6 @@ function removeFile(idx, chip) {
   pendingFiles.splice(idx, 1);
   chip.remove();
   if (pendingFiles.length === 0) filePreviewStrip.classList.remove('has-files');
-  // Re-index remaining chips
   [...filePreviewStrip.querySelectorAll('.file-chip')].forEach((c, i) => { c.dataset.idx = i; });
 }
 
@@ -2530,7 +2530,7 @@ function addTransferProgress(id, name) {
   const el = document.createElement('div');
   el.className = 'bubble theirs transfer-progress';
   el.id = 'xfer-' + id;
-  el.innerHTML = '<div class="who">BRAVO</div><div class="xfer-label">📥 ' + name + ' — <span class="xfer-pct">0%</span></div>';
+  el.innerHTML = '<div class="who">ALPHA</div><div class="xfer-label">📥 ' + name + ' — <span class="xfer-pct">0%</span></div>';
   chat.appendChild(el);
   scrollToBottom();
 }
@@ -2549,7 +2549,7 @@ function addMediaBubble(name, type, dataUrl, mine) {
   wrap.className = 'bubble ' + (mine ? 'mine' : 'theirs');
   const who = document.createElement('div');
   who.className = 'who';
-  who.textContent = mine ? 'ALPHA' : 'BRAVO';
+  who.textContent = mine ? 'BRAVO' : 'ALPHA';
   wrap.appendChild(who);
   if (type.startsWith('image/')) {
     const img = document.createElement('img');
@@ -2599,8 +2599,6 @@ chatInput.addEventListener('keydown', e => {
     sendChat();
   }
 });
-
-
 
 function toggleLogPanel() {
   const p = document.getElementById('logPanel');
@@ -2702,29 +2700,48 @@ function startPeer() {
   }
   // Close any stale data connection from a previous peer instance
   if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
-  pendingDC = false;
   linked = false;
+  pendingDC = false;
 
   peer = new Peer(MY_ID, {
     host: '0.peerjs.com', port: 443, path: '/', secure: true, pingInterval: 5000,
     config: { iceServers: ICE_SERVERS }
   });
 
-  peer.on('open', () => {
-    entry('Radio online', 'ok');
-    setStatus('calling');
-    dial();
+  let watchdog;
+  peer.on('open', id => {
+    entry('Radio online — waiting for Alpha [' + id + ']', 'ok');
+    setStatus('standby');
+    // Watchdog: if no call arrives in 30s, reconnect to signalling server to stay fresh
+    watchdog = setTimeout(() => {
+      if (!linked && !peer.destroyed) {
+        entry('Refreshing signalling connection…', 'sys');
+        if (peer.disconnected) peer.reconnect();
+      }
+    }, 30000);
   });
 
   peer.on('connection', dc => {
     if (dataConn || pendingDC) { dc.close(); return; }
-    entry('Inbound data channel from Bravo', 'sys');
+    entry('Inbound data channel from Alpha', 'sys');
     attachDataConn(dc);
   });
 
   peer.on('call', incoming => {
-    entry('Inbound call from Bravo', 'info');
-    answerCall(incoming);
+    entry('Inbound call from Alpha', 'info');
+    if (!localStream) {
+      entry('ERROR: no local stream — cannot answer', 'err');
+      incoming.close();
+      return;
+    }
+    // If already linked, close the previous call cleanly before answering the new one
+    if (call) {
+      try { call.close(); } catch(e) {}
+      call = null;
+      linked = false;
+    }
+    incoming.answer(getCallStream());
+    attachCall(incoming);
   });
 
   peer.on('disconnected', () => {
@@ -2736,16 +2753,7 @@ function startPeer() {
   peer.on('error', e => {
     entry('Peer error [' + e.type + ']: ' + e.message, 'err');
     if (e.type === 'browser-incompatible') return;
-    if (e.type === 'peer-unavailable') {
-      entry('Bravo offline — retry in 5s', 'sys');
-      // Close the dead outgoing call so its 'close' event doesn't trigger a
-      // competing onDrop → retryTimer chain alongside this one
-      if (call) { try { call.close(); } catch(ex) {} call = null; }
-      retryTimer = setTimeout(dial, 5000);
-      return;
-    }
     if (e.type === 'unavailable-id') {
-      // Stale session holds the preferred ID — claim a random suffix variant immediately
       const suffix = Math.random().toString(36).slice(2,6).toUpperCase();
       MY_ID = MY_ID.replace(/-[A-Z0-9]{4}$/, '') + '-' + suffix || MY_ID + '-' + suffix;
       entry('ID taken (stale session) — retrying as ' + MY_ID + '…', 'sys');
@@ -2753,38 +2761,15 @@ function startPeer() {
       setTimeout(startPeer, 1500);
       return;
     }
+    if (e.type === 'peer-unavailable') {
+      // Alpha not registered yet — ignore, we're waiting for Alpha to call us
+      entry('Alpha not yet visible — standing by…', 'sys');
+      return;
+    }
     // network / server-error / socket-error / socket-closed
     entry('Retrying in 6s…', 'sys');
-    retryTimer = setTimeout(() => { peer.destroy(); startPeer(); }, 6000);
+    setTimeout(() => { peer.destroy(); startPeer(); }, 6000);
   });
-}
-
-function getCallStream() {
-  const tracks = [...localStream.getVideoTracks()];
-  entry('STREAM: audioMuted=' + audioMuted + ' audioTracks=' + localStream.getAudioTracks().length, 'sys');
-  if (audioMuted) {
-    tracks.push(getSilentTrack());
-    entry('STREAM: using silent audio track', 'sys');
-  } else {
-    tracks.push(...localStream.getAudioTracks());
-    entry('STREAM: using real audio track', 'sys');
-  }
-  return new MediaStream(tracks);
-}
-
-function dial() {
-  clearTimeout(retryTimer);
-  if (linked || !localStream) return;
-  // Close stale outgoing call before redialling — prevents its 'close' event
-  // from triggering a competing onDrop → retryTimer race
-  if (call) {
-    try { call.off('close', onDrop); call.close(); } catch(e) {}
-    call = null;
-  }
-  entry('Calling Bravo…', 'info');
-  const c = peer.call(REMOTE_ID, getCallStream());
-  attachCall(c);
-  openDataConn();
 }
 
 function attachDataConn(dc) {
@@ -2830,9 +2815,6 @@ function attachDataConn(dc) {
 
 let pendingDC = false;
 
-// dcSend — always sends a UTF-8 string so raw-mode DataChannel works
-// cross-platform (desktop Chrome ↔ Android Chrome/WebView).
-// Plain text is prefixed with 'T:'; JSON objects with 'J:'.
 function dcSend(payload) {
   if (!dataConn || !dataConn.open) return;
   const wire = (typeof payload === 'string')
@@ -2841,18 +2823,15 @@ function dcSend(payload) {
   dataConn.send(wire);
 }
 
-// dcDecode — inverse of dcSend; returns { text } or { obj } or null
 function dcDecode(raw) {
   let s;
   if (raw instanceof ArrayBuffer)   s = new TextDecoder().decode(raw);
-  else if (raw instanceof Blob)     return null; // handle async elsewhere if needed
+  else if (raw instanceof Blob)     return null;
   else                              s = String(raw);
-
   if (s.startsWith('T:')) return { text: s.slice(2) };
   if (s.startsWith('J:')) {
     try { return { obj: JSON.parse(s.slice(2)) }; } catch(e) { return { text: s }; }
   }
-  // Legacy fallback — other side may still use json serialization mode
   if (s.startsWith('{')) {
     try { return { obj: JSON.parse(s) }; } catch(e) {}
   }
@@ -2862,17 +2841,22 @@ function dcDecode(raw) {
 function openDataConn() {
   if (dataConn || pendingDC) return;
   pendingDC = true;
-  entry('Opening data channel…', 'sys');
-  // Use 'raw' serialization — 'json' mode has known cross-platform failures
-  // between desktop Chrome and Android Chrome/WebView. We JSON-encode manually.
+  entry('Opening data channel to Alpha…', 'sys');
   const dc = peer.connect(REMOTE_ID, { reliable: true, serialization: 'raw' });
   attachDataConn(dc);
 }
 
-function answerCall(c) {
-  clearTimeout(retryTimer);
-  c.answer(getCallStream());
-  attachCall(c);
+function getCallStream() {
+  const tracks = [...localStream.getVideoTracks()];
+  entry('STREAM: audioMuted=' + audioMuted + ' audioTracks=' + localStream.getAudioTracks().length, 'sys');
+  if (audioMuted) {
+    tracks.push(getSilentTrack());
+    entry('STREAM: using silent audio track', 'sys');
+  } else {
+    tracks.push(...localStream.getAudioTracks());
+    entry('STREAM: using real audio track', 'sys');
+  }
+  return new MediaStream(tracks);
 }
 
 // ── Connection quality polling ────────────────────────────────
@@ -2916,7 +2900,6 @@ function updateQuality(rtt, lossPct) {
     label.style.color = 'var(--text-dim)';
     return;
   }
-  // Score: 3=good, 2=ok, 1=poor
   let score = 3;
   if (rtt > 300 || lossPct > 5)  score = 2;
   if (rtt > 600 || lossPct > 15) score = 1;
@@ -2992,25 +2975,23 @@ function attachCall(c) {
     if (linked) return;
     linked = true;
     setStatus('linked');
-    entry('Linked to Bravo — full duplex active', 'ok');
+    entry('Linked to Alpha — full duplex active', 'ok');
     duplexBar.textContent = '● LIVE';
     duplexBar.className = 'duplex-overlay live';
     syncControls();
     startQualityPolling();
-    // Ensure data channel is open (may have failed during retry storm)
+    // Ensure data channel is open
     openDataConn();
     // Re-enforce mute/unmute state now that WebRTC senders are live.
     // A link drop + reconnect resets the sender track to whatever getCallStream()
     // supplied; applyMuteToSenders brings it back in line with audioMuted.
     applyMuteToSenders();
   });
-  // Only trigger onDrop if this is still the active call (guards against stale calls
-  // from a previous dial attempt closing and racing with the current one)
   c.on('close', () => { if (call === c) onDrop(); });
   c.on('error', e => { entry('Call error: ' + e.message, 'err'); if (call === c) onDrop(); });
 }
 
-// ── Save recordings if a disconnection interrupts them ────────
+// ── Save recording if a disconnection interrupts it ──────────
 function saveRecordingIfActive() {
   if (recRemote && recRemote.state === 'recording') {
     entry('Connection lost — auto-saving remote recording…', 'sys');
@@ -3114,11 +3095,10 @@ function handleRemoteLeave() {
 }
 
 function onDrop() {
-  clearTimeout(retryTimer);
   saveRecordingIfActive();
   linked = false;
   call = null;
-  // Reset data channel state so it re-opens cleanly on next dial
+  // Reset data channel state so it re-opens cleanly on reconnect
   if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
   pendingDC = false;
   stopQualityPolling();
@@ -3137,7 +3117,7 @@ function onDrop() {
     const el = document.getElementById(id);
     if (el) { el.classList.remove('no-video'); el.classList.add('stale'); }
   });
-  setStatus('calling');
+  setStatus('standby');
   if (leftPermanently) return; // permanent leave handled by leaveSession()
   if (remotePeerLeft) return;  // remote sent leave signal — stay on screen, notice already shown
   if (peerRefreshing)  return;  // a refresh-reload is in progress — do not show login
@@ -3167,7 +3147,6 @@ let autoReconnectTimer;
 function resetLockTimer() {
   clearTimeout(lockTimer);
   lockTimer = setTimeout(() => {
-    // Re-show the session overlay to re-authenticate
     document.getElementById('sessionOverlay').style.display = 'flex';
     document.getElementById('unitIdDisplay').style.display = 'none';
     prefillLogin();
@@ -3226,19 +3205,15 @@ function preferredMime() {
   ].find(t => MediaRecorder.isTypeSupported(t)) || 'video/webm';
 }
 
-// Mix audio from multiple MediaStreams into one destination track.
-// Returns { ctx, dest } — caller must call ctx.close() when done.
 async function buildAudioMix(...streams) {
   const ctx  = new (window.AudioContext || window.webkitAudioContext)();
-  await ctx.resume();                         // ensure context is running
+  await ctx.resume();
   const dest = ctx.createMediaStreamDestination();
   streams.forEach(s => {
     if (!s) return;
     const tracks = s.getAudioTracks ? s.getAudioTracks() : [];
     if (!tracks.length) return;
     try {
-      // Wrap the stream in a new MediaStream containing only its audio tracks
-      // so createMediaStreamSource gets a clean audio-only stream
       const audioOnly = new MediaStream(tracks);
       ctx.createMediaStreamSource(audioOnly).connect(dest);
     } catch(e) { entry('Audio mix warn: ' + e.message, 'sys'); }
@@ -3246,8 +3221,6 @@ async function buildAudioMix(...streams) {
   return { ctx, dest };
 }
 
-// Composite mainVideo with optional PiP overlayVideo (pass null for no PiP).
-// Returns { stream, stopLoop }.
 function buildCompositeStream(mainVideo, overlayVideo, audioTracks) {
   const W = mainVideo.videoWidth  || 1280;
   const H = mainVideo.videoHeight || 720;
@@ -3258,7 +3231,7 @@ function buildCompositeStream(mainVideo, overlayVideo, audioTracks) {
   const pipH = Math.round(pipW * 9 / 16);
   const pipX = W - pipW - 14;
   const pipY = 14;
-  const showPip = !!overlayVideo; // only draw PiP if caller explicitly passed a video el
+  const showPip = !!overlayVideo;
   let afId;
   function draw() {
     c.drawImage(mainVideo, 0, 0, W, H);
@@ -3270,7 +3243,7 @@ function buildCompositeStream(mainVideo, overlayVideo, audioTracks) {
       c.clip();
       c.drawImage(overlayVideo, pipX, pipY, pipW, pipH);
       c.restore();
-      c.strokeStyle = '#00d4ff'; c.lineWidth = 2;
+      c.strokeStyle = '#00ff9f'; c.lineWidth = 2;
       c.beginPath();
       if (c.roundRect) c.roundRect(pipX, pipY, pipW, pipH, 4);
       else c.rect(pipX, pipY, pipW, pipH);
@@ -3291,13 +3264,12 @@ function saveRec(chunks, mimeType, label) {
   const a    = document.createElement('a');
   const ts   = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
   const ext  = mimeType.startsWith('video/mp4') ? 'mp4' : 'webm';
-  a.href = url; a.download = `alpha-${label}-${ts}.${ext}`;
+  a.href = url; a.download = `bravo-${label}-${ts}.${ext}`;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 5000);
   entry(`${label} recording saved (${ext})`, 'ok');
 }
 
-// ── Record Remote button ──────────────────────────────────────
 async function toggleRecordRemote() {
   const btn = document.getElementById('recBtn2');
   if (recRemoteBusy) return;
@@ -3316,8 +3288,6 @@ async function toggleRecordRemote() {
   const hasRemote = remoteVideo.srcObject && remoteVideo.srcObject.getVideoTracks().length > 0;
   if (!hasRemote) { entry('No remote video to record', 'err'); return; }
 
-  // Use remoteAudio.srcObject for remote audio (same stream, but this element is
-  // actively playing it so the browser is less likely to throttle the audio tracks)
   const { ctx: aCtx, dest: aDest } = await buildAudioMix(
     localStream,
     remoteAudio ? remoteAudio.srcObject : remoteVideo.srcObject
@@ -3325,15 +3295,13 @@ async function toggleRecordRemote() {
 
   const mimeType = preferredMime();
   let stopLoop = null, recStream;
-  const withMini = !!miniVideoVisible;   // snapshot the flag right now
+  const withMini = !!miniVideoVisible;
 
   if (withMini) {
-    // Composite: remote video + local mini PiP
     const miniLocalVideo = document.getElementById('miniLocalVideo');
     const comp = buildCompositeStream(remoteVideo, miniLocalVideo, aDest.stream.getAudioTracks());
     recStream = comp.stream; stopLoop = comp.stopLoop;
   } else {
-    // Plain remote video track + mixed audio — no canvas, no PiP
     recStream = new MediaStream([
       ...remoteVideo.srcObject.getVideoTracks(),
       ...aDest.stream.getAudioTracks()
@@ -3354,7 +3322,6 @@ async function toggleRecordRemote() {
   entry(`Remote recording started${withMini ? ' (with local mini overlay)' : ''}…`, 'ok');
 }
 
-// ── Record Local button ───────────────────────────────────────
 async function toggleRecordLocal() {
   const btn = document.getElementById('recBtn');
   if (recLocalBusy) return;
@@ -3381,16 +3348,14 @@ async function toggleRecordLocal() {
 
   const mimeType = preferredMime();
   let stopLoop = null, recStream;
-  const withMini = !!miniVideoVisible;   // snapshot the flag right now
+  const withMini = !!miniVideoVisible;
 
   if (withMini) {
-    // Composite: local video + remote mini PiP
     const localVideo      = document.getElementById('localVideo');
     const miniRemoteVideo = document.getElementById('miniRemoteVideo');
     const comp = buildCompositeStream(localVideo, miniRemoteVideo, aDest.stream.getAudioTracks());
     recStream = comp.stream; stopLoop = comp.stopLoop;
   } else {
-    // Plain local video track + mixed audio — no canvas, no PiP
     recStream = new MediaStream([
       ...localStream.getVideoTracks(),
       ...aDest.stream.getAudioTracks()
@@ -3411,7 +3376,6 @@ async function toggleRecordLocal() {
   entry(`Local recording started${withMini ? ' (with remote mini overlay)' : ''}…`, 'ok');
 }
 
-// Legacy no-op — buttons now call specific functions directly
 function toggleRecord() {}
 
 function toggleVideo() {
@@ -3433,7 +3397,7 @@ function toggleVideo() {
 
 // ── Screen Share ──────────────────────────────────────────────
 let screenSharing = false;
-let cameraTrack = null;   // saved camera track while screen-sharing
+let cameraTrack = null;
 let screenTrack = null;
 
 // Hide share buttons on Android Chrome (no getDisplayMedia support).
@@ -3454,7 +3418,6 @@ document.addEventListener('DOMContentLoaded', function initScreenShareSupport() 
 async function toggleScreenShare() {
   const btns = [document.getElementById('screenBtn'), document.getElementById('screenBtn2')];
   if (!screenSharing) {
-    // ── Start screen share ──
     if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
       entry('Screen share not supported in this browser', 'err'); return;
     }
@@ -3462,21 +3425,16 @@ async function toggleScreenShare() {
       const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
       screenTrack = screenStream.getVideoTracks()[0];
 
-      // Save current camera track
       cameraTrack = localStream.getVideoTracks()[0] || null;
-
-      // Swap track in localStream
       if (cameraTrack) localStream.removeTrack(cameraTrack);
       localStream.addTrack(screenTrack);
 
-      // Update local preview
       document.getElementById('localVideo').srcObject = null;
       document.getElementById('localVideo').srcObject = localStream;
       syncMiniVideos();
       updateLocalVideoState();
       sendVideoState();
 
-      // Replace track in live call
       try {
         const pc = call && (call.peerConnection || call._pc);
         const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'video');
@@ -3487,7 +3445,6 @@ async function toggleScreenShare() {
       btns.forEach(b => { if(b){ b.textContent = 'Share On'; b.classList.add('screen-active'); }});
       entry('Screen share started', 'ok');
 
-      // Auto-stop when user ends via browser UI
       screenTrack.addEventListener('ended', () => {
         if (screenSharing) stopScreenShare();
       });
@@ -3504,13 +3461,9 @@ async function stopScreenShare() {
   const btns = [document.getElementById('screenBtn'), document.getElementById('screenBtn2')];
   screenSharing = false;
 
-  // Stop screen track
   if (screenTrack) { screenTrack.stop(); screenTrack = null; }
-
-  // Remove screen track from stream
   localStream.getVideoTracks().forEach(t => localStream.removeTrack(t));
 
-  // Restore camera track (or acquire a fresh one)
   let restoreTrack = cameraTrack && cameraTrack.readyState !== 'ended' ? cameraTrack : null;
   if (!restoreTrack) {
     try {
@@ -3524,14 +3477,12 @@ async function stopScreenShare() {
     cameraTrack = restoreTrack;
   }
 
-  // Update preview
   document.getElementById('localVideo').srcObject = null;
   document.getElementById('localVideo').srcObject = localStream;
   syncMiniVideos();
   updateLocalVideoState();
   sendVideoState();
 
-  // Replace track in live call
   try {
     const pc = call && (call.peerConnection || call._pc);
     const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'video');
@@ -3543,26 +3494,21 @@ async function stopScreenShare() {
 }
 
 // ── System Audio capture (getDisplayMedia audio-only) ─────────
-// Captures any tab or system audio via getDisplayMedia and mixes it
-// into the live call stream alongside the microphone.
 let sysAudioStream  = null;
 let sysAudioNode    = null;
 let sysMonitorGain  = null;  // controls local speaker passthrough for sys audio (independent of call stream)
 let mediaMonitorGain = null; // controls local speaker passthrough for media elements
-let sysMonitorOn    = false; // default: monitor off
+let sysMonitorOn    = false;
 
 async function toggleSysAudio() {
   const btns = [document.getElementById('sysAudioBtn'), document.getElementById('sysAudioBtn2')];
-
   if (sysAudioStream) {
-    // ── Stop system audio ──
     sysAudioStream.getTracks().forEach(t => t.stop());
     sysAudioStream = null;
     if (sysAudioNode) { try { sysAudioNode.disconnect(); } catch(e){} sysAudioNode = null; }
     if (sysMonitorGain) { try { sysMonitorGain.disconnect(); } catch(e){} sysMonitorGain = null; }
     _mixPlayingSet.delete('__sysaudio__');
     if (_mixPlayingSet.size === 0) _deactivateMix();
-    // Restore all remote audio elements now that sys capture is stopped
     ['remoteAudio', 'miniRemoteVideo', 'miniChatVideo'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.muted = false;
@@ -3571,33 +3517,24 @@ async function toggleSysAudio() {
     entry('System audio capture stopped', 'sys');
     return;
   }
-
-  // ── Start system audio ──
   if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
     entry('getDisplayMedia not supported in this browser', 'err'); return;
   }
   try {
-    // Chrome requires video:true — we immediately stop the video track after capture.
-    // The audio track is what we actually want.
+    // Chrome requires video:true — stop video track immediately after capture
     const stream = await navigator.mediaDevices.getDisplayMedia({
       video: true,
       audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
     });
-
-    // Stop video immediately — we only want audio
     stream.getVideoTracks().forEach(t => t.stop());
-
     const audioTracks = stream.getAudioTracks();
     if (!audioTracks.length) {
       entry('No audio track captured — tick "Share tab audio" or "Share system audio" in the picker', 'err');
       return;
     }
     sysAudioStream = stream;
-
-    // Wire into the shared mix AudioContext
     _ensureMixContext();
     if (_mixCtx.state === 'suspended') await _mixCtx.resume();
-
     const sysOnly = new MediaStream(audioTracks);
     sysAudioNode = _mixCtx.createMediaStreamSource(sysOnly);
     // GainNode locks sys audio at a fixed unity level so WebRTC's per-packet
@@ -3605,30 +3542,19 @@ async function toggleSysAudio() {
     const sysGain = _mixCtx.createGain();
     sysGain.gain.value = 1.0;
     sysAudioNode.connect(sysGain);
-    sysGain.connect(_mixDest);            // → call stream (always active)
+    sysGain.connect(_mixDest);
 
-    // Local speaker monitor — gated by sysMonitorGain so user can toggle passthrough
     sysMonitorGain = _mixCtx.createGain();
     sysMonitorGain.gain.value = sysMonitorOn ? 1.0 : 0.0;
     sysGain.connect(sysMonitorGain);
-    sysMonitorGain.connect(_mixCtx.destination); // → local speakers (toggleable)
-
+    sysMonitorGain.connect(_mixCtx.destination);
     _mixPlayingSet.add('__sysaudio__');
     await _activateMix();
-
-    // Mute ALL remote audio-bearing elements to prevent the captured sys audio
-    // from picking up the incoming call audio via OS loopback, creating feedback.
-    // remoteAudio, miniRemoteVideo, and miniChatVideo all carry the remote stream
-    // and must all be silenced — muting only remoteAudio leaves the others as a
-    // loopback path.
     ['remoteAudio', 'miniRemoteVideo', 'miniChatVideo'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.muted = true;
     });
-
-    // Auto-stop when user clicks "Stop sharing" in the browser bar
     audioTracks[0].addEventListener('ended', () => { if (sysAudioStream) toggleSysAudio(); });
-
     btns.forEach(b => { if(b){ b.textContent = '🔊 Sys Audio On'; b.classList.add('sys-audio-on'); }});
     entry('System audio capture active — mixed into call', 'ok');
   } catch(e) {
@@ -3657,47 +3583,30 @@ function toggleSysMonitor() {
   });
   entry('Sys audio local monitor: ' + (sysMonitorOn ? 'ON' : 'OFF'), 'sys');
 }
-
 // ── Media-to-call audio mix ───────────────────────────────────
-// Captures audio from chat media elements (video/audio files) and mixes
-// them with the live microphone before sending over the WebRTC call.
-//
-// Design notes:
-//  • The AudioContext is created once and NEVER closed while the page lives,
-//    because createMediaElementSource() permanently transfers ownership of a
-//    media element to one AudioContext — calling it again on the same element
-//    after context closure throws InvalidStateError.
-//  • A WeakMap tracks which elements have already been wired so we don't try
-//    to create a second source node for the same element.
-//  • Active playback count drives whether the mixed track or the plain mic
-//    track is sent in the call.
-
-let _mixCtx  = null;   // single shared AudioContext, never closed
-let _mixDest = null;   // MediaStreamDestination — mixed output
+let _mixCtx  = null;
+let _mixDest = null;
 let _mixMicNode = null;
-let _mixMicGain = null;   // module-level so toggleAudio can zero it to mute mic within the mix graph
-const _mixSourceNodes  = new WeakMap(); // mediaEl → AudioNode (created once)
-const _mixPlayingSet   = new Set();     // mediaEl currently playing
-let   _mixOutTrack     = null;          // track currently sent in call
+let _mixMicGain = null;   // module-level so toggleAudio can zero it to mute mic in the mix graph
+const _mixSourceNodes  = new WeakMap();
+const _mixPlayingSet   = new Set();
+let   _mixOutTrack     = null;
 
 function _ensureMixContext() {
-  if (_mixCtx) return; // already initialised
+  if (_mixCtx) return;
   _mixCtx  = new (window.AudioContext || window.webkitAudioContext)();
   _mixDest = _mixCtx.createMediaStreamDestination();
   // Gate node for media-element local monitor — respects the Monitor toggle
   mediaMonitorGain = _mixCtx.createGain();
   mediaMonitorGain.gain.value = sysMonitorOn ? 1.0 : 0.0;
   mediaMonitorGain.connect(_mixCtx.destination);
-  // Wire the live mic into the permanent mix destination
   if (localStream) {
     try {
       _mixMicNode = _mixCtx.createMediaStreamSource(new MediaStream(localStream.getAudioTracks()));
       // GainNode isolates the mic from WebRTC's AGC so it doesn't pull the
       // blended mix level up/down while sys audio is active.
-      // Also used by toggleAudio to mute/unmute the mic within the mix graph,
-      // because track.enabled=false does NOT silence an AudioContext source node.
       _mixMicGain = _mixCtx.createGain();
-      _mixMicGain.gain.value = audioMuted ? 0.0 : 1.0;
+      _mixMicGain.gain.value = audioMuted ? 0.0 : 1.0;  // honour mute state if mix starts after mute
       _mixMicNode.connect(_mixMicGain);
       _mixMicGain.connect(_mixDest);
     } catch(e) { entry('Mix mic init warn: ' + e.message, 'sys'); }
@@ -3747,74 +3656,31 @@ async function _deactivateMix() {
   _mixOutTrack = null;
 }
 
-// Called on every 'play' event from a chat media element.
 async function attachMediaToCallAudio(mediaEl) {
   // Note: audioMuted only gates the local mic input — sys audio and chat
   // media mixing are independent and must remain active regardless.
-
-  // Resume context if suspended (browsers suspend on creation until a user gesture)
   _ensureMixContext();
   if (_mixCtx.state === 'suspended') await _mixCtx.resume();
-
-  // Wire the element into the AudioContext exactly once for its lifetime
   if (!_mixSourceNodes.has(mediaEl)) {
     try {
       const src = _mixCtx.createMediaElementSource(mediaEl);
-      src.connect(_mixDest);           // → call stream
+      src.connect(_mixDest);
       src.connect(mediaMonitorGain);    // → local speakers (gated by monitor toggle)
       _mixSourceNodes.set(mediaEl, src);
       entry('Media element wired into mix', 'sys');
-    } catch(e) {
-      entry('Media wire warn: ' + e.message, 'sys');
-      return;
-    }
+    } catch(e) { entry('Media wire warn: ' + e.message, 'sys'); return; }
   }
-
-  // Track playback state
   _mixPlayingSet.add(mediaEl);
   await _activateMix();
-
-  // One-shot listeners for this play session
   function onPause() {
-    mediaEl.removeEventListener('pause',  onPause);
-    mediaEl.removeEventListener('ended',  onPause);
+    mediaEl.removeEventListener('pause', onPause);
+    mediaEl.removeEventListener('ended', onPause);
     _mixPlayingSet.delete(mediaEl);
     entry('Media paused/ended — playing count: ' + _mixPlayingSet.size, 'sys');
     if (_mixPlayingSet.size === 0) _deactivateMix();
   }
-  mediaEl.addEventListener('pause',  onPause, { once: true });
-  mediaEl.addEventListener('ended',  onPause, { once: true });
-}
-
-// ── applyMuteToSenders ───────────────────────────────────────
-// Enforces the current mute/unmute state on the live WebRTC sender.
-// Called after a stream event (reconnect) so state survives link drops.
-// Mix-aware: if the mix is active we leave the mix track in place and only
-// adjust _mixMicGain; we never blindly restore realAudioTrack over the mix.
-function applyMuteToSenders() {
-  try {
-    const pc = call && (call.peerConnection || call._pc);
-    const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
-    if (!sender) return;
-    if (audioMuted) {
-      if (_mixMicGain) {
-        // Mix is active — silence the mic gain node; mix track stays on sender.
-        _mixMicGain.gain.value = 0.0;
-      } else {
-        sender.replaceTrack(getSilentTrack()).catch(() => {});
-      }
-    } else {
-      if (_mixMicGain) {
-        // Mix is active — restore mic gain; mix track stays on sender.
-        _mixMicGain.gain.value = 1.0;
-      } else {
-        // No mix — restore raw mic track only if sender doesn't already hold it.
-        if (realAudioTrack && sender.track !== realAudioTrack) {
-          sender.replaceTrack(realAudioTrack).catch(() => {});
-        }
-      }
-    }
-  } catch(e) { entry('applyMuteToSenders warn: ' + e.message, 'sys'); }
+  mediaEl.addEventListener('pause', onPause, { once: true });
+  mediaEl.addEventListener('ended', onPause, { once: true });
 }
 
 // ── Silent audio track used when muted ───────────────────────
@@ -3847,7 +3713,6 @@ function toggleAudio() {
       _mixMicGain.gain.value = 0.0;
       // Mix track stays on the sender — no replaceTrack needed; sys audio keeps flowing.
     } else {
-      // No mix active — replace with a silent track on the WebRTC sender directly.
       try {
         const pc = call && (call.peerConnection || call._pc);
         const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
@@ -3863,7 +3728,6 @@ function toggleAudio() {
       // Restore mic gain in the mix graph — the mix track is already on the sender.
       _mixMicGain.gain.value = 1.0;
     } else {
-      // No mix active — restore the real mic track on the WebRTC sender directly.
       try {
         const pc = call && (call.peerConnection || call._pc);
         const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
@@ -3986,10 +3850,7 @@ async function flipCamera() {
 
 
 // ── Speaker / Earphone toggle ─────────────────────────────────
-// Toggles between loudspeaker and earphone/headset output.
-// Uses setSinkId when available; falls back to a visual-only toggle
-// (earphone mode routes audio the same way but UI reminds user to use headset).
-let speakerMode = true; // true = loudspeaker, false = earphone
+let speakerMode = true;
 
 async function toggleSpeaker() {
   speakerMode = !speakerMode;
@@ -3999,15 +3860,12 @@ async function toggleSpeaker() {
   ];
   const ra = document.getElementById('remoteAudio');
   if (speakerMode) {
-    // Try to set default output device (loudspeaker)
     if (ra && ra.setSinkId) {
       try { await ra.setSinkId(''); } catch(e) { entry('setSinkId: ' + e.message, 'sys'); }
     }
     btns.forEach(b => { if(b){ b.textContent='🔊 Speaker'; b.classList.add('speaker-on'); b.classList.remove('speaker-ear'); }});
     entry('Audio: loudspeaker', 'sys');
   } else {
-    // Earphone — on devices with setSinkId, could enumerate and pick headset;
-    // here we surface a prompt-style UX since enumerateDevices labels need permission.
     if (ra && ra.setSinkId) {
       try {
         const devices = await navigator.mediaDevices.enumerateDevices();
@@ -4032,7 +3890,7 @@ function applyMicGain(val) {
   if (_micGainNode) {
     _micGainNode.gain.setTargetAtTime(v, _micGainCtx.currentTime, 0.01);
   }
-  try { localStorage.setItem('alpha_mic_gain', String(v)); } catch(e) {}
+  try { localStorage.setItem('bravo_mic_gain', String(v)); } catch(e) {}
 }
 
 function setupMicGainNode(stream) {
@@ -4041,7 +3899,7 @@ function setupMicGainNode(stream) {
     const src = _micGainCtx.createMediaStreamSource(stream);
     _micGainNode = _micGainCtx.createGain();
     _micGainDest = _micGainCtx.createMediaStreamDestination();
-    const savedGain = parseFloat(localStorage.getItem('alpha_mic_gain') || '1');
+    const savedGain = parseFloat(localStorage.getItem('bravo_mic_gain') || '1');
     _micGainNode.gain.value = isFinite(savedGain) ? savedGain : 1;
     src.connect(_micGainNode);
     _micGainNode.connect(_micGainDest);
@@ -4055,13 +3913,12 @@ function setupMicGainNode(stream) {
     // Update slider & label to saved value
     const slider = document.getElementById('micGainSlider');
     const lbl    = document.getElementById('micGainVal');
-    if (slider) slider.value = _micGainNode.gain.value;
-    if (lbl)    lbl.textContent = _micGainNode.gain.value.toFixed(2) + '×';
+    if (slider && isFinite(savedGain)) { slider.value = savedGain; }
+    if (lbl    && isFinite(savedGain)) { lbl.textContent = savedGain.toFixed(2) + '×'; }
   } catch(e) { console.warn('Mic gain setup failed:', e); }
 }
 
 // ── Local video zoom ──────────────────────────────────────────
-// Zooms the local video element via CSS transform (scale + overflow:hidden).
 function applyZoom(val, channel) {
   const v = parseFloat(val);
   if (channel === 'local') {
@@ -4069,7 +3926,6 @@ function applyZoom(val, channel) {
     if (vid) vid.style.transform = v > 1 ? `scale(${v})` : '';
     const lbl = document.getElementById('zoomValLocal');
     if (lbl) lbl.textContent = v.toFixed(1) + '×';
-    // Sync remote-tab slider if it exists
     const s2 = document.getElementById('zoomSliderRemote');
     if (s2 && s2.value !== String(val)) { s2.value = val; applyZoom(val, 'remote-sync'); }
   } else if (channel === 'remote-sync') {
@@ -4078,7 +3934,41 @@ function applyZoom(val, channel) {
   }
 }
 
+// ── applyMuteToSenders ───────────────────────────────────────
+// Enforces the current mute/unmute state on the live WebRTC sender.
+// Called after a stream event (reconnect) so state survives link drops.
+// Mix-aware: if the mix is active we leave the mix track in place and only
+// adjust _mixMicGain; we never blindly restore realAudioTrack over the mix.
+function applyMuteToSenders() {
+  try {
+    const pc = call && (call.peerConnection || call._pc);
+    const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
+    if (!sender) return;
+    if (audioMuted) {
+      if (_mixMicGain) {
+        // Mix is active — silence the mic gain node; mix track stays on sender.
+        _mixMicGain.gain.value = 0.0;
+      } else {
+        sender.replaceTrack(getSilentTrack()).catch(() => {});
+      }
+    } else {
+      if (_mixMicGain) {
+        // Mix is active — restore mic gain; mix track stays on sender.
+        _mixMicGain.gain.value = 1.0;
+      } else {
+        // No mix — restore raw mic track only if sender doesn't already hold it.
+        if (realAudioTrack && sender.track !== realAudioTrack) {
+          sender.replaceTrack(realAudioTrack).catch(() => {});
+        }
+      }
+    }
+  } catch(e) { entry('applyMuteToSenders warn: ' + e.message, 'sys'); }
+}
+
 // ── Android / tab-backgrounding recovery ─────────────────────
+// Android kills the WebSocket to the PeerJS signalling server when the tab is
+// backgrounded. Without this handler the peer silently goes stale and never
+// receives Alpha's call when the user returns to the tab.
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
   if (!peer || peer.destroyed) return;
