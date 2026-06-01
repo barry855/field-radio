@@ -935,31 +935,27 @@
   }
 
   /* ── Mic gain slider row ────────────────────────────────────── */
-  .mic-gain-row {
+  .gain-row {
     display: flex; align-items: center; gap: 8px;
     flex-shrink: 0; padding: 2px 0;
     font-size: 10px; color: var(--text-dim);
     letter-spacing: 1px; text-transform: uppercase;
   }
-  .mic-gain-row input[type=range] {
+  .gain-row .gain-label {
+    display: flex; flex-direction: column; align-items: center;
+    line-height: 1.15; flex-shrink: 0;
+    font-family: 'Orbitron', sans-serif; font-size: 9px;
+    color: var(--text-dim);
+  }
+  .gain-row .gain-label span:first-child { color: var(--accent); font-size: 9px; }
+  .gain-row input[type=range] {
     flex: 1; accent-color: var(--accent);
     height: 4px; cursor: pointer;
   }
-  .mic-gain-row .mic-gain-val {
-    min-width: 34px; text-align: right;
+  .gain-row .gain-val {
+    min-width: 38px; text-align: right;
     color: var(--accent); font-family: 'Orbitron', sans-serif;
     font-size: 10px;
-  }
-  .mic-gain-label {
-    display: flex; flex-direction: column; align-items: center;
-    line-height: 1.1; flex-shrink: 0;
-  }
-  .mic-gain-label .mic-lbl-top {
-    color: var(--accent); font-family: 'Orbitron', sans-serif;
-    font-size: 9px; letter-spacing: 1px;
-  }
-  .mic-gain-label .mic-lbl-bot {
-    font-size: 9px; letter-spacing: 1px;
   }
 
   /* ── Login presence indicator ──────────────────────────────── */
@@ -1219,13 +1215,10 @@
         <button class="media-btn" id="flipBtn2" onclick="flipCamera()">⟳ Flip</button>
         <button class="speaker-btn speaker-on" id="speakerBtnRemote" onclick="toggleSpeaker()">🔊 Speaker</button>
       </div>
-      <div class="mic-gain-row">
-        <div class="mic-gain-label">
-          <span class="mic-lbl-top">MIKE</span>
-          <span class="mic-lbl-bot">GAIN</span>
-        </div>
+      <div class="gain-row">
+        <div class="gain-label"><span>MIKE</span><span>GAIN</span></div>
         <input type="range" id="micGainSlider" min="0" max="3" step="0.05" value="1" oninput="applyMicGain(this.value)">
-        <span class="mic-gain-val" id="micGainVal">1.0×</span>
+        <span class="gain-val" id="micGainVal">1.00×</span>
       </div>
       <div class="video-panel">
         <div class="panel-label">REMOTE — BRAVO</div>
@@ -1645,6 +1638,12 @@ function prefillLogin() {
     setTimeout(() => entry('PREFILL: code=' + last + ' vid=' + disVid + ' aud=' + disAud, 'sys'), 500);
     // Start presence polling immediately if code was pre-filled
     if (last) startPresencePolling(last);
+    // Prefill mic gain slider from saved value
+    const savedGain = parseFloat(localStorage.getItem('alpha_mic_gain') || '1');
+    const gSlider = document.getElementById('micGainSlider');
+    const gLabel  = document.getElementById('micGainVal');
+    if (gSlider && isFinite(savedGain)) { gSlider.value = savedGain; }
+    if (gLabel  && isFinite(savedGain)) { gLabel.textContent = savedGain.toFixed(2) + '×'; }
     // Restore saved translate language
     const savedLang = localStorage.getItem('alpha_translate_lang');
     if (savedLang) {
@@ -2599,6 +2598,7 @@ function init() {
 
   function applyStreamFlags(stream) {
     localStream = stream;
+    setupMicGainNode(stream);
     document.getElementById('localVideo').srcObject = stream;
     entry('Mic + camera ready', 'ok');
     syncMiniVideos();
@@ -3956,6 +3956,45 @@ async function toggleSpeaker() {
   }
 }
 
+// ── Microphone Gain Control ───────────────────────────────────
+// Web Audio API gain node inserted between mic source and outgoing stream.
+let _micGainCtx = null, _micGainNode = null, _micGainDest = null;
+
+function applyMicGain(val) {
+  const v = parseFloat(val);
+  const lbl = document.getElementById('micGainVal');
+  if (lbl) lbl.textContent = v.toFixed(2) + '×';
+  if (_micGainNode) {
+    _micGainNode.gain.setTargetAtTime(v, _micGainCtx.currentTime, 0.01);
+  }
+  try { localStorage.setItem('alpha_mic_gain', String(v)); } catch(e) {}
+}
+
+function setupMicGainNode(stream) {
+  try {
+    if (!_micGainCtx) _micGainCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const src = _micGainCtx.createMediaStreamSource(stream);
+    _micGainNode = _micGainCtx.createGain();
+    _micGainDest = _micGainCtx.createMediaStreamDestination();
+    const savedGain = parseFloat(localStorage.getItem('alpha_mic_gain') || '1');
+    _micGainNode.gain.value = isFinite(savedGain) ? savedGain : 1;
+    src.connect(_micGainNode);
+    _micGainNode.connect(_micGainDest);
+    // Replace audio track in localStream with the gained version
+    const gainedAudio = _micGainDest.stream.getAudioTracks()[0];
+    if (gainedAudio) {
+      const oldAudio = stream.getAudioTracks()[0];
+      if (oldAudio) stream.removeTrack(oldAudio);
+      stream.addTrack(gainedAudio);
+    }
+    // Update slider & label to saved value
+    const slider = document.getElementById('micGainSlider');
+    const lbl    = document.getElementById('micGainVal');
+    if (slider) slider.value = _micGainNode.gain.value;
+    if (lbl)    lbl.textContent = _micGainNode.gain.value.toFixed(2) + '×';
+  } catch(e) { console.warn('Mic gain setup failed:', e); }
+}
+
 // ── Local video zoom ──────────────────────────────────────────
 // Zooms the local video element via CSS transform (scale + overflow:hidden).
 function applyZoom(val, channel) {
@@ -3972,68 +4011,6 @@ function applyZoom(val, channel) {
     const lbl2 = document.getElementById('zoomValRemote');
     if (lbl2) lbl2.textContent = parseFloat(val).toFixed(1) + '×';
   }
-}
-
-// ── Microphone gain control ───────────────────────────────────
-// Dedicated gain node for the mic-gain slider, separate from the
-// mute GainNode (_mixMicGain) so both can be composed in series.
-let _micGainNode = null;
-let _micGainValue = 1.0;  // current multiplier
-
-const MIC_GAIN_KEY = 'alpha_mic_gain';
-
-function _ensureMicGainNode() {
-  if (_micGainNode) return _micGainNode;
-  if (!_mixCtx) return null;
-  _micGainNode = _mixCtx.createGain();
-  _micGainNode.gain.value = _micGainValue;
-  // Re-wire: mic source → micGainNode → _mixMicGain → _mixDest
-  if (_mixMicNode && _mixMicGain) {
-    try {
-      _mixMicNode.disconnect(_mixMicGain);
-      _mixMicNode.connect(_micGainNode);
-      _micGainNode.connect(_mixMicGain);
-    } catch(e) { /* already disconnected */ }
-  }
-  return _micGainNode;
-}
-
-function applyMicGain(val) {
-  _micGainValue = parseFloat(val);
-  // Update slider UI
-  const slider = document.getElementById('micGainSlider');
-  const lbl    = document.getElementById('micGainVal');
-  if (slider && slider.value !== String(val)) slider.value = val;
-  if (lbl) lbl.textContent = _micGainValue.toFixed(2).replace(/\.?0+$/, '') + '×';
-  // Apply to Web Audio gain node if mix context is live
-  if (_micGainNode) {
-    _micGainNode.gain.value = _micGainValue;
-  } else if (_mixCtx) {
-    _ensureMicGainNode();
-  }
-  // Persist
-  try { localStorage.setItem(MIC_GAIN_KEY, String(_micGainValue)); } catch(e) {}
-}
-
-function _restoreMicGain() {
-  try {
-    const saved = parseFloat(localStorage.getItem(MIC_GAIN_KEY));
-    if (!isNaN(saved) && saved >= 0 && saved <= 3) {
-      _micGainValue = saved;
-      applyMicGain(saved);
-    }
-  } catch(e) {}
-}
-
-// Restore saved gain on page load
-_restoreMicGain();
-
-// Hook into _ensureMixContext so the gain node is wired once the AudioContext
-// exists. Patch: after _ensureMixContext runs, wire the mic gain node in.
-const _origEnsureMixContext = _ensureMixContext;
-function _ensureMixContext() {
-  _origEnsureMixContext();
-  if (_mixCtx && !_micGainNode) _ensureMicGainNode();
 }
 
 // ── Android / tab-backgrounding recovery ─────────────────────
