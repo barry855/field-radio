@@ -2794,7 +2794,7 @@ function attachDataConn(dc) {
     if (f) {
       if (f.__control === 'video') { updateRemoteVideoState(f.enabled, f.hasTrack !== false); return; }
       if (f.__control === 'leave') { handleRemoteLeave(); return; }
-      if (f.__control === 'refresh') { entry('Remote refreshed — reloading…', 'sys'); setTimeout(() => window.location.reload(), 400); return; }
+      if (f.__control === 'refresh') { entry('Remote refreshed — reloading…', 'sys'); peerRefreshing = true; setTimeout(() => window.location.reload(), 400); return; }
       if (f.__file  === true)      { addMediaBubble(f.name, f.type, f.data, false); return; }
       if (f.__chunk === true)      { receiveChunk(f); return; }
       addBubble(JSON.stringify(f), false);
@@ -3018,6 +3018,7 @@ function saveRecordingIfActive() {
 // ── Leave session ─────────────────────────────────────────────
 let leftPermanently = false;
 let remotePeerLeft = false;
+let peerRefreshing  = false;  // true when either side is doing a refresh-reload
 
 function exportSysLog() {
   try {
@@ -3125,11 +3126,13 @@ function onDrop() {
   setStatus('calling');
   if (leftPermanently) return; // permanent leave handled by leaveSession()
   if (remotePeerLeft) return;  // remote sent leave signal — stay on screen, notice already shown
+  if (peerRefreshing)  return;  // a refresh-reload is in progress — do not show login
   // Delay redirect to allow a pending data-channel 'leave' message to arrive first.
   // Over HTTPS/relayed WebRTC the DC message and call-close event race each other;
   // we wait long enough for the leave flag to be set before deciding it's a real drop.
   setTimeout(() => {
     if (remotePeerLeft) return; // leave message arrived — stay on screen
+    if (peerRefreshing)  return; // refresh in progress — do not show login
     entry('Link lost — returning to login screen', 'sys');
     // Show login overlay immediately and restart auto-login countdown
     document.getElementById('sessionOverlay').style.display = 'flex';
@@ -3862,6 +3865,7 @@ function toggleAudio() {
 function refreshScreen() {
   // Notify remote peer so they auto-refresh in sync
   try { dcSend({ __control: 'refresh' }); } catch(e) {}
+  peerRefreshing = true;  // suppress onDrop login redirect
   setTimeout(() => window.location.reload(), 400);
 }
 
