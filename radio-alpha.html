@@ -525,7 +525,7 @@
   .leave-btn:hover { background: rgba(0,212,255,0.3); }
   .user-left-notice {
     display: none; align-items: center; gap: 8px;
-    font-family: 'Share Tech Mono', monospace; font-size: 28px;
+    font-family: 'Share Tech Mono', monospace; font-size: 11px;
     color: var(--accent2); letter-spacing: 0.5px;
     animation: blink 0.8s step-end infinite;
   }
@@ -533,37 +533,11 @@
   .user-left-notice .leave-chat-btn {
     background: rgba(0,212,255,0.15); border: 1px solid var(--accent);
     color: var(--accent); border-radius: 4px; padding: 2px 8px;
-    font-family: 'Share Tech Mono', monospace; font-size: 28px;
+    font-family: 'Share Tech Mono', monospace; font-size: 11px;
     cursor: pointer; transition: background 0.15s;
     animation: none;
   }
   .user-left-notice .leave-chat-btn:hover { background: rgba(0,212,255,0.3); }
-
-  /* ── Peer-left full-screen overlay ── */
-  .peer-left-overlay {
-    display: none;
-    position: fixed; inset: 0;
-    background: #000;
-    align-items: center; justify-content: center;
-    flex-direction: column; gap: 32px;
-    z-index: 9999;
-  }
-  .peer-left-overlay.active { display: flex; }
-  .peer-left-overlay p {
-    color: #ffffff;
-    font-family: 'Orbitron', sans-serif;
-    font-size: 28px; letter-spacing: 3px;
-    text-align: center; line-height: 1.7;
-    padding: 24px;
-  }
-  .peer-left-overlay .leave-now-btn {
-    background: rgba(0,212,255,0.15); border: 1px solid var(--accent);
-    color: var(--accent); border-radius: 4px; padding: 10px 28px;
-    font-family: 'Orbitron', sans-serif; font-size: 18px;
-    letter-spacing: 2px; cursor: pointer;
-    transition: background 0.15s, border-color 0.15s;
-  }
-  .peer-left-overlay .leave-now-btn:hover { background: rgba(0,212,255,0.3); }
 
   .log-panel {
     background: var(--panel); border: 1px solid var(--border);
@@ -1199,8 +1173,6 @@
         <button class="media-btn" id="audioBtn" onclick="toggleAudio()">Audio On</button>
         <button class="media-btn" id="miniBtn" onclick="toggleMiniVideo()">Mini Off</button>
         <button class="media-btn" id="screenBtn" onclick="toggleScreenShare()">Share Off</button>
-        <button class="media-btn" id="sysAudioBtn" onclick="toggleSysAudio()">🔊 Sys Audio</button>
-        <button class="media-btn" id="sysMonitorBtn" onclick="toggleSysMonitor()">🎧 Monitor</button>
         <button class="leave-btn" id="leaveBtn" onclick="leaveSession()">✕ Leave</button>
       </div>
       <div class="channel-row" style="flex-shrink:0; padding:0 0 4px 0;">
@@ -1236,8 +1208,6 @@
         <button class="media-btn" id="audioBtn2" onclick="toggleAudio()">Audio On</button>
         <button class="media-btn" id="miniBtn2" onclick="toggleMiniVideo()">Mini Off</button>
         <button class="media-btn" id="screenBtn2" onclick="toggleScreenShare()">Share Off</button>
-        <button class="media-btn" id="sysAudioBtn2" onclick="toggleSysAudio()">🔊 Sys Audio</button>
-        <button class="media-btn" id="sysMonitorBtn2" onclick="toggleSysMonitor()">🎧 Monitor</button>
         <button class="leave-btn" id="leaveBtn2" onclick="leaveSession()">✕ Leave</button>
       </div>
       <div class="channel-row" style="flex-shrink:0; padding:0 0 4px 0;">
@@ -1442,7 +1412,6 @@ function startSession() {
   showLoginBox();
   document.getElementById('unitIdDisplay').style.display = 'flex';
   const _uln = document.getElementById('userLeftNotice'); if (_uln) _uln.classList.remove('visible');
-  const _plo = document.getElementById('peerLeftOverlay'); if (_plo) _plo.classList.remove('active');
   leftPermanently = false;
   remotePeerLeft = false;
   document.getElementById('unitIdValue').textContent = code;
@@ -2700,7 +2669,7 @@ function init() {
   }
 
   navigator.mediaDevices.getUserMedia({
-    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+    audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
     video: videoConstraint
   })
   .then(applyStreamFlags)
@@ -2709,7 +2678,7 @@ function init() {
     if (e.name !== 'NotAllowedError' && e.name !== 'PermissionDeniedError' && e.name !== 'SecurityError') {
       entry('Camera unavailable (' + e.name + ') — retrying audio-only', 'sys');
       navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
         video: false
       })
       .then(applyStreamFlags)
@@ -3027,8 +2996,6 @@ function attachCall(c) {
     // Ensure data channel is open (may have failed during retry storm)
     openDataConn();
     // Re-enforce mute/unmute state now that WebRTC senders are live.
-    // A link drop + reconnect resets the sender track to whatever getCallStream()
-    // supplied; applyMuteToSenders brings it back in line with audioMuted.
     applyMuteToSenders();
   });
   // Only trigger onDrop if this is still the active call (guards against stale calls
@@ -3113,9 +3080,10 @@ function _doLeave() {
 }
 
 function handleRemoteLeave() {
-  // Remote user left — show notice, clear stale video, do NOT auto-reconnect
+  // Remote user left intentionally — cancel any pending reconnect and go to leave screen
+  clearTimeout(dropTimer);  // prevent onDrop's grace-period timer from showing reconnect screen
   leftPermanently = false; // we haven't left yet, remote did
-  remotePeerLeft = true;  // flag so onDrop doesn't redirect to login
+  remotePeerLeft = true;
   // Clear remote video immediately
   ['remoteVideo','miniRemoteVideo','miniChatVideo'].forEach(id => {
     const el = document.getElementById(id);
@@ -3132,15 +3100,14 @@ function handleRemoteLeave() {
   });
   // Stop quality polling
   stopQualityPolling();
-  // Show full-screen "peer left" overlay
-  const overlay = document.getElementById('peerLeftOverlay');
-  if (overlay) overlay.classList.add('active');
-  // Also show header notice as fallback
-  const notice = document.getElementById('userLeftNotice');
-  if (notice) notice.classList.add('visible');
   entry('Remote user left the session', 'sys');
-  // Hide login overlay if it was showing — stay on current screen
-  document.getElementById('sessionOverlay').style.display = 'none';
+  // Go to leave screen immediately — show session overlay (login box) so user sees the other side left
+  document.getElementById('sessionOverlay').style.display = 'flex';
+  document.getElementById('unitIdDisplay').style.display = 'none';
+  prefillLogin();
+  // Do NOT show reconnect spinner — show plain login screen so user knows remote left intentionally
+  document.getElementById('reconnectOverlay').classList.remove('active');
+  startLoginTimeout();
 }
 
 function onDrop() {
@@ -3160,31 +3127,31 @@ function onDrop() {
   const _rv = document.getElementById('remoteVideo');
   if (_rv) { try { _rv.srcObject = null; _rv.load(); } catch(e){} }
   syncMiniVideos();
-  document.getElementById('remoteWrap').classList.remove('video-off', 'no-video', 'stale');
-  document.getElementById('remoteWrap').classList.add('waiting');
-  // Mark mini remote overlays as waiting too
+  document.getElementById('remoteWrap').classList.remove('video-off', 'no-video', 'waiting');
+  document.getElementById('remoteWrap').classList.add('stale');
+  // Mark mini remote overlays as stale too
   ['miniRemoteOverlay', 'miniChatOverlay'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) { el.classList.remove('no-video', 'stale'); }
+    if (el) { el.classList.remove('no-video'); el.classList.add('stale'); }
   });
   setStatus('calling');
   if (leftPermanently) return; // permanent leave handled by leaveSession()
-  if (remotePeerLeft) return;  // remote sent leave signal — stay on screen, notice already shown
+  if (remotePeerLeft) return;  // remote sent leave signal — stay on leave screen
   if (peerRefreshing)  return;  // a refresh-reload is in progress — do not show login
-  // Delay redirect to allow a pending data-channel 'leave' message to arrive first.
-  // Over HTTPS/relayed WebRTC the DC message and call-close event race each other;
-  // we wait long enough for the leave flag to be set before deciding it's a real drop.
-  setTimeout(() => {
-    if (remotePeerLeft) return; // leave message arrived — stay on screen
+  // Show reconnect screen after a short grace period.
+  // handleRemoteLeave() will cancel this timer if a 'leave' signal arrives first,
+  // ensuring a clean leave goes to the leave screen, not the reconnect screen.
+  clearTimeout(dropTimer);
+  dropTimer = setTimeout(() => {
+    if (remotePeerLeft) return; // leave message arrived — handled by handleRemoteLeave
     if (peerRefreshing)  return; // refresh in progress — do not show login
-    entry('Link lost — returning to login screen', 'sys');
-    // Show login overlay immediately and restart auto-login countdown
+    entry('Link lost — returning to reconnect screen', 'sys');
     document.getElementById('sessionOverlay').style.display = 'flex';
     document.getElementById('unitIdDisplay').style.display = 'none';
     prefillLogin();
     showReconnecting();
     startLoginTimeout();
-  }, 2000);
+  }, 400);
 }
 
 function muteLocal() {
@@ -3194,6 +3161,7 @@ function muteLocal() {
 // ── Session timeout (10 min inactivity) ──────────────────────
 let lockTimer;
 let autoReconnectTimer;
+let dropTimer;  // cancellable handle for onDrop's leave-vs-drop grace period
 function resetLockTimer() {
   clearTimeout(lockTimer);
   lockTimer = setTimeout(() => {
@@ -3572,122 +3540,6 @@ async function stopScreenShare() {
   entry('Screen share stopped — camera restored', 'ok');
 }
 
-// ── System Audio capture (getDisplayMedia audio-only) ─────────
-// Captures any tab or system audio via getDisplayMedia and mixes it
-// into the live call stream alongside the microphone.
-let sysAudioStream  = null;
-let sysAudioNode    = null;
-let sysMonitorGain  = null;  // controls local speaker passthrough for sys audio (independent of call stream)
-let mediaMonitorGain = null; // controls local speaker passthrough for media elements
-let sysMonitorOn    = false; // default: monitor off
-
-async function toggleSysAudio() {
-  const btns = [document.getElementById('sysAudioBtn'), document.getElementById('sysAudioBtn2')];
-
-  if (sysAudioStream) {
-    // ── Stop system audio ──
-    sysAudioStream.getTracks().forEach(t => t.stop());
-    sysAudioStream = null;
-    if (sysAudioNode) { try { sysAudioNode.disconnect(); } catch(e){} sysAudioNode = null; }
-    if (sysMonitorGain) { try { sysMonitorGain.disconnect(); } catch(e){} sysMonitorGain = null; }
-    _mixPlayingSet.delete('__sysaudio__');
-    if (_mixPlayingSet.size === 0) _deactivateMix();
-    // Restore all remote audio elements now that sys capture is stopped
-    ['remoteAudio', 'miniRemoteVideo', 'miniChatVideo'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.muted = false;
-    });
-    btns.forEach(b => { if(b){ b.textContent = '🔊 Sys Audio'; b.classList.remove('sys-audio-on'); }});
-    entry('System audio capture stopped', 'sys');
-    return;
-  }
-
-  // ── Start system audio ──
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
-    entry('getDisplayMedia not supported in this browser', 'err'); return;
-  }
-  try {
-    // Chrome requires video:true — we immediately stop the video track after capture.
-    // The audio track is what we actually want.
-    const stream = await navigator.mediaDevices.getDisplayMedia({
-      video: true,
-      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
-    });
-
-    // Stop video immediately — we only want audio
-    stream.getVideoTracks().forEach(t => t.stop());
-
-    const audioTracks = stream.getAudioTracks();
-    if (!audioTracks.length) {
-      entry('No audio track captured — tick "Share tab audio" or "Share system audio" in the picker', 'err');
-      return;
-    }
-    sysAudioStream = stream;
-
-    // Wire into the shared mix AudioContext
-    _ensureMixContext();
-    if (_mixCtx.state === 'suspended') await _mixCtx.resume();
-
-    const sysOnly = new MediaStream(audioTracks);
-    sysAudioNode = _mixCtx.createMediaStreamSource(sysOnly);
-    // GainNode locks sys audio at a fixed unity level so WebRTC's per-packet
-    // gain adjustments on the blended track don't cause amplitude fluctuation.
-    const sysGain = _mixCtx.createGain();
-    sysGain.gain.value = 1.0;
-    sysAudioNode.connect(sysGain);
-    sysGain.connect(_mixDest);            // → call stream (always active)
-
-    // Local speaker monitor — gated by sysMonitorGain so user can toggle passthrough
-    sysMonitorGain = _mixCtx.createGain();
-    sysMonitorGain.gain.value = sysMonitorOn ? 1.0 : 0.0;
-    sysGain.connect(sysMonitorGain);
-    sysMonitorGain.connect(_mixCtx.destination); // → local speakers (toggleable)
-
-    _mixPlayingSet.add('__sysaudio__');
-    await _activateMix();
-
-    // Mute ALL remote audio-bearing elements to prevent the captured sys audio
-    // from picking up the incoming call audio via OS loopback, creating feedback.
-    // remoteAudio, miniRemoteVideo, and miniChatVideo all carry the remote stream
-    // and must all be silenced — muting only remoteAudio leaves the others as a
-    // loopback path.
-    ['remoteAudio', 'miniRemoteVideo', 'miniChatVideo'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.muted = true;
-    });
-
-    // Auto-stop when user clicks "Stop sharing" in the browser bar
-    audioTracks[0].addEventListener('ended', () => { if (sysAudioStream) toggleSysAudio(); });
-
-    btns.forEach(b => { if(b){ b.textContent = '🔊 Sys Audio On'; b.classList.add('sys-audio-on'); }});
-    entry('System audio capture active — mixed into call', 'ok');
-  } catch(e) {
-    entry('System audio capture failed: ' + e.message, 'err');
-  }
-}
-
-function toggleSysMonitor() {
-  sysMonitorOn = !sysMonitorOn;
-  // Ensure the AudioContext exists and is running — gain nodes are useless
-  // if the context is suspended or hasn't been created yet.
-  _ensureMixContext();
-  if (_mixCtx.state === 'suspended') _mixCtx.resume();
-  if (sysMonitorGain)   sysMonitorGain.gain.value   = sysMonitorOn ? 1.0 : 0.0;
-  if (mediaMonitorGain) mediaMonitorGain.gain.value  = sysMonitorOn ? 1.0 : 0.0;
-  const btns = [document.getElementById('sysMonitorBtn'), document.getElementById('sysMonitorBtn2')];
-  btns.forEach(b => {
-    if (!b) return;
-    if (sysMonitorOn) {
-      b.textContent = '🎧 Monitor On';
-      b.classList.add('sys-audio-on');
-    } else {
-      b.textContent = '🎧 Monitor Off';
-      b.classList.remove('sys-audio-on');
-    }
-  });
-  entry('Sys audio local monitor: ' + (sysMonitorOn ? 'ON' : 'OFF'), 'sys');
-}
-
 // ── Media-to-call audio mix ───────────────────────────────────
 // Captures audio from chat media elements (video/audio files) and mixes
 // them with the live microphone before sending over the WebRTC call.
@@ -3714,18 +3566,10 @@ function _ensureMixContext() {
   if (_mixCtx) return; // already initialised
   _mixCtx  = new (window.AudioContext || window.webkitAudioContext)();
   _mixDest = _mixCtx.createMediaStreamDestination();
-  // Gate node for media-element local monitor — respects the Monitor toggle
-  mediaMonitorGain = _mixCtx.createGain();
-  mediaMonitorGain.gain.value = sysMonitorOn ? 1.0 : 0.0;
-  mediaMonitorGain.connect(_mixCtx.destination);
   // Wire the live mic into the permanent mix destination
   if (localStream) {
     try {
       _mixMicNode = _mixCtx.createMediaStreamSource(new MediaStream(localStream.getAudioTracks()));
-      // GainNode isolates the mic from WebRTC's AGC so it doesn't pull the
-      // blended mix level up/down while sys audio is active.
-      // Also used by toggleAudio to mute/unmute the mic within the mix graph,
-      // because track.enabled=false does NOT silence an AudioContext source node.
       _mixMicGain = _mixCtx.createGain();
       _mixMicGain.gain.value = audioMuted ? 0.0 : 1.0;
       _mixMicNode.connect(_mixMicGain);
@@ -3791,7 +3635,7 @@ async function attachMediaToCallAudio(mediaEl) {
     try {
       const src = _mixCtx.createMediaElementSource(mediaEl);
       src.connect(_mixDest);           // → call stream
-      src.connect(mediaMonitorGain);    // → local speakers (gated by monitor toggle)
+      src.connect(_mixCtx.destination); // → local speakers
       _mixSourceNodes.set(mediaEl, src);
       entry('Media element wired into mix', 'sys');
     } catch(e) {
@@ -4122,11 +3966,4 @@ window.addEventListener('beforeunload', () => { peer?.destroy(); });
 </script>
 
 
-</div>
-
-<div class="peer-left-overlay" id="peerLeftOverlay">
-  <p>BRAVO has left<br>the session</p>
-  <button class="leave-now-btn" onclick="leaveSession()">Leave Chat</button>
-</div>
-
-</body></html>
+</div></body></html>
