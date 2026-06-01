@@ -3086,9 +3086,10 @@ function _doLeave() {
 }
 
 function handleRemoteLeave() {
-  // Remote user left — show leave screen immediately
+  // Remote user left intentionally — cancel any pending reconnect and go to leave screen
+  clearTimeout(dropTimer);  // prevent onDrop's grace-period timer from showing reconnect screen
   leftPermanently = false; // we haven't left yet, remote did
-  remotePeerLeft = true;  // flag so onDrop doesn't redirect again
+  remotePeerLeft = true;
   // Clear remote video immediately
   ['remoteVideo','miniRemoteVideo','miniChatVideo'].forEach(id => {
     const el = document.getElementById(id);
@@ -3143,14 +3144,14 @@ function onDrop() {
   if (leftPermanently) return; // permanent leave handled by leaveSession()
   if (remotePeerLeft) return;  // remote sent leave signal — stay on leave screen
   if (peerRefreshing)  return;  // a refresh-reload is in progress — do not show login
-  // Show reconnect screen immediately on disconnect.
-  // A short delay (400 ms) allows a racing data-channel 'leave' message to arrive
-  // so we can distinguish a clean leave from a real drop before committing to reconnect.
-  setTimeout(() => {
+  // Show reconnect screen after a short grace period.
+  // handleRemoteLeave() will cancel this timer if a 'leave' signal arrives first,
+  // ensuring a clean leave goes to the leave screen, not the reconnect screen.
+  clearTimeout(dropTimer);
+  dropTimer = setTimeout(() => {
     if (remotePeerLeft) return; // leave message arrived — handled by handleRemoteLeave
     if (peerRefreshing)  return; // refresh in progress — do not show login
     entry('Link lost — returning to reconnect screen', 'sys');
-    // Show login overlay and reconnect overlay immediately
     document.getElementById('sessionOverlay').style.display = 'flex';
     document.getElementById('unitIdDisplay').style.display = 'none';
     prefillLogin();
@@ -3166,6 +3167,7 @@ function muteLocal() {
 // ── Session timeout (10 min inactivity) ──────────────────────
 let lockTimer;
 let autoReconnectTimer;
+let dropTimer;  // cancellable handle for onDrop's leave-vs-drop grace period
 function resetLockTimer() {
   clearTimeout(lockTimer);
   lockTimer = setTimeout(() => {
