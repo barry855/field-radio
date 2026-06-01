@@ -979,6 +979,7 @@
 
 <div class="session-overlay" id="sessionOverlay">
   <div class="session-box">
+    <div class="reconnect-overlay" id="reconnectOverlay"><p>Please wait while I<br>try to reconnect…</p></div>
     <span class="session-title">β · 02</span>
     <label>Unit ID</label>
     <input type="text" id="sessionCode" maxlength="8" placeholder="ENTER CODE" autocomplete="off">
@@ -1379,11 +1380,22 @@ function startSession() {
     localStorage.setItem('bravo_disable_video', disVidChecked ? '1' : '0');
     localStorage.setItem('bravo_disable_audio', disAudChecked ? '1' : '0');
   } catch(e) {}
+  // Reset per-session state so reconnect honours current preferences
+  audioMuted = false;
+  realAudioTrack = null;
+  // Reset audio button UI to On (applyStreamFlags will re-apply if needed)
+  ['audioBtn','audioBtn2'].forEach(id => {
+    const b = document.getElementById(id);
+    if (b) { b.textContent = 'Audio On'; b.classList.remove('active-on','disabled-state'); }
+  });
+  // Reset video button UI to On (applyStreamFlags will re-apply if needed)
+  setVideoButtons(true);
   loginDisableVideoFlag = disVidChecked;
   loginDisableAudioFlag = disAudChecked;
   entry('LOGIN: disableVideo=' + disVidChecked + ' disableAudio=' + disAudChecked, 'sys');
   clearInterval(loginTimeoutInterval);
   document.getElementById('sessionOverlay').style.display = 'none';
+  showLoginBox();
   document.getElementById('unitIdDisplay').style.display = 'flex';
   const _uln = document.getElementById('userLeftNotice'); if (_uln) _uln.classList.remove('visible');
   leftPermanently = false;
@@ -1648,6 +1660,13 @@ function prefillLogin() {
   } catch(e) {}
 }
 prefillLogin();
+
+function showReconnecting() {
+  document.getElementById('reconnectOverlay').classList.add('active');
+}
+function showLoginBox() {
+  document.getElementById('reconnectOverlay').classList.remove('active');
+}
 
 // ── 10-second auto-login countdown ───────────────────────────
 let loginTimeoutInterval;
@@ -3054,6 +3073,7 @@ function onDrop() {
     document.getElementById('sessionOverlay').style.display = 'flex';
     document.getElementById('unitIdDisplay').style.display = 'none';
     prefillLogin();
+    showReconnecting();
     startLoginTimeout();
   }, 2000);
 }
@@ -3071,6 +3091,7 @@ function resetLockTimer() {
     document.getElementById('sessionOverlay').style.display = 'flex';
     document.getElementById('unitIdDisplay').style.display = 'none';
     prefillLogin();
+    showReconnecting();
     saveRecordingIfActive();
     if (peer) { peer.destroy(); }
     entry('Session timed out — auto-reconnecting…', 'sys');
