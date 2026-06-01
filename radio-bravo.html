@@ -550,7 +550,7 @@
   .leave-btn:hover { background: rgba(0,212,255,0.3); }
   .user-left-notice {
     display: none; align-items: center; gap: 8px;
-    font-family: 'Share Tech Mono', monospace; font-size: 11px;
+    font-family: 'Share Tech Mono', monospace; font-size: 28px;
     color: var(--accent2); letter-spacing: 0.5px;
     animation: blink 0.8s step-end infinite;
   }
@@ -558,11 +558,37 @@
   .user-left-notice .leave-chat-btn {
     background: rgba(0,212,255,0.15); border: 1px solid var(--accent);
     color: var(--accent); border-radius: 4px; padding: 2px 8px;
-    font-family: 'Share Tech Mono', monospace; font-size: 11px;
+    font-family: 'Share Tech Mono', monospace; font-size: 28px;
     cursor: pointer; transition: background 0.15s;
     animation: none;
   }
   .user-left-notice .leave-chat-btn:hover { background: rgba(0,212,255,0.3); }
+
+  /* ── Peer-left full-screen overlay ── */
+  .peer-left-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: #000;
+    align-items: center; justify-content: center;
+    flex-direction: column; gap: 32px;
+    z-index: 9999;
+  }
+  .peer-left-overlay.active { display: flex; }
+  .peer-left-overlay p {
+    color: #ffffff;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 28px; letter-spacing: 3px;
+    text-align: center; line-height: 1.7;
+    padding: 24px;
+  }
+  .peer-left-overlay .leave-now-btn {
+    background: rgba(0,212,255,0.15); border: 1px solid var(--accent);
+    color: var(--accent); border-radius: 4px; padding: 10px 28px;
+    font-family: 'Orbitron', sans-serif; font-size: 18px;
+    letter-spacing: 2px; cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .peer-left-overlay .leave-now-btn:hover { background: rgba(0,212,255,0.3); }
 
   .log-panel {
     background: var(--panel); border: 1px solid var(--border);
@@ -1425,6 +1451,7 @@ function startSession() {
   showLoginBox();
   document.getElementById('unitIdDisplay').style.display = 'flex';
   const _uln = document.getElementById('userLeftNotice'); if (_uln) _uln.classList.remove('visible');
+  const _plo = document.getElementById('peerLeftOverlay'); if (_plo) _plo.classList.remove('active');
   leftPermanently = false;
   remotePeerLeft = false;
   document.getElementById('unitIdValue').textContent = code;
@@ -3086,7 +3113,10 @@ function handleRemoteLeave() {
   });
   // Stop quality polling
   stopQualityPolling();
-  // Show "User left chat" notice in header
+  // Show full-screen "peer left" overlay
+  const overlay = document.getElementById('peerLeftOverlay');
+  if (overlay) overlay.classList.add('active');
+  // Also show header notice as fallback
   const notice = document.getElementById('userLeftNotice');
   if (notice) notice.classList.add('visible');
   entry('Remote user left the session', 'sys');
@@ -3982,4 +4012,11 @@ window.addEventListener('beforeunload', () => { peer?.destroy(); });
 </script>
 
 
-</div></body></html>
+</div>
+
+<div class="peer-left-overlay" id="peerLeftOverlay">
+  <p>ALPHA has left<br>the session</p>
+  <button class="leave-now-btn" onclick="leaveSession()">Leave Chat</button>
+</div>
+
+</body></html>
