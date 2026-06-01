@@ -963,10 +963,11 @@
     display: flex; flex-direction: column; align-items: center;
     line-height: 1.15; flex-shrink: 0;
     font-family: 'Orbitron', sans-serif; font-size: 9px;
-    color: #00aaff;
+    color: #ffffff;
+    background: var(--panel); padding: 2px 5px; border-radius: 3px;
   }
-  .gain-row .gain-label span:first-child { color: #00aaff; font-size: 9px; }
-  .gain-row .gain-label span:last-child  { color: #00aaff; }
+  .gain-row .gain-label span:first-child { color: #ffffff; font-size: 9px; }
+  .gain-row .gain-label span:last-child  { color: #ffffff; }
   .gain-row input[type=range] {
     flex: 1; accent-color: var(--accent);
     height: 4px; cursor: pointer;
@@ -1188,8 +1189,8 @@
         <button class="media-btn" id="audioBtn" onclick="toggleAudio()">Audio On</button>
         <button class="media-btn" id="miniBtn" onclick="toggleMiniVideo()">Mini Off</button>
         <button class="media-btn" id="screenBtn" onclick="toggleScreenShare()">Share Off</button>
-        <button class="media-btn" id="sysAudioBtn" onclick="toggleSysAudio()" style="display:none;">🔊 Sys Audio Off</button>
-        <button class="media-btn" id="sysMonitorBtn" onclick="toggleSysMonitor()" style="display:none;">🎧 Monitor Off</button>
+        <button class="media-btn" id="sysAudioBtn" onclick="toggleSysAudio()">🔊 Sys Audio</button>
+        <button class="media-btn" id="sysMonitorBtn" onclick="toggleSysMonitor()">🎧 Monitor</button>
         <button class="leave-btn" id="leaveBtn" onclick="leaveSession()">✕ Leave</button>
       </div>
       <div class="channel-row" style="flex-shrink:0; padding:0 0 4px 0;">
@@ -1225,8 +1226,8 @@
         <button class="media-btn" id="audioBtn2" onclick="toggleAudio()">Audio On</button>
         <button class="media-btn" id="miniBtn2" onclick="toggleMiniVideo()">Mini Off</button>
         <button class="media-btn" id="screenBtn2" onclick="toggleScreenShare()">Share Off</button>
-        <button class="media-btn" id="sysAudioBtn2" onclick="toggleSysAudio()" style="display:none;">🔊 Sys Audio Off</button>
-        <button class="media-btn" id="sysMonitorBtn2" onclick="toggleSysMonitor()" style="display:none;">🎧 Monitor Off</button>
+        <button class="media-btn" id="sysAudioBtn2" onclick="toggleSysAudio()">🔊 Sys Audio</button>
+        <button class="media-btn" id="sysMonitorBtn2" onclick="toggleSysMonitor()">🎧 Monitor</button>
         <button class="leave-btn" id="leaveBtn2" onclick="leaveSession()">✕ Leave</button>
       </div>
       <div class="channel-row" style="flex-shrink:0; padding:0 0 4px 0;">
@@ -1721,6 +1722,19 @@ function startLoginTimeout() {
     }
   }, 1000);
 }
+// If this page load is the result of a refresh, show the reconnect overlay
+// over the login box until auto-login fires (sessionStorage survives reload)
+(function() {
+  try {
+    if (sessionStorage.getItem('fieldRadioRefreshing') === '1') {
+      sessionStorage.removeItem('fieldRadioRefreshing');
+      // Show session overlay with reconnect screen on top
+      document.getElementById('sessionOverlay').style.display = 'flex';
+      showReconnecting();
+    }
+  } catch(e) {}
+})();
+
 // Only start login timeout if the overlay wasn't already dismissed by auto-login
 if (document.getElementById('sessionOverlay').style.display !== 'none') {
   startLoginTimeout();
@@ -2779,7 +2793,7 @@ function attachDataConn(dc) {
     if (f) {
       if (f.__control === 'video') { updateRemoteVideoState(f.enabled, f.hasTrack !== false); return; }
       if (f.__control === 'leave') { handleRemoteLeave(); return; }
-      if (f.__control === 'refresh') { entry('Remote refreshed — reloading…', 'sys'); peerRefreshing = true; setTimeout(() => window.location.reload(), 400); return; }
+      if (f.__control === 'refresh') { entry('Remote refreshed — reloading…', 'sys'); peerRefreshing = true; try { sessionStorage.setItem('fieldRadioRefreshing', '1'); } catch(e) {} setTimeout(() => window.location.reload(), 400); return; }
       if (f.__file  === true)      { addMediaBubble(f.name, f.type, f.data, false); return; }
       if (f.__chunk === true)      { receiveChunk(f); return; }
       addBubble(JSON.stringify(f), false);
@@ -3499,7 +3513,7 @@ async function toggleSysAudio() {
       const el = document.getElementById(id);
       if (el) el.muted = false;
     });
-    btns.forEach(b => { if(b){ b.textContent = '🔊 Sys Audio Off'; b.classList.remove('sys-audio-on'); }});
+    btns.forEach(b => { if(b){ b.textContent = '🔊 Sys Audio'; b.classList.remove('sys-audio-on'); }});
     entry('System audio capture stopped', 'sys');
     return;
   }
@@ -3730,6 +3744,8 @@ function refreshScreen() {
   // Notify remote peer so they auto-refresh in sync
   try { dcSend({ __control: 'refresh' }); } catch(e) {}
   peerRefreshing = true;  // suppress onDrop login redirect
+  // Flag survives the reload so the fresh page shows reconnect overlay
+  try { sessionStorage.setItem('fieldRadioRefreshing', '1'); } catch(e) {}
   // Show black overlay immediately on the refreshing side too
   document.getElementById('sessionOverlay').style.display = 'flex';
   document.getElementById('unitIdDisplay').style.display = 'none';
