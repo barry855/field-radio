@@ -2670,6 +2670,8 @@ function init() {
 
   navigator.mediaDevices.getUserMedia({
     audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+    video: videoConstraint
+  })
   .then(applyStreamFlags)
   .catch(e => {
     // Camera failed (OverconstrainedError, NotFoundError, NotReadableError etc.) — retry audio-only
@@ -2677,6 +2679,7 @@ function init() {
       entry('Camera unavailable (' + e.name + ') — retrying audio-only', 'sys');
       navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+        video: false
       })
       .then(applyStreamFlags)
       .catch(handleMediaError);
