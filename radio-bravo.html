@@ -282,11 +282,15 @@
   }
   .find-chat-btn:hover, .find-chat-btn:active { opacity: 1; border-color: var(--accent2, #00ffaa); color: var(--accent2); }
   .find-chat-btn.active { opacity: 1; border-color: var(--accent2, #00ffaa); color: var(--accent2); }
+  .mini-chat-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+    margin-bottom: 4px;
+  }
   .mini-chat-btn {
-    position: absolute;
-    top: 10px; right: 46px;
-    z-index: 10;
-    background: rgba(5,15,21,0.55);
+    background: #000;
     border: 1px solid var(--border);
     border-radius: 4px;
     color: var(--text-dim);
@@ -296,8 +300,9 @@
     line-height: 1;
     padding: 4px 7px;
     cursor: pointer;
-    opacity: 0.45;
+    opacity: 0.65;
     transition: opacity 0.15s, border-color 0.15s, color 0.15s;
+    margin-bottom: 4px;
   }
   .mini-chat-btn:hover, .mini-chat-btn:active { opacity: 1; border-color: var(--accent2, #00ffaa); color: var(--accent2); }
   .mini-chat-btn.active { opacity: 1; border-color: var(--accent2, #00ffaa); color: var(--accent2); }
@@ -1198,10 +1203,7 @@
     <div class="tab-pane" id="paneChat">
       <div class="chat-panel" style="flex:1" id="chatPanel">
         <div class="panel-label">COMMS</div>
-        <div class="mini-video-overlay hidden" id="miniChatOverlay" style="top:40px;right:16px;z-index:20;">
-          <video id="miniChatVideo" autoplay="" playsinline=""></video>
-          <span class="video-label">REMOTE</span>
-        </div>
+
         <div class="drop-overlay" id="dropOverlay">
           <div class="drop-overlay-icon">📎</div>
           <div class="drop-overlay-label">Drop file to attach</div>
@@ -1217,8 +1219,15 @@
         <button class="refresh-chat-btn" onclick="refreshScreen()" title="Refresh / Reconnect">↺</button>
         <button class="save-chat-btn" onclick="saveChatToFile()" title="Save chat as HTML">💾</button>
         <button class="clear-chat-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" title="Clear chat history">🗑</button>
-        <button class="mini-chat-btn" id="miniChatBtn" onclick="toggleMiniChatOverlay()" title="Toggle mini remote screen">📺</button>
+
         <button class="find-chat-btn" id="findChatBtn" title="Find in chat">🔍</button>
+        <div class="mini-chat-wrapper">
+          <button class="mini-chat-btn active" id="miniChatBtn" onclick="toggleMiniChatOverlay()" title="Toggle mini remote screen">📺</button>
+          <div class="mini-video-overlay" id="miniChatOverlay">
+            <video id="miniChatVideo" autoplay="" playsinline=""></video>
+            <span class="video-label">REMOTE</span>
+          </div>
+        </div>
         <div class="file-preview-strip" id="filePreviewStrip"></div>
         <div class="chat-input-row">
           <button class="attach-btn" id="attachBtn" title="Attach file / photo / video">📎</button>
@@ -1796,7 +1805,7 @@ function makeDraggable(el) {
 });
 
 // ── Mini remote screen in Chat tab ───────────────────────────
-let miniChatVisible = false;
+let miniChatVisible = true;
 function toggleMiniChatOverlay() {
   miniChatVisible = !miniChatVisible;
   const overlay = document.getElementById('miniChatOverlay');
