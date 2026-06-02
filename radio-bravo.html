@@ -2285,21 +2285,19 @@ function sendChat() {
   const hasFiles = pendingFiles.length > 0;
   if (!txt && !hasFiles) return;
   if (!dataConn || !dataConn.open) {
+    if (txt) {
+      _pendingChatMsg = txt;
+      chatInput.value = ''; chatInput.style.height = 'auto';
+    }
     if (dataConn && !dataConn.open) {
-      entry('Chat channel lost — reconnecting…', 'sys');
+      entry('Channel reopening — message queued…', 'sys');
       try { dataConn.close(); } catch(e) {}
       dataConn = null;
       openDataConn();
-    } else if (pendingDC) {
-      // Channel is reopening — queue the message and send when ready
-      if (txt) {
-        _pendingChatMsg = txt;
-        entry('Channel reopening — message queued…', 'sys');
-        chatInput.value = ''; chatInput.style.height = 'auto';
-      }
-      return;
+    } else if (!dataConn) {
+      entry('Channel not ready — message queued…', 'sys');
+      openDataConn();
     }
-    entry('Message not sent — channel not ready', 'err');
     return;
   }
   if (txt) {
@@ -2800,10 +2798,8 @@ function attachDataConn(dc) {
     setStatus('reachable');
     document.getElementById('sendBtn').disabled = false;
     sendVideoState();
-    // Flush any queued message
     if (_pendingChatMsg) {
-      const queued = _pendingChatMsg;
-      _pendingChatMsg = null;
+      const queued = _pendingChatMsg; _pendingChatMsg = null;
       try { dcSend(queued); addBubble(queued, true); entry('Queued message sent', 'sys'); } catch(e) {}
     }
   }
@@ -2997,6 +2993,8 @@ function attachCall(c) {
     document.getElementById('remoteAudio').srcObject = stream;
     const remoteVideo = document.getElementById('remoteVideo');
     remoteVideo.srcObject = stream;
+    const _cu = document.getElementById('chatUnderlay');
+    if (_cu) { _cu.srcObject = stream; _cu.classList.remove('no-stream'); }
     syncMiniVideos();
     document.getElementById('remoteWrap').classList.remove('waiting', 'stale');
     updateRemoteVideoState(true, stream.getVideoTracks().length > 0);
@@ -3076,7 +3074,7 @@ function _doLeave() {
     localStream = null;
   }
   // Clear all video elements immediately — no stale frames
-  ['localVideo','remoteVideo'].forEach(id => {
+  ['localVideo','remoteVideo','chatUnderlay'].forEach(id => {
     const el = document.getElementById(id);
     if (el) { try { el.pause(); el.srcObject = null; el.load(); } catch(e){} }
   });
