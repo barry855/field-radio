@@ -2768,6 +2768,11 @@ function startPeer() {
     setTimeout(startPeer, 500);
     return;
   }
+  // Destroy any existing peer before creating a new one.
+  // Without this the old peer's event handlers (especially 'disconnected' → peer.reconnect())
+  // keep firing against the replaced reference, causing a permanent reconnect loop.
+  if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e){} }
+  peer = null;
   // Close any stale data connection from a previous peer instance
   if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
   pendingDC = false;
@@ -2893,20 +2898,21 @@ function attachDataConn(dc) {
     dataConn = null;
     document.getElementById('sendBtn').disabled = true;
     entry('Chat channel closed', 'sys');
-    // If the call is still live, reopen the data channel automatically
+    // Only reopen if the call is still live — re-check inside the timeout
+    // so a concurrent onDrop() doesn't cause a ghost reconnect attempt
     if (linked) {
       entry('Reopening data channel…', 'sys');
-      setTimeout(openDataConn, 500);
+      setTimeout(() => { if (linked) openDataConn(); }, 500);
     }
   });
   dc.on('error', e => {
     pendingDC = false;
     entry('Data channel error: ' + (e.message || e), 'err');
-    // If the call is still live, attempt recovery
+    // Only reopen if the call is still live
     if (linked && dataConn === dc) {
       dataConn = null;
       entry('Reopening data channel after error…', 'sys');
-      setTimeout(openDataConn, 500);
+      setTimeout(() => { if (linked) openDataConn(); }, 500);
     }
   });
 }
