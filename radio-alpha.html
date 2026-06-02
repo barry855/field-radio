@@ -259,6 +259,18 @@
   .find-chat-btn:hover, .find-chat-btn:active { border-color: var(--accent, #00d4ff); color: var(--accent); }
   .find-chat-btn.active { border-color: var(--accent, #00d4ff); color: var(--accent); }
 
+  .syslog-chat-btn {
+    background: #000; border: 1px solid #444;
+    border-radius: 4px; color: #fff;
+    font-size: 11px; line-height: 1;
+    padding: 4px 8px; cursor: pointer;
+    font-family: 'Share Tech Mono', monospace; letter-spacing: 1px;
+    transition: border-color 0.15s, color 0.15s;
+    margin-left: auto;
+  }
+  .syslog-chat-btn:hover, .syslog-chat-btn:active { border-color: var(--accent, #00d4ff); color: var(--accent); }
+  .syslog-chat-btn.active { border-color: var(--accent2); color: var(--accent2); }
+
   /* ── Chat button bar (above message area) ──────────────────── */
   .chat-btn-bar {
     display: flex; gap: 6px; flex-shrink: 0;
@@ -571,9 +583,12 @@
 
   .log-panel {
     background: var(--panel); border: 1px solid var(--border);
-    border-radius: 8px; padding: 10px 14px; position: relative;
-    flex-shrink: 0; transition: padding 0.2s;
+    border-radius: 8px; padding: 10px 14px;
+    position: absolute; bottom: 0; left: 0; right: 0;
+    z-index: 200; display: none;
+    transition: padding 0.2s;
   }
+  .log-panel.syslog-open { display: block; }
   .log-panel.collapsed { padding-bottom: 10px; min-height: 44px; }
   .log-panel.collapsed .log { display: none; }
   .log-panel .panel-label {
@@ -603,45 +618,75 @@
     font-size: 10px; line-height: 1.9; letter-spacing: 0.5px;
     display: block;
   }
+  /* ── Speech overlay panel ──────────────────────────────────── */
+  #speechPanel {
+    display: none;
+    position: absolute; bottom: 0; left: 0; right: 0;
+    z-index: 300;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 14px;
+    flex-direction: column; gap: 8px;
+  }
+  #speechPanel.speech-open { display: flex; }
+  #speechPanel .speech-header {
+    font-size: 10px; letter-spacing: 2px; color: var(--accent);
+    text-transform: uppercase; font-family: 'Share Tech Mono', monospace;
+    border-bottom: 1px solid var(--border); padding-bottom: 6px;
+    display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+  }
+  #speechPanel .speech-header .speech-status {
+    margin-left: auto; font-size: 9px; letter-spacing: 1px;
+    color: var(--text-dim);
+  }
+  #speechPanel .speech-status.listening {
+    color: var(--danger, #cc2222);
+    animation: speech-blink 1s step-start infinite;
+  }
+  @keyframes speech-blink { 50% { opacity: 0; } }
+  #speechEditBox {
+    flex: 1; min-height: 80px; max-height: 160px;
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text); padding: 7px 10px; border-radius: 4px;
+    font-family: 'Share Tech Mono', monospace; font-size: 14px;
+    outline: none; resize: none; line-height: 1.4;
+    transition: border-color 0.2s;
+  }
+  #speechEditBox:focus { border-color: var(--accent); }
+  #speechEditBox::placeholder { color: rgba(200,220,240,0.45); }
+  .speech-btn-row {
+    display: flex; gap: 8px; justify-content: flex-end; align-items: center;
+    flex-shrink: 0;
+  }
+  #speechSendBtn {
+    background: var(--btn-bg); border: 1px solid var(--border);
+    color: var(--text); padding: 6px 14px; border-radius: 4px;
+    font-family: 'Share Tech Mono', monospace; font-size: 12px;
+    cursor: pointer; transition: background 0.15s, border-color 0.15s, color 0.15s;
+    white-space: nowrap; letter-spacing: 0.5px;
+  }
+  #speechSendBtn:hover { background: var(--btn-hover); border-color: #2a4060; }
+  #speechSendBtn:disabled { opacity: 0.35; cursor: not-allowed; }
+  #speechListenBtn {
+    background: var(--btn-bg); border: 1px solid var(--border);
+    color: var(--text); padding: 6px 14px; border-radius: 4px;
+    font-family: 'Share Tech Mono', monospace; font-size: 12px;
+    cursor: pointer; transition: background 0.15s, border-color 0.15s, color 0.15s;
+    white-space: nowrap; letter-spacing: 0.5px;
+  }
+  #speechListenBtn:hover { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
+  #speechListenBtn.listening {
+    border-color: var(--danger, #cc2222); color: var(--danger, #cc2222);
+    background: rgba(204,34,34,0.08);
+  }
+
   .log-entry.sys  { color: #555555; }
   .log-entry.info { color: #0077aa; }
   .log-entry.ok   { color: #007744; }
   .log-entry.err  { color: #cc2222; }
   .log-entry.tx   { color: #996600; }
 
-  /* ── SYS LOG menu-bar toggle button ─────────────────────── */
-  .syslog-toggle-btn {
-    margin-left: auto; flex-shrink: 0;
-    background: var(--btn-bg); border: 1px solid var(--border);
-    color: var(--text-dim); border-radius: 4px; padding: 4px 10px;
-    font-family: 'Share Tech Mono', monospace; font-size: 10px;
-    letter-spacing: 1.5px; text-transform: uppercase; cursor: pointer;
-    transition: background 0.15s, border-color 0.15s, color 0.15s;
-  }
-  .syslog-toggle-btn:hover { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
-  .syslog-toggle-btn.active { border-color: var(--accent2); color: var(--accent2); background: rgba(0,255,159,0.08); }
 
-  /* ── SYS LOG full-area overlay (replaces chat+video area) ── */
-  #syslogOverlay {
-    display: none; position: absolute; inset: 0;
-    background: var(--panel); border: 1px solid var(--border);
-    border-radius: 8px; padding: 10px 14px;
-    opacity: 1; z-index: 50; overflow-y: auto;
-    flex-direction: column; gap: 4px;
-  }
-  #syslogOverlay.visible { display: flex; }
-  #syslogOverlay .syslog-header {
-    font-family: 'Share Tech Mono', monospace; font-size: 10px;
-    letter-spacing: 2px; color: var(--accent); text-transform: uppercase;
-    border-bottom: 1px solid var(--border); padding-bottom: 6px; margin-bottom: 4px;
-    flex-shrink: 0;
-  }
-  #syslogOverlay .log {
-    flex: 1; background: #ffffff; border-radius: 4px;
-    padding: 4px 8px; overflow-y: auto;
-    scrollbar-width: thin; scrollbar-color: #ccc #fff;
-    height: auto; min-height: 0;
-  }
+
 
   .session-overlay {
     position: fixed; inset: 0; background: var(--bg);
@@ -1084,7 +1129,6 @@
         <span>User left chat</span>
         <button class="leave-chat-btn" onclick="leaveSession()">Leave Chat</button>
       </div>
-      <button class="syslog-toggle-btn" id="syslogToggleBtn" onclick="toggleSysLogView()" title="Toggle SYS LOG">SYS LOG</button>
     </div>
   </header>
 
@@ -1296,15 +1340,11 @@
         <button class="save-chat-btn" onclick="saveChatToFile()" title="Save chat as HTML">💾</button>
         <button class="clear-chat-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" title="Clear chat history">🗑</button>
         <button class="find-chat-btn" id="findChatBtn" title="Find in chat">🔍</button>
+        <button class="syslog-chat-btn" id="syslogToggleBtn" onclick="toggleSysLogView()" title="Toggle SYS LOG">SYS LOG</button>
+        <button class="syslog-chat-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input">SPEECH</button>
       </div>
       <!-- ── Chat / video pane ───────────────────────────────── -->
-      <!-- SYS LOG full-area overlay (shown when syslog toggle is ON) -->
-      <div id="syslogOverlay">
-        <div class="syslog-header">⬡ SYS LOG</div>
-        <div class="log" id="logOverlay"></div>
-      </div>
-      <!-- Chat + video content (hidden when syslog overlay is visible) -->
-      <div id="chatVideoContent" style="display:flex; flex-direction:column; flex:1; min-height:0; gap:6px;">
+
       <div class="chat-panel" style="flex:1" id="chatPanel">
         <div class="panel-label">COMMS</div>
         <video id="chatUnderlay" autoplay playsinline muted></video>
@@ -1323,7 +1363,18 @@
           <textarea class="chat-input" id="chatInput" placeholder="TYPE MESSAGE…" rows="1"></textarea>
           <button class="btn" id="sendBtn">SEND</button>
       </div>
-      </div><!-- end chatVideoContent -->
+      <!-- ── Speech overlay panel ──────────────────────────────── -->
+      <div id="speechPanel">
+        <div class="speech-header">
+          🎤 SPEECH INPUT
+          <span class="speech-status" id="speechStatus">IDLE</span>
+        </div>
+        <textarea id="speechEditBox" placeholder="Tap LISTEN to start speaking… or type here." spellcheck="true"></textarea>
+        <div class="speech-btn-row">
+          <button id="speechSendBtn" onclick="sendSpeechToChat()" disabled>SEND</button>
+          <button id="speechListenBtn" onclick="toggleListening()">LISTEN</button>
+        </div>
+      </div>
       <div class="log-panel collapsed" id="logPanel">
         <div class="panel-label" onclick="toggleLogPanel()">SYS LOG<span class="log-toggle-arrow" id="logToggleArrow">▾</span></div>
         <div class="log" id="log"><span class="log-entry sys">15:59:51  PREFILL: code=123 vid=false aud=false</span></div>
@@ -1819,15 +1870,7 @@ function entry(msg, cls='sys') {
   d.textContent = `${ts}  ${msg}`;
   logEl.appendChild(d);
   logEl.scrollTop = logEl.scrollHeight;
-  // Mirror to overlay log if it's visible
-  if (_syslogVisible) {
-    const dstLog = document.getElementById('logOverlay');
-    if (dstLog) {
-      const d2 = d.cloneNode(true);
-      dstLog.appendChild(d2);
-      dstLog.scrollTop = dstLog.scrollHeight;
-    }
-  }
+
 }
 
 function scrollToBottom(force) {
@@ -2697,33 +2740,159 @@ function toggleLogPanel() {
   }
 }
 
-// ── SYS LOG menu-bar toggle ─────────────────────────────────────────────────
+// ── SYS LOG chat-bar toggle ──────────────────────────────────────────────────
 function toggleSysLogView() {
   _syslogVisible = !_syslogVisible;
-  const overlay   = document.getElementById('syslogOverlay');
-  const content   = document.getElementById('chatVideoContent');
-  const logPanel  = document.getElementById('logPanel');
-  const btn       = document.getElementById('syslogToggleBtn');
-
+  const logPanel = document.getElementById('logPanel');
+  const btn      = document.getElementById('syslogToggleBtn');
   if (_syslogVisible) {
-    // Sync log entries into the overlay log div
-    const srcLog  = document.getElementById('log');
-    const dstLog  = document.getElementById('logOverlay');
-    if (srcLog && dstLog) dstLog.innerHTML = srcLog.innerHTML;
-
-    if (overlay)  overlay.classList.add('visible');
-    if (content)  content.style.display = 'none';
-    if (logPanel) logPanel.style.display = 'none';
-    if (btn)      btn.classList.add('active');
-    // Scroll overlay log to bottom
-    if (dstLog) setTimeout(() => { dstLog.scrollTop = dstLog.scrollHeight; }, 50);
+    // Close speech panel if open
+    if (_speechVisible) toggleSpeechPanel();
+    if (logPanel) {
+      logPanel.classList.add('syslog-open');
+      logPanel.classList.remove('collapsed');
+      const l = logPanel.querySelector('#log');
+      if (l) setTimeout(() => { l.scrollTop = l.scrollHeight; }, 50);
+    }
+    if (btn) btn.classList.add('active');
   } else {
-    if (overlay)  overlay.classList.remove('visible');
-    if (content)  content.style.display = 'flex';
-    if (logPanel) logPanel.style.display = '';
-    if (btn)      btn.classList.remove('active');
+    if (logPanel) {
+      logPanel.classList.remove('syslog-open');
+      logPanel.classList.add('collapsed');
+    }
+    if (btn) btn.classList.remove('active');
   }
 }
+
+// ── Speech panel toggle + Web Speech API ────────────────────────────────────
+let _speechVisible = false;
+let _recognition   = null;
+let _listening     = false;
+let _interimText   = '';
+
+function toggleSpeechPanel() {
+  _speechVisible = !_speechVisible;
+  const panel = document.getElementById('speechPanel');
+  const btn   = document.getElementById('speechToggleBtn');
+  if (_speechVisible) {
+    // Close syslog if open
+    if (_syslogVisible) toggleSysLogView();
+    if (panel) panel.classList.add('speech-open');
+    if (btn)   btn.classList.add('active');
+    updateSpeechSendBtn();
+  } else {
+    stopListening();
+    if (panel) panel.classList.remove('speech-open');
+    if (btn)   btn.classList.remove('active');
+  }
+}
+
+function updateSpeechSendBtn() {
+  const box = document.getElementById('speechEditBox');
+  const btn = document.getElementById('speechSendBtn');
+  if (btn) btn.disabled = !box || !box.value.trim();
+}
+
+function sendSpeechToChat() {
+  const box = document.getElementById('speechEditBox');
+  if (!box) return;
+  const txt = box.value.trim();
+  if (!txt) return;
+  // Inject into the main chat input and fire sendChat
+  if (chatInput) {
+    chatInput.value = txt;
+    // trigger auto-resize
+    chatInput.style.height = 'auto';
+    chatInput.style.height = Math.min(chatInput.scrollHeight, 160) + 'px';
+  }
+  sendChat();
+  box.value = '';
+  updateSpeechSendBtn();
+}
+
+function toggleListening() {
+  if (_listening) { stopListening(); } else { startListening(); }
+}
+
+function startListening() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    setStatus('NOT SUPPORTED');
+    return;
+  }
+  if (_recognition) { try { _recognition.abort(); } catch(e){} }
+  _recognition = new SpeechRecognition();
+  _recognition.continuous      = true;
+  _recognition.interimResults  = true;
+  _recognition.lang            = 'en-US';
+
+  _recognition.onstart = () => {
+    _listening = true;
+    _interimText = '';
+    setStatus('● LISTENING');
+    const lb = document.getElementById('speechListenBtn');
+    if (lb) lb.classList.add('listening');
+    const ss = document.getElementById('speechStatus');
+    if (ss) ss.classList.add('listening');
+    lb.textContent = 'STOP';
+  };
+
+  _recognition.onresult = (e) => {
+    const box = document.getElementById('speechEditBox');
+    if (!box) return;
+    let finalChunk = '';
+    let interim    = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) { finalChunk += e.results[i][0].transcript; }
+      else                      { interim    += e.results[i][0].transcript; }
+    }
+    if (finalChunk) {
+      // Append final text; add space if needed
+      const cur = box.value;
+      box.value = cur + (cur && !cur.endsWith(' ') ? ' ' : '') + finalChunk.trim();
+      _interimText = '';
+    } else {
+      _interimText = interim;
+    }
+    updateSpeechSendBtn();
+  };
+
+  _recognition.onerror = (e) => {
+    if (e.error === 'no-speech') return; // ignore silence
+    setStatus('ERR: ' + e.error.toUpperCase());
+    stopListening();
+  };
+
+  _recognition.onend = () => {
+    if (_listening) {
+      // Auto-restart for continuous mode (browser may stop after silence)
+      try { _recognition.start(); } catch(e) { stopListening(); }
+    }
+  };
+
+  try { _recognition.start(); } catch(e) { setStatus('ERR: START FAILED'); }
+}
+
+function stopListening() {
+  _listening = false;
+  if (_recognition) { try { _recognition.stop(); } catch(e){} _recognition = null; }
+  setStatus('IDLE');
+  const lb = document.getElementById('speechListenBtn');
+  if (lb) { lb.classList.remove('listening'); lb.textContent = 'LISTEN'; }
+  const ss = document.getElementById('speechStatus');
+  if (ss) ss.classList.remove('listening');
+}
+
+function setStatus(txt) {
+  const ss = document.getElementById('speechStatus');
+  if (ss) ss.textContent = txt;
+}
+
+// Enable/disable send btn as user types in the speech edit box
+document.addEventListener('DOMContentLoaded', () => {
+  const box = document.getElementById('speechEditBox');
+  if (box) box.addEventListener('input', updateSpeechSendBtn);
+});
 
 function init() {
   if (location.protocol !== 'https:' && location.protocol !== 'file:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
