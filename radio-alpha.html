@@ -713,7 +713,7 @@
     background: rgba(0,0,0,0.85);
   }
   .video-wrap.video-off::after {
-    content: 'VIDEO OFF';
+    content: 'WAITING FOR CONNECTION';
     position: absolute; inset: 0;
     display: flex; align-items: center; justify-content: center;
     font-family: 'Orbitron', sans-serif; font-size: 10px;
@@ -721,7 +721,7 @@
     background: rgba(0,0,0,0.72);
   }
   .video-wrap.no-video::after {
-    content: 'VIDEO OFF';
+    content: 'WAITING FOR CONNECTION';
     position: absolute; inset: 0;
     display: flex; align-items: center; justify-content: center;
     font-family: 'Orbitron', sans-serif; font-size: 10px;
@@ -760,7 +760,7 @@
     bottom: 4px; left: 6px; font-size: 8px; letter-spacing: 1px; pointer-events: none;
   }
   .mini-video-overlay.no-video::after {
-    content: 'VIDEO OFF';
+    content: 'WAITING FOR CONNECTION';
     position: absolute; inset: 0;
     display: flex; align-items: center; justify-content: center;
     font-family: 'Orbitron', sans-serif; font-size: 8px;
@@ -3075,7 +3075,7 @@ function _doLeave() {
   window.close();
   // Fallback if window.close() is blocked (e.g. not opener)
   setTimeout(() => {
-    document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0a1520;color:#f1f5f9;font-family:monospace;font-size:14px;">Session ended. You may close this tab.</div>';
+    document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0a1520;color:#f1f5f9;font-family:monospace;font-size:10px;">Session ended. You may close this tab.</div>';
   }, 300);
 }
 
@@ -3101,13 +3101,8 @@ function handleRemoteLeave() {
   // Stop quality polling
   stopQualityPolling();
   entry('Remote user left the session', 'sys');
-  // Go to leave screen immediately — show session overlay (login box) so user sees the other side left
-  document.getElementById('sessionOverlay').style.display = 'flex';
-  document.getElementById('unitIdDisplay').style.display = 'none';
-  prefillLogin();
-  // Do NOT show reconnect spinner — show plain login screen so user knows remote left intentionally
-  document.getElementById('reconnectOverlay').classList.remove('active');
-  startLoginTimeout();
+  // End this session immediately so both sides close at the same time
+  _doLeave();
 }
 
 function onDrop() {
