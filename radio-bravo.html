@@ -3043,11 +3043,9 @@ function _doLeave() {
   exportSysLog();
   // Close window
   window.close();
-  // Fallback if window.close() is blocked (e.g. not opened by script) — reload to login screen
+  // Fallback if window.close() is blocked — show ended screen (do NOT reload, that returns to login)
   setTimeout(() => {
-    try { location.reload(); } catch(e) {
-      document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0a1520;color:#f1f5f9;font-family:monospace;font-size:10px;">Session ended. You may close this tab.</div>';
-    }
+    document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0a1520;color:#f1f5f9;font-family:monospace;font-size:13px;letter-spacing:1px;">SESSION ENDED — YOU MAY CLOSE THIS TAB</div>';
   }, 300);
 }
 
