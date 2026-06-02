@@ -2806,14 +2806,26 @@ function attachDataConn(dc) {
     }
   });
   dc.on('close', () => {
+    if (dataConn !== dc) return; // stale handler — a newer DC already took over
     pendingDC = false;
     dataConn = null;
     document.getElementById('sendBtn').disabled = true;
     entry('Chat channel closed', 'sys');
+    // If the call is still live, reopen the data channel automatically
+    if (linked) {
+      entry('Reopening data channel…', 'sys');
+      setTimeout(openDataConn, 500);
+    }
   });
   dc.on('error', e => {
     pendingDC = false;
     entry('Data channel error: ' + (e.message || e), 'err');
+    // If the call is still live, attempt recovery
+    if (linked && dataConn === dc) {
+      dataConn = null;
+      entry('Reopening data channel after error…', 'sys');
+      setTimeout(openDataConn, 500);
+    }
   });
 }
 
