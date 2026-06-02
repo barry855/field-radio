@@ -618,6 +618,67 @@
     font-size: 10px; line-height: 1.9; letter-spacing: 0.5px;
     display: block;
   }
+  /* ── Speech overlay panel ──────────────────────────────────── */
+  #speechPanel {
+    display: none;
+    position: absolute; bottom: 0; left: 0; right: 0;
+    z-index: 300;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 14px;
+    flex-direction: column; gap: 8px;
+  }
+  #speechPanel.speech-open { display: flex; }
+  #speechPanel .speech-header {
+    font-size: 10px; letter-spacing: 2px; color: var(--accent);
+    text-transform: uppercase; font-family: 'Share Tech Mono', monospace;
+    border-bottom: 1px solid var(--border); padding-bottom: 6px;
+    display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+  }
+  #speechPanel .speech-header .speech-status {
+    margin-left: auto; font-size: 9px; letter-spacing: 1px;
+    color: var(--text-dim);
+  }
+  #speechPanel .speech-status.listening {
+    color: var(--danger, #cc2222);
+    animation: speech-blink 1s step-start infinite;
+  }
+  @keyframes speech-blink { 50% { opacity: 0; } }
+  #speechEditBox {
+    flex: 1; min-height: 80px; max-height: 160px;
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text); padding: 7px 10px; border-radius: 4px;
+    font-family: 'Share Tech Mono', monospace; font-size: 14px;
+    outline: none; resize: none; line-height: 1.4;
+    transition: border-color 0.2s;
+  }
+  #speechEditBox:focus { border-color: var(--accent); }
+  #speechEditBox::placeholder { color: rgba(200,220,240,0.45); }
+  .speech-btn-row {
+    display: flex; gap: 8px; justify-content: flex-end; align-items: center;
+    flex-shrink: 0;
+  }
+  #speechSendBtn {
+    background: var(--btn-bg); border: 1px solid var(--border);
+    color: var(--text); padding: 6px 14px; border-radius: 4px;
+    font-family: 'Share Tech Mono', monospace; font-size: 12px;
+    cursor: pointer; transition: background 0.15s, border-color 0.15s, color 0.15s;
+    white-space: nowrap; letter-spacing: 0.5px;
+  }
+  #speechSendBtn:hover { background: var(--btn-hover); border-color: #2a4060; }
+  #speechSendBtn:disabled { opacity: 0.35; cursor: not-allowed; }
+  #speechListenBtn {
+    background: var(--btn-bg); border: 1px solid var(--border);
+    color: var(--text); padding: 6px 14px; border-radius: 4px;
+    font-family: 'Share Tech Mono', monospace; font-size: 12px;
+    cursor: pointer; transition: background 0.15s, border-color 0.15s, color 0.15s;
+    white-space: nowrap; letter-spacing: 0.5px;
+  }
+  #speechListenBtn:hover { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
+  #speechListenBtn.listening {
+    border-color: var(--danger, #cc2222); color: var(--danger, #cc2222);
+    background: rgba(204,34,34,0.08);
+  }
+
   .log-entry.sys  { color: #555555; }
   .log-entry.info { color: #0077aa; }
   .log-entry.ok   { color: #007744; }
@@ -1280,6 +1341,7 @@
         <button class="clear-chat-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" title="Clear chat history">🗑</button>
         <button class="find-chat-btn" id="findChatBtn" title="Find in chat">🔍</button>
         <button class="syslog-chat-btn" id="syslogToggleBtn" onclick="toggleSysLogView()" title="Toggle SYS LOG">SYS LOG</button>
+        <button class="syslog-chat-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input">SPEECH</button>
       </div>
       <!-- ── Chat / video pane ───────────────────────────────── -->
 
@@ -1300,6 +1362,18 @@
           <input type="file" id="fileInput" multiple="" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx" style="display:none">
           <textarea class="chat-input" id="chatInput" placeholder="TYPE MESSAGE…" rows="1"></textarea>
           <button class="btn" id="sendBtn">SEND</button>
+      </div>
+      <!-- ── Speech overlay panel ──────────────────────────────── -->
+      <div id="speechPanel">
+        <div class="speech-header">
+          🎤 SPEECH INPUT
+          <span class="speech-status" id="speechStatus">IDLE</span>
+        </div>
+        <textarea id="speechEditBox" placeholder="Tap LISTEN to start speaking… or type here." spellcheck="true"></textarea>
+        <div class="speech-btn-row">
+          <button id="speechSendBtn" onclick="sendSpeechToChat()" disabled>SEND</button>
+          <button id="speechListenBtn" onclick="toggleListening()">LISTEN</button>
+        </div>
       </div>
       <div class="log-panel collapsed" id="logPanel">
         <div class="panel-label" onclick="toggleLogPanel()">SYS LOG<span class="log-toggle-arrow" id="logToggleArrow">▾</span></div>
@@ -2672,6 +2746,8 @@ function toggleSysLogView() {
   const logPanel = document.getElementById('logPanel');
   const btn      = document.getElementById('syslogToggleBtn');
   if (_syslogVisible) {
+    // Close speech panel if open
+    if (_speechVisible) toggleSpeechPanel();
     if (logPanel) {
       logPanel.classList.add('syslog-open');
       logPanel.classList.remove('collapsed');
@@ -2687,6 +2763,136 @@ function toggleSysLogView() {
     if (btn) btn.classList.remove('active');
   }
 }
+
+// ── Speech panel toggle + Web Speech API ────────────────────────────────────
+let _speechVisible = false;
+let _recognition   = null;
+let _listening     = false;
+let _interimText   = '';
+
+function toggleSpeechPanel() {
+  _speechVisible = !_speechVisible;
+  const panel = document.getElementById('speechPanel');
+  const btn   = document.getElementById('speechToggleBtn');
+  if (_speechVisible) {
+    // Close syslog if open
+    if (_syslogVisible) toggleSysLogView();
+    if (panel) panel.classList.add('speech-open');
+    if (btn)   btn.classList.add('active');
+    updateSpeechSendBtn();
+  } else {
+    stopListening();
+    if (panel) panel.classList.remove('speech-open');
+    if (btn)   btn.classList.remove('active');
+  }
+}
+
+function updateSpeechSendBtn() {
+  const box = document.getElementById('speechEditBox');
+  const btn = document.getElementById('speechSendBtn');
+  if (btn) btn.disabled = !box || !box.value.trim();
+}
+
+function sendSpeechToChat() {
+  const box = document.getElementById('speechEditBox');
+  if (!box) return;
+  const txt = box.value.trim();
+  if (!txt) return;
+  // Inject into the main chat input and fire sendChat
+  if (chatInput) {
+    chatInput.value = txt;
+    // trigger auto-resize
+    chatInput.style.height = 'auto';
+    chatInput.style.height = Math.min(chatInput.scrollHeight, 160) + 'px';
+  }
+  sendChat();
+  box.value = '';
+  updateSpeechSendBtn();
+}
+
+function toggleListening() {
+  if (_listening) { stopListening(); } else { startListening(); }
+}
+
+function startListening() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    setStatus('NOT SUPPORTED');
+    return;
+  }
+  if (_recognition) { try { _recognition.abort(); } catch(e){} }
+  _recognition = new SpeechRecognition();
+  _recognition.continuous      = true;
+  _recognition.interimResults  = true;
+  _recognition.lang            = 'en-US';
+
+  _recognition.onstart = () => {
+    _listening = true;
+    _interimText = '';
+    setStatus('● LISTENING');
+    const lb = document.getElementById('speechListenBtn');
+    if (lb) lb.classList.add('listening');
+    const ss = document.getElementById('speechStatus');
+    if (ss) ss.classList.add('listening');
+    lb.textContent = 'STOP';
+  };
+
+  _recognition.onresult = (e) => {
+    const box = document.getElementById('speechEditBox');
+    if (!box) return;
+    let finalChunk = '';
+    let interim    = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) { finalChunk += e.results[i][0].transcript; }
+      else                      { interim    += e.results[i][0].transcript; }
+    }
+    if (finalChunk) {
+      // Append final text; add space if needed
+      const cur = box.value;
+      box.value = cur + (cur && !cur.endsWith(' ') ? ' ' : '') + finalChunk.trim();
+      _interimText = '';
+    } else {
+      _interimText = interim;
+    }
+    updateSpeechSendBtn();
+  };
+
+  _recognition.onerror = (e) => {
+    if (e.error === 'no-speech') return; // ignore silence
+    setStatus('ERR: ' + e.error.toUpperCase());
+    stopListening();
+  };
+
+  _recognition.onend = () => {
+    if (_listening) {
+      // Auto-restart for continuous mode (browser may stop after silence)
+      try { _recognition.start(); } catch(e) { stopListening(); }
+    }
+  };
+
+  try { _recognition.start(); } catch(e) { setStatus('ERR: START FAILED'); }
+}
+
+function stopListening() {
+  _listening = false;
+  if (_recognition) { try { _recognition.stop(); } catch(e){} _recognition = null; }
+  setStatus('IDLE');
+  const lb = document.getElementById('speechListenBtn');
+  if (lb) { lb.classList.remove('listening'); lb.textContent = 'LISTEN'; }
+  const ss = document.getElementById('speechStatus');
+  if (ss) ss.classList.remove('listening');
+}
+
+function setStatus(txt) {
+  const ss = document.getElementById('speechStatus');
+  if (ss) ss.textContent = txt;
+}
+
+// Enable/disable send btn as user types in the speech edit box
+document.addEventListener('DOMContentLoaded', () => {
+  const box = document.getElementById('speechEditBox');
+  if (box) box.addEventListener('input', updateSpeechSendBtn);
+});
 
 function init() {
   if (location.protocol !== 'https:' && location.protocol !== 'file:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
