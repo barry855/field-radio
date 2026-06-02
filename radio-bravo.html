@@ -309,13 +309,59 @@
     display: flex; gap: 6px; flex-shrink: 0;
     margin-bottom: 6px; align-items: center;
   }
-  .chat-btn-bar .mini-chat-wrapper {
-    margin-bottom: 0; margin-left: auto;
-    flex-direction: row; align-items: center; gap: 6px;
+  .chat-btn-bar .mini-chat-wrapper {\n    margin-bottom: 0; margin-left: auto;\n    flex-direction: row; align-items: center; gap: 6px;\n  }
+
+  /* ── Chat input wrapper — contains textarea + mini video ───── */
+  .chat-input-wrap {
+    flex: 1;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 34px;
   }
-  .chat-btn-bar .mini-chat-wrapper .mini-video-overlay {
-    position: relative; top: auto; left: auto; right: auto;
-    width: 80px; flex-shrink: 0;
+  /* Mini video lives inside the input wrap, above the textarea on ChromeOS,
+     as an inline block on Windows (stays inside/below the box boundary).
+     Default (Windows 11): mini sits in the top-right corner of the wrap,
+     z-index below the textarea text layer so text is always readable. */
+  .chat-input-wrap #miniChatOverlay {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: clamp(72px, 22%, 110px);
+    aspect-ratio: 16/9;
+    z-index: 2;                /* above underlay, below focused text cursor */
+    cursor: default;
+    border: 1px solid rgba(0,255,159,0.4);
+    border-radius: 3px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+    pointer-events: none;      /* don't steal taps from textarea */
+  }
+  /* When the textarea has focus on Windows 11 — keep mini INSIDE/BELOW
+     the text layer so the user can see the other party behind the text.
+     We lower opacity and keep z-index below the caret layer. */
+  .chat-input-wrap:focus-within #miniChatOverlay {
+    z-index: 0;
+    opacity: 0.55;
+  }
+  /* ChromeOS: mini floats ABOVE the text box */
+  .chromeos .chat-input-wrap #miniChatOverlay {
+    z-index: 10;
+    opacity: 1;
+    pointer-events: auto;
+    top: auto;
+    bottom: calc(100% + 4px);  /* float above the input wrap */
+    right: 0;
+  }
+  /* ChromeOS focus: keep floating above, full opacity */
+  .chromeos .chat-input-wrap:focus-within #miniChatOverlay {
+    z-index: 10;
+    opacity: 1;
+  }
+  /* Textarea inside wrap — full width, no flex shrink conflict */
+  .chat-input-wrap .chat-input {
+    width: 100%;
+    box-sizing: border-box;
   }
   /* ── Chat video underlay ──────────────────────────────────── */
   #chatUnderlayMain {
@@ -1292,13 +1338,7 @@
           <button class="clear-chat-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" title="Clear chat history">🗑</button>
           <button class="find-chat-btn" id="findChatBtn" title="Find in chat">🔍</button>
           <button class="underlay-flip-btn active" id="underlayFlipBtn" onclick="flipChatUnderlay()" title="Up = Remote main / Local mini  |  Down = Local main / Remote mini">▲</button>
-          <div class="mini-chat-wrapper">
-            <button class="mini-chat-btn active" id="miniChatBtn" onclick="toggleMiniChatOverlay()" title="Toggle mini remote screen">📺</button>
-            <div class="mini-video-overlay" id="miniChatOverlay">
-              <video id="miniChatVideo" autoplay="" playsinline=""></video>
-              <span class="video-label">REMOTE</span>
-            </div>
-          </div>
+          <button class="mini-chat-btn active" id="miniChatBtn" onclick="toggleMiniChatOverlay()" title="Toggle mini remote screen">📺</button>
         </div>
         <div class="chat" id="chat" tabindex="0">
           <video id="chatUnderlayMain" autoplay playsinline muted></video>
@@ -1308,7 +1348,13 @@
         <div class="chat-input-row">
           <button class="attach-btn" id="attachBtn" title="Attach file / photo / video">📎</button>
           <input type="file" id="fileInput" multiple="" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx" style="display:none">
-          <textarea class="chat-input" id="chatInput" placeholder="TYPE MESSAGE…" rows="1"></textarea>
+          <div class="chat-input-wrap" id="chatInputWrap">
+            <div class="mini-video-overlay hidden" id="miniChatOverlay">
+              <video id="miniChatVideo" autoplay="" playsinline=""></video>
+              <span class="video-label">REMOTE</span>
+            </div>
+            <textarea class="chat-input" id="chatInput" placeholder="TYPE MESSAGE…" rows="1"></textarea>
+          </div>
           <button class="btn" id="sendBtn">SEND</button>
         </div>
       </div>
@@ -1391,6 +1437,15 @@ const logEl     = document.getElementById('log');
 const chat      = document.getElementById('chat');
 const chatInput = document.getElementById('chatInput');
 const sendBtn   = document.getElementById('sendBtn');
+
+// ── Platform detection ────────────────────────────────────────
+// ChromeOS: mini video floats ABOVE the text box.
+// Windows / other: mini video stays inside, underlay visible below text on focus.
+(function detectPlatform() {
+  const ua = navigator.userAgent || '';
+  const isChromeOS = /CrOS/.test(ua);
+  if (isChromeOS) document.documentElement.classList.add('chromeos');
+})();
 // On Android, tapping Send while the keyboard is open causes the browser to
 // blur the textarea first, then fire click — but if the keyboard dismiss
 // animation interrupts the tap sequence the click is swallowed entirely and
@@ -2339,6 +2394,7 @@ function addBubble(text, mine, ts, save = true) {
 }
 
 let _sendChatLast = 0;
+let _pendingChatMsg = null; // one queued message to send when channel recovers
 function sendChat() {
   const now = Date.now();
   if (now - _sendChatLast < 300) return;   // debounce — blocks multi-fire on older Android
@@ -2352,6 +2408,14 @@ function sendChat() {
       try { dataConn.close(); } catch(e) {}
       dataConn = null;
       openDataConn();
+    } else if (pendingDC) {
+      // Channel is reopening — queue the message and send when ready
+      if (txt) {
+        _pendingChatMsg = txt;
+        entry('Channel reopening — message queued…', 'sys');
+        chatInput.value = ''; chatInput.style.height = 'auto';
+      }
+      return;
     }
     entry('Message not sent — channel not ready', 'err');
     return;
@@ -2849,6 +2913,12 @@ function attachDataConn(dc) {
     setStatus('reachable');
     document.getElementById('sendBtn').disabled = false;
     sendVideoState();
+    // Flush any queued message
+    if (_pendingChatMsg) {
+      const queued = _pendingChatMsg;
+      _pendingChatMsg = null;
+      try { dcSend(queued); addBubble(queued, true); entry('Queued message sent', 'sys'); } catch(e) {}
+    }
   }
   dc.on('open', onDcOpen);
   // Android/WebView fallback: 'open' sometimes fires before the handler is attached
@@ -3134,8 +3204,6 @@ function _doLeave() {
   if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
   if (peer)  { try { peer.destroy(); } catch(e){} peer = null; }
   linked = false;
-  // Export sys log before closing
-  exportSysLog();
   // Close window
   window.close();
   // Fallback if window.close() is blocked — show ended screen (do NOT reload, that returns to login)
@@ -3173,6 +3241,7 @@ function handleRemoteLeave() {
 function onDrop() {
   clearTimeout(retryTimer);
   saveRecordingIfActive();
+  _pendingChatMsg = null;  // discard any queued message — it belongs to the dropped session
   linked = false;
   call = null;
   // Reset data channel state so it re-opens cleanly on reconnect
