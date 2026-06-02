@@ -1844,18 +1844,8 @@ let chatUnderlayMode = (function() {
   try { return localStorage.getItem('bravo_underlay_mode') || 'up'; } catch(e) { return 'up'; }
 })();
 
-function syncChatUnderlay() { /* removed */ } else {
-    if (mainEl.srcObject !== localS)       mainEl.srcObject = localS;
-    if (miniEl.srcObject !== remoteStream) miniEl.srcObject = remoteStream;
-  }
-  mainEl.classList.toggle('no-stream', !mainEl.srcObject);
-  miniEl.classList.toggle('no-stream',  !miniEl.srcObject);
-}
-
+function syncChatUnderlay() { /* removed */ }
 function flipChatUnderlay() { /* removed */ }
-  syncChatUnderlay();
-  entry('Chat underlay: ' + (chatUnderlayMode === 'up' ? 'remote main / local mini' : 'local main / remote mini'), 'sys');
-}
 
 // Init flip button removed
 
