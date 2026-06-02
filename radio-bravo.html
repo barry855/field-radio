@@ -1302,6 +1302,24 @@
 <div id="lightbox"><img id="lightboxImg" src="" alt=""></div>
 
 <script>
+// ── localStorage shim (file:// safe) ─────────────────────────────────────────
+// On file:// Chrome may block localStorage entirely. This shim falls back to
+// an in-memory store so prefillLogin and all other storage calls still work.
+(function() {
+  let _ok = false;
+  try { localStorage.setItem('__test__','1'); localStorage.removeItem('__test__'); _ok = true; } catch(e) {}
+  if (_ok) return;
+  const _mem = {};
+  const _shim = {
+    getItem:    k => Object.prototype.hasOwnProperty.call(_mem, k) ? _mem[k] : null,
+    setItem:    (k, v) => { _mem[k] = String(v); },
+    removeItem: k => { delete _mem[k]; },
+    clear:      () => { Object.keys(_mem).forEach(k => delete _mem[k]); },
+    key:        i => Object.keys(_mem)[i] || null,
+    get length() { return Object.keys(_mem).length; }
+  };
+  try { Object.defineProperty(window, 'localStorage', { value: _shim, configurable: true }); } catch(e) {}
+})();
 // ── Audio tone engine (defined first so all code can call playTone) ──────────
 const _tones = {
   msg_in:       { freqs:[880,1100],       durs:[0.07,0.09],       wave:'sine',     vol:0.22 },
