@@ -309,6 +309,19 @@
   /* ── Chat find bar ──────────────────────────────────────── */
 
   /* ── Chat button bar (above message area) ──────────────────── */
+  .syslog-chat-btn {
+    background: rgba(5,15,21,0.55); border: 1px solid var(--border);
+    border-radius: 4px; color: var(--text-dim);
+    font-size: 11px; line-height: 1;
+    padding: 4px 8px; cursor: pointer;
+    font-family: 'Share Tech Mono', monospace; letter-spacing: 1px;
+    opacity: 0.65;
+    transition: opacity 0.15s, border-color 0.15s, color 0.15s;
+    margin-left: auto;
+  }
+  .syslog-chat-btn:hover, .syslog-chat-btn:active { opacity: 1; border-color: var(--accent2, #00ffaa); color: var(--accent2); }
+  .syslog-chat-btn.active { opacity: 1; border-color: var(--accent2); color: var(--accent2); }
+
   .chat-btn-bar {
     display: flex; gap: 6px; flex-shrink: 0;
     margin-bottom: 4px; align-items: center;
@@ -606,9 +619,12 @@
 
   .log-panel {
     background: var(--panel); border: 1px solid var(--border);
-    border-radius: 8px; padding: 10px 14px; position: relative;
-    flex-shrink: 0; transition: padding 0.2s;
+    border-radius: 8px; padding: 10px 14px;
+    position: absolute; bottom: 0; left: 0; right: 0;
+    z-index: 200; display: none;
+    transition: padding 0.2s;
   }
+  .log-panel.syslog-open { display: block; }
   .log-panel.collapsed { padding-bottom: 10px; min-height: 44px; }
   .log-panel.collapsed .log { display: none; }
   .log-panel .panel-label {
@@ -644,39 +660,8 @@
   .log-entry.err  { color: #cc2222; }
   .log-entry.tx   { color: #996600; }
 
-  /* ── SYS LOG menu-bar toggle button ─────────────────────── */
-  .syslog-toggle-btn {
-    margin-left: auto; flex-shrink: 0;
-    background: var(--btn-bg); border: 1px solid var(--border);
-    color: var(--text-dim); border-radius: 4px; padding: 4px 10px;
-    font-family: 'Share Tech Mono', monospace; font-size: 10px;
-    letter-spacing: 1.5px; text-transform: uppercase; cursor: pointer;
-    transition: background 0.15s, border-color 0.15s, color 0.15s;
-  }
-  .syslog-toggle-btn:hover { background: var(--btn-hover); border-color: var(--accent2); color: var(--accent2); }
-  .syslog-toggle-btn.active { border-color: var(--accent2); color: var(--accent2); background: rgba(0,255,159,0.08); }
 
-  /* ── SYS LOG full-area overlay (replaces chat+video area) ── */
-  #syslogOverlay {
-    display: none; position: absolute; inset: 0;
-    background: var(--panel); border: 1px solid var(--border);
-    border-radius: 8px; padding: 10px 14px;
-    opacity: 1; z-index: 50; overflow-y: auto;
-    flex-direction: column; gap: 4px;
-  }
-  #syslogOverlay.visible { display: flex; }
-  #syslogOverlay .syslog-header {
-    font-family: 'Share Tech Mono', monospace; font-size: 10px;
-    letter-spacing: 2px; color: var(--accent2); text-transform: uppercase;
-    border-bottom: 1px solid var(--border); padding-bottom: 6px; margin-bottom: 4px;
-    flex-shrink: 0;
-  }
-  #syslogOverlay .log {
-    flex: 1; background: #ffffff; border-radius: 4px;
-    padding: 4px 8px; overflow-y: auto;
-    scrollbar-width: thin; scrollbar-color: #ccc #fff;
-    height: auto; min-height: 0;
-  }
+
 
   .session-overlay {
     position: fixed; inset: 0; background: var(--bg);
@@ -1116,7 +1101,6 @@
         <span>User left chat</span>
         <button class="leave-chat-btn" onclick="leaveSession()">Leave Chat</button>
       </div>
-      <button class="syslog-toggle-btn" id="syslogToggleBtn" onclick="toggleSysLogView()" title="Toggle SYS LOG">SYS LOG</button>
     </div>
   </header>
 
@@ -1320,14 +1304,10 @@
         <button class="save-chat-btn" onclick="saveChatToFile()" title="Save chat as HTML">💾</button>
         <button class="clear-chat-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" title="Clear chat history">🗑</button>
         <button class="find-chat-btn" id="findChatBtn" title="Find in chat">🔍</button>
+        <button class="syslog-chat-btn" id="syslogToggleBtn" onclick="toggleSysLogView()" title="Toggle SYS LOG">SYS LOG</button>
       </div>
       <!-- ── Chat / video pane ───────────────────────────────── -->
-      <!-- SYS LOG full-area overlay -->
-      <div id="syslogOverlay">
-        <div class="syslog-header">⬡ SYS LOG</div>
-        <div class="log" id="logOverlay"></div>
-      </div>
-      <div id="chatVideoContent" style="display:flex; flex-direction:column; flex:1; min-height:0; gap:6px;">
+
       <div class="chat-panel" style="flex:1" id="chatPanel">
         <div class="panel-label">COMMS</div>
         <video id="chatUnderlay" autoplay playsinline muted></video>
@@ -1348,7 +1328,6 @@
           </div>
           <button class="btn" id="sendBtn">SEND</button>
       </div>
-      </div><!-- end chatVideoContent -->
       <div class="log-panel collapsed" id="logPanel">
         <div class="panel-label" onclick="toggleLogPanel()">SYS LOG<span class="log-toggle-arrow" id="logToggleArrow">▾</span></div>
         <div class="log" id="log"><span class="log-entry sys">16:00:39  PREFILL: code=null vid=false aud=false</span></div>
@@ -1847,15 +1826,7 @@ function entry(msg, cls='sys') {
   d.textContent = `${ts}  ${msg}`;
   logEl.appendChild(d);
   logEl.scrollTop = logEl.scrollHeight;
-  // Mirror to overlay log if it's visible
-  if (_syslogVisible) {
-    const dstLog = document.getElementById('logOverlay');
-    if (dstLog) {
-      const d2 = d.cloneNode(true);
-      dstLog.appendChild(d2);
-      dstLog.scrollTop = dstLog.scrollHeight;
-    }
-  }
+
 }
 
 function scrollToBottom(force) {
@@ -2675,31 +2646,25 @@ function toggleLogPanel() {
   }
 }
 
-// ── SYS LOG menu-bar toggle ─────────────────────────────────────────────────
+// ── SYS LOG chat-bar toggle ──────────────────────────────────────────────────
 function toggleSysLogView() {
   _syslogVisible = !_syslogVisible;
-  const overlay   = document.getElementById('syslogOverlay');
-  const content   = document.getElementById('chatVideoContent');
-  const logPanel  = document.getElementById('logPanel');
-  const btn       = document.getElementById('syslogToggleBtn');
-
+  const logPanel = document.getElementById('logPanel');
+  const btn      = document.getElementById('syslogToggleBtn');
   if (_syslogVisible) {
-    // Sync log entries into the overlay log div
-    const srcLog  = document.getElementById('log');
-    const dstLog  = document.getElementById('logOverlay');
-    if (srcLog && dstLog) dstLog.innerHTML = srcLog.innerHTML;
-
-    if (overlay)  overlay.classList.add('visible');
-    if (content)  content.style.display = 'none';
-    if (logPanel) logPanel.style.display = 'none';
-    if (btn)      btn.classList.add('active');
-    // Scroll overlay log to bottom
-    if (dstLog) setTimeout(() => { dstLog.scrollTop = dstLog.scrollHeight; }, 50);
+    if (logPanel) {
+      logPanel.classList.add('syslog-open');
+      logPanel.classList.remove('collapsed');
+      const l = logPanel.querySelector('#log');
+      if (l) setTimeout(() => { l.scrollTop = l.scrollHeight; }, 50);
+    }
+    if (btn) btn.classList.add('active');
   } else {
-    if (overlay)  overlay.classList.remove('visible');
-    if (content)  content.style.display = 'flex';
-    if (logPanel) logPanel.style.display = '';
-    if (btn)      btn.classList.remove('active');
+    if (logPanel) {
+      logPanel.classList.remove('syslog-open');
+      logPanel.classList.add('collapsed');
+    }
+    if (btn) btn.classList.remove('active');
   }
 }
 
