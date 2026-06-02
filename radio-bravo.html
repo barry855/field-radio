@@ -123,6 +123,7 @@
     overflow-y: auto;
     display: flex;
     flex-direction: column;
+    position: relative; z-index: 1;
     gap: 8px;
     scrollbar-width: thin;
     scrollbar-color: #aaa transparent;
@@ -201,6 +202,7 @@
 
   .chat-input-row {
     display: flex; gap: 8px; margin-top: 10px; flex-shrink: 0; align-items: flex-end;
+    position: relative; z-index: 1;
   }
   .chat-input {
     flex: 1;
@@ -308,6 +310,7 @@
   .chat-btn-bar {
     display: flex; gap: 6px; flex-shrink: 0;
     margin-bottom: 6px; align-items: center;
+    position: relative; z-index: 1;
   }
   .chat-btn-bar .mini-chat-wrapper {\n    margin-bottom: 0; margin-left: auto;\n    flex-direction: row; align-items: center; gap: 6px;\n  }
 
@@ -327,7 +330,14 @@
     width: 100%;
     box-sizing: border-box;
   }
-  /* chatUnderlay removed */
+  /* ── Chat video underlay ──────────────────────────────────── */
+  #chatUnderlay {
+    position: absolute; inset: 0; z-index: 0;
+    width: 100%; height: 100%;
+    object-fit: cover; pointer-events: none;
+    opacity: 1; border-radius: 8px;
+  }
+  #chatUnderlay.no-stream { display: none; }
 
   /* ── Underlay flip button ─────────────────────────────────── */
   .underlay-flip-btn {
@@ -1262,6 +1272,7 @@
     <div class="tab-pane" id="paneChat">
       <div class="chat-panel" style="flex:1" id="chatPanel">
         <div class="panel-label">COMMS</div>
+        <video id="chatUnderlay" autoplay playsinline muted></video>
 
         <div class="drop-overlay" id="dropOverlay">
           <div class="drop-overlay-icon">📎</div>
@@ -1845,7 +1856,14 @@ let chatUnderlayMode = (function() {
   try { return localStorage.getItem('bravo_underlay_mode') || 'up'; } catch(e) { return 'up'; }
 })();
 
-function syncChatUnderlay() { /* removed */ }
+function syncChatUnderlay() {
+  const el = document.getElementById('chatUnderlay');
+  if (!el) return;
+  const remoteV = document.getElementById('remoteVideo');
+  const stream = remoteV ? remoteV.srcObject : null;
+  if (el.srcObject !== stream) el.srcObject = stream;
+  el.classList.toggle('no-stream', !stream);
+}
 function flipChatUnderlay() { /* removed */ }
 
 // Init flip button removed
