@@ -201,8 +201,7 @@
   .quality-bars span.lit-bad  { background: var(--danger); }
 
   .chat-input-row {
-    display: flex; gap: 8px; margin-top: 10px; flex-shrink: 0; align-items: flex-end;
-    position: relative; z-index: 1;
+    display: flex; gap: 8px; margin-top: 6px; flex-shrink: 0; align-items: flex-end;
   }
   .chat-input {
     flex: 1;
@@ -309,8 +308,7 @@
   /* ── Chat button bar (above message area) ──────────────────── */
   .chat-btn-bar {
     display: flex; gap: 6px; flex-shrink: 0;
-    margin-bottom: 6px; align-items: center;
-    position: relative; z-index: 1;
+    margin-bottom: 4px; align-items: center;
   }
   .chat-btn-bar .mini-chat-wrapper {\n    margin-bottom: 0; margin-left: auto;\n    flex-direction: row; align-items: center; gap: 6px;\n  }
 
@@ -356,7 +354,7 @@
     display: none; align-items: center; gap: 6px;
     background: #0c1520; border: 1px solid var(--accent2);
     border-radius: 4px; padding: 4px 8px;
-    margin-bottom: 6px; flex-shrink: 0;
+    margin-bottom: 4px; flex-shrink: 0;
   }
   .chat-find-bar.open { display: flex; }
   .chat-find-input {
@@ -1270,38 +1268,40 @@
     </div>
     <!-- CHAT TAB -->
     <div class="tab-pane" id="paneChat">
+      <!-- ── Toolbar above chat pane ─────────────────────────── -->
+      <div class="chat-find-bar" id="chatFindBar">
+        <input class="chat-find-input" id="chatFindInput" placeholder="Find in chat…" autocomplete="off" spellcheck="false">
+        <span class="chat-find-count" id="chatFindCount"></span>
+        <button class="chat-find-nav" id="chatFindPrev" title="Previous match">▲</button>
+        <button class="chat-find-nav" id="chatFindNext" title="Next match">▼</button>
+        <button class="chat-find-close" id="chatFindClose" title="Close">✕</button>
+      </div>
+      <div class="chat-btn-bar">
+        <button class="refresh-chat-btn" onclick="refreshScreen()" title="Refresh / Reconnect">↺</button>
+        <button class="save-chat-btn" onclick="saveChatToFile()" title="Save chat as HTML">💾</button>
+        <button class="clear-chat-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" title="Clear chat history">🗑</button>
+        <button class="find-chat-btn" id="findChatBtn" title="Find in chat">🔍</button>
+      </div>
+      <!-- ── Chat / video pane ───────────────────────────────── -->
       <div class="chat-panel" style="flex:1" id="chatPanel">
         <div class="panel-label">COMMS</div>
         <video id="chatUnderlay" autoplay playsinline muted></video>
-
         <div class="drop-overlay" id="dropOverlay">
           <div class="drop-overlay-icon">📎</div>
           <div class="drop-overlay-label">Drop file to attach</div>
         </div>
-        <div class="chat-find-bar" id="chatFindBar">
-          <input class="chat-find-input" id="chatFindInput" placeholder="Find in chat…" autocomplete="off" spellcheck="false">
-          <span class="chat-find-count" id="chatFindCount"></span>
-          <button class="chat-find-nav" id="chatFindPrev" title="Previous match">▲</button>
-          <button class="chat-find-nav" id="chatFindNext" title="Next match">▼</button>
-          <button class="chat-find-close" id="chatFindClose" title="Close">✕</button>
-        </div>
-        <div class="chat-btn-bar">
-          <button class="refresh-chat-btn" onclick="refreshScreen()" title="Refresh / Reconnect">↺</button>
-          <button class="save-chat-btn" onclick="saveChatToFile()" title="Save chat as HTML">💾</button>
-          <button class="clear-chat-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" title="Clear chat history">🗑</button>
-          <button class="find-chat-btn" id="findChatBtn" title="Find in chat">🔍</button>
-        </div>
         <div class="chat" id="chat" tabindex="0">
         </div>
-        <div class="file-preview-strip" id="filePreviewStrip"></div>
-        <div class="chat-input-row">
+      </div>
+      <!-- ── Input below chat pane ───────────────────────────── -->
+      <div class="file-preview-strip" id="filePreviewStrip"></div>
+      <div class="chat-input-row">
           <button class="attach-btn" id="attachBtn" title="Attach file / photo / video">📎</button>
           <input type="file" id="fileInput" multiple="" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx" style="display:none">
           <div class="chat-input-wrap" id="chatInputWrap">
 <textarea class="chat-input" id="chatInput" placeholder="TYPE MESSAGE…" rows="1"></textarea>
           </div>
           <button class="btn" id="sendBtn">SEND</button>
-        </div>
       </div>
       <div class="log-panel collapsed" id="logPanel">
         <div class="panel-label" onclick="toggleLogPanel()">SYS LOG<span class="log-toggle-arrow" id="logToggleArrow">▾</span></div>
