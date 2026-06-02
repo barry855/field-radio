@@ -126,8 +126,8 @@
     flex-direction: column;
     gap: 8px;
     scrollbar-width: thin;
-    scrollbar-color: #ccc #9AC08F;
-    background: #9AC08F;
+    scrollbar-color: #aaa #fff;
+    background: #fff;
     border-radius: 4px;
     padding: 8px;
     margin-bottom: 2px;
@@ -205,8 +205,8 @@
   }
   .chat-input {
     flex: 1;
-    background: #9AC08F; border: 1px solid var(--border);
-    color: var(--text); padding: 7px 10px; border-radius: 4px;
+    background: #fff; border: 1px solid var(--border);
+    color: #000; padding: 7px 10px; border-radius: 4px;
     font-family: 'Share Tech Mono', monospace; font-size: 16px;
     outline: none; transition: border-color 0.2s;
     resize: none; overflow-y: hidden; line-height: 1.4;
@@ -214,9 +214,9 @@
     word-wrap: break-word; white-space: pre-wrap;
     align-self: flex-end;
   }
-  .chat-input:focus   { border-color: var(--accent); }
+  .chat:focus { outline: none; }
   .chat-input:disabled { opacity: 0.4; cursor: not-allowed; }
-  .chat-input::placeholder { color: var(--text-dim); }
+  .chat-input::placeholder { color: #888; }
 
   .clear-chat-btn {
     background: #000; border: 1px solid #444;
@@ -1253,7 +1253,7 @@
             </div>
           </div>
         </div>
-        <div class="chat" id="chat"></div>
+        <div class="chat" id="chat" tabindex="0"></div>
         <div class="file-preview-strip" id="filePreviewStrip"></div>
         <div class="chat-input-row">
           <button class="attach-btn" id="attachBtn" title="Attach file / photo / video">📎</button>
@@ -1743,6 +1743,7 @@ function entry(msg, cls='sys') {
 }
 
 function scrollToBottom() {
+  if (document.activeElement === chat) return;  // user is scrolling — don't interrupt
   requestAnimationFrame(() => {
     chat.scrollTop = chat.scrollHeight;
   });
