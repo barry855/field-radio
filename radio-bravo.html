@@ -108,7 +108,7 @@
 
   .chat-panel {
     flex: 1;
-    background: var(--panel);
+    background: transparent;
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: 12px 14px;
@@ -145,13 +145,13 @@
   }
   .bubble.mine {
     align-self: flex-end;
-    background: rgba(0,255,159,0.82);
+    background: rgba(0,255,159,1);
     border-color: var(--accent2);
     color: #0a1520;
   }
   .bubble.theirs {
     align-self: flex-start;
-    background: rgba(0,212,255,0.82);
+    background: rgba(0,212,255,1);
     border-color: var(--accent);
     color: #0a1520;
   }
@@ -321,47 +321,13 @@
      the chat underlay already shows the remote video inside the chat box.
      Showing it here causes an extra element to appear above the text box
      and push the layout down. */
-  .chat-input-wrap #miniChatOverlay {
-    display: none;
-  }
-  /* ChromeOS: mini floats ABOVE the text box, fully visible */
-  .chromeos .chat-input-wrap #miniChatOverlay {
-    display: block;
-    position: absolute;
-    z-index: 10;
-    opacity: 1;
-    pointer-events: auto;
-    bottom: calc(100% + 4px);
-    right: 0;
-    top: auto;
-    left: auto;
-    width: clamp(72px, 22%, 110px);
-    aspect-ratio: 16/9;
-    border: 1px solid rgba(0,255,159,0.4);
-    border-radius: 3px;
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.35);
-  }
+  /* miniChatOverlay removed */
   /* Textarea inside wrap — full width */
   .chat-input-wrap .chat-input {
     width: 100%;
     box-sizing: border-box;
   }
-  /* ── Chat video underlay ──────────────────────────────────── */
-  #chatUnderlayMain {
-    position: absolute; inset: 0; z-index: 1;
-    width: 100%; height: 100%;
-    object-fit: cover; pointer-events: none;
-    opacity: 0.85; border-radius: 4px;
-  }
-  #chatUnderlayMini {
-    position: absolute; bottom: 10px; right: 10px; z-index: 2;
-    width: clamp(72px, 20%, 110px); aspect-ratio: 16/9;
-    object-fit: cover; pointer-events: none;
-    opacity: 0.88; border-radius: 3px;
-    border: 1px solid rgba(0,255,159,0.3);
-  }
-  #chatUnderlayMain.no-stream, #chatUnderlayMini.no-stream { display: none; }
+  /* chatUnderlay removed */
 
   /* ── Underlay flip button ─────────────────────────────────── */
   .underlay-flip-btn {
@@ -1313,12 +1279,8 @@
           <button class="save-chat-btn" onclick="saveChatToFile()" title="Save chat as HTML">💾</button>
           <button class="clear-chat-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" title="Clear chat history">🗑</button>
           <button class="find-chat-btn" id="findChatBtn" title="Find in chat">🔍</button>
-          <button class="underlay-flip-btn active" id="underlayFlipBtn" onclick="flipChatUnderlay()" title="Up = Remote main / Local mini  |  Down = Local main / Remote mini">▲</button>
         </div>
         <div class="chat" id="chat" tabindex="0">
-          <video id="chatUnderlayMain" autoplay playsinline muted></video>
-          <video id="chatUnderlayMini" autoplay playsinline muted></video>
-        </div>
         <div class="file-preview-strip" id="filePreviewStrip"></div>
         <div class="chat-input-row">
           <button class="attach-btn" id="attachBtn" title="Attach file / photo / video">📎</button>
@@ -1864,17 +1826,7 @@ let chatUnderlayMode = (function() {
   try { return localStorage.getItem('bravo_underlay_mode') || 'up'; } catch(e) { return 'up'; }
 })();
 
-function syncChatUnderlay() {
-  const mainEl  = document.getElementById('chatUnderlayMain');
-  const miniEl  = document.getElementById('chatUnderlayMini');
-  const remoteV = document.getElementById('remoteVideo');
-  if (!mainEl || !miniEl) return;
-  const remoteStream = remoteV ? remoteV.srcObject : null;
-  const localS = typeof localStream !== 'undefined' ? localStream : null;
-  if (chatUnderlayMode === 'up') {
-    if (mainEl.srcObject !== remoteStream) mainEl.srcObject = remoteStream;
-    if (miniEl.srcObject !== localS)       miniEl.srcObject = localS;
-  } else {
+function syncChatUnderlay() { /* removed */ } else {
     if (mainEl.srcObject !== localS)       mainEl.srcObject = localS;
     if (miniEl.srcObject !== remoteStream) miniEl.srcObject = remoteStream;
   }
@@ -1882,25 +1834,12 @@ function syncChatUnderlay() {
   miniEl.classList.toggle('no-stream',  !miniEl.srcObject);
 }
 
-function flipChatUnderlay() {
-  chatUnderlayMode = (chatUnderlayMode === 'up') ? 'down' : 'up';
-  try { localStorage.setItem('bravo_underlay_mode', chatUnderlayMode); } catch(e) {}
-  const btn = document.getElementById('underlayFlipBtn');
-  if (btn) {
-    btn.textContent = chatUnderlayMode === 'up' ? '▲' : '▼';
-    btn.title = chatUnderlayMode === 'up'
-      ? 'Up = Remote main / Local mini  |  Down = Local main / Remote mini'
-      : 'Down = Local main / Remote mini  |  Up = Remote main / Local mini';
-  }
+function flipChatUnderlay() { /* removed */ }
   syncChatUnderlay();
   entry('Chat underlay: ' + (chatUnderlayMode === 'up' ? 'remote main / local mini' : 'local main / remote mini'), 'sys');
 }
 
-// Init flip button to saved state
-(function() {
-  const btn = document.getElementById('underlayFlipBtn');
-  if (btn) btn.textContent = chatUnderlayMode === 'up' ? '▲' : '▼';
-})();
+// Init flip button removed
 
 // Mini overlay removed
 
@@ -3110,7 +3049,7 @@ function _doLeave() {
     localStream = null;
   }
   // Clear all video elements immediately — no stale frames
-  ['localVideo','remoteVideo','chatUnderlayMain','chatUnderlayMini'].forEach(id => {
+  ['localVideo','remoteVideo'].forEach(id => {
     const el = document.getElementById(id);
     if (el) { try { el.pause(); el.srcObject = null; el.load(); } catch(e){} }
   });
@@ -3135,7 +3074,7 @@ function handleRemoteLeave() {
   leftPermanently = false; // we haven't left yet, remote did
   remotePeerLeft = true;
   // Clear remote video immediately
-  ['remoteVideo','chatUnderlayMain','chatUnderlayMini'].forEach(id => {
+  ['remoteVideo'].forEach(id => {
     const el = document.getElementById(id);
     if (el) { try { el.pause(); el.srcObject = null; el.load(); } catch(e){} }
   });
