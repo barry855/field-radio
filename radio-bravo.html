@@ -3045,7 +3045,7 @@ function _doLeave() {
   window.close();
   // Fallback if window.close() is blocked — show ended screen (do NOT reload, that returns to login)
   setTimeout(() => {
-    document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0a1520;color:#f1f5f9;font-family:monospace;font-size:13px;letter-spacing:1px;">SESSION ENDED — YOU MAY CLOSE THIS TAB</div>';
+    document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0a1520;color:#f1f5f9;font-family:monospace;font-size:18px;letter-spacing:1px;">SESSION ENDED — YOU MAY CLOSE THIS TAB</div>';
   }, 300);
 }
 
