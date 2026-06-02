@@ -41,6 +41,9 @@
     overflow: hidden;
   }
 
+  /* LOCAL tab — match refresh button font size */
+  #paneLocal { font-size: 14px; }
+
   .shell {
     display: flex;
     flex-direction: column;
@@ -3040,9 +3043,11 @@ function _doLeave() {
   exportSysLog();
   // Close window
   window.close();
-  // Fallback if window.close() is blocked (e.g. not opener)
+  // Fallback if window.close() is blocked (e.g. not opened by script) — reload to login screen
   setTimeout(() => {
-    document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0a1520;color:#f1f5f9;font-family:monospace;font-size:10px;">Session ended. You may close this tab.</div>';
+    try { location.reload(); } catch(e) {
+      document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0a1520;color:#f1f5f9;font-family:monospace;font-size:10px;">Session ended. You may close this tab.</div>';
+    }
   }, 300);
 }
 
