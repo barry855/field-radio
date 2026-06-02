@@ -109,7 +109,7 @@
 
   .chat-panel {
     flex: 1;
-    background: var(--panel);
+    background: transparent;
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: 12px 14px;
@@ -126,8 +126,8 @@
     flex-direction: column;
     gap: 8px;
     scrollbar-width: thin;
-    scrollbar-color: #aaa #fff;
-    background: #fff;
+    scrollbar-color: #aaa transparent;
+    background: transparent;
     border-radius: 4px;
     padding: 8px;
     margin-bottom: 2px;
@@ -146,13 +146,13 @@
   }
   .bubble.mine {
     align-self: flex-end;
-    background: rgba(0,212,255,0.15);
+    background: rgba(0,212,255,1);
     border-color: var(--accent);
     color: #0a1520;
   }
   .bubble.theirs {
     align-self: flex-start;
-    background: rgba(0,255,159,0.12);
+    background: rgba(0,255,159,1);
     border-color: var(--accent2);
     color: #0a1520;
   }
@@ -268,21 +268,7 @@
     position: relative; top: auto; left: auto; right: auto;
     width: 80px; flex-shrink: 0;
   }
-  /* ── Chat video underlay ──────────────────────────────────── */
-  #chatUnderlayMain {
-    position: absolute; inset: 0; z-index: 1;
-    width: 100%; height: 100%;
-    object-fit: cover; pointer-events: none;
-    opacity: 0.22; border-radius: 4px;
-  }
-  #chatUnderlayMini {
-    position: absolute; bottom: 10px; right: 10px; z-index: 2;
-    width: clamp(72px, 20%, 110px); aspect-ratio: 16/9;
-    object-fit: cover; pointer-events: none;
-    opacity: 0.32; border-radius: 3px;
-    border: 1px solid rgba(0,212,255,0.3);
-  }
-  #chatUnderlayMain.no-stream, #chatUnderlayMini.no-stream { display: none; }
+  /* ── Chat video underlay removed ─────────────────────────── */
 
   /* ── Underlay flip button ─────────────────────────────────── */
   .underlay-flip-btn {
@@ -762,12 +748,7 @@
     cursor: grab; user-select: none;
   }
   /* Chat tab mini video sits inline below the toggle button */
-  .mini-chat-wrapper #miniChatOverlay {
-    position: relative; top: auto; right: auto; left: auto;
-    width: 100%; max-width: 320px; aspect-ratio: 16/9;
-    cursor: default;
-  }
-  .mini-chat-wrapper #miniChatOverlay.hidden { display: none; }
+
   .mini-video-overlay.dragging { cursor: grabbing; box-shadow: 0 12px 32px rgba(0,212,255,0.25); }
   .mini-video-overlay.hidden { display: none; }
   .mini-video-overlay video {
@@ -1274,19 +1255,8 @@
           <button class="save-chat-btn" onclick="saveChatToFile()" title="Save chat as HTML">💾</button>
           <button class="clear-chat-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" title="Clear chat history">🗑</button>
           <button class="find-chat-btn" id="findChatBtn" title="Find in chat">🔍</button>
-          <button class="underlay-flip-btn active" id="underlayFlipBtn" onclick="flipChatUnderlay()" title="Up = Remote main / Local mini  |  Down = Local main / Remote mini">▲</button>
-          <div class="mini-chat-wrapper">
-            <button class="mini-chat-btn active" id="miniChatBtn" onclick="toggleMiniChatOverlay()" title="Toggle mini remote screen">📺</button>
-            <div class="mini-video-overlay" id="miniChatOverlay">
-              <video id="miniChatVideo" autoplay="" playsinline=""></video>
-              <span class="video-label">REMOTE</span>
-            </div>
-          </div>
         </div>
         <div class="chat" id="chat" tabindex="0">
-          <video id="chatUnderlayMain" autoplay playsinline muted></video>
-          <video id="chatUnderlayMini" autoplay playsinline muted></video>
-        </div>
         <div class="file-preview-strip" id="filePreviewStrip"></div>
         <div class="chat-input-row">
           <button class="attach-btn" id="attachBtn" title="Attach file / photo / video">📎</button>
@@ -1836,11 +1806,9 @@ function syncMiniVideos() {
   if (miniRemoteOverlay) miniRemoteOverlay.classList.toggle('no-video', !(remoteVideo && remoteVideo.srcObject));
   // sync mini chat overlay
   const miniChatVideo = document.getElementById('miniChatVideo');
-  const miniChatOverlay = document.getElementById('miniChatOverlay');
   if (miniChatVideo && remoteVideo && miniChatVideo.srcObject !== remoteVideo.srcObject) {
     miniChatVideo.srcObject = remoteVideo.srcObject;
   }
-  if (miniChatOverlay) miniChatOverlay.classList.toggle('no-video', !(remoteVideo && remoteVideo.srcObject));
   syncChatUnderlay();
 }
 
@@ -1851,43 +1819,11 @@ let chatUnderlayMode = (function() {
   try { return localStorage.getItem('alpha_underlay_mode') || 'up'; } catch(e) { return 'up'; }
 })();
 
-function syncChatUnderlay() {
-  const mainEl  = document.getElementById('chatUnderlayMain');
-  const miniEl  = document.getElementById('chatUnderlayMini');
-  const remoteV = document.getElementById('remoteVideo');
-  if (!mainEl || !miniEl) return;
-  const remoteStream = remoteV ? remoteV.srcObject : null;
-  const localS = typeof localStream !== 'undefined' ? localStream : null;
-  if (chatUnderlayMode === 'up') {
-    if (mainEl.srcObject !== remoteStream) mainEl.srcObject = remoteStream;
-    if (miniEl.srcObject !== localS)       miniEl.srcObject = localS;
-  } else {
-    if (mainEl.srcObject !== localS)       mainEl.srcObject = localS;
-    if (miniEl.srcObject !== remoteStream) miniEl.srcObject = remoteStream;
-  }
-  mainEl.classList.toggle('no-stream', !mainEl.srcObject);
-  miniEl.classList.toggle('no-stream',  !miniEl.srcObject);
-}
+function syncChatUnderlay() { /* removed */ }
 
-function flipChatUnderlay() {
-  chatUnderlayMode = (chatUnderlayMode === 'up') ? 'down' : 'up';
-  try { localStorage.setItem('alpha_underlay_mode', chatUnderlayMode); } catch(e) {}
-  const btn = document.getElementById('underlayFlipBtn');
-  if (btn) {
-    btn.textContent = chatUnderlayMode === 'up' ? '▲' : '▼';
-    btn.title = chatUnderlayMode === 'up'
-      ? 'Up = Remote main / Local mini  |  Down = Local main / Remote mini'
-      : 'Down = Local main / Remote mini  |  Up = Remote main / Local mini';
-  }
-  syncChatUnderlay();
-  entry('Chat underlay: ' + (chatUnderlayMode === 'up' ? 'remote main / local mini' : 'local main / remote mini'), 'sys');
-}
+function flipChatUnderlay() { /* removed */ }
 
-// Init flip button to saved state
-(function() {
-  const btn = document.getElementById('underlayFlipBtn');
-  if (btn) btn.textContent = chatUnderlayMode === 'up' ? '▲' : '▼';
-})();
+// Init flip button removed
 
 function updateMiniVideoVisibility() {
   ['miniLocalOverlay', 'miniRemoteOverlay'].forEach(id => {
@@ -1951,28 +1887,14 @@ function makeDraggable(el) {
     document.removeEventListener('touchend', onDragEnd);
   }
 }
-['miniLocalOverlay','miniRemoteOverlay','miniChatOverlay'].forEach(id => {
+['miniLocalOverlay','miniRemoteOverlay'].forEach(id => {
   const el = document.getElementById(id);
   if (el) makeDraggable(el);
 });
 
 // ── Mini remote screen in Chat tab ───────────────────────────
 let miniChatVisible = true;
-function toggleMiniChatOverlay() {
-  miniChatVisible = !miniChatVisible;
-  const overlay = document.getElementById('miniChatOverlay');
-  const btn     = document.getElementById('miniChatBtn');
-  if (!overlay) return;
-  overlay.classList.toggle('hidden', !miniChatVisible);
-  if (btn) btn.classList.toggle('active', miniChatVisible);
-  if (miniChatVisible) {
-    const miniChatVideo = document.getElementById('miniChatVideo');
-    const remoteVideo   = document.getElementById('remoteVideo');
-    if (miniChatVideo && remoteVideo && miniChatVideo.srcObject !== remoteVideo.srcObject) {
-      miniChatVideo.srcObject = remoteVideo.srcObject;
-    }
-  }
-}
+function toggleMiniChatOverlay() { /* removed */ }
 
 function linkify(text) {
   const frag = document.createDocumentFragment();
@@ -3068,7 +2990,7 @@ function attachCall(c) {
     syncMiniVideos();
     document.getElementById('remoteWrap').classList.remove('waiting', 'stale');
     // Clear stale from mini overlays when stream reconnects
-    ['miniRemoteOverlay', 'miniChatOverlay'].forEach(id => {
+    ['miniRemoteOverlay'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.classList.remove('stale');
     });
@@ -3151,7 +3073,7 @@ function _doLeave() {
     localStream = null;
   }
   // Clear all video elements immediately — no stale frames
-  ['localVideo','remoteVideo','miniRemoteVideo','miniLocalVideo','miniChatVideo','chatUnderlayMain','chatUnderlayMini'].forEach(id => {
+  ['localVideo','remoteVideo','miniRemoteVideo','miniLocalVideo'].forEach(id => {
     const el = document.getElementById(id);
     if (el) { try { el.pause(); el.srcObject = null; el.load(); } catch(e){} }
   });
@@ -3178,7 +3100,7 @@ function handleRemoteLeave() {
   leftPermanently = false; // we haven't left yet, remote did
   remotePeerLeft = true;
   // Clear remote video immediately
-  ['remoteVideo','miniRemoteVideo','miniChatVideo','chatUnderlayMain','chatUnderlayMini'].forEach(id => {
+  ['remoteVideo','miniRemoteVideo'].forEach(id => {
     const el = document.getElementById(id);
     if (el) { try { el.pause(); el.srcObject = null; el.load(); } catch(e){} }
   });
@@ -3187,7 +3109,7 @@ function handleRemoteLeave() {
   // Remove stale/waiting classes, keep video wrap clean
   const rw = document.getElementById('remoteWrap');
   if (rw) rw.className = 'video-wrap';
-  ['miniRemoteOverlay','miniChatOverlay'].forEach(id => {
+  ['miniRemoteOverlay'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.remove('stale','no-video');
   });
@@ -3218,7 +3140,7 @@ function onDrop() {
   document.getElementById('remoteWrap').classList.remove('video-off', 'no-video', 'waiting');
   document.getElementById('remoteWrap').classList.add('stale');
   // Mark mini remote overlays as stale too
-  ['miniRemoteOverlay', 'miniChatOverlay'].forEach(id => {
+  ['miniRemoteOverlay'].forEach(id => {
     const el = document.getElementById(id);
     if (el) { el.classList.remove('no-video'); el.classList.add('stale'); }
   });
