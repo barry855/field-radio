@@ -317,6 +317,35 @@
     position: relative; top: auto; left: auto; right: auto;
     width: 80px; flex-shrink: 0;
   }
+  /* ── Chat video underlay ──────────────────────────────────── */
+  #chatUnderlayMain {
+    position: absolute; inset: 0; z-index: 1;
+    width: 100%; height: 100%;
+    object-fit: cover; pointer-events: none;
+    opacity: 0.22; border-radius: 4px;
+  }
+  #chatUnderlayMini {
+    position: absolute; bottom: 10px; right: 10px; z-index: 2;
+    width: clamp(72px, 20%, 110px); aspect-ratio: 16/9;
+    object-fit: cover; pointer-events: none;
+    opacity: 0.32; border-radius: 3px;
+    border: 1px solid rgba(0,255,159,0.3);
+  }
+  #chatUnderlayMain.no-stream, #chatUnderlayMini.no-stream { display: none; }
+
+  /* ── Underlay flip button ─────────────────────────────────── */
+  .underlay-flip-btn {
+    background: #000; border: 1px solid var(--border);
+    border-radius: 4px; color: var(--text-dim);
+    font-size: 13px; font-family: 'Orbitron', sans-serif;
+    letter-spacing: 1px; line-height: 1;
+    padding: 4px 7px; cursor: pointer; opacity: 0.65;
+    transition: opacity 0.15s, border-color 0.15s, color 0.15s;
+    user-select: none;
+  }
+  .underlay-flip-btn:hover, .underlay-flip-btn:active { opacity: 1; border-color: var(--accent2); color: var(--accent2); }
+  .underlay-flip-btn.active { opacity: 1; border-color: var(--accent2); color: var(--accent2); }
+
   .chat-find-bar {
     display: none; align-items: center; gap: 6px;
     background: #0c1520; border: 1px solid var(--accent2);
@@ -1262,6 +1291,7 @@
           <button class="save-chat-btn" onclick="saveChatToFile()" title="Save chat as HTML">💾</button>
           <button class="clear-chat-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" title="Clear chat history">🗑</button>
           <button class="find-chat-btn" id="findChatBtn" title="Find in chat">🔍</button>
+          <button class="underlay-flip-btn active" id="underlayFlipBtn" onclick="flipChatUnderlay()" title="Up = Remote main / Local mini  |  Down = Local main / Remote mini">▲</button>
           <div class="mini-chat-wrapper">
             <button class="mini-chat-btn active" id="miniChatBtn" onclick="toggleMiniChatOverlay()" title="Toggle mini remote screen">📺</button>
             <div class="mini-video-overlay" id="miniChatOverlay">
@@ -1270,7 +1300,10 @@
             </div>
           </div>
         </div>
-        <div class="chat" id="chat" tabindex="0"></div>
+        <div class="chat" id="chat" tabindex="0">
+          <video id="chatUnderlayMain" autoplay playsinline muted></video>
+          <video id="chatUnderlayMini" autoplay playsinline muted></video>
+        </div>
         <div class="file-preview-strip" id="filePreviewStrip"></div>
         <div class="chat-input-row">
           <button class="attach-btn" id="attachBtn" title="Attach file / photo / video">📎</button>
@@ -1816,7 +1849,53 @@ function syncMiniVideos() {
     miniChatVideo.srcObject = remoteVideo.srcObject;
   }
   if (miniChatOverlay) miniChatOverlay.classList.toggle('no-video', !(remoteVideo && remoteVideo.srcObject));
+  syncChatUnderlay();
 }
+
+// ── Chat video underlay ───────────────────────────────────────
+// 'up'   = remote main / local mini
+// 'down' = local main / remote mini
+let chatUnderlayMode = (function() {
+  try { return localStorage.getItem('bravo_underlay_mode') || 'up'; } catch(e) { return 'up'; }
+})();
+
+function syncChatUnderlay() {
+  const mainEl  = document.getElementById('chatUnderlayMain');
+  const miniEl  = document.getElementById('chatUnderlayMini');
+  const remoteV = document.getElementById('remoteVideo');
+  if (!mainEl || !miniEl) return;
+  const remoteStream = remoteV ? remoteV.srcObject : null;
+  const localS = typeof localStream !== 'undefined' ? localStream : null;
+  if (chatUnderlayMode === 'up') {
+    if (mainEl.srcObject !== remoteStream) mainEl.srcObject = remoteStream;
+    if (miniEl.srcObject !== localS)       miniEl.srcObject = localS;
+  } else {
+    if (mainEl.srcObject !== localS)       mainEl.srcObject = localS;
+    if (miniEl.srcObject !== remoteStream) miniEl.srcObject = remoteStream;
+  }
+  mainEl.classList.toggle('no-stream', !mainEl.srcObject);
+  miniEl.classList.toggle('no-stream',  !miniEl.srcObject);
+}
+
+function flipChatUnderlay() {
+  chatUnderlayMode = (chatUnderlayMode === 'up') ? 'down' : 'up';
+  try { localStorage.setItem('bravo_underlay_mode', chatUnderlayMode); } catch(e) {}
+  const btn = document.getElementById('underlayFlipBtn');
+  if (btn) {
+    btn.textContent = chatUnderlayMode === 'up' ? '▲' : '▼';
+    btn.title = chatUnderlayMode === 'up'
+      ? 'Up = Remote main / Local mini  |  Down = Local main / Remote mini'
+      : 'Down = Local main / Remote mini  |  Up = Remote main / Local mini';
+  }
+  syncChatUnderlay();
+  entry('Chat underlay: ' + (chatUnderlayMode === 'up' ? 'remote main / local mini' : 'local main / remote mini'), 'sys');
+}
+
+// Init flip button to saved state
+(function() {
+  const btn = document.getElementById('underlayFlipBtn');
+  if (btn) btn.textContent = chatUnderlayMode === 'up' ? '▲' : '▼';
+})();
 
 function updateMiniVideoVisibility() {
   ['miniLocalOverlay', 'miniRemoteOverlay'].forEach(id => {
@@ -3044,7 +3123,7 @@ function _doLeave() {
     localStream = null;
   }
   // Clear all video elements immediately — no stale frames
-  ['localVideo','remoteVideo','miniRemoteVideo','miniLocalVideo','miniChatVideo'].forEach(id => {
+  ['localVideo','remoteVideo','miniRemoteVideo','miniLocalVideo','miniChatVideo','chatUnderlayMain','chatUnderlayMini'].forEach(id => {
     const el = document.getElementById(id);
     if (el) { try { el.pause(); el.srcObject = null; el.load(); } catch(e){} }
   });
@@ -3071,7 +3150,7 @@ function handleRemoteLeave() {
   leftPermanently = false; // we haven't left yet, remote did
   remotePeerLeft = true;
   // Clear remote video immediately
-  ['remoteVideo','miniRemoteVideo','miniChatVideo'].forEach(id => {
+  ['remoteVideo','miniRemoteVideo','miniChatVideo','chatUnderlayMain','chatUnderlayMini'].forEach(id => {
     const el = document.getElementById(id);
     if (el) { try { el.pause(); el.srcObject = null; el.load(); } catch(e){} }
   });
