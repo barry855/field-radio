@@ -2965,8 +2965,8 @@ function attachCall(c) {
     duplexBar.className = 'duplex-overlay live';
     syncControls();
     startQualityPolling();
-    // Ensure data channel is open
-    openDataConn();
+    // Alpha owns data channel initiation — do not call openDataConn() here.
+    // Bravo only accepts inbound DCs via peer.on('connection').
     // Re-enforce mute/unmute state now that WebRTC senders are live.
     applyMuteToSenders();
   });
@@ -3076,6 +3076,7 @@ function handleRemoteLeave() {
 }
 
 function onDrop() {
+  clearTimeout(retryTimer);
   saveRecordingIfActive();
   linked = false;
   call = null;
