@@ -1,6 +1,6 @@
 
 <!DOCTYPE html>
-<!-- saved from url=(0052)file:///C:/Users/barry/Downloads/radio-alpha_23.html -->
+<!-- Field Radio v6 — ALPHA -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1300,7 +1300,7 @@
   </div>
 
 <audio id="remoteAudio" autoplay="" playsinline=""></audio>
-<div id="lightbox"><img id="lightboxImg" src="file:///C:/Users/barry/Downloads/radio-alpha_23.html" alt=""></div>
+<div id="lightbox"><img id="lightboxImg" src="" alt=""></div>
 
 <script>
 // ── Audio tone engine (defined first so all code can call playTone) ──────────
@@ -1727,6 +1727,7 @@ function startLoginTimeout() {
 }
 // If this page load is the result of a refresh, show the reconnect overlay
 // over the login box until auto-login fires (sessionStorage survives reload)
+let _loginTimerStarted = false;
 (function() {
   try {
     if (sessionStorage.getItem('fieldRadioRefreshing') === '1') {
@@ -1735,17 +1736,15 @@ function startLoginTimeout() {
       document.getElementById('sessionOverlay').style.display = 'flex';
       prefillLogin();
       startLoginTimeout();
+      _loginTimerStarted = true;
     }
   } catch(e) {}
 })();
 
-// Only start login timeout if the overlay wasn't already dismissed by auto-login,
-// AND a code was pre-filled (otherwise auto-login fires with an empty code and freezes)
-if (document.getElementById('sessionOverlay').style.display !== 'none') {
-  const _prefillCode = localStorage.getItem('alpha_last_code');
-  if (_prefillCode) {
-    startLoginTimeout();
-  }
+// Only start login timeout if the overlay wasn't already dismissed by auto-login
+// and the timer wasn't already started by the refresh-detection IIFE above
+if (!_loginTimerStarted && document.getElementById('sessionOverlay').style.display !== 'none') {
+  startLoginTimeout();
 }
 
 // Restart login timer if overlay re-appears (handled inside resetLockTimer above)
@@ -1964,6 +1963,23 @@ function flipChatUnderlay() {
   const btn = document.getElementById('underlayFlipBtn');
   if (btn) btn.textContent = chatUnderlayMode === 'up' ? '▲' : '▼';
   syncChatUnderlay();
+}
+
+
+  const frag = document.createDocumentFragment();
+  const re = /(https?:\/\/[^\s]+)/g;
+  let last = 0, m;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) frag.appendChild(document.createTextNode(text.slice(last, m.index)));
+    const a = document.createElement('a');
+    a.href = m[1]; a.textContent = m[1];
+    a.target = '_blank'; a.rel = 'noopener noreferrer';
+    a.style.cssText = 'color:inherit;text-decoration:underline;word-break:break-all;';
+    frag.appendChild(a);
+    last = re.lastIndex;
+  }
+  if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+  return frag;
 }
 
 // ── Chat history (localStorage) ──────────────────────────────
@@ -2264,23 +2280,6 @@ function _toggleLock(wrap) {
     wrap.classList.add('peek-locked');
     _peekOrig(wrap);
   }
-}
-
-function linkify(text) {
-  const frag = document.createDocumentFragment();
-  const re = /(https?:\/\/[^\s]+)/g;
-  let last = 0, m;
-  while ((m = re.exec(text)) !== null) {
-    if (m.index > last) frag.appendChild(document.createTextNode(text.slice(last, m.index)));
-    const a = document.createElement('a');
-    a.href = m[1]; a.textContent = m[1];
-    a.target = '_blank'; a.rel = 'noopener noreferrer';
-    a.style.cssText = 'color:inherit;text-decoration:underline;word-break:break-all;';
-    frag.appendChild(a);
-    last = re.lastIndex;
-  }
-  if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
-  return frag;
 }
 
 function addBubble(text, mine, ts, save = true) {
