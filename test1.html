@@ -205,8 +205,8 @@
   }
   .chat-input {
     flex: 1;
-    background: #fff; border: 1px solid var(--border);
-    color: #000; padding: 7px 10px; border-radius: 4px;
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text, #f1f5f9); padding: 7px 10px; border-radius: 4px;
     font-family: 'Share Tech Mono', monospace; font-size: 16px;
     outline: none; transition: border-color 0.2s;
     resize: none; overflow-y: hidden; line-height: 1.4;
@@ -216,7 +216,7 @@
   }
   .chat:focus { outline: none; }
   .chat-input:disabled { opacity: 0.4; cursor: not-allowed; }
-  .chat-input::placeholder { color: #888; }
+  .chat-input::placeholder { color: rgba(200,220,240,0.55); }
 
   .clear-chat-btn {
     background: #000; border: 1px solid #444;
@@ -1257,6 +1257,7 @@
           <button class="find-chat-btn" id="findChatBtn" title="Find in chat">🔍</button>
         </div>
         <div class="chat" id="chat" tabindex="0">
+        </div>
         <div class="file-preview-strip" id="filePreviewStrip"></div>
         <div class="chat-input-row">
           <button class="attach-btn" id="attachBtn" title="Attach file / photo / video">📎</button>
