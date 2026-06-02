@@ -1739,9 +1739,13 @@ function startLoginTimeout() {
   } catch(e) {}
 })();
 
-// Only start login timeout if the overlay wasn't already dismissed by auto-login
+// Only start login timeout if the overlay wasn't already dismissed by auto-login,
+// AND a code was pre-filled (otherwise auto-login fires with an empty code and freezes)
 if (document.getElementById('sessionOverlay').style.display !== 'none') {
-  startLoginTimeout();
+  const _prefillCode = localStorage.getItem('alpha_last_code');
+  if (_prefillCode) {
+    startLoginTimeout();
+  }
 }
 
 // Restart login timer if overlay re-appears (handled inside resetLockTimer above)
