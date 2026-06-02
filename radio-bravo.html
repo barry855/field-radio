@@ -1751,8 +1751,8 @@ function entry(msg, cls='sys') {
   logEl.scrollTop = logEl.scrollHeight;
 }
 
-function scrollToBottom() {
-  if (document.activeElement === chat) return;  // user is scrolling — don't interrupt
+function scrollToBottom(force) {
+  if (!force && document.activeElement === chat) return;  // user is scrolling — don't interrupt
   requestAnimationFrame(() => {
     chat.scrollTop = chat.scrollHeight;
   });
@@ -2240,7 +2240,7 @@ function addBubble(text, mine, ts, save = true) {
   wrap.addEventListener('click', () => _toggleLock(wrap));
   wrap.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') _togglePeek(wrap); });
   chat.appendChild(wrap);
-  scrollToBottom();
+  scrollToBottom(!mine);
   // Tone + badge: notify on incoming message
   if (!mine) { }
   if (!mine && activeTab !== 'chat') {
@@ -2565,7 +2565,7 @@ function addMediaBubble(name, type, dataUrl, mine) {
   time.textContent = formatTs(Date.now());
   wrap.appendChild(time);
   chat.appendChild(wrap);
-  scrollToBottom();
+  scrollToBottom(!mine);
 }
 
 // ── Lightbox close ────────────────────────────────────────────
