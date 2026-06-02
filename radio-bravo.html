@@ -277,6 +277,13 @@
   }
   .find-chat-btn:hover, .find-chat-btn:active { opacity: 1; border-color: var(--accent2, #00ffaa); color: var(--accent2); }
   .find-chat-btn.active { opacity: 1; border-color: var(--accent2, #00ffaa); color: var(--accent2); }
+  .mini-chat-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+    margin-bottom: 4px;
+  }
   .mini-chat-btn {
     background: #000;
     border: 1px solid var(--border);
@@ -290,59 +297,10 @@
     cursor: pointer;
     opacity: 0.65;
     transition: opacity 0.15s, border-color 0.15s, color 0.15s;
+    margin-bottom: 4px;
   }
   .mini-chat-btn:hover, .mini-chat-btn:active { opacity: 1; border-color: var(--accent2, #00ffaa); color: var(--accent2); }
   .mini-chat-btn.active { opacity: 1; border-color: var(--accent2, #00ffaa); color: var(--accent2); }
-
-  /* Mini overlay floats inside the chat message box */
-  .chat { position: relative; }
-  #miniChatOverlay {
-    position: absolute; top: 10px; right: 10px; z-index: 10;
-    width: clamp(100px, 28%, 160px); aspect-ratio: 16/9;
-    background: #000; border: 1px solid var(--accent2);
-    border-radius: 4px; overflow: hidden;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
-    cursor: grab; user-select: none;
-  }
-  #miniChatOverlay.hidden { display: none; }
-  #miniChatOverlay video { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
-
-  /* ── Full-chat video underlay ─────────────────────────────── */
-  #chatUnderlayMain {
-    position: absolute; inset: 0; z-index: 1;
-    width: 100%; height: 100%;
-    object-fit: cover; pointer-events: none;
-    opacity: 0.22;
-    border-radius: 4px;
-  }
-  #chatUnderlayMini {
-    position: absolute; bottom: 10px; right: 10px; z-index: 2;
-    width: clamp(72px, 20%, 110px); aspect-ratio: 16/9;
-    object-fit: cover; pointer-events: none;
-    opacity: 0.32;
-    border-radius: 3px;
-    border: 1px solid rgba(0,212,255,0.3);
-  }
-  #chatUnderlayMain.no-stream, #chatUnderlayMini.no-stream { display: none; }
-
-  /* ── Up/Down arrow button in chat-btn-bar ─────────────────── */
-  .underlay-flip-btn {
-    background: #000;
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    color: var(--text-dim);
-    font-size: 13px;
-    font-family: 'Orbitron', sans-serif;
-    letter-spacing: 1px;
-    line-height: 1;
-    padding: 4px 7px;
-    cursor: pointer;
-    opacity: 0.65;
-    transition: opacity 0.15s, border-color 0.15s, color 0.15s;
-    user-select: none;
-  }
-  .underlay-flip-btn:hover, .underlay-flip-btn:active { opacity: 1; border-color: var(--accent); color: var(--accent); }
-  .underlay-flip-btn.active { opacity: 1; border-color: var(--accent); color: var(--accent); }
 
   /* ── Chat find bar ──────────────────────────────────────── */
 
@@ -350,6 +308,14 @@
   .chat-btn-bar {
     display: flex; gap: 6px; flex-shrink: 0;
     margin-bottom: 6px; align-items: center;
+  }
+  .chat-btn-bar .mini-chat-wrapper {
+    margin-bottom: 0; margin-left: auto;
+    flex-direction: row; align-items: center; gap: 6px;
+  }
+  .chat-btn-bar .mini-chat-wrapper .mini-video-overlay {
+    position: relative; top: auto; left: auto; right: auto;
+    width: 80px; flex-shrink: 0;
   }
   .chat-find-bar {
     display: none; align-items: center; gap: 6px;
@@ -408,13 +374,13 @@
 
   /* ── File attach button ─────────────────────────────────── */
   .attach-btn {
-    background: #000; border: 1px solid var(--border);
+    background: var(--btn-bg); border: 1px solid var(--border);
     color: var(--text-dim); padding: 6px 10px; border-radius: 4px;
     font-size: 14px; cursor: pointer;
     transition: background 0.15s, border-color 0.15s, color 0.15s;
     flex-shrink: 0; line-height: 1;
   }
-  .attach-btn:hover { background: #1a1a1a; border-color: var(--accent2); color: var(--accent2); }
+  .attach-btn:hover { background: var(--btn-hover); border-color: var(--accent2); color: var(--accent2); }
 
   /* ── File preview strip ─────────────────────────────────── */
   .file-preview-strip {
@@ -478,15 +444,15 @@
   #lightbox img { max-width: 90vw; max-height: 90vh; border-radius: 6px; box-shadow: 0 0 40px rgba(0,255,159,0.3); }
 
   .btn {
-    background: #000; border: 1px solid var(--border);
+    background: var(--btn-bg); border: 1px solid var(--border);
     color: var(--text); padding: 6px 14px; border-radius: 4px;
     font-family: 'Share Tech Mono', monospace; font-size: 12px;
     cursor: pointer; transition: background 0.15s, border-color 0.15s, color 0.15s;
     white-space: nowrap; letter-spacing: 0.5px;
     touch-action: manipulation;
   }
-  .btn:hover  { background: #1a1a1a; border-color: #2a4060; }
-  .btn:active { background: #222; }
+  .btn:hover  { background: var(--btn-hover); border-color: #2a4060; }
+  .btn:active { background: var(--btn-active); }
   .btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
   /* ── duplex status bar ── */
@@ -1296,17 +1262,15 @@
           <button class="save-chat-btn" onclick="saveChatToFile()" title="Save chat as HTML">💾</button>
           <button class="clear-chat-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" title="Clear chat history">🗑</button>
           <button class="find-chat-btn" id="findChatBtn" title="Find in chat">🔍</button>
-          <button class="mini-chat-btn active" id="miniChatBtn" onclick="toggleMiniChatOverlay()" title="Toggle mini remote screen">📺</button>
-          <button class="underlay-flip-btn active" id="underlayFlipBtn" onclick="flipChatUnderlay()" title="Up = Remote main / Local mini  |  Down = Local main / Remote mini">▲</button>
-        </div>
-        <div class="chat" id="chat" tabindex="0">
-          <video id="chatUnderlayMain" autoplay playsinline muted></video>
-          <video id="chatUnderlayMini" autoplay playsinline muted></video>
-          <div class="mini-video-overlay" id="miniChatOverlay">
-            <video id="miniChatVideo" autoplay="" playsinline=""></video>
-            <span class="video-label">REMOTE</span>
+          <div class="mini-chat-wrapper">
+            <button class="mini-chat-btn active" id="miniChatBtn" onclick="toggleMiniChatOverlay()" title="Toggle mini remote screen">📺</button>
+            <div class="mini-video-overlay" id="miniChatOverlay">
+              <video id="miniChatVideo" autoplay="" playsinline=""></video>
+              <span class="video-label">REMOTE</span>
+            </div>
           </div>
         </div>
+        <div class="chat" id="chat" tabindex="0"></div>
         <div class="file-preview-strip" id="filePreviewStrip"></div>
         <div class="chat-input-row">
           <button class="attach-btn" id="attachBtn" title="Attach file / photo / video">📎</button>
@@ -1852,8 +1816,6 @@ function syncMiniVideos() {
     miniChatVideo.srcObject = remoteVideo.srcObject;
   }
   if (miniChatOverlay) miniChatOverlay.classList.toggle('no-video', !(remoteVideo && remoteVideo.srcObject));
-  // sync chat underlay
-  if (typeof syncChatUnderlay === 'function') syncChatUnderlay();
 }
 
 function updateMiniVideoVisibility() {
@@ -1939,39 +1901,6 @@ function toggleMiniChatOverlay() {
       miniChatVideo.srcObject = remoteVideo.srcObject;
     }
   }
-}
-
-// ── Chat video underlay (full-area background video) ──────────
-// 'up'   = remote main / local mini
-// 'down' = local main / remote mini
-let chatUnderlayMode = 'up';
-
-function syncChatUnderlay() {
-  const mainEl  = document.getElementById('chatUnderlayMain');
-  const miniEl  = document.getElementById('chatUnderlayMini');
-  const remoteV = document.getElementById('remoteVideo');
-  if (!mainEl || !miniEl) return;
-
-  const remoteStream = remoteV ? remoteV.srcObject : null;
-  const localStream_ = typeof localStream !== 'undefined' ? localStream : null;
-
-  if (chatUnderlayMode === 'up') {
-    if (mainEl.srcObject !== remoteStream) mainEl.srcObject = remoteStream;
-    if (miniEl.srcObject !== localStream_) miniEl.srcObject = localStream_;
-  } else {
-    if (mainEl.srcObject !== localStream_) mainEl.srcObject = localStream_;
-    if (miniEl.srcObject !== remoteStream) miniEl.srcObject = remoteStream;
-  }
-
-  mainEl.classList.toggle('no-stream', !mainEl.srcObject);
-  miniEl.classList.toggle('no-stream', !miniEl.srcObject);
-}
-
-function flipChatUnderlay() {
-  chatUnderlayMode = (chatUnderlayMode === 'up') ? 'down' : 'up';
-  const btn = document.getElementById('underlayFlipBtn');
-  if (btn) btn.textContent = chatUnderlayMode === 'up' ? '▲' : '▼';
-  syncChatUnderlay();
 }
 
 function linkify(text) {
@@ -2668,10 +2597,13 @@ function toggleLogPanel() {
 }
 
 function init() {
-  if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+  if (location.protocol !== 'https:' && location.protocol !== 'file:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
     entry('ERROR: HTTPS required for mic access', 'err');
     entry('Please open this page over HTTPS', 'err');
     return;
+  }
+  if (location.protocol === 'file:') {
+    entry('Running from local file — mic/camera may need manual permission grant in browser', 'sys');
   }
   // Real WebRTC check — PeerJS error message can be misleading
   if (typeof RTCPeerConnection === 'undefined') {
@@ -3082,6 +3014,19 @@ let leftPermanently = false;
 let remotePeerLeft = false;
 let peerRefreshing  = false;  // true when either side is doing a refresh-reload
 
+function exportSysLog() {
+  try {
+    const entries = Array.from(logEl.querySelectorAll('.log-entry'))
+      .map(el => el.textContent).join('\n');
+    const blob = new Blob([entries], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'TempLog.txt';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  } catch(e) { console.warn('Log export failed:', e); }
+}
 
 function leaveSession() {
   leftPermanently = true;
@@ -3110,6 +3055,8 @@ function _doLeave() {
   if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
   if (peer)  { try { peer.destroy(); } catch(e){} peer = null; }
   linked = false;
+  // Export sys log before closing
+  exportSysLog();
   // Close window
   window.close();
   // Fallback if window.close() is blocked — show ended screen (do NOT reload, that returns to login)
