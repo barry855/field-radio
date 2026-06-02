@@ -2726,6 +2726,9 @@ function startPeer() {
       // Close the dead outgoing call so its 'close' event doesn't trigger a
       // competing onDrop → retryTimer chain alongside this one
       if (call) { try { call.close(); } catch(ex) {} call = null; }
+      // Clear stale pendingDC so the next dial() can open a fresh data channel
+      if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
+      pendingDC = false;
       retryTimer = setTimeout(dial, 5000);
       return;
     }
