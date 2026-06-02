@@ -1235,7 +1235,6 @@
       <div class="channel-row" style="flex-shrink:0; padding:4px 0;">
         <button class="media-btn video-off-state" id="videoBtn" onclick="toggleVideo()">Video Off</button>
         <button class="media-btn" id="audioBtn" onclick="toggleAudio()">Audio On</button>
-        <button class="media-btn" id="miniBtn" onclick="toggleMiniVideo()">Mini Off</button>
         <button class="media-btn" id="screenBtn" onclick="toggleScreenShare()">Share Off</button>
         <button class="leave-btn" id="leaveBtn" onclick="leaveSession()">✕ Leave</button>
       </div>
@@ -1259,10 +1258,7 @@
             <span class="duplex-overlay" id="duplexBar">OFFLINE</span>
           </div>
         </div>
-        <div class="mini-video-overlay hidden" id="miniRemoteOverlay">
-          <video id="miniRemoteVideo" autoplay="" playsinline=""></video>
-          <span class="video-label">ALPHA</span>
-        </div>
+
       </div>
     </div>
     <!-- REMOTE TAB -->
@@ -1270,7 +1266,6 @@
       <div class="channel-row" style="flex-shrink:0; padding:4px 0;">
         <button class="media-btn video-off-state" id="videoBtn2" onclick="toggleVideo()">Video Off</button>
         <button class="media-btn" id="audioBtn2" onclick="toggleAudio()">Audio On</button>
-        <button class="media-btn" id="miniBtn2" onclick="toggleMiniVideo()">Mini Off</button>
         <button class="media-btn" id="screenBtn2" onclick="toggleScreenShare()">Share Off</button>
         <button class="leave-btn" id="leaveBtn2" onclick="leaveSession()">✕ Leave</button>
       </div>
@@ -1294,10 +1289,7 @@
             <span class="duplex-overlay" id="duplexBar2">OFFLINE</span>
           </div>
         </div>
-        <div class="mini-video-overlay hidden" id="miniLocalOverlay">
-          <video id="miniLocalVideo" autoplay="" playsinline="" muted=""></video>
-          <span class="video-label">BRAVO</span>
-        </div>
+
       </div>
     </div>
     <!-- CHAT TAB -->
@@ -1322,7 +1314,6 @@
           <button class="clear-chat-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" title="Clear chat history">🗑</button>
           <button class="find-chat-btn" id="findChatBtn" title="Find in chat">🔍</button>
           <button class="underlay-flip-btn active" id="underlayFlipBtn" onclick="flipChatUnderlay()" title="Up = Remote main / Local mini  |  Down = Local main / Remote mini">▲</button>
-          <button class="mini-chat-btn active" id="miniChatBtn" onclick="toggleMiniChatOverlay()" title="Toggle mini remote screen">📺</button>
         </div>
         <div class="chat" id="chat" tabindex="0">
           <video id="chatUnderlayMain" autoplay playsinline muted></video>
@@ -1333,11 +1324,7 @@
           <button class="attach-btn" id="attachBtn" title="Attach file / photo / video">📎</button>
           <input type="file" id="fileInput" multiple="" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx" style="display:none">
           <div class="chat-input-wrap" id="chatInputWrap">
-            <div class="mini-video-overlay hidden" id="miniChatOverlay">
-              <video id="miniChatVideo" autoplay="" playsinline=""></video>
-              <span class="video-label">REMOTE</span>
-            </div>
-            <textarea class="chat-input" id="chatInput" placeholder="TYPE MESSAGE…" rows="1"></textarea>
+<textarea class="chat-input" id="chatInput" placeholder="TYPE MESSAGE…" rows="1"></textarea>
           </div>
           <button class="btn" id="sendBtn">SEND</button>
         </div>
@@ -1842,7 +1829,6 @@ function setStatus(state) {
 
 let activeTab = 'remote';
 let unreadCount = 0;
-let miniVideoVisible = true;
 const msgBadge = document.getElementById('msgBadge');
 
 function syncControls() {
@@ -1868,26 +1854,6 @@ function switchTab(tab) {
 }
 
 function syncMiniVideos() {
-  const miniLocal = document.getElementById('miniLocalVideo');
-  const miniRemote = document.getElementById('miniRemoteVideo');
-  const miniLocalOverlay = document.getElementById('miniLocalOverlay');
-  const miniRemoteOverlay = document.getElementById('miniRemoteOverlay');
-  const remoteVideo = document.getElementById('remoteVideo');
-  if (miniLocal && localStream && miniLocal.srcObject !== localStream) {
-    miniLocal.srcObject = localStream;
-  }
-  if (miniRemote && remoteVideo && miniRemote.srcObject !== remoteVideo.srcObject) {
-    miniRemote.srcObject = remoteVideo.srcObject;
-  }
-  if (miniLocalOverlay) miniLocalOverlay.classList.toggle('no-video', !localStream);
-  if (miniRemoteOverlay) miniRemoteOverlay.classList.toggle('no-video', !(remoteVideo && remoteVideo.srcObject));
-  // sync mini chat overlay
-  const miniChatVideo = document.getElementById('miniChatVideo');
-  const miniChatOverlay = document.getElementById('miniChatOverlay');
-  if (miniChatVideo && remoteVideo && miniChatVideo.srcObject !== remoteVideo.srcObject) {
-    miniChatVideo.srcObject = remoteVideo.srcObject;
-  }
-  if (miniChatOverlay) miniChatOverlay.classList.toggle('no-video', !(remoteVideo && remoteVideo.srcObject));
   syncChatUnderlay();
 }
 
@@ -1936,22 +1902,7 @@ function flipChatUnderlay() {
   if (btn) btn.textContent = chatUnderlayMode === 'up' ? '▲' : '▼';
 })();
 
-function updateMiniVideoVisibility() {
-  ['miniLocalOverlay', 'miniRemoteOverlay'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.classList.toggle('hidden', !miniVideoVisible);
-  });
-  [document.getElementById('miniBtn'), document.getElementById('miniBtn2')].forEach(btn => {
-    if (btn) { btn.textContent = miniVideoVisible ? 'Mini Off' : 'Mini On'; btn.classList.toggle('active-on', !miniVideoVisible); }
-  });
-  syncMiniVideos();
-}
-
-function toggleMiniVideo() {
-  miniVideoVisible = !miniVideoVisible;
-  updateMiniVideoVisibility();
-}
-updateMiniVideoVisibility();
+// Mini overlay removed
 
 // ── Draggable mini video overlays ────────────────────────────
 function makeDraggable(el) {
@@ -1998,28 +1949,9 @@ function makeDraggable(el) {
     document.removeEventListener('touchend', onDragEnd);
   }
 }
-['miniLocalOverlay','miniRemoteOverlay','miniChatOverlay'].forEach(id => {
-  const el = document.getElementById(id);
-  if (el) makeDraggable(el);
-});
 
-// ── Mini remote screen in Chat tab ───────────────────────────
-let miniChatVisible = true;
-function toggleMiniChatOverlay() {
-  miniChatVisible = !miniChatVisible;
-  const overlay = document.getElementById('miniChatOverlay');
-  const btn     = document.getElementById('miniChatBtn');
-  if (!overlay) return;
-  overlay.classList.toggle('hidden', !miniChatVisible);
-  if (btn) btn.classList.toggle('active', miniChatVisible);
-  if (miniChatVisible) {
-    const miniChatVideo = document.getElementById('miniChatVideo');
-    const remoteVideo   = document.getElementById('remoteVideo');
-    if (miniChatVideo && remoteVideo && miniChatVideo.srcObject !== remoteVideo.srcObject) {
-      miniChatVideo.srcObject = remoteVideo.srcObject;
-    }
-  }
-}
+
+// Mini chat overlay removed
 
 function linkify(text) {
   const frag = document.createDocumentFragment();
@@ -3101,11 +3033,6 @@ function attachCall(c) {
     remoteVideo.srcObject = stream;
     syncMiniVideos();
     document.getElementById('remoteWrap').classList.remove('waiting', 'stale');
-    // Clear stale from mini overlays when stream reconnects
-    ['miniRemoteOverlay', 'miniChatOverlay'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.classList.remove('stale');
-    });
     updateRemoteVideoState(true, stream.getVideoTracks().length > 0);
     stream.getVideoTracks().forEach(track => {
       track.addEventListener('mute', () => updateRemoteVideoState(false, true));
@@ -3183,7 +3110,7 @@ function _doLeave() {
     localStream = null;
   }
   // Clear all video elements immediately — no stale frames
-  ['localVideo','remoteVideo','miniRemoteVideo','miniLocalVideo','miniChatVideo','chatUnderlayMain','chatUnderlayMini'].forEach(id => {
+  ['localVideo','remoteVideo','chatUnderlayMain','chatUnderlayMini'].forEach(id => {
     const el = document.getElementById(id);
     if (el) { try { el.pause(); el.srcObject = null; el.load(); } catch(e){} }
   });
@@ -3208,7 +3135,7 @@ function handleRemoteLeave() {
   leftPermanently = false; // we haven't left yet, remote did
   remotePeerLeft = true;
   // Clear remote video immediately
-  ['remoteVideo','miniRemoteVideo','miniChatVideo','chatUnderlayMain','chatUnderlayMini'].forEach(id => {
+  ['remoteVideo','chatUnderlayMain','chatUnderlayMini'].forEach(id => {
     const el = document.getElementById(id);
     if (el) { try { el.pause(); el.srcObject = null; el.load(); } catch(e){} }
   });
@@ -3217,10 +3144,6 @@ function handleRemoteLeave() {
   // Remove stale/waiting classes, keep video wrap clean
   const rw = document.getElementById('remoteWrap');
   if (rw) rw.className = 'video-wrap';
-  ['miniRemoteOverlay','miniChatOverlay'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.classList.remove('stale','no-video');
-  });
   // Stop quality polling
   stopQualityPolling();
   entry('Remote user left the session', 'sys');
@@ -3249,10 +3172,7 @@ function onDrop() {
   document.getElementById('remoteWrap').classList.remove('video-off', 'no-video', 'waiting');
   document.getElementById('remoteWrap').classList.add('stale');
   // Mark mini remote overlays as stale too
-  ['miniRemoteOverlay', 'miniChatOverlay'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) { el.classList.remove('no-video'); el.classList.add('stale'); }
-  });
+  
   setStatus('standby');
   if (leftPermanently) return; // permanent leave handled by leaveSession()
   if (remotePeerLeft) return;  // remote sent leave signal — stay on leave screen
@@ -3430,18 +3350,10 @@ async function toggleRecordRemote() {
 
   const mimeType = preferredMime();
   let stopLoop = null, recStream;
-  const withMini = !!miniVideoVisible;
-
-  if (withMini) {
-    const miniLocalVideo = document.getElementById('miniLocalVideo');
-    const comp = buildCompositeStream(remoteVideo, miniLocalVideo, aDest.stream.getAudioTracks());
-    recStream = comp.stream; stopLoop = comp.stopLoop;
-  } else {
-    recStream = new MediaStream([
+  recStream = new MediaStream([
       ...remoteVideo.srcObject.getVideoTracks(),
       ...aDest.stream.getAudioTracks()
     ]);
-  }
 
   recRemoteChunks = [];
   recRemote = new MediaRecorder(recStream, { mimeType });
@@ -3454,7 +3366,7 @@ async function toggleRecordRemote() {
   };
   recRemote.start(1000);
   btn.textContent = 'Record Remote Off'; btn.classList.add('recording');
-  entry(`Remote recording started${withMini ? ' (with local mini overlay)' : ''}…`, 'ok');
+  entry('Remote recording started…', 'ok');
 }
 
 async function toggleRecordLocal() {
@@ -3483,19 +3395,11 @@ async function toggleRecordLocal() {
 
   const mimeType = preferredMime();
   let stopLoop = null, recStream;
-  const withMini = !!miniVideoVisible;
-
-  if (withMini) {
-    const localVideo      = document.getElementById('localVideo');
-    const miniRemoteVideo = document.getElementById('miniRemoteVideo');
-    const comp = buildCompositeStream(localVideo, miniRemoteVideo, aDest.stream.getAudioTracks());
-    recStream = comp.stream; stopLoop = comp.stopLoop;
-  } else {
-    recStream = new MediaStream([
+  const localVideo = document.getElementById('localVideo');
+  recStream = new MediaStream([
       ...localStream.getVideoTracks(),
       ...aDest.stream.getAudioTracks()
     ]);
-  }
 
   recLocalChunks = [];
   recLocal = new MediaRecorder(recStream, { mimeType });
@@ -3508,7 +3412,7 @@ async function toggleRecordLocal() {
   };
   recLocal.start(1000);
   btn.textContent = '⏹ Stop & Save'; btn.classList.add('recording');
-  entry(`Local recording started${withMini ? ' (with remote mini overlay)' : ''}…`, 'ok');
+  entry('Local recording started…', 'ok');
 }
 
 function toggleRecord() {}
@@ -3809,11 +3713,9 @@ async function flipCamera() {
   // We must: (1) detach srcObject from all video elements, (2) stop & remove the
   // track, (3) wait for hardware to fully release, then (4) re-acquire.
   const localVideoEl = document.getElementById('localVideo');
-  const miniLocalEl  = document.getElementById('miniLocalVideo');
 
   // Detach video elements so the hardware lock is released
   if (localVideoEl) localVideoEl.srcObject = null;
-  if (miniLocalEl)  miniLocalEl.srcObject  = null;
 
   const oldVideoTrack = localStream.getVideoTracks()[0] || null;
   if (oldVideoTrack) {
@@ -3851,9 +3753,7 @@ async function flipCamera() {
     // Hard re-attach — null first so the browser treats it as a fresh assignment
     // even if srcObject reference hasn't changed. This clears any frozen/blurred frame.
     const _lv = document.getElementById('localVideo');
-    const _mlv = document.getElementById('miniLocalVideo');
     if (_lv)  { _lv.srcObject  = null; _lv.srcObject  = localStream; }
-    if (_mlv) { _mlv.srcObject = null; _mlv.srcObject = localStream; }
     syncMiniVideos();
 
     // Replace track in active WebRTC call
@@ -3872,9 +3772,7 @@ async function flipCamera() {
       const recoveryTrack  = recoveryStream.getVideoTracks()[0];
       localStream.addTrack(recoveryTrack);
       const _lv2  = document.getElementById('localVideo');
-      const _mlv2 = document.getElementById('miniLocalVideo');
       if (_lv2)  { _lv2.srcObject  = null; _lv2.srcObject  = localStream; }
-      if (_mlv2) { _mlv2.srcObject = null; _mlv2.srcObject = localStream; }
       syncMiniVideos();
       entry('Camera restored to original.', 'ok');
     } catch(re) {
