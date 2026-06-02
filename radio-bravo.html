@@ -638,22 +638,8 @@
   .session-go:hover { background: var(--btn-hover); border-color: var(--accent2); }
 
   /* ── Reconnect overlay (hides login box on auto-disconnect) ── */
-  .reconnect-overlay {
-    display: none;
-    position: fixed; inset: 0;
-    background: #000;
-    align-items: center; justify-content: center;
-    z-index: 9999;
-    border-radius: 0;
-  }
-  .reconnect-overlay.active { display: flex; }
-  .reconnect-overlay p {
-    color: #ffffff;
-    font-family: 'Orbitron', sans-serif;
-    font-size: 28px; letter-spacing: 3px;
-    text-align: center; line-height: 1.7;
-    padding: 24px;
-  }
+  /* ── Reconnect overlay — hidden, login screen shown instead ── */
+  .reconnect-overlay { display: none !important; }
 
 
   /* login checkboxes */
@@ -1718,15 +1704,15 @@ function startLoginTimeout() {
     }
   }, 1000);
 }
-// If this page load is the result of a refresh, show the reconnect overlay
-// over the login box until auto-login fires (sessionStorage survives reload)
+// If this page load is the result of a refresh, show the login box and auto-reconnect
 (function() {
   try {
     if (sessionStorage.getItem('fieldRadioRefreshing') === '1') {
       sessionStorage.removeItem('fieldRadioRefreshing');
-      // Show session overlay with reconnect screen on top
+      // Show login box and start auto-reconnect countdown
       document.getElementById('sessionOverlay').style.display = 'flex';
-      showReconnecting();
+      prefillLogin();
+      startLoginTimeout();
     }
   } catch(e) {}
 })();
@@ -3124,7 +3110,6 @@ function onDrop() {
     document.getElementById('sessionOverlay').style.display = 'flex';
     document.getElementById('unitIdDisplay').style.display = 'none';
     prefillLogin();
-    showReconnecting();
     startLoginTimeout();
   }, 400);
 }
@@ -3143,7 +3128,6 @@ function resetLockTimer() {
     document.getElementById('sessionOverlay').style.display = 'flex';
     document.getElementById('unitIdDisplay').style.display = 'none';
     prefillLogin();
-    showReconnecting();
     saveRecordingIfActive();
     if (peer) { peer.destroy(); }
     entry('Session timed out — auto-reconnecting…', 'sys');
@@ -3641,12 +3625,11 @@ function refreshScreen() {
   // Notify remote peer so they auto-refresh in sync
   try { dcSend({ __control: 'refresh' }); } catch(e) {}
   peerRefreshing = true;  // suppress onDrop login redirect
-  // Flag survives the reload so the fresh page shows reconnect overlay
+  // Flag survives the reload so the fresh page auto-reconnects via login countdown
   try { sessionStorage.setItem('fieldRadioRefreshing', '1'); } catch(e) {}
-  // Show black overlay immediately on the refreshing side too
+  // Show login box immediately on the refreshing side too
   document.getElementById('sessionOverlay').style.display = 'flex';
   document.getElementById('unitIdDisplay').style.display = 'none';
-  showReconnecting();
   setTimeout(() => window.location.reload(), 400);
 }
 
