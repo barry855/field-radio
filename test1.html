@@ -1564,7 +1564,7 @@ function startSession() {
   document.body.classList.remove('offline');
   stopPresencePolling();
   const code = document.getElementById('sessionCode').value.trim().toUpperCase().replace(/\s+/g,'');
-  if (!code) { document.getElementById('sessionCode').focus(); return; }
+  if (!code) { document.body.classList.add('offline'); document.getElementById('sessionCode').focus(); return; }
   MY_ID     = 'alpha-' + code;
   REMOTE_ID = 'bravo-' + code;
   // Persist code and checkbox states for next load
@@ -3111,6 +3111,7 @@ function startPeer() {
   });
 
   peer.on('open', () => {
+    document.body.classList.remove('offline');
     entry('Radio online', 'ok');
     setStatus('calling');
     dial();
