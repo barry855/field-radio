@@ -845,6 +845,16 @@
   .mini-video-overlay video {
     width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none;
   }
+  .mini-video-overlay .mini-toggle-btn {
+    position: absolute; top: 3px; right: 3px; z-index: 10;
+    width: 16px; height: 16px; padding: 0;
+    background: rgba(0,0,0,0.65); border: 1px solid var(--accent, #00d4ff);
+    border-radius: 3px; color: var(--accent, #00d4ff);
+    font-size: 9px; line-height: 16px; text-align: center;
+    cursor: pointer; user-select: none; font-family: monospace;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .mini-video-overlay .mini-toggle-btn:hover { background: rgba(0,212,255,0.22); }
   .mini-video-overlay .video-label {
     bottom: 4px; left: 6px; font-size: 8px; letter-spacing: 1px; pointer-events: none;
   }
@@ -1287,6 +1297,7 @@
         <div class="mini-video-overlay hidden" id="miniRemoteOverlay">
           <video id="miniRemoteVideo" autoplay="" playsinline=""></video>
           <span class="video-label">BRAVO</span>
+          <button class="mini-toggle-btn" title="Hide mini" onclick="toggleMiniVideo();event.stopPropagation()">✕</button>
         </div>
       </div>
     </div>
@@ -1322,6 +1333,7 @@
         <div class="mini-video-overlay hidden" id="miniLocalOverlay">
           <video id="miniLocalVideo" autoplay="" playsinline="" muted=""></video>
           <span class="video-label">ALPHA</span>
+          <button class="mini-toggle-btn" title="Hide mini" onclick="toggleMiniVideo();event.stopPropagation()">✕</button>
         </div>
       </div>
     </div>
@@ -2009,8 +2021,13 @@ function makeDraggable(el) {
     const dy = touch.clientY - startY;
     const parent = el.offsetParent || document.body;
     const pr = parent.getBoundingClientRect();
-    const maxLeft = pr.width  - el.offsetWidth;
-    const maxTop  = pr.height - el.offsetHeight;
+    const ps = window.getComputedStyle(parent);
+    const padL = parseFloat(ps.paddingLeft)  || 0;
+    const padT = parseFloat(ps.paddingTop)   || 0;
+    const padR = parseFloat(ps.paddingRight) || 0;
+    const padB = parseFloat(ps.paddingBottom)|| 0;
+    const maxLeft = pr.width  - padL - padR - el.offsetWidth;
+    const maxTop  = pr.height - padT - padB - el.offsetHeight;
     el.style.left = Math.max(0, Math.min(maxLeft, origLeft + dx)) + 'px';
     el.style.top  = Math.max(0, Math.min(maxTop,  origTop  + dy)) + 'px';
   }
