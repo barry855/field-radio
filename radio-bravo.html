@@ -878,6 +878,16 @@
   .mini-video-overlay video {
     width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none;
   }
+  .mini-video-overlay .mini-toggle-btn {
+    position: absolute; top: 3px; right: 3px; z-index: 10;
+    width: 16px; height: 16px; padding: 0;
+    background: rgba(0,0,0,0.65); border: 1px solid var(--accent2, #00ffaa);
+    border-radius: 3px; color: var(--accent2, #00ffaa);
+    font-size: 9px; line-height: 16px; text-align: center;
+    cursor: pointer; user-select: none; font-family: monospace;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .mini-video-overlay .mini-toggle-btn:hover { background: rgba(0,255,170,0.22); }
   .mini-video-overlay .video-label {
     bottom: 4px; left: 6px; font-size: 8px; letter-spacing: 1px; pointer-events: none;
   }
@@ -1293,6 +1303,7 @@
       <div class="channel-row" style="flex-shrink:0; padding:4px 0;">
         <button class="media-btn video-off-state" id="videoBtn" onclick="toggleVideo()">Video Off</button>
         <button class="media-btn" id="audioBtn" onclick="toggleAudio()">Audio On</button>
+        <button class="media-btn" id="miniBtn" onclick="toggleMiniVideo()">Mini Off</button>
         <button class="media-btn" id="screenBtn" onclick="toggleScreenShare()">Share Off</button>
         <button class="leave-btn" id="leaveBtn" onclick="leaveSession()">✕ Leave</button>
       </div>
@@ -1316,7 +1327,11 @@
             <span class="duplex-overlay" id="duplexBar">OFFLINE</span>
           </div>
         </div>
-
+        <div class="mini-video-overlay hidden" id="miniRemoteOverlay">
+          <video id="miniRemoteVideo" autoplay="" playsinline=""></video>
+          <span class="video-label">ALPHA</span>
+          <button class="mini-toggle-btn" title="Hide mini" onclick="toggleMiniVideo();event.stopPropagation()">✕</button>
+        </div>
       </div>
     </div>
     <!-- REMOTE TAB -->
@@ -1324,6 +1339,7 @@
       <div class="channel-row" style="flex-shrink:0; padding:4px 0;">
         <button class="media-btn video-off-state" id="videoBtn2" onclick="toggleVideo()">Video Off</button>
         <button class="media-btn" id="audioBtn2" onclick="toggleAudio()">Audio On</button>
+        <button class="media-btn" id="miniBtn2" onclick="toggleMiniVideo()">Mini Off</button>
         <button class="media-btn" id="screenBtn2" onclick="toggleScreenShare()">Share Off</button>
         <button class="leave-btn" id="leaveBtn2" onclick="leaveSession()">✕ Leave</button>
       </div>
@@ -1347,7 +1363,11 @@
             <span class="duplex-overlay" id="duplexBar2">OFFLINE</span>
           </div>
         </div>
-
+        <div class="mini-video-overlay hidden" id="miniLocalOverlay">
+          <video id="miniLocalVideo" autoplay="" playsinline="" muted=""></video>
+          <span class="video-label">BRAVO</span>
+          <button class="mini-toggle-btn" title="Hide mini" onclick="toggleMiniVideo();event.stopPropagation()">✕</button>
+        </div>
       </div>
     </div>
     <!-- CHAT TAB -->
@@ -1947,6 +1967,16 @@ function switchTab(tab) {
 }
 
 function syncMiniVideos() {
+  const miniLocal  = document.getElementById('miniLocalVideo');
+  const miniRemote = document.getElementById('miniRemoteVideo');
+  const miniLocalOverlay  = document.getElementById('miniLocalOverlay');
+  const miniRemoteOverlay = document.getElementById('miniRemoteOverlay');
+  const localV  = document.getElementById('localVideo');
+  const remoteV = document.getElementById('remoteVideo');
+  if (miniLocal  && localV  && miniLocal.srcObject  !== localV.srcObject)  miniLocal.srcObject  = localV.srcObject;
+  if (miniRemote && remoteV && miniRemote.srcObject !== remoteV.srcObject)  miniRemote.srcObject = remoteV.srcObject;
+  if (miniLocalOverlay)  miniLocalOverlay.classList.toggle('no-video',  !(localV  && localV.srcObject));
+  if (miniRemoteOverlay) miniRemoteOverlay.classList.toggle('no-video', !(remoteV && remoteV.srcObject));
   syncChatUnderlay();
 }
 
@@ -1969,7 +1999,23 @@ function flipChatUnderlay() { /* removed */ }
 
 // Init flip button removed
 
-// Mini overlay removed
+// ── Mini video toggle ─────────────────────────────────────────
+let miniVideoVisible = true;
+function updateMiniVideoVisibility() {
+  ['miniLocalOverlay', 'miniRemoteOverlay'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('hidden', !miniVideoVisible);
+  });
+  [document.getElementById('miniBtn'), document.getElementById('miniBtn2')].forEach(btn => {
+    if (btn) { btn.textContent = miniVideoVisible ? 'Mini Off' : 'Mini On'; btn.classList.toggle('active-on', !miniVideoVisible); }
+  });
+  syncMiniVideos();
+}
+function toggleMiniVideo() {
+  miniVideoVisible = !miniVideoVisible;
+  updateMiniVideoVisibility();
+}
+updateMiniVideoVisibility();
 
 // ── Draggable mini video overlays ────────────────────────────
 function makeDraggable(el) {
@@ -2003,8 +2049,13 @@ function makeDraggable(el) {
     const dy = touch.clientY - startY;
     const parent = el.offsetParent || document.body;
     const pr = parent.getBoundingClientRect();
-    const maxLeft = pr.width  - el.offsetWidth;
-    const maxTop  = pr.height - el.offsetHeight;
+    const ps = window.getComputedStyle(parent);
+    const padL = parseFloat(ps.paddingLeft)  || 0;
+    const padT = parseFloat(ps.paddingTop)   || 0;
+    const padR = parseFloat(ps.paddingRight) || 0;
+    const padB = parseFloat(ps.paddingBottom)|| 0;
+    const maxLeft = pr.width  - padL - padR - el.offsetWidth;
+    const maxTop  = pr.height - padT - padB - el.offsetHeight;
     el.style.left = Math.max(0, Math.min(maxLeft, origLeft + dx)) + 'px';
     el.style.top  = Math.max(0, Math.min(maxTop,  origTop  + dy)) + 'px';
   }
@@ -2016,9 +2067,10 @@ function makeDraggable(el) {
     document.removeEventListener('touchend', onDragEnd);
   }
 }
-
-
-// Mini chat overlay removed
+['miniLocalOverlay','miniRemoteOverlay'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) makeDraggable(el);
+});
 
 function linkify(text) {
   const frag = document.createDocumentFragment();
