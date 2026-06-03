@@ -284,37 +284,6 @@
     position: relative; top: auto; left: auto; right: auto;
     width: 80px; flex-shrink: 0;
   }
-  /* ── Chat content dims when syslog overlay is open ─────────── */
-  .syslog-open-mode #chat,
-  .syslog-open-mode .chat-input-row,
-  .syslog-open-mode .file-preview-strip,
-  .syslog-open-mode .drop-overlay {
-    opacity: 0; pointer-events: none; transition: opacity 0.2s;
-  }
-
-  /* ── New CHAT button (matches refresh/save/clear/find style) ─ */
-  .showchat-btn {
-    background: #000; border: 1px solid #444;
-    border-radius: 4px; color: #fff;
-    font-size: 14px; line-height: 1;
-    padding: 4px 8px; cursor: pointer;
-    transition: border-color 0.15s, color 0.15s;
-  }
-  .showchat-btn:hover, .showchat-btn:active { border-color: var(--accent, #00d4ff); color: var(--accent); }
-  .showchat-btn.active { border-color: var(--accent2); color: var(--accent2); background: #000; }
-
-  /* ── Underlay flip button ─────────────────────────────────── */
-  .underlay-flip-btn {
-    background: #000; border: 1px solid #444;
-    border-radius: 4px; color: #fff;
-    font-size: 11px; font-family: 'Share Tech Mono', monospace;
-    letter-spacing: 1px; line-height: 1;
-    padding: 4px 8px; cursor: pointer;
-    transition: border-color 0.15s, color 0.15s;
-    margin-left: auto;
-  }
-  .underlay-flip-btn:hover, .underlay-flip-btn:active { border-color: var(--accent); color: var(--accent); }
-
   /* ── Chat video underlay ──────────────────────────────────── */
   #chatUnderlay {
     position: absolute; inset: 0; z-index: 0;
@@ -324,7 +293,18 @@
   }
   #chatUnderlay.no-stream { display: none; }
 
-
+  /* ── Underlay flip button ─────────────────────────────────── */
+  .underlay-flip-btn {
+    background: #000; border: 1px solid var(--border);
+    border-radius: 4px; color: var(--text-dim);
+    font-size: 13px; font-family: 'Orbitron', sans-serif;
+    letter-spacing: 1px; line-height: 1;
+    padding: 4px 7px; cursor: pointer; opacity: 0.65;
+    transition: opacity 0.15s, border-color 0.15s, color 0.15s;
+    user-select: none;
+  }
+  .underlay-flip-btn:hover, .underlay-flip-btn:active { opacity: 1; border-color: var(--accent); color: var(--accent); }
+  .underlay-flip-btn.active { opacity: 1; border-color: var(--accent); color: var(--accent); }
 
   .chat-find-bar {
     display: none; align-items: center; gap: 6px;
@@ -601,40 +581,38 @@
   }
   .user-left-notice .leave-chat-btn:hover { background: rgba(0,212,255,0.3); }
 
-  /* ── SYS LOG overlay — covers full chatPanel area ─────────── */
   .log-panel {
-    background: rgba(0,0,0,0.93); border: 1px solid var(--border);
+    background: var(--panel); border: 1px solid var(--border);
     border-radius: 8px; padding: 10px 14px;
-    position: absolute; inset: 0;
-    z-index: 300; display: none;
-    flex-direction: column;
-    transition: opacity 0.2s;
-    box-sizing: border-box;
+    position: absolute; bottom: 0; left: 0; right: 0;
+    z-index: 200; display: none;
+    transition: padding 0.2s;
   }
-  .log-panel.syslog-open { display: flex; }
-  /* collapsed class no longer used but kept for compat */
-  .log-panel.collapsed { }
-  .log-panel.collapsed .log { }
+  .log-panel.syslog-open { display: block; }
+  .log-panel.collapsed { padding-bottom: 10px; min-height: 44px; }
+  .log-panel.collapsed .log { display: none; }
   .log-panel .panel-label {
     position: static; background: none; padding: 0;
-    user-select: none;
+    cursor: pointer; user-select: none;
     display: flex; align-items: center; gap: 6px;
+    touch-action: manipulation; -webkit-tap-highlight-color: transparent;
     min-height: 28px; width: 100%;
-    font-size: 11px; letter-spacing: 1px; color: var(--text-dim);
-    flex-shrink: 0;
   }
-  .log-toggle-arrow { display: none; }
+  .log-toggle-arrow {
+    font-size: 10px; color: var(--text-dim);
+    margin-left: auto; transition: transform 0.2s;
+    display: inline-block; line-height: 1;
+  }
+  .log-panel.collapsed .log-toggle-arrow { transform: rotate(-90deg); }
   .log {
-    flex: 1;
+    height: 76px;
     overflow-y: auto;
     scrollbar-width: thin;
-    scrollbar-color: #555 #111;
-    background: #060e18;
-    border: 1px solid #1a2a3a;
+    scrollbar-color: #ccc #fff;
+    background: #ffffff;
     border-radius: 4px;
-    padding: 6px 10px;
+    padding: 4px 8px;
     margin-top: 6px;
-    font-size: 11px;
   }
   .log-entry {
     font-size: 10px; line-height: 1.9; letter-spacing: 0.5px;
@@ -1372,10 +1350,8 @@
         <button class="save-chat-btn" onclick="saveChatToFile()" title="Save chat as HTML">💾</button>
         <button class="clear-chat-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" title="Clear chat history">🗑</button>
         <button class="find-chat-btn" id="findChatBtn" title="Find in chat">🔍</button>
-        <button class="showchat-btn" id="showChatBtn" onclick="showChatView()" title="Show Chat">CHAT</button>
         <button class="syslog-chat-btn" id="syslogToggleBtn" onclick="toggleSysLogView()" title="Toggle SYS LOG">SYS LOG</button>
         <button class="syslog-chat-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input">SPEECH</button>
-        <button class="showchat-btn" id="underlayFlipBtn" onclick="flipChatUnderlay()" title="Swap video feed">R/L ⇄</button>
         <button class="media-btn" id="miniChatBtn" onclick="toggleMiniChatVideo()" style="margin-left:auto;">Mini On</button>
       </div>
       <!-- ── Chat / video pane ───────────────────────────────── -->
@@ -1415,7 +1391,7 @@
         </div>
       </div>
       <div class="log-panel collapsed" id="logPanel">
-        <div class="panel-label">SYS LOG</div>
+        <div class="panel-label" onclick="toggleLogPanel()">SYS LOG<span class="log-toggle-arrow" id="logToggleArrow">▾</span></div>
         <div class="log" id="log"><span class="log-entry sys">15:59:51  PREFILL: code=123 vid=false aud=false</span></div>
       </div>
     </div>
@@ -1987,6 +1963,19 @@ function syncMiniVideos() {
 let chatUnderlayMode = (function() {
   try { return localStorage.getItem('alpha_underlay_mode') || 'up'; } catch(e) { return 'up'; }
 })();
+
+function syncChatUnderlay() {
+  const el = document.getElementById('chatUnderlay');
+  if (!el) return;
+  const remoteV = document.getElementById('remoteVideo');
+  const stream = remoteV ? remoteV.srcObject : null;
+  if (el.srcObject !== stream) el.srcObject = stream;
+  el.classList.toggle('no-stream', !stream);
+}
+
+function flipChatUnderlay() { /* removed */ }
+
+// Init flip button removed
 
 function updateMiniVideoVisibility() {
   ['miniLocalOverlay', 'miniRemoteOverlay'].forEach(id => {
@@ -2787,68 +2776,28 @@ function toggleLogPanel() {
 // ── SYS LOG chat-bar toggle ──────────────────────────────────────────────────
 function toggleSysLogView() {
   _syslogVisible = !_syslogVisible;
-  const logPanel  = document.getElementById('logPanel');
-  const chatPanel = document.getElementById('chatPanel');
-  const btn       = document.getElementById('syslogToggleBtn');
-  const showBtn   = document.getElementById('showChatBtn');
+  const logPanel = document.getElementById('logPanel');
+  const btn      = document.getElementById('syslogToggleBtn');
   if (_syslogVisible) {
     // Close speech panel if open
     if (_speechVisible) toggleSpeechPanel();
-    if (logPanel)  { logPanel.classList.add('syslog-open'); logPanel.classList.remove('collapsed'); }
-    if (chatPanel) chatPanel.classList.add('syslog-open-mode');
-    if (btn)     btn.classList.add('active');
-    if (showBtn) showBtn.classList.remove('active');
-    const l = document.getElementById('log');
-    if (l) setTimeout(() => { l.scrollTop = l.scrollHeight; }, 50);
+    if (logPanel) {
+      logPanel.classList.add('syslog-open');
+      logPanel.classList.remove('collapsed');
+      const l = logPanel.querySelector('#log');
+      if (l) setTimeout(() => { l.scrollTop = l.scrollHeight; }, 50);
+    }
+    if (btn) btn.classList.add('active');
   } else {
-    if (logPanel)  { logPanel.classList.remove('syslog-open'); logPanel.classList.add('collapsed'); }
-    if (chatPanel) chatPanel.classList.remove('syslog-open-mode');
-    if (btn)     btn.classList.remove('active');
-    if (showBtn) showBtn.classList.add('active');
+    if (logPanel) {
+      logPanel.classList.remove('syslog-open');
+      logPanel.classList.add('collapsed');
+    }
+    if (btn) btn.classList.remove('active');
   }
 }
 
-function showChatView() {
-  if (_syslogVisible) toggleSysLogView();
-  if (_speechVisible) toggleSpeechPanel();
-  const showBtn = document.getElementById('showChatBtn');
-  if (showBtn) showBtn.classList.add('active');
-}
-
-// ── Chat underlay flip (remote↔local) ───────────────────────────────────────
-let _underlayFlipped = false;
-function flipChatUnderlay() {
-  _underlayFlipped = !_underlayFlipped;
-  const btn = document.getElementById('underlayFlipBtn');
-  if (btn) {
-    btn.textContent = _underlayFlipped ? 'L/R ⇄' : 'R/L ⇄';
-    btn.classList.toggle('active', _underlayFlipped);
-  }
-  syncChatUnderlay();
-}
-
-function syncChatUnderlay() {
-  const el = document.getElementById('chatUnderlay');
-  if (!el) return;
-  const remoteV = document.getElementById('remoteVideo');
-  const remoteStream = remoteV ? remoteV.srcObject : null;
-  const localStream2 = (typeof localStream !== 'undefined') ? localStream : null;
-  let mainStream, miniStream;
-  if (_underlayFlipped) {
-    mainStream = localStream2;
-    miniStream = remoteStream;
-  } else {
-    mainStream = remoteStream;
-    miniStream = localStream2;
-  }
-  if (el.srcObject !== mainStream) el.srcObject = mainStream;
-  el.classList.toggle('no-stream', !mainStream);
-  // update mini overlay
-  const miniChatVideo = document.getElementById('miniChatVideo');
-  const miniChatOverlay = document.getElementById('miniChatOverlay');
-  if (miniChatVideo && miniChatVideo.srcObject !== miniStream) miniChatVideo.srcObject = miniStream;
-  if (miniChatOverlay) miniChatOverlay.classList.toggle('no-video', !miniStream);
-}
+// ── Speech panel toggle + Web Speech API ────────────────────────────────────
 let _speechVisible = false;
 let _recognition   = null;
 let _listening     = false;
