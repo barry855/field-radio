@@ -1602,7 +1602,7 @@ function startSession() {
   document.body.classList.remove('offline');
   stopPresencePolling();
   const code = document.getElementById('sessionCode').value.trim().toUpperCase().replace(/\s+/g,'');
-  if (!code) { document.getElementById('sessionCode').focus(); return; }
+  if (!code) { document.body.classList.add('offline'); document.getElementById('sessionCode').focus(); return; }
   MY_ID     = 'bravo-' + code;
   REMOTE_ID = 'alpha-' + code;
   const disVidChecked = document.getElementById('loginDisableVideo').checked;
@@ -3125,6 +3125,7 @@ function startPeer() {
 
   let watchdog;
   peer.on('open', id => {
+    document.body.classList.remove('offline');
     entry('Radio online — waiting for Alpha [' + id + ']', 'ok');
     setStatus('standby');
     // Watchdog: if no call arrives in 30s, reconnect to signalling server to stay fresh
