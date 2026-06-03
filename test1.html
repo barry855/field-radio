@@ -711,8 +711,12 @@
 
 
   .session-overlay {
-    position: fixed; inset: 0; background: var(--bg);
+    position: fixed; inset: 0; background: rgba(5,12,20,0.82);
     display: flex; align-items: center; justify-content: center; z-index: 100;
+    pointer-events: none;
+  }
+  .session-overlay > .session-box {
+    pointer-events: all;
   }
   .session-box {
     background: var(--panel); border: 1px solid var(--border);
@@ -925,6 +929,25 @@
   }
   .tab-pane { display: none; flex-direction: column; flex: 1; min-height: 0; gap: 10px; position: relative; }
   .tab-pane.active { display: flex; }
+  /* Chat pane always visible when offline so mini-video shows behind login overlay */
+  body.offline #paneChat { display: flex; }
+
+  /* ── Offline/standby mode — disable most buttons ────────────── */
+  body.offline .tab-btn:not(#tabChatBtn) { pointer-events: none; opacity: 0.35; }
+  body.offline .media-btn:not(#miniChatBtn):not(#recBtn):not(#recBtn2):not(#refreshBtnLocal):not(#refreshBtn):not(#leaveBtn):not(#leaveBtn2) {
+    pointer-events: none; opacity: 0.35;
+  }
+  body.offline .chat-input { pointer-events: none; }
+  body.offline #sendBtn { pointer-events: none; opacity: 0.35; }
+  /* Hide syslog, speech overlays in offline */
+  body.offline #logPanel, body.offline #speechPanel { display: none !important; }
+  /* Hide chat btn bar extras in offline except mini toggle */
+  body.offline .refresh-chat-btn,
+  body.offline .save-chat-btn,
+  body.offline .clear-chat-btn,
+  body.offline .find-chat-btn,
+  body.offline .showchat-btn,
+  body.offline .syslog-chat-btn { pointer-events: none; opacity: 0.25; }
   .app-tooltip {
     position: fixed; z-index: 1000; pointer-events: none;
     max-width: min(240px, calc(100vw - 16px));
@@ -1282,9 +1305,9 @@
   </div>
   </div>
   <div class="tab-bar">
-    <button class="tab-btn" id="tabLocalBtn" onclick="switchTab(&#39;local&#39;)">LOCAL</button>
-    <button class="tab-btn active" id="tabRemoteBtn" onclick="switchTab(&#39;remote&#39;)">REMOTE</button>
-    <button class="tab-btn" id="tabChatBtn" onclick="switchTab(&#39;chat&#39;)">CHAT <span class="msg-badge" id="msgBadge">0</span></button>
+    <button class="tab-btn" id="tabLocalBtn" onclick="switchTab('local')">LOCAL</button>
+    <button class="tab-btn" id="tabRemoteBtn" onclick="switchTab('remote')">REMOTE</button>
+    <button class="tab-btn active" id="tabChatBtn" onclick="switchTab('chat')">CHAT <span class="msg-badge" id="msgBadge">0</span></button>
   </div>
   <div class="tab-content">
     <!-- LOCAL TAB -->
@@ -1323,7 +1346,7 @@
       </div>
     </div>
     <!-- REMOTE TAB -->
-    <div class="tab-pane active" id="paneRemote">
+    <div class="tab-pane" id="paneRemote">
       <div class="channel-row" style="flex-shrink:0; padding:4px 0;">
         <button class="media-btn video-off-state" id="videoBtn2" onclick="toggleVideo()">Video Off</button>
         <button class="media-btn" id="audioBtn2" onclick="toggleAudio()">Audio On</button>
@@ -1531,12 +1554,14 @@ sendBtn.addEventListener('pointerdown', e => {
   }
 });
 sendBtn.disabled = true;
+document.body.classList.add('offline');
 sendBtn.addEventListener('click', e => {
   if (_sendBtnTouched) { _sendBtnTouched = false; return; }
   sendChat();
 });
 
 function startSession() {
+  document.body.classList.remove('offline');
   stopPresencePolling();
   const code = document.getElementById('sessionCode').value.trim().toUpperCase().replace(/\s+/g,'');
   if (!code) { document.getElementById('sessionCode').focus(); return; }
@@ -1573,6 +1598,7 @@ function startSession() {
   remotePeerLeft = false;
   document.getElementById('unitIdValue').textContent = code;
   document.getElementById('qualityDisplay').style.display = 'flex';
+  switchTab('remote');
   init();
   setTimeout(loadHistory, 100);
 }
@@ -1929,7 +1955,7 @@ function setStatus(state) {
   else                            { statusEl.textContent = 'OFFLINE'; }
 }
 
-let activeTab = 'remote';
+let activeTab = 'chat';
 let unreadCount = 0;
 let miniVideoVisible = true;
 const msgBadge = document.getElementById('msgBadge');
@@ -3443,6 +3469,7 @@ function exportSysLog() {
 }
 
 function leaveSession() {
+  document.body.classList.add('offline');
   leftPermanently = true;
   // Notify remote peer before disconnecting
   try { dcSend({ __control: 'leave' }); } catch(e) {}
@@ -3542,6 +3569,7 @@ function onDrop() {
     if (remotePeerLeft) return; // leave message arrived — handled by handleRemoteLeave
     if (peerRefreshing)  return; // refresh in progress — do not show login
     entry('Link lost — returning to reconnect screen', 'sys');
+    document.body.classList.add('offline');
     document.getElementById('sessionOverlay').style.display = 'flex';
     document.getElementById('unitIdDisplay').style.display = 'none';
     prefillLogin();
@@ -3561,6 +3589,7 @@ function resetLockTimer() {
   clearTimeout(lockTimer);
   lockTimer = setTimeout(() => {
     // Re-show the session overlay to re-authenticate
+    document.body.classList.add('offline');
     document.getElementById('sessionOverlay').style.display = 'flex';
     document.getElementById('unitIdDisplay').style.display = 'none';
     prefillLogin();
@@ -4151,6 +4180,7 @@ function refreshScreen() {
   // Flag survives the reload so the fresh page auto-reconnects via login countdown
   try { sessionStorage.setItem('fieldRadioRefreshing', '1'); } catch(e) {}
   // Show login box immediately on the refreshing side too
+  document.body.classList.add('offline');
   document.getElementById('sessionOverlay').style.display = 'flex';
   document.getElementById('unitIdDisplay').style.display = 'none';
   setTimeout(() => window.location.reload(), 400);
