@@ -729,6 +729,20 @@
   #speechCopyBtn:hover   { background: var(--btn-hover); border-color: var(--accent2); color: var(--accent2); }
   #speechClearBtn:hover  { background: var(--btn-hover); border-color: var(--danger, #cc2222); color: var(--danger, #cc2222); }
   /* drag-over highlight on speech panel */
+  .speech-top-bar {
+    display: flex; gap: 4px; flex-shrink: 0;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 2px;
+  }
+  .speech-top-btn {
+    background: var(--btn-bg); border: 1px solid var(--border);
+    color: var(--text); padding: 4px 8px; border-radius: 4px;
+    font-family: 'Share Tech Mono', monospace; font-size: 11px;
+    cursor: pointer; letter-spacing: 0.5px; white-space: nowrap;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .speech-top-btn:hover { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
   #speechPanel.drag-over { border-color: var(--accent2); background: rgba(0,255,159,0.04); }
   /* ── Speech panel file preview strip ─────────────────────── */
   #speechFilePreviewStrip {
@@ -1426,6 +1440,12 @@
       <input type="file" id="fileInput" multiple="" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx" style="display:none">
       <!-- ── Speech overlay panel ──────────────────────────────── -->
       <div id="speechPanel">
+        <div class="speech-top-bar">
+          <button class="speech-top-btn" onclick="refreshScreen()" title="Refresh / Reconnect">↺ REFRESH</button>
+          <button class="speech-top-btn" onclick="saveChatToFile()" title="Save chat as HTML">💾 SAVE</button>
+          <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" title="Clear chat history">🗑 CLEAR</button>
+          <button class="speech-top-btn" onclick="document.getElementById('chatFindBar').classList.contains('open')?closeFind():openFind()" title="Find in chat">🔍 FIND</button>
+        </div>
         <div class="file-preview-strip" id="speechFilePreviewStrip"></div>
         <textarea id="speechEditBox" placeholder="Tap LISTEN to start speaking… or type here." spellcheck="true"></textarea>
         <div class="speech-btn-row">
