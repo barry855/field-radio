@@ -118,6 +118,7 @@
     flex-direction: column;
     overflow: hidden;
     min-height: 0;
+    isolation: isolate;
   }
   .chat {
     flex: 1;
@@ -584,11 +585,11 @@
   .log-panel {
     background: var(--panel); border: 1px solid var(--border);
     border-radius: 8px; padding: 10px 14px;
-    position: absolute; bottom: 0; left: 0; right: 0;
-    z-index: 200; display: none;
+    position: absolute; top: 0; bottom: 0; left: 0; right: 0;
+    z-index: 200; display: none; flex-direction: column;
     transition: padding 0.2s;
   }
-  .log-panel.syslog-open { display: block; }
+  .log-panel.syslog-open { display: flex; }
   .log-panel.collapsed { padding-bottom: 10px; min-height: 44px; }
   .log-panel.collapsed .log { display: none; }
   .log-panel .panel-label {
@@ -604,8 +605,18 @@
     display: inline-block; line-height: 1;
   }
   .log-panel.collapsed .log-toggle-arrow { transform: rotate(-90deg); }
+  .log-action-btn {
+    background: var(--btn-bg); border: 1px solid var(--border);
+    color: var(--text); padding: 2px 7px; border-radius: 4px;
+    font-family: 'Share Tech Mono', monospace; font-size: 10px;
+    cursor: pointer; letter-spacing: 0.5px;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    flex-shrink: 0;
+  }
+  .log-action-btn:hover { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
+  .log-action-btn.stopped { border-color: var(--danger); color: var(--danger); }
   .log {
-    height: 76px;
+    flex: 1;
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: #ccc #fff;
@@ -613,6 +624,7 @@
     border-radius: 4px;
     padding: 4px 8px;
     margin-top: 6px;
+    min-height: 0;
   }
   .log-entry {
     font-size: 10px; line-height: 1.9; letter-spacing: 0.5px;
@@ -621,7 +633,7 @@
   /* ── Speech overlay panel ──────────────────────────────────── */
   #speechPanel {
     display: none;
-    position: absolute; bottom: 0; left: 0; right: 0;
+    position: absolute; top: 0; bottom: 0; left: 0; right: 0;
     z-index: 300;
     background: var(--panel); border: 1px solid var(--border);
     border-radius: 8px; padding: 10px 14px;
@@ -644,7 +656,7 @@
   }
   @keyframes speech-blink { 50% { opacity: 0; } }
   #speechEditBox {
-    flex: 1; min-height: 80px; max-height: 160px;
+    flex: 1; min-height: 80px;
     background: transparent; border: 1px solid var(--border);
     color: var(--text); padding: 7px 10px; border-radius: 4px;
     font-family: 'Share Tech Mono', monospace; font-size: 14px;
@@ -654,17 +666,17 @@
   #speechEditBox:focus { border-color: var(--accent); }
   #speechEditBox::placeholder { color: rgba(200,220,240,0.45); }
   .speech-btn-row {
-    display: flex; gap: 8px; justify-content: space-between; align-items: center;
-    flex-shrink: 0;
+    display: flex; gap: 4px; justify-content: space-between; align-items: center;
+    flex-shrink: 0; flex-wrap: wrap;
   }
-  .speech-btn-row .sbr-left  { display: flex; gap: 8px; align-items: center; }
-  .speech-btn-row .sbr-mid   { display: flex; gap: 8px; align-items: center; }
-  .speech-btn-row .sbr-right { display: flex; gap: 8px; align-items: center; }
+  .speech-btn-row .sbr-left  { display: flex; gap: 4px; align-items: center; }
+  .speech-btn-row .sbr-mid   { display: flex; gap: 4px; align-items: center; }
+  .speech-btn-row .sbr-right { display: flex; gap: 4px; align-items: center; }
   /* ── Shared speech button base ── */
-  #speechSendBtn, #speechListenBtn, #speechAttachBtn, #speechLoadBtn, #speechSaveBtn {
+  #speechSendBtn, #speechListenBtn, #speechAttachBtn, #speechLoadBtn, #speechSaveBtn, #speechCopyBtn, #speechClearBtn {
     background: var(--btn-bg); border: 1px solid var(--border);
-    color: var(--text); padding: 6px 14px; border-radius: 4px;
-    font-family: 'Share Tech Mono', monospace; font-size: 12px;
+    color: var(--text); padding: 5px 9px; border-radius: 4px;
+    font-family: 'Share Tech Mono', monospace; font-size: 11px;
     cursor: pointer; transition: background 0.15s, border-color 0.15s, color 0.15s;
     white-space: nowrap; letter-spacing: 0.5px;
   }
@@ -678,7 +690,25 @@
   #speechAttachBtn:hover { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
   #speechLoadBtn:hover   { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
   #speechSaveBtn:hover   { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
+  #speechCopyBtn:hover   { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
+  #speechClearBtn:hover  { background: var(--btn-hover); border-color: var(--danger, #cc2222); color: var(--danger, #cc2222); }
   /* drag-over highlight on speech panel */
+  .speech-top-bar {
+    display: flex; gap: 4px; flex-shrink: 0;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 2px;
+  }
+  .speech-top-btn {
+    background: var(--btn-bg); border: 1px solid var(--border);
+    color: var(--text); padding: 4px 8px; border-radius: 4px;
+    font-family: 'Share Tech Mono', monospace; font-size: 11px;
+    cursor: pointer; letter-spacing: 0.5px; white-space: nowrap;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .speech-top-btn:hover { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
+  .speech-top-btn.active { border-color: var(--accent, #00d4ff); color: var(--accent); }
+  .speech-top-btn:disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
   #speechPanel.drag-over { border-color: var(--accent); background: rgba(0,212,255,0.05); }
   /* ── Speech panel file preview strip ─────────────────────── */
   #speechFilePreviewStrip {
@@ -1356,12 +1386,12 @@
         <button class="chat-find-close" id="chatFindClose" title="Close">✕</button>
       </div>
       <div class="chat-btn-bar">
-        <button class="refresh-chat-btn" onclick="refreshScreen()" title="Refresh / Reconnect">↺</button>
-        <button class="save-chat-btn" onclick="saveChatToFile()" title="Save chat as HTML">💾</button>
-        <button class="clear-chat-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" title="Clear chat history">🗑</button>
-        <button class="find-chat-btn" id="findChatBtn" title="Find in chat">🔍</button>
-        <button class="syslog-chat-btn" id="syslogToggleBtn" onclick="toggleSysLogView()" title="Toggle SYS LOG">SYS LOG</button>
-        <button class="syslog-chat-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input">CHAT</button>
+        <button class="speech-top-btn" onclick="refreshScreen()" title="Refresh / Reconnect">↺ REFRESH</button>
+        <button class="speech-top-btn" onclick="saveChatToFile()" id="saveChatBtn" title="Save chat as HTML">💾 SAVE</button>
+        <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR</button>
+        <button class="speech-top-btn" id="findChatBtn" title="Find in chat">🔍 FIND</button>
+        <button class="syslog-chat-btn" id="syslogToggleBtn" onclick="toggleSysLogView()" title="Toggle SYS LOG">SHOW SYS LOG</button>
+        <button class="syslog-chat-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input">INPUT CHAT</button>
       </div>
       <!-- ── Chat / video pane ───────────────────────────────── -->
 
@@ -1374,22 +1404,24 @@
         </div>
         <div class="chat" id="chat" tabindex="0">
         </div>
-      </div>
       <!-- hidden shims kept for JS compatibility -->
       <textarea id="chatInput" style="display:none"></textarea>
       <input type="file" id="fileInput" multiple="" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx" style="display:none">
       <!-- ── Speech overlay panel ──────────────────────────────── -->
       <div id="speechPanel">
+        <div class="speech-top-bar" style="display:none"></div>
         <div class="file-preview-strip" id="speechFilePreviewStrip"></div>
         <textarea id="speechEditBox" placeholder="Tap LISTEN to start speaking… or type here." spellcheck="true"></textarea>
         <div class="speech-btn-row">
           <div class="sbr-left">
-            <button id="speechAttachBtn" onclick="speechAttachClick()" title="Attach file or drag &amp; drop">📎 ATTACH</button>
+            <button id="speechAttachBtn" onclick="speechAttachClick()" title="Attach file or drag &amp; drop">ATTACH</button>
             <input type="file" id="speechFileInput" multiple style="display:none" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx">
           </div>
           <div class="sbr-mid">
-            <button id="speechLoadBtn" onclick="speechLoadText()" title="Load text file into input box">⬆ LOAD</button>
-            <button id="speechSaveBtn" onclick="speechSaveText()" title="Save input box text to file">⬇ SAVE</button>
+            <button id="speechLoadBtn" onclick="speechLoadText()" title="Load text file into input box">LOAD</button>
+            <button id="speechSaveBtn" onclick="speechSaveText()" title="Save input box text to file">SAVE</button>
+            <button id="speechClearBtn" onclick="speechClearText()" title="Clear input box">CLEAR</button>
+            <button id="speechCopyBtn" onclick="speechCopyText()" title="Copy input box text to clipboard">COPY</button>
             <input type="file" id="speechTextFileInput" style="display:none" accept=".txt,.md,.text">
           </div>
           <div class="sbr-right">
@@ -1399,9 +1431,15 @@
         </div>
       </div>
       <div class="log-panel collapsed" id="logPanel">
-        <div class="panel-label" onclick="toggleLogPanel()">SYS LOG<span class="log-toggle-arrow" id="logToggleArrow">▾</span></div>
+        <div class="panel-label" onclick="toggleLogPanel()">SYS LOG<span class="log-toggle-arrow" id="logToggleArrow">▾</span>
+          <button class="log-action-btn" onclick="event.stopPropagation();saveLog()" title="Save log to file">SAVE</button>
+          <button class="log-action-btn" id="logCopyBtn" onclick="event.stopPropagation();copyLog()" title="Copy log to clipboard">COPY</button>
+          <button class="log-action-btn" onclick="event.stopPropagation();clearLog()" title="Clear log">CLEAR</button>
+          <button class="log-action-btn" id="logStopBtn" onclick="event.stopPropagation();toggleLogStop()" title="Pause/resume log">STOP</button>
+        </div>
         <div class="log" id="log"><span class="log-entry sys">15:59:51  PREFILL: code=123 vid=false aud=false</span></div>
       </div>
+      </div><!-- /chatPanel -->
     </div>
   </div>
 
@@ -1507,6 +1545,7 @@ const sendBtn   = document.getElementById('sendBtn');
 // On mouse, we defer to click so normal desktop UX is preserved.
 let _sendBtnTouched = false;
 let _syslogVisible  = false;
+let _speechVisible  = false;
 // sendBtn removed — sending is via speech panel only
 
 function startSession() {
@@ -1875,7 +1914,9 @@ document.getElementById('sessionCode').addEventListener('keydown', e => {
   if (e.key === 'Enter') startSession();
 });
 
+let _logStopped = false;
 function entry(msg, cls='sys') {
+  if (_logStopped) return;
   const ts = new Date().toTimeString().slice(0,8);
   const d = document.createElement('span');
   d.className = 'log-entry ' + cls;
@@ -2755,31 +2796,46 @@ function toggleLogPanel() {
 }
 
 // ── SYS LOG chat-bar toggle ──────────────────────────────────────────────────
+function setChatBtnsDisabled(disabled) {
+  ['findChatBtn', 'saveChatBtn', 'clearChatBtn'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = disabled;
+  });
+}
+
 function toggleSysLogView() {
   _syslogVisible = !_syslogVisible;
   const logPanel = document.getElementById('logPanel');
   const btn      = document.getElementById('syslogToggleBtn');
   if (_syslogVisible) {
-    // Close speech panel if open
-    if (_speechVisible) toggleSpeechPanel();
+    // Close speech panel directly without cross-calling
+    if (_speechVisible) {
+      _speechVisible = false;
+      stopListening();
+      const sp = document.getElementById('speechPanel');
+      if (sp) sp.classList.remove('speech-open');
+      const sb = document.getElementById('speechToggleBtn');
+      if (sb) { sb.classList.remove('active'); sb.textContent = 'INPUT CHAT'; }
+    }
     if (logPanel) {
       logPanel.classList.add('syslog-open');
       logPanel.classList.remove('collapsed');
       const l = logPanel.querySelector('#log');
       if (l) setTimeout(() => { l.scrollTop = l.scrollHeight; }, 50);
     }
-    if (btn) btn.classList.add('active');
+    if (btn) { btn.classList.add('active'); btn.textContent = 'HIDE SYS LOG'; }
+    setChatBtnsDisabled(true);
   } else {
     if (logPanel) {
       logPanel.classList.remove('syslog-open');
       logPanel.classList.add('collapsed');
     }
-    if (btn) btn.classList.remove('active');
+    if (btn) { btn.classList.remove('active'); btn.textContent = 'SHOW SYS LOG'; }
+    setChatBtnsDisabled(false);
   }
 }
 
 // ── Speech panel toggle + Web Speech API ────────────────────────────────────
-let _speechVisible = false;
 let _recognition   = null;
 let _listening     = false;
 let _interimText   = '';
@@ -2789,15 +2845,23 @@ function toggleSpeechPanel() {
   const panel = document.getElementById('speechPanel');
   const btn   = document.getElementById('speechToggleBtn');
   if (_speechVisible) {
-    // Close syslog if open
-    if (_syslogVisible) toggleSysLogView();
+    // Close syslog directly without cross-calling
+    if (_syslogVisible) {
+      _syslogVisible = false;
+      const lp = document.getElementById('logPanel');
+      if (lp) { lp.classList.remove('syslog-open'); lp.classList.add('collapsed'); }
+      const lb = document.getElementById('syslogToggleBtn');
+      if (lb) { lb.classList.remove('active'); lb.textContent = 'SHOW SYS LOG'; }
+    }
     if (panel) panel.classList.add('speech-open');
-    if (btn)   btn.classList.add('active');
+    if (btn)   { btn.classList.add('active'); btn.textContent = 'SHOW CHAT'; }
     updateSpeechSendBtn();
+    setChatBtnsDisabled(true);
   } else {
     stopListening();
     if (panel) panel.classList.remove('speech-open');
-    if (btn)   btn.classList.remove('active');
+    if (btn)   { btn.classList.remove('active'); btn.textContent = 'INPUT CHAT'; }
+    setChatBtnsDisabled(false);
   }
 }
 
@@ -2980,6 +3044,29 @@ function speechSaveText() {
   document.body.appendChild(a); a.click();
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function speechCopyText() {
+  const box = document.getElementById('speechEditBox');
+  if (!box || !box.value.trim()) return;
+  navigator.clipboard.writeText(box.value).then(() => {
+    const btn = document.getElementById('speechCopyBtn');
+    if (!btn) return;
+    const orig = btn.textContent;
+    btn.textContent = '✓ COPIED';
+    setTimeout(() => { btn.textContent = orig; }, 1200);
+  }).catch(() => {
+    // Fallback for file:// or older browsers
+    box.select();
+    document.execCommand('copy');
+  });
+}
+
+function speechClearText() {
+  const box = document.getElementById('speechEditBox');
+  if (!box) return;
+  box.value = '';
+  updateSpeechSendBtn();
 }
 
 function init() {
@@ -4360,6 +4447,39 @@ document.addEventListener('visibilitychange', () => {
 });
 
 window.addEventListener('beforeunload', () => { peer?.destroy(); });
+
+// ── SYS LOG actions ──────────────────────────────────────────────────────────
+
+
+function saveLog() {
+  const lines = Array.from(document.querySelectorAll('#log .log-entry'))
+    .map(el => el.textContent).join('\n');
+  const blob = new Blob([lines], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'syslog-' + new Date().toISOString().slice(0,19).replace(/[:T]/g,'-') + '.txt';
+  a.click();
+}
+
+function copyLog() {
+  const lines = Array.from(document.querySelectorAll('#log .log-entry'))
+    .map(el => el.textContent).join('\n');
+  navigator.clipboard.writeText(lines).then(() => {
+    const btn = document.getElementById('logCopyBtn');
+    if (btn) { const orig = btn.textContent; btn.textContent = 'COPIED'; setTimeout(() => btn.textContent = orig, 1200); }
+  });
+}
+
+function clearLog() {
+  const log = document.getElementById('log');
+  if (log) log.innerHTML = '';
+}
+
+function toggleLogStop() {
+  _logStopped = !_logStopped;
+  const btn = document.getElementById('logStopBtn');
+  if (btn) { btn.textContent = _logStopped ? 'RUN' : 'STOP'; btn.classList.toggle('stopped', _logStopped); }
+}
 </script>
 
 
