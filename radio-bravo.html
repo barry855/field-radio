@@ -1,6 +1,6 @@
 
 <!DOCTYPE html>
-<!-- Field Radio v6 — BRAVO -->
+<!-- saved from url=(0052)file:///C:/Users/barry/Downloads/radio-bravo_21.html -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -40,9 +40,6 @@
     flex-direction: column;
     overflow: hidden;
   }
-
-  /* LOCAL tab — match refresh button font size */
-  #paneLocal { font-size: 14px; }
 
   .shell {
     display: flex;
@@ -108,7 +105,7 @@
 
   .chat-panel {
     flex: 1;
-    background: transparent;
+    background: var(--panel);
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: 12px 14px;
@@ -123,11 +120,10 @@
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    position: relative; z-index: 1;
     gap: 8px;
     scrollbar-width: thin;
-    scrollbar-color: #aaa transparent;
-    background: transparent;
+    scrollbar-color: #ccc #9AC08F;
+    background: #9AC08F;
     border-radius: 4px;
     padding: 8px;
     margin-bottom: 2px;
@@ -146,13 +142,13 @@
   }
   .bubble.mine {
     align-self: flex-end;
-    background: rgba(0,255,159,1);
+    background: rgba(0,255,159,0.15);
     border-color: var(--accent2);
     color: #0a1520;
   }
   .bubble.theirs {
     align-self: flex-start;
-    background: rgba(0,212,255,1);
+    background: rgba(0,212,255,0.12);
     border-color: var(--accent);
     color: #0a1520;
   }
@@ -201,15 +197,12 @@
   .quality-bars span.lit-bad  { background: var(--danger); }
 
   .chat-input-row {
-    display: flex; gap: 8px; margin-top: 6px; flex-shrink: 0; align-items: flex-end;
-    padding: 4px 8px;
-    background: rgba(0,0,0,0.25);
-    border: 1px solid var(--border); border-radius: 4px;
+    display: flex; gap: 8px; margin-top: 10px; flex-shrink: 0; align-items: flex-end;
   }
   .chat-input {
     flex: 1;
-    background: transparent; border: 1px solid var(--border);
-    color: var(--text, #f1f5f9); padding: 7px 10px; border-radius: 4px;
+    background: #9AC08F; border: 1px solid var(--border);
+    color: var(--text); padding: 7px 10px; border-radius: 4px;
     font-family: 'Share Tech Mono', monospace; font-size: 16px;
     outline: none; transition: border-color 0.2s;
     resize: none; overflow-y: hidden; line-height: 1.4;
@@ -217,9 +210,9 @@
     word-wrap: break-word; white-space: pre-wrap;
     align-self: flex-end;
   }
-  .chat:focus { outline: none; }
+  .chat-input:focus   { border-color: var(--accent2); }
   .chat-input:disabled { opacity: 0.4; cursor: not-allowed; }
-  .chat-input::placeholder { color: rgba(200,220,240,0.55); }
+  .chat-input::placeholder { color: var(--text-dim); }
 
   .clear-chat-btn {
     background: #000; border: 1px solid #444;
@@ -309,68 +302,23 @@
   /* ── Chat find bar ──────────────────────────────────────── */
 
   /* ── Chat button bar (above message area) ──────────────────── */
-  .syslog-chat-btn {
-    background: rgba(5,15,21,0.55); border: 1px solid var(--border);
-    border-radius: 4px; color: var(--text-dim);
-    font-size: 11px; line-height: 1;
-    padding: 4px 8px; cursor: pointer;
-    font-family: 'Share Tech Mono', monospace; letter-spacing: 1px;
-    opacity: 0.65;
-    transition: opacity 0.15s, border-color 0.15s, color 0.15s;
-    margin-left: auto;
-  }
-  .syslog-chat-btn:hover, .syslog-chat-btn:active { opacity: 1; border-color: var(--accent2, #00ffaa); color: var(--accent2); }
-  .syslog-chat-btn.active { opacity: 1; border-color: var(--accent2); color: var(--accent2); }
-
   .chat-btn-bar {
     display: flex; gap: 6px; flex-shrink: 0;
-    margin-bottom: 4px; align-items: center;
+    margin-bottom: 6px; align-items: center;
   }
-  .chat-btn-bar .mini-chat-wrapper {\n    margin-bottom: 0; margin-left: auto;\n    flex-direction: row; align-items: center; gap: 6px;\n  }
-
-  /* ── Chat input wrapper — contains textarea + mini video ───── */
-  .chat-input-wrap {
-    flex: 1;
-    position: relative;
-    min-height: 34px;
+  .chat-btn-bar .mini-chat-wrapper {
+    margin-bottom: 0; margin-left: auto;
+    flex-direction: row; align-items: center; gap: 6px;
   }
-  /* Non-ChromeOS (Windows/Mac): hide the mini chat overlay entirely —
-     the chat underlay already shows the remote video inside the chat box.
-     Showing it here causes an extra element to appear above the text box
-     and push the layout down. */
-  /* miniChatOverlay removed */
-  /* Textarea inside wrap — full width */
-  .chat-input-wrap .chat-input {
-    width: 100%;
-    box-sizing: border-box;
+  .chat-btn-bar .mini-chat-wrapper .mini-video-overlay {
+    position: relative; top: auto; left: auto; right: auto;
+    width: 80px; flex-shrink: 0;
   }
-  /* ── Chat video underlay ──────────────────────────────────── */
-  #chatUnderlay {
-    position: absolute; inset: 0; z-index: 0;
-    width: 100%; height: 100%;
-    object-fit: cover; pointer-events: none;
-    opacity: 1; border-radius: 8px;
-  }
-  #chatUnderlay.no-stream { display: none; }
-
-  /* ── Underlay flip button ─────────────────────────────────── */
-  .underlay-flip-btn {
-    background: #000; border: 1px solid var(--border);
-    border-radius: 4px; color: var(--text-dim);
-    font-size: 13px; font-family: 'Orbitron', sans-serif;
-    letter-spacing: 1px; line-height: 1;
-    padding: 4px 7px; cursor: pointer; opacity: 0.65;
-    transition: opacity 0.15s, border-color 0.15s, color 0.15s;
-    user-select: none;
-  }
-  .underlay-flip-btn:hover, .underlay-flip-btn:active { opacity: 1; border-color: var(--accent2); color: var(--accent2); }
-  .underlay-flip-btn.active { opacity: 1; border-color: var(--accent2); color: var(--accent2); }
-
   .chat-find-bar {
     display: none; align-items: center; gap: 6px;
     background: #0c1520; border: 1px solid var(--accent2);
     border-radius: 4px; padding: 4px 8px;
-    margin-bottom: 4px; flex-shrink: 0;
+    margin-bottom: 6px; flex-shrink: 0;
   }
   .chat-find-bar.open { display: flex; }
   .chat-find-input {
@@ -423,12 +371,11 @@
 
   /* ── File attach button ─────────────────────────────────── */
   .attach-btn {
-    flex-shrink: 0; background: var(--btn-bg); border: 1px solid var(--border);
-    color: var(--text-dim); border-radius: 4px; padding: 4px 8px;
-    font-size: 14px; cursor: pointer; line-height: 1;
-    font-family: 'Share Tech Mono', monospace; font-size: 12px;
+    background: var(--btn-bg); border: 1px solid var(--border);
+    color: var(--text-dim); padding: 6px 10px; border-radius: 4px;
+    font-size: 14px; cursor: pointer;
     transition: background 0.15s, border-color 0.15s, color 0.15s;
-    white-space: nowrap; align-self: flex-end; margin-bottom: 3px;
+    flex-shrink: 0; line-height: 1;
   }
   .attach-btn:hover { background: var(--btn-hover); border-color: var(--accent2); color: var(--accent2); }
 
@@ -619,12 +566,9 @@
 
   .log-panel {
     background: var(--panel); border: 1px solid var(--border);
-    border-radius: 8px; padding: 10px 14px;
-    position: absolute; bottom: 0; left: 0; right: 0;
-    z-index: 200; display: none;
-    transition: padding 0.2s;
+    border-radius: 8px; padding: 10px 14px; position: relative;
+    flex-shrink: 0; transition: padding 0.2s;
   }
-  .log-panel.syslog-open { display: block; }
   .log-panel.collapsed { padding-bottom: 10px; min-height: 44px; }
   .log-panel.collapsed .log { display: none; }
   .log-panel .panel-label {
@@ -654,75 +598,11 @@
     font-size: 10px; line-height: 1.9; letter-spacing: 0.5px;
     display: block;
   }
-  /* ── Speech overlay panel ──────────────────────────────────── */
-  #speechPanel {
-    display: none;
-    position: absolute; bottom: 0; left: 0; right: 0;
-    z-index: 300;
-    background: var(--panel); border: 1px solid var(--border);
-    border-radius: 8px; padding: 10px 14px;
-    flex-direction: column; gap: 8px;
-  }
-  #speechPanel.speech-open { display: flex; }
-  #speechPanel .speech-header {
-    font-size: 10px; letter-spacing: 2px; color: var(--accent2);
-    text-transform: uppercase; font-family: 'Share Tech Mono', monospace;
-    border-bottom: 1px solid var(--border); padding-bottom: 6px;
-    display: flex; align-items: center; gap: 8px; flex-shrink: 0;
-  }
-  #speechPanel .speech-status {
-    margin-left: auto; font-size: 9px; letter-spacing: 1px;
-    color: var(--text-dim);
-  }
-  #speechPanel .speech-status.listening {
-    color: var(--danger, #cc2222);
-    animation: speech-blink 1s step-start infinite;
-  }
-  @keyframes speech-blink { 50% { opacity: 0; } }
-  #speechEditBox {
-    flex: 1; min-height: 80px; max-height: 160px;
-    background: transparent; border: 1px solid var(--border);
-    color: var(--text); padding: 7px 10px; border-radius: 4px;
-    font-family: 'Share Tech Mono', monospace; font-size: 14px;
-    outline: none; resize: none; line-height: 1.4;
-    transition: border-color 0.2s;
-  }
-  #speechEditBox:focus { border-color: var(--accent2); }
-  #speechEditBox::placeholder { color: rgba(200,220,240,0.45); }
-  .speech-btn-row {
-    display: flex; gap: 8px; justify-content: flex-end; align-items: center;
-    flex-shrink: 0;
-  }
-  #speechSendBtn {
-    background: var(--btn-bg); border: 1px solid var(--border);
-    color: var(--text); padding: 6px 14px; border-radius: 4px;
-    font-family: 'Share Tech Mono', monospace; font-size: 12px;
-    cursor: pointer; transition: background 0.15s, border-color 0.15s, color 0.15s;
-    white-space: nowrap; letter-spacing: 0.5px;
-  }
-  #speechSendBtn:hover { background: var(--btn-hover); border-color: #2a4060; }
-  #speechSendBtn:disabled { opacity: 0.35; cursor: not-allowed; }
-  #speechListenBtn {
-    background: var(--btn-bg); border: 1px solid var(--border);
-    color: var(--text); padding: 6px 14px; border-radius: 4px;
-    font-family: 'Share Tech Mono', monospace; font-size: 12px;
-    cursor: pointer; transition: background 0.15s, border-color 0.15s, color 0.15s;
-    white-space: nowrap; letter-spacing: 0.5px;
-  }
-  #speechListenBtn:hover { background: var(--btn-hover); border-color: var(--accent2); color: var(--accent2); }
-  #speechListenBtn.listening {
-    border-color: var(--danger, #cc2222); color: var(--danger, #cc2222);
-    background: rgba(204,34,34,0.08);
-  }
-
   .log-entry.sys  { color: #555555; }
   .log-entry.info { color: #0077aa; }
   .log-entry.ok   { color: #007744; }
   .log-entry.err  { color: #cc2222; }
   .log-entry.tx   { color: #996600; }
-
-
-
 
   .session-overlay {
     position: fixed; inset: 0; background: var(--bg);
@@ -758,8 +638,22 @@
   .session-go:hover { background: var(--btn-hover); border-color: var(--accent2); }
 
   /* ── Reconnect overlay (hides login box on auto-disconnect) ── */
-  /* ── Reconnect overlay — hidden, login screen shown instead ── */
-  .reconnect-overlay { display: none !important; }
+  .reconnect-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: #000;
+    align-items: center; justify-content: center;
+    z-index: 9999;
+    border-radius: 0;
+  }
+  .reconnect-overlay.active { display: flex; }
+  .reconnect-overlay p {
+    color: #ffffff;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 28px; letter-spacing: 3px;
+    text-align: center; line-height: 1.7;
+    padding: 24px;
+  }
 
 
   /* login checkboxes */
@@ -842,7 +736,7 @@
     background: rgba(0,0,0,0.85);
   }
   .video-wrap.video-off::after {
-    content: 'WAITING FOR CONNECTION';
+    content: 'VIDEO OFF';
     position: absolute; inset: 0;
     display: flex; align-items: center; justify-content: center;
     font-family: 'Orbitron', sans-serif; font-size: 10px;
@@ -850,7 +744,7 @@
     background: rgba(0,0,0,0.72);
   }
   .video-wrap.no-video::after {
-    content: 'WAITING FOR CONNECTION';
+    content: 'VIDEO OFF';
     position: absolute; inset: 0;
     display: flex; align-items: center; justify-content: center;
     font-family: 'Orbitron', sans-serif; font-size: 10px;
@@ -878,21 +772,11 @@
   .mini-video-overlay video {
     width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none;
   }
-  .mini-video-overlay .mini-toggle-btn {
-    position: absolute; top: 3px; right: 3px; z-index: 10;
-    width: 16px; height: 16px; padding: 0;
-    background: rgba(0,0,0,0.65); border: 1px solid var(--accent2, #00ffaa);
-    border-radius: 3px; color: var(--accent2, #00ffaa);
-    font-size: 9px; line-height: 16px; text-align: center;
-    cursor: pointer; user-select: none; font-family: monospace;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .mini-video-overlay .mini-toggle-btn:hover { background: rgba(0,255,170,0.22); }
   .mini-video-overlay .video-label {
     bottom: 4px; left: 6px; font-size: 8px; letter-spacing: 1px; pointer-events: none;
   }
   .mini-video-overlay.no-video::after {
-    content: 'WAITING FOR CONNECTION';
+    content: 'VIDEO OFF';
     position: absolute; inset: 0;
     display: flex; align-items: center; justify-content: center;
     font-family: 'Orbitron', sans-serif; font-size: 8px;
@@ -934,7 +818,7 @@
     border-radius: 0 0 8px 8px; overflow: hidden; min-height: 0;
     padding: 10px; gap: 10px;
   }
-  .tab-pane { display: none; flex-direction: column; flex: 1; min-height: 0; gap: 10px; position: relative; }
+  .tab-pane { display: none; flex-direction: column; flex: 1; min-height: 0; gap: 10px; }
   .tab-pane.active { display: flex; }
   .app-tooltip {
     position: fixed; z-index: 1000; pointer-events: none;
@@ -1305,6 +1189,8 @@
         <button class="media-btn" id="audioBtn" onclick="toggleAudio()">Audio On</button>
         <button class="media-btn" id="miniBtn" onclick="toggleMiniVideo()">Mini Off</button>
         <button class="media-btn" id="screenBtn" onclick="toggleScreenShare()">Share Off</button>
+        <button class="media-btn" id="sysAudioBtn" onclick="toggleSysAudio()">🔊 Sys Audio</button>
+        <button class="media-btn" id="sysMonitorBtn" onclick="toggleSysMonitor()">🎧 Monitor</button>
         <button class="leave-btn" id="leaveBtn" onclick="leaveSession()">✕ Leave</button>
       </div>
       <div class="channel-row" style="flex-shrink:0; padding:0 0 4px 0;">
@@ -1330,7 +1216,6 @@
         <div class="mini-video-overlay hidden" id="miniRemoteOverlay">
           <video id="miniRemoteVideo" autoplay="" playsinline=""></video>
           <span class="video-label">ALPHA</span>
-          <button class="mini-toggle-btn" title="Hide mini" onclick="toggleMiniVideo();event.stopPropagation()">✕</button>
         </div>
       </div>
     </div>
@@ -1341,6 +1226,8 @@
         <button class="media-btn" id="audioBtn2" onclick="toggleAudio()">Audio On</button>
         <button class="media-btn" id="miniBtn2" onclick="toggleMiniVideo()">Mini Off</button>
         <button class="media-btn" id="screenBtn2" onclick="toggleScreenShare()">Share Off</button>
+        <button class="media-btn" id="sysAudioBtn2" onclick="toggleSysAudio()">🔊 Sys Audio</button>
+        <button class="media-btn" id="sysMonitorBtn2" onclick="toggleSysMonitor()">🎧 Monitor</button>
         <button class="leave-btn" id="leaveBtn2" onclick="leaveSession()">✕ Leave</button>
       </div>
       <div class="channel-row" style="flex-shrink:0; padding:0 0 4px 0;">
@@ -1366,60 +1253,45 @@
         <div class="mini-video-overlay hidden" id="miniLocalOverlay">
           <video id="miniLocalVideo" autoplay="" playsinline="" muted=""></video>
           <span class="video-label">BRAVO</span>
-          <button class="mini-toggle-btn" title="Hide mini" onclick="toggleMiniVideo();event.stopPropagation()">✕</button>
         </div>
       </div>
     </div>
     <!-- CHAT TAB -->
     <div class="tab-pane" id="paneChat">
-      <!-- ── Toolbar above chat pane ─────────────────────────── -->
-      <div class="chat-find-bar" id="chatFindBar">
-        <input class="chat-find-input" id="chatFindInput" placeholder="Find in chat…" autocomplete="off" spellcheck="false">
-        <span class="chat-find-count" id="chatFindCount"></span>
-        <button class="chat-find-nav" id="chatFindPrev" title="Previous match">▲</button>
-        <button class="chat-find-nav" id="chatFindNext" title="Next match">▼</button>
-        <button class="chat-find-close" id="chatFindClose" title="Close">✕</button>
-      </div>
-      <div class="chat-btn-bar">
-        <button class="refresh-chat-btn" onclick="refreshScreen()" title="Refresh / Reconnect">↺</button>
-        <button class="save-chat-btn" onclick="saveChatToFile()" title="Save chat as HTML">💾</button>
-        <button class="clear-chat-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" title="Clear chat history">🗑</button>
-        <button class="find-chat-btn" id="findChatBtn" title="Find in chat">🔍</button>
-        <button class="syslog-chat-btn" id="syslogToggleBtn" onclick="toggleSysLogView()" title="Toggle SYS LOG">SYS LOG</button>
-        <button class="syslog-chat-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input">SPEECH</button>
-      </div>
-      <!-- ── Chat / video pane ───────────────────────────────── -->
-
       <div class="chat-panel" style="flex:1" id="chatPanel">
         <div class="panel-label">COMMS</div>
-        <video id="chatUnderlay" autoplay playsinline muted></video>
+
         <div class="drop-overlay" id="dropOverlay">
           <div class="drop-overlay-icon">📎</div>
           <div class="drop-overlay-label">Drop file to attach</div>
         </div>
-        <div class="chat" id="chat" tabindex="0">
+        <div class="chat-find-bar" id="chatFindBar">
+          <input class="chat-find-input" id="chatFindInput" placeholder="Find in chat…" autocomplete="off" spellcheck="false">
+          <span class="chat-find-count" id="chatFindCount"></span>
+          <button class="chat-find-nav" id="chatFindPrev" title="Previous match">▲</button>
+          <button class="chat-find-nav" id="chatFindNext" title="Next match">▼</button>
+          <button class="chat-find-close" id="chatFindClose" title="Close">✕</button>
         </div>
-      </div>
-      <!-- ── Input below chat pane ───────────────────────────── -->
-      <div class="file-preview-strip" id="filePreviewStrip"></div>
-      <div class="chat-input-row">
+        <div class="chat-btn-bar">
+          <button class="refresh-chat-btn" onclick="refreshScreen()" title="Refresh / Reconnect">↺</button>
+          <button class="save-chat-btn" onclick="saveChatToFile()" title="Save chat as HTML">💾</button>
+          <button class="clear-chat-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" title="Clear chat history">🗑</button>
+          <button class="find-chat-btn" id="findChatBtn" title="Find in chat">🔍</button>
+          <div class="mini-chat-wrapper">
+            <button class="mini-chat-btn active" id="miniChatBtn" onclick="toggleMiniChatOverlay()" title="Toggle mini remote screen">📺</button>
+            <div class="mini-video-overlay" id="miniChatOverlay">
+              <video id="miniChatVideo" autoplay="" playsinline=""></video>
+              <span class="video-label">REMOTE</span>
+            </div>
+          </div>
+        </div>
+        <div class="chat" id="chat"></div>
+        <div class="file-preview-strip" id="filePreviewStrip"></div>
+        <div class="chat-input-row">
           <button class="attach-btn" id="attachBtn" title="Attach file / photo / video">📎</button>
           <input type="file" id="fileInput" multiple="" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx" style="display:none">
-          <div class="chat-input-wrap" id="chatInputWrap">
-<textarea class="chat-input" id="chatInput" placeholder="TYPE MESSAGE…" rows="1"></textarea>
-          </div>
+          <textarea class="chat-input" id="chatInput" placeholder="TYPE MESSAGE…" rows="1"></textarea>
           <button class="btn" id="sendBtn">SEND</button>
-      </div>
-      <!-- ── Speech overlay panel ──────────────────────────────── -->
-      <div id="speechPanel">
-        <div class="speech-header">
-          🎤 SPEECH INPUT
-          <span class="speech-status" id="speechStatus">IDLE</span>
-        </div>
-        <textarea id="speechEditBox" placeholder="Tap LISTEN to start speaking… or type here." spellcheck="true"></textarea>
-        <div class="speech-btn-row">
-          <button id="speechSendBtn" onclick="sendSpeechToChat()" disabled>SEND</button>
-          <button id="speechListenBtn" onclick="toggleListening()">LISTEN</button>
         </div>
       </div>
       <div class="log-panel collapsed" id="logPanel">
@@ -1430,27 +1302,9 @@
   </div>
 
 <audio id="remoteAudio" autoplay="" playsinline=""></audio>
-<div id="lightbox"><img id="lightboxImg" src="" alt=""></div>
+<div id="lightbox"><img id="lightboxImg" src="file:///C:/Users/barry/Downloads/radio-bravo_21.html" alt=""></div>
 
 <script>
-// ── localStorage shim (file:// safe) ─────────────────────────────────────────
-// On file:// Chrome may block localStorage entirely. This shim falls back to
-// an in-memory store so prefillLogin and all other storage calls still work.
-(function() {
-  let _ok = false;
-  try { localStorage.setItem('__test__','1'); localStorage.removeItem('__test__'); _ok = true; } catch(e) {}
-  if (_ok) return;
-  const _mem = {};
-  const _shim = {
-    getItem:    k => Object.prototype.hasOwnProperty.call(_mem, k) ? _mem[k] : null,
-    setItem:    (k, v) => { _mem[k] = String(v); },
-    removeItem: k => { delete _mem[k]; },
-    clear:      () => { Object.keys(_mem).forEach(k => delete _mem[k]); },
-    key:        i => Object.keys(_mem)[i] || null,
-    get length() { return Object.keys(_mem).length; }
-  };
-  try { Object.defineProperty(window, 'localStorage', { value: _shim, configurable: true }); } catch(e) {}
-})();
 // ── Audio tone engine (defined first so all code can call playTone) ──────────
 const _tones = {
   msg_in:       { freqs:[880,1100],       durs:[0.07,0.09],       wave:'sine',     vol:0.22 },
@@ -1519,15 +1373,6 @@ const logEl     = document.getElementById('log');
 const chat      = document.getElementById('chat');
 const chatInput = document.getElementById('chatInput');
 const sendBtn   = document.getElementById('sendBtn');
-
-// ── Platform detection ────────────────────────────────────────
-// ChromeOS: mini video floats ABOVE the text box.
-// Windows / other: mini video stays inside, underlay visible below text on focus.
-(function detectPlatform() {
-  const ua = navigator.userAgent || '';
-  const isChromeOS = /CrOS/.test(ua);
-  if (isChromeOS) document.documentElement.classList.add('chromeos');
-})();
 // On Android, tapping Send while the keyboard is open causes the browser to
 // blur the textarea first, then fire click — but if the keyboard dismiss
 // animation interrupts the tap sequence the click is swallowed entirely and
@@ -1536,7 +1381,6 @@ const sendBtn   = document.getElementById('sendBtn');
 // value while focus is still live, then send. The click listener is kept as
 // a fallback for mouse users and assistive technology.
 let _sendBtnTouched = false;
-let _syslogVisible  = false;
 sendBtn.addEventListener('pointerdown', e => {
   if (e.pointerType !== 'mouse') {
     _sendBtnTouched = true;
@@ -1878,15 +1722,15 @@ function startLoginTimeout() {
     }
   }, 1000);
 }
-// If this page load is the result of a refresh, show the login box and auto-reconnect
+// If this page load is the result of a refresh, show the reconnect overlay
+// over the login box until auto-login fires (sessionStorage survives reload)
 (function() {
   try {
     if (sessionStorage.getItem('fieldRadioRefreshing') === '1') {
       sessionStorage.removeItem('fieldRadioRefreshing');
-      // Show login box and start auto-reconnect countdown
+      // Show session overlay with reconnect screen on top
       document.getElementById('sessionOverlay').style.display = 'flex';
-      prefillLogin();
-      startLoginTimeout();
+      showReconnecting();
     }
   } catch(e) {}
 })();
@@ -1920,11 +1764,9 @@ function entry(msg, cls='sys') {
   d.textContent = `${ts}  ${msg}`;
   logEl.appendChild(d);
   logEl.scrollTop = logEl.scrollHeight;
-
 }
 
-function scrollToBottom(force) {
-  if (!force && document.activeElement === chat) return;  // user is scrolling — don't interrupt
+function scrollToBottom() {
   requestAnimationFrame(() => {
     chat.scrollTop = chat.scrollHeight;
   });
@@ -1942,6 +1784,7 @@ function setStatus(state) {
 
 let activeTab = 'remote';
 let unreadCount = 0;
+let miniVideoVisible = true;
 const msgBadge = document.getElementById('msgBadge');
 
 function syncControls() {
@@ -1967,40 +1810,28 @@ function switchTab(tab) {
 }
 
 function syncMiniVideos() {
-  const miniLocal  = document.getElementById('miniLocalVideo');
+  const miniLocal = document.getElementById('miniLocalVideo');
   const miniRemote = document.getElementById('miniRemoteVideo');
-  const miniLocalOverlay  = document.getElementById('miniLocalOverlay');
+  const miniLocalOverlay = document.getElementById('miniLocalOverlay');
   const miniRemoteOverlay = document.getElementById('miniRemoteOverlay');
-  const localV  = document.getElementById('localVideo');
-  const remoteV = document.getElementById('remoteVideo');
-  if (miniLocal  && localV  && miniLocal.srcObject  !== localV.srcObject)  miniLocal.srcObject  = localV.srcObject;
-  if (miniRemote && remoteV && miniRemote.srcObject !== remoteV.srcObject)  miniRemote.srcObject = remoteV.srcObject;
-  if (miniLocalOverlay)  miniLocalOverlay.classList.toggle('no-video',  !(localV  && localV.srcObject));
-  if (miniRemoteOverlay) miniRemoteOverlay.classList.toggle('no-video', !(remoteV && remoteV.srcObject));
-  syncChatUnderlay();
+  const remoteVideo = document.getElementById('remoteVideo');
+  if (miniLocal && localStream && miniLocal.srcObject !== localStream) {
+    miniLocal.srcObject = localStream;
+  }
+  if (miniRemote && remoteVideo && miniRemote.srcObject !== remoteVideo.srcObject) {
+    miniRemote.srcObject = remoteVideo.srcObject;
+  }
+  if (miniLocalOverlay) miniLocalOverlay.classList.toggle('no-video', !localStream);
+  if (miniRemoteOverlay) miniRemoteOverlay.classList.toggle('no-video', !(remoteVideo && remoteVideo.srcObject));
+  // sync mini chat overlay
+  const miniChatVideo = document.getElementById('miniChatVideo');
+  const miniChatOverlay = document.getElementById('miniChatOverlay');
+  if (miniChatVideo && remoteVideo && miniChatVideo.srcObject !== remoteVideo.srcObject) {
+    miniChatVideo.srcObject = remoteVideo.srcObject;
+  }
+  if (miniChatOverlay) miniChatOverlay.classList.toggle('no-video', !(remoteVideo && remoteVideo.srcObject));
 }
 
-// ── Chat video underlay ───────────────────────────────────────
-// 'up'   = remote main / local mini
-// 'down' = local main / remote mini
-let chatUnderlayMode = (function() {
-  try { return localStorage.getItem('bravo_underlay_mode') || 'up'; } catch(e) { return 'up'; }
-})();
-
-function syncChatUnderlay() {
-  const el = document.getElementById('chatUnderlay');
-  if (!el) return;
-  const remoteV = document.getElementById('remoteVideo');
-  const stream = remoteV ? remoteV.srcObject : null;
-  if (el.srcObject !== stream) el.srcObject = stream;
-  el.classList.toggle('no-stream', !stream);
-}
-function flipChatUnderlay() { /* removed */ }
-
-// Init flip button removed
-
-// ── Mini video toggle ─────────────────────────────────────────
-let miniVideoVisible = true;
 function updateMiniVideoVisibility() {
   ['miniLocalOverlay', 'miniRemoteOverlay'].forEach(id => {
     const el = document.getElementById(id);
@@ -2011,6 +1842,7 @@ function updateMiniVideoVisibility() {
   });
   syncMiniVideos();
 }
+
 function toggleMiniVideo() {
   miniVideoVisible = !miniVideoVisible;
   updateMiniVideoVisibility();
@@ -2049,13 +1881,8 @@ function makeDraggable(el) {
     const dy = touch.clientY - startY;
     const parent = el.offsetParent || document.body;
     const pr = parent.getBoundingClientRect();
-    const ps = window.getComputedStyle(parent);
-    const padL = parseFloat(ps.paddingLeft)  || 0;
-    const padT = parseFloat(ps.paddingTop)   || 0;
-    const padR = parseFloat(ps.paddingRight) || 0;
-    const padB = parseFloat(ps.paddingBottom)|| 0;
-    const maxLeft = pr.width  - padL - padR - el.offsetWidth;
-    const maxTop  = pr.height - padT - padB - el.offsetHeight;
+    const maxLeft = pr.width  - el.offsetWidth;
+    const maxTop  = pr.height - el.offsetHeight;
     el.style.left = Math.max(0, Math.min(maxLeft, origLeft + dx)) + 'px';
     el.style.top  = Math.max(0, Math.min(maxTop,  origTop  + dy)) + 'px';
   }
@@ -2067,10 +1894,28 @@ function makeDraggable(el) {
     document.removeEventListener('touchend', onDragEnd);
   }
 }
-['miniLocalOverlay','miniRemoteOverlay'].forEach(id => {
+['miniLocalOverlay','miniRemoteOverlay','miniChatOverlay'].forEach(id => {
   const el = document.getElementById(id);
   if (el) makeDraggable(el);
 });
+
+// ── Mini remote screen in Chat tab ───────────────────────────
+let miniChatVisible = true;
+function toggleMiniChatOverlay() {
+  miniChatVisible = !miniChatVisible;
+  const overlay = document.getElementById('miniChatOverlay');
+  const btn     = document.getElementById('miniChatBtn');
+  if (!overlay) return;
+  overlay.classList.toggle('hidden', !miniChatVisible);
+  if (btn) btn.classList.toggle('active', miniChatVisible);
+  if (miniChatVisible) {
+    const miniChatVideo = document.getElementById('miniChatVideo');
+    const remoteVideo   = document.getElementById('remoteVideo');
+    if (miniChatVideo && remoteVideo && miniChatVideo.srcObject !== remoteVideo.srcObject) {
+      miniChatVideo.srcObject = remoteVideo.srcObject;
+    }
+  }
+}
 
 function linkify(text) {
   const frag = document.createDocumentFragment();
@@ -2409,7 +2254,7 @@ function addBubble(text, mine, ts, save = true) {
   wrap.addEventListener('click', () => _toggleLock(wrap));
   wrap.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') _togglePeek(wrap); });
   chat.appendChild(wrap);
-  scrollToBottom(!mine);
+  scrollToBottom();
   // Tone + badge: notify on incoming message
   if (!mine) { }
   if (!mine && activeTab !== 'chat') {
@@ -2429,7 +2274,6 @@ function addBubble(text, mine, ts, save = true) {
 }
 
 let _sendChatLast = 0;
-let _pendingChatMsg = null; // one queued message to send when channel recovers
 function sendChat() {
   const now = Date.now();
   if (now - _sendChatLast < 300) return;   // debounce — blocks multi-fire on older Android
@@ -2438,19 +2282,13 @@ function sendChat() {
   const hasFiles = pendingFiles.length > 0;
   if (!txt && !hasFiles) return;
   if (!dataConn || !dataConn.open) {
-    if (txt) {
-      _pendingChatMsg = txt;
-      chatInput.value = ''; chatInput.style.height = 'auto';
-    }
     if (dataConn && !dataConn.open) {
-      entry('Channel reopening — message queued…', 'sys');
+      entry('Chat channel lost — reconnecting…', 'sys');
       try { dataConn.close(); } catch(e) {}
       dataConn = null;
       openDataConn();
-    } else if (!dataConn) {
-      entry('Channel not ready — message queued…', 'sys');
-      openDataConn();
     }
+    entry('Message not sent — channel not ready', 'err');
     return;
   }
   if (txt) {
@@ -2741,7 +2579,7 @@ function addMediaBubble(name, type, dataUrl, mine) {
   time.textContent = formatTs(Date.now());
   wrap.appendChild(time);
   chat.appendChild(wrap);
-  scrollToBottom(!mine);
+  scrollToBottom();
 }
 
 // ── Lightbox close ────────────────────────────────────────────
@@ -2772,160 +2610,11 @@ function toggleLogPanel() {
   }
 }
 
-// ── SYS LOG chat-bar toggle ──────────────────────────────────────────────────
-function toggleSysLogView() {
-  _syslogVisible = !_syslogVisible;
-  const logPanel = document.getElementById('logPanel');
-  const btn      = document.getElementById('syslogToggleBtn');
-  if (_syslogVisible) {
-    if (_speechVisible) toggleSpeechPanel();
-    if (logPanel) {
-      logPanel.classList.add('syslog-open');
-      logPanel.classList.remove('collapsed');
-      const l = logPanel.querySelector('#log');
-      if (l) setTimeout(() => { l.scrollTop = l.scrollHeight; }, 50);
-    }
-    if (btn) btn.classList.add('active');
-  } else {
-    if (logPanel) {
-      logPanel.classList.remove('syslog-open');
-      logPanel.classList.add('collapsed');
-    }
-    if (btn) btn.classList.remove('active');
-  }
-}
-
-// ── Speech panel toggle + Web Speech API ────────────────────────────────────
-let _speechVisible = false;
-let _recognition   = null;
-let _listening     = false;
-let _interimText   = '';
-
-function toggleSpeechPanel() {
-  _speechVisible = !_speechVisible;
-  const panel = document.getElementById('speechPanel');
-  const btn   = document.getElementById('speechToggleBtn');
-  if (_speechVisible) {
-    if (_syslogVisible) toggleSysLogView();
-    if (panel) panel.classList.add('speech-open');
-    if (btn)   btn.classList.add('active');
-    updateSpeechSendBtn();
-  } else {
-    stopListening();
-    if (panel) panel.classList.remove('speech-open');
-    if (btn)   btn.classList.remove('active');
-  }
-}
-
-function updateSpeechSendBtn() {
-  const box = document.getElementById('speechEditBox');
-  const btn = document.getElementById('speechSendBtn');
-  if (btn) btn.disabled = !box || !box.value.trim();
-}
-
-function sendSpeechToChat() {
-  const box = document.getElementById('speechEditBox');
-  if (!box) return;
-  const txt = box.value.trim();
-  if (!txt) return;
-  if (chatInput) {
-    chatInput.value = txt;
-    chatInput.style.height = 'auto';
-    chatInput.style.height = Math.min(chatInput.scrollHeight, 160) + 'px';
-  }
-  sendChat();
-  box.value = '';
-  updateSpeechSendBtn();
-}
-
-function toggleListening() {
-  if (_listening) { stopListening(); } else { startListening(); }
-}
-
-function startListening() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) {
-    setStatus('NOT SUPPORTED');
-    return;
-  }
-  if (_recognition) { try { _recognition.abort(); } catch(e){} }
-  _recognition = new SpeechRecognition();
-  _recognition.continuous      = true;
-  _recognition.interimResults  = true;
-  _recognition.lang            = 'en-US';
-
-  _recognition.onstart = () => {
-    _listening = true;
-    _interimText = '';
-    setStatus('● LISTENING');
-    const lb = document.getElementById('speechListenBtn');
-    if (lb) { lb.classList.add('listening'); lb.textContent = 'STOP'; }
-    const ss = document.getElementById('speechStatus');
-    if (ss) ss.classList.add('listening');
-  };
-
-  _recognition.onresult = (e) => {
-    const box = document.getElementById('speechEditBox');
-    if (!box) return;
-    let finalChunk = '';
-    let interim    = '';
-    for (let i = e.resultIndex; i < e.results.length; i++) {
-      if (e.results[i].isFinal) { finalChunk += e.results[i][0].transcript; }
-      else                      { interim    += e.results[i][0].transcript; }
-    }
-    if (finalChunk) {
-      const cur = box.value;
-      box.value = cur + (cur && !cur.endsWith(' ') ? ' ' : '') + finalChunk.trim();
-      _interimText = '';
-    } else {
-      _interimText = interim;
-    }
-    updateSpeechSendBtn();
-  };
-
-  _recognition.onerror = (e) => {
-    if (e.error === 'no-speech') return;
-    setStatus('ERR: ' + e.error.toUpperCase());
-    stopListening();
-  };
-
-  _recognition.onend = () => {
-    if (_listening) {
-      try { _recognition.start(); } catch(e) { stopListening(); }
-    }
-  };
-
-  try { _recognition.start(); } catch(e) { setStatus('ERR: START FAILED'); }
-}
-
-function stopListening() {
-  _listening = false;
-  if (_recognition) { try { _recognition.stop(); } catch(e){} _recognition = null; }
-  setStatus('IDLE');
-  const lb = document.getElementById('speechListenBtn');
-  if (lb) { lb.classList.remove('listening'); lb.textContent = 'LISTEN'; }
-  const ss = document.getElementById('speechStatus');
-  if (ss) ss.classList.remove('listening');
-}
-
-function setStatus(txt) {
-  const ss = document.getElementById('speechStatus');
-  if (ss) ss.textContent = txt;
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  const box = document.getElementById('speechEditBox');
-  if (box) box.addEventListener('input', updateSpeechSendBtn);
-});
-
 function init() {
-  if (location.protocol !== 'https:' && location.protocol !== 'file:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+  if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
     entry('ERROR: HTTPS required for mic access', 'err');
     entry('Please open this page over HTTPS', 'err');
     return;
-  }
-  if (location.protocol === 'file:') {
-    entry('Running from local file — mic/camera may need manual permission grant in browser', 'sys');
   }
   // Real WebRTC check — PeerJS error message can be misleading
   if (typeof RTCPeerConnection === 'undefined') {
@@ -2982,7 +2671,7 @@ function init() {
   }
 
   navigator.mediaDevices.getUserMedia({
-    audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
     video: videoConstraint
   })
   .then(applyStreamFlags)
@@ -2991,7 +2680,7 @@ function init() {
     if (e.name !== 'NotAllowedError' && e.name !== 'PermissionDeniedError' && e.name !== 'SecurityError') {
       entry('Camera unavailable (' + e.name + ') — retrying audio-only', 'sys');
       navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
         video: false
       })
       .then(applyStreamFlags)
@@ -3009,11 +2698,6 @@ function startPeer() {
     setTimeout(startPeer, 500);
     return;
   }
-  // Destroy any existing peer before creating a new one.
-  // Without this the old peer's event handlers (especially 'disconnected' → peer.reconnect())
-  // keep firing against the replaced reference, causing a permanent reconnect loop.
-  if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e){} }
-  peer = null;
   // Close any stale data connection from a previous peer instance
   if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
   linked = false;
@@ -3097,10 +2781,6 @@ function attachDataConn(dc) {
     setStatus('reachable');
     document.getElementById('sendBtn').disabled = false;
     sendVideoState();
-    if (_pendingChatMsg) {
-      const queued = _pendingChatMsg; _pendingChatMsg = null;
-      try { dcSend(queued); addBubble(queued, true); entry('Queued message sent', 'sys'); } catch(e) {}
-    }
   }
   dc.on('open', onDcOpen);
   // Android/WebView fallback: 'open' sometimes fires before the handler is attached
@@ -3122,27 +2802,14 @@ function attachDataConn(dc) {
     }
   });
   dc.on('close', () => {
-    if (dataConn !== dc) return; // stale handler — a newer DC already took over
     pendingDC = false;
     dataConn = null;
     document.getElementById('sendBtn').disabled = true;
     entry('Chat channel closed', 'sys');
-    // Only reopen if the call is still live — capture linked now and re-check
-    // after the setTimeout so a concurrent onDrop() doesn't cause a ghost reconnect
-    if (linked) {
-      entry('Reopening data channel…', 'sys');
-      setTimeout(() => { if (linked) openDataConn(); }, 500);
-    }
   });
   dc.on('error', e => {
     pendingDC = false;
     entry('Data channel error: ' + (e.message || e), 'err');
-    // Only reopen if the call is still live
-    if (linked && dataConn === dc) {
-      dataConn = null;
-      entry('Reopening data channel after error…', 'sys');
-      setTimeout(() => { if (linked) openDataConn(); }, 500);
-    }
   });
 }
 
@@ -3292,10 +2959,13 @@ function attachCall(c) {
     document.getElementById('remoteAudio').srcObject = stream;
     const remoteVideo = document.getElementById('remoteVideo');
     remoteVideo.srcObject = stream;
-    const _cu = document.getElementById('chatUnderlay');
-    if (_cu) { _cu.srcObject = stream; _cu.classList.remove('no-stream'); }
     syncMiniVideos();
     document.getElementById('remoteWrap').classList.remove('waiting', 'stale');
+    // Clear stale from mini overlays when stream reconnects
+    ['miniRemoteOverlay', 'miniChatOverlay'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.remove('stale');
+    });
     updateRemoteVideoState(true, stream.getVideoTracks().length > 0);
     stream.getVideoTracks().forEach(track => {
       track.addEventListener('mute', () => updateRemoteVideoState(false, true));
@@ -3310,9 +2980,11 @@ function attachCall(c) {
     duplexBar.className = 'duplex-overlay live';
     syncControls();
     startQualityPolling();
-    // Alpha owns data channel initiation — do not call openDataConn() here.
-    // Bravo only accepts inbound DCs via peer.on('connection').
+    // Ensure data channel is open
+    openDataConn();
     // Re-enforce mute/unmute state now that WebRTC senders are live.
+    // A link drop + reconnect resets the sender track to whatever getCallStream()
+    // supplied; applyMuteToSenders brings it back in line with audioMuted.
     applyMuteToSenders();
   });
   c.on('close', () => { if (call === c) onDrop(); });
@@ -3373,7 +3045,7 @@ function _doLeave() {
     localStream = null;
   }
   // Clear all video elements immediately — no stale frames
-  ['localVideo','remoteVideo','chatUnderlay'].forEach(id => {
+  ['localVideo','remoteVideo','miniRemoteVideo','miniLocalVideo','miniChatVideo'].forEach(id => {
     const el = document.getElementById(id);
     if (el) { try { el.pause(); el.srcObject = null; el.load(); } catch(e){} }
   });
@@ -3384,21 +3056,22 @@ function _doLeave() {
   if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
   if (peer)  { try { peer.destroy(); } catch(e){} peer = null; }
   linked = false;
+  // Export sys log before closing
+  exportSysLog();
   // Close window
   window.close();
-  // Fallback if window.close() is blocked — show ended screen (do NOT reload, that returns to login)
+  // Fallback if window.close() is blocked (e.g. not opener)
   setTimeout(() => {
-    document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0a1520;color:#f1f5f9;font-family:monospace;font-size:18px;letter-spacing:1px;">SESSION ENDED — YOU MAY CLOSE THIS TAB</div>';
+    document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0a1520;color:#f1f5f9;font-family:monospace;font-size:14px;">Session ended. You may close this tab.</div>';
   }, 300);
 }
 
 function handleRemoteLeave() {
-  // Remote user left intentionally — cancel any pending reconnect and go to leave screen
-  clearTimeout(dropTimer);  // prevent onDrop's grace-period timer from showing reconnect screen
+  // Remote user left — show notice, clear stale video, do NOT auto-reconnect
   leftPermanently = false; // we haven't left yet, remote did
-  remotePeerLeft = true;
+  remotePeerLeft = true;  // flag so onDrop doesn't redirect to login
   // Clear remote video immediately
-  ['remoteVideo'].forEach(id => {
+  ['remoteVideo','miniRemoteVideo','miniChatVideo'].forEach(id => {
     const el = document.getElementById(id);
     if (el) { try { el.pause(); el.srcObject = null; el.load(); } catch(e){} }
   });
@@ -3407,17 +3080,22 @@ function handleRemoteLeave() {
   // Remove stale/waiting classes, keep video wrap clean
   const rw = document.getElementById('remoteWrap');
   if (rw) rw.className = 'video-wrap';
+  ['miniRemoteOverlay','miniChatOverlay'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('stale','no-video');
+  });
   // Stop quality polling
   stopQualityPolling();
+  // Show "User left chat" notice in header
+  const notice = document.getElementById('userLeftNotice');
+  if (notice) notice.classList.add('visible');
   entry('Remote user left the session', 'sys');
-  // End this session immediately so both sides close at the same time
-  _doLeave();
+  // Hide login overlay if it was showing — stay on current screen
+  document.getElementById('sessionOverlay').style.display = 'none';
 }
 
 function onDrop() {
-  clearTimeout(retryTimer);
   saveRecordingIfActive();
-  _pendingChatMsg = null;  // discard any queued message — it belongs to the dropped session
   linked = false;
   call = null;
   // Reset data channel state so it re-opens cleanly on reconnect
@@ -3432,27 +3110,31 @@ function onDrop() {
   const _rv = document.getElementById('remoteVideo');
   if (_rv) { try { _rv.srcObject = null; _rv.load(); } catch(e){} }
   syncMiniVideos();
-  document.getElementById('remoteWrap').classList.remove('video-off', 'no-video', 'waiting');
-  document.getElementById('remoteWrap').classList.add('stale');
-  // Mark mini remote overlays as stale too
-  
+  document.getElementById('remoteWrap').classList.remove('video-off', 'no-video', 'stale');
+  document.getElementById('remoteWrap').classList.add('waiting');
+  // Mark mini remote overlays as waiting too
+  ['miniRemoteOverlay', 'miniChatOverlay'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.classList.remove('no-video', 'stale'); }
+  });
   setStatus('standby');
   if (leftPermanently) return; // permanent leave handled by leaveSession()
-  if (remotePeerLeft) return;  // remote sent leave signal — stay on leave screen
+  if (remotePeerLeft) return;  // remote sent leave signal — stay on screen, notice already shown
   if (peerRefreshing)  return;  // a refresh-reload is in progress — do not show login
-  // Show reconnect screen after a short grace period.
-  // handleRemoteLeave() will cancel this timer if a 'leave' signal arrives first,
-  // ensuring a clean leave goes to the leave screen, not the reconnect screen.
-  clearTimeout(dropTimer);
-  dropTimer = setTimeout(() => {
-    if (remotePeerLeft) return; // leave message arrived — handled by handleRemoteLeave
+  // Delay redirect to allow a pending data-channel 'leave' message to arrive first.
+  // Over HTTPS/relayed WebRTC the DC message and call-close event race each other;
+  // we wait long enough for the leave flag to be set before deciding it's a real drop.
+  setTimeout(() => {
+    if (remotePeerLeft) return; // leave message arrived — stay on screen
     if (peerRefreshing)  return; // refresh in progress — do not show login
-    entry('Link lost — returning to reconnect screen', 'sys');
+    entry('Link lost — returning to login screen', 'sys');
+    // Show login overlay immediately and restart auto-login countdown
     document.getElementById('sessionOverlay').style.display = 'flex';
     document.getElementById('unitIdDisplay').style.display = 'none';
     prefillLogin();
+    showReconnecting();
     startLoginTimeout();
-  }, 400);
+  }, 2000);
 }
 
 function muteLocal() {
@@ -3462,13 +3144,13 @@ function muteLocal() {
 // ── Session timeout (10 min inactivity) ──────────────────────
 let lockTimer;
 let autoReconnectTimer;
-let dropTimer;  // cancellable handle for onDrop's leave-vs-drop grace period
 function resetLockTimer() {
   clearTimeout(lockTimer);
   lockTimer = setTimeout(() => {
     document.getElementById('sessionOverlay').style.display = 'flex';
     document.getElementById('unitIdDisplay').style.display = 'none';
     prefillLogin();
+    showReconnecting();
     saveRecordingIfActive();
     if (peer) { peer.destroy(); }
     entry('Session timed out — auto-reconnecting…', 'sys');
@@ -3613,10 +3295,18 @@ async function toggleRecordRemote() {
 
   const mimeType = preferredMime();
   let stopLoop = null, recStream;
-  recStream = new MediaStream([
+  const withMini = !!miniVideoVisible;
+
+  if (withMini) {
+    const miniLocalVideo = document.getElementById('miniLocalVideo');
+    const comp = buildCompositeStream(remoteVideo, miniLocalVideo, aDest.stream.getAudioTracks());
+    recStream = comp.stream; stopLoop = comp.stopLoop;
+  } else {
+    recStream = new MediaStream([
       ...remoteVideo.srcObject.getVideoTracks(),
       ...aDest.stream.getAudioTracks()
     ]);
+  }
 
   recRemoteChunks = [];
   recRemote = new MediaRecorder(recStream, { mimeType });
@@ -3629,7 +3319,7 @@ async function toggleRecordRemote() {
   };
   recRemote.start(1000);
   btn.textContent = 'Record Remote Off'; btn.classList.add('recording');
-  entry('Remote recording started…', 'ok');
+  entry(`Remote recording started${withMini ? ' (with local mini overlay)' : ''}…`, 'ok');
 }
 
 async function toggleRecordLocal() {
@@ -3658,11 +3348,19 @@ async function toggleRecordLocal() {
 
   const mimeType = preferredMime();
   let stopLoop = null, recStream;
-  const localVideo = document.getElementById('localVideo');
-  recStream = new MediaStream([
+  const withMini = !!miniVideoVisible;
+
+  if (withMini) {
+    const localVideo      = document.getElementById('localVideo');
+    const miniRemoteVideo = document.getElementById('miniRemoteVideo');
+    const comp = buildCompositeStream(localVideo, miniRemoteVideo, aDest.stream.getAudioTracks());
+    recStream = comp.stream; stopLoop = comp.stopLoop;
+  } else {
+    recStream = new MediaStream([
       ...localStream.getVideoTracks(),
       ...aDest.stream.getAudioTracks()
     ]);
+  }
 
   recLocalChunks = [];
   recLocal = new MediaRecorder(recStream, { mimeType });
@@ -3675,7 +3373,7 @@ async function toggleRecordLocal() {
   };
   recLocal.start(1000);
   btn.textContent = '⏹ Stop & Save'; btn.classList.add('recording');
-  entry('Local recording started…', 'ok');
+  entry(`Local recording started${withMini ? ' (with remote mini overlay)' : ''}…`, 'ok');
 }
 
 function toggleRecord() {}
@@ -3795,6 +3493,96 @@ async function stopScreenShare() {
   entry('Screen share stopped — camera restored', 'ok');
 }
 
+// ── System Audio capture (getDisplayMedia audio-only) ─────────
+let sysAudioStream  = null;
+let sysAudioNode    = null;
+let sysMonitorGain  = null;  // controls local speaker passthrough for sys audio (independent of call stream)
+let mediaMonitorGain = null; // controls local speaker passthrough for media elements
+let sysMonitorOn    = false;
+
+async function toggleSysAudio() {
+  const btns = [document.getElementById('sysAudioBtn'), document.getElementById('sysAudioBtn2')];
+  if (sysAudioStream) {
+    sysAudioStream.getTracks().forEach(t => t.stop());
+    sysAudioStream = null;
+    if (sysAudioNode) { try { sysAudioNode.disconnect(); } catch(e){} sysAudioNode = null; }
+    if (sysMonitorGain) { try { sysMonitorGain.disconnect(); } catch(e){} sysMonitorGain = null; }
+    _mixPlayingSet.delete('__sysaudio__');
+    if (_mixPlayingSet.size === 0) _deactivateMix();
+    ['remoteAudio', 'miniRemoteVideo', 'miniChatVideo'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.muted = false;
+    });
+    btns.forEach(b => { if(b){ b.textContent = '🔊 Sys Audio'; b.classList.remove('sys-audio-on'); }});
+    entry('System audio capture stopped', 'sys');
+    return;
+  }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+    entry('getDisplayMedia not supported in this browser', 'err'); return;
+  }
+  try {
+    // Chrome requires video:true — stop video track immediately after capture
+    const stream = await navigator.mediaDevices.getDisplayMedia({
+      video: true,
+      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+    });
+    stream.getVideoTracks().forEach(t => t.stop());
+    const audioTracks = stream.getAudioTracks();
+    if (!audioTracks.length) {
+      entry('No audio track captured — tick "Share tab audio" or "Share system audio" in the picker', 'err');
+      return;
+    }
+    sysAudioStream = stream;
+    _ensureMixContext();
+    if (_mixCtx.state === 'suspended') await _mixCtx.resume();
+    const sysOnly = new MediaStream(audioTracks);
+    sysAudioNode = _mixCtx.createMediaStreamSource(sysOnly);
+    // GainNode locks sys audio at a fixed unity level so WebRTC's per-packet
+    // gain adjustments on the blended track don't cause amplitude fluctuation.
+    const sysGain = _mixCtx.createGain();
+    sysGain.gain.value = 1.0;
+    sysAudioNode.connect(sysGain);
+    sysGain.connect(_mixDest);
+
+    sysMonitorGain = _mixCtx.createGain();
+    sysMonitorGain.gain.value = sysMonitorOn ? 1.0 : 0.0;
+    sysGain.connect(sysMonitorGain);
+    sysMonitorGain.connect(_mixCtx.destination);
+    _mixPlayingSet.add('__sysaudio__');
+    await _activateMix();
+    ['remoteAudio', 'miniRemoteVideo', 'miniChatVideo'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.muted = true;
+    });
+    audioTracks[0].addEventListener('ended', () => { if (sysAudioStream) toggleSysAudio(); });
+    btns.forEach(b => { if(b){ b.textContent = '🔊 Sys Audio On'; b.classList.add('sys-audio-on'); }});
+    entry('System audio capture active — mixed into call', 'ok');
+  } catch(e) {
+    entry('System audio capture failed: ' + e.message, 'err');
+  }
+}
+
+function toggleSysMonitor() {
+  sysMonitorOn = !sysMonitorOn;
+  // Ensure the AudioContext exists and is running — gain nodes are useless
+  // if the context is suspended or hasn't been created yet.
+  _ensureMixContext();
+  if (_mixCtx.state === 'suspended') _mixCtx.resume();
+  if (sysMonitorGain)   sysMonitorGain.gain.value   = sysMonitorOn ? 1.0 : 0.0;
+  if (mediaMonitorGain) mediaMonitorGain.gain.value  = sysMonitorOn ? 1.0 : 0.0;
+  const btns = [document.getElementById('sysMonitorBtn'), document.getElementById('sysMonitorBtn2')];
+  btns.forEach(b => {
+    if (!b) return;
+    if (sysMonitorOn) {
+      b.textContent = '🎧 Monitor On';
+      b.classList.add('sys-audio-on');
+    } else {
+      b.textContent = '🎧 Monitor Off';
+      b.classList.remove('sys-audio-on');
+    }
+  });
+  entry('Sys audio local monitor: ' + (sysMonitorOn ? 'ON' : 'OFF'), 'sys');
+}
 // ── Media-to-call audio mix ───────────────────────────────────
 let _mixCtx  = null;
 let _mixDest = null;
@@ -3808,9 +3596,15 @@ function _ensureMixContext() {
   if (_mixCtx) return;
   _mixCtx  = new (window.AudioContext || window.webkitAudioContext)();
   _mixDest = _mixCtx.createMediaStreamDestination();
+  // Gate node for media-element local monitor — respects the Monitor toggle
+  mediaMonitorGain = _mixCtx.createGain();
+  mediaMonitorGain.gain.value = sysMonitorOn ? 1.0 : 0.0;
+  mediaMonitorGain.connect(_mixCtx.destination);
   if (localStream) {
     try {
       _mixMicNode = _mixCtx.createMediaStreamSource(new MediaStream(localStream.getAudioTracks()));
+      // GainNode isolates the mic from WebRTC's AGC so it doesn't pull the
+      // blended mix level up/down while sys audio is active.
       _mixMicGain = _mixCtx.createGain();
       _mixMicGain.gain.value = audioMuted ? 0.0 : 1.0;  // honour mute state if mix starts after mute
       _mixMicNode.connect(_mixMicGain);
@@ -3871,7 +3665,7 @@ async function attachMediaToCallAudio(mediaEl) {
     try {
       const src = _mixCtx.createMediaElementSource(mediaEl);
       src.connect(_mixDest);
-      src.connect(_mixCtx.destination); // → local speakers
+      src.connect(mediaMonitorGain);    // → local speakers (gated by monitor toggle)
       _mixSourceNodes.set(mediaEl, src);
       entry('Media element wired into mix', 'sys');
     } catch(e) { entry('Media wire warn: ' + e.message, 'sys'); return; }
@@ -3950,11 +3744,12 @@ function refreshScreen() {
   // Notify remote peer so they auto-refresh in sync
   try { dcSend({ __control: 'refresh' }); } catch(e) {}
   peerRefreshing = true;  // suppress onDrop login redirect
-  // Flag survives the reload so the fresh page auto-reconnects via login countdown
+  // Flag survives the reload so the fresh page shows reconnect overlay
   try { sessionStorage.setItem('fieldRadioRefreshing', '1'); } catch(e) {}
-  // Show login box immediately on the refreshing side too
+  // Show black overlay immediately on the refreshing side too
   document.getElementById('sessionOverlay').style.display = 'flex';
   document.getElementById('unitIdDisplay').style.display = 'none';
+  showReconnecting();
   setTimeout(() => window.location.reload(), 400);
 }
 
@@ -3976,9 +3771,11 @@ async function flipCamera() {
   // We must: (1) detach srcObject from all video elements, (2) stop & remove the
   // track, (3) wait for hardware to fully release, then (4) re-acquire.
   const localVideoEl = document.getElementById('localVideo');
+  const miniLocalEl  = document.getElementById('miniLocalVideo');
 
   // Detach video elements so the hardware lock is released
   if (localVideoEl) localVideoEl.srcObject = null;
+  if (miniLocalEl)  miniLocalEl.srcObject  = null;
 
   const oldVideoTrack = localStream.getVideoTracks()[0] || null;
   if (oldVideoTrack) {
@@ -4016,7 +3813,9 @@ async function flipCamera() {
     // Hard re-attach — null first so the browser treats it as a fresh assignment
     // even if srcObject reference hasn't changed. This clears any frozen/blurred frame.
     const _lv = document.getElementById('localVideo');
+    const _mlv = document.getElementById('miniLocalVideo');
     if (_lv)  { _lv.srcObject  = null; _lv.srcObject  = localStream; }
+    if (_mlv) { _mlv.srcObject = null; _mlv.srcObject = localStream; }
     syncMiniVideos();
 
     // Replace track in active WebRTC call
@@ -4035,7 +3834,9 @@ async function flipCamera() {
       const recoveryTrack  = recoveryStream.getVideoTracks()[0];
       localStream.addTrack(recoveryTrack);
       const _lv2  = document.getElementById('localVideo');
+      const _mlv2 = document.getElementById('miniLocalVideo');
       if (_lv2)  { _lv2.srcObject  = null; _lv2.srcObject  = localStream; }
+      if (_mlv2) { _mlv2.srcObject = null; _mlv2.srcObject = localStream; }
       syncMiniVideos();
       entry('Camera restored to original.', 'ok');
     } catch(re) {
