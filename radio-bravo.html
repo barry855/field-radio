@@ -1582,6 +1582,7 @@ const sendBtn   = document.getElementById('sendBtn');
 // a fallback for mouse users and assistive technology.
 let _sendBtnTouched = false;
 let _syslogVisible  = false;
+let _speechVisible  = false;
 // sendBtn removed — sending is via speech panel only
 
 function startSession() {
@@ -2837,7 +2838,6 @@ function toggleSysLogView() {
 }
 
 // ── Speech panel toggle + Web Speech API ────────────────────────────────────
-let _speechVisible = false;
 let _recognition   = null;
 let _listening     = false;
 let _interimText   = '';
