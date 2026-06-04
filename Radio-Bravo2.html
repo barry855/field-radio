@@ -4498,8 +4498,9 @@ document.addEventListener('visibilitychange', () => {
 });
 
 window.addEventListener('beforeunload', () => {
-  // Notify remote that this side is leaving before the peer tears down
-  if (!leftPermanently) {
+  // Notify remote that this side is leaving — but NOT during a refresh-reload,
+  // otherwise the remote wrongly shows the leave screen instead of reconnecting.
+  if (!leftPermanently && !peerRefreshing) {
     try { dcSend({ __control: 'leave' }); } catch(e) {}
   }
   peer?.destroy();
