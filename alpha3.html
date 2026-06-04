@@ -495,7 +495,7 @@
     flex: 0 0 auto; height: 36px; padding: 0 8px;
     display: flex; align-items: center;
     font-family: 'Share Tech Mono', monospace; font-size: 10px;
-    letter-spacing: 1.5px; color: var(--text-muted, #7a9ab0);
+    letter-spacing: 1.5px; color: #3a8fff;
     text-transform: uppercase; user-select: none; white-space: nowrap;
     border-left: 1px solid var(--border); border-right: 1px solid var(--border);
     margin: 0 1px;
@@ -1419,17 +1419,17 @@
           <button class="speech-top-btn" onclick="saveChatToFile()" id="saveChatBtn" title="Save chat as HTML">💾 SAVE</button>
           <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR</button>
           <button class="speech-top-btn" id="findChatBtn" title="Find in chat">🔍 FIND</button>
+          <button class="speech-top-btn active" id="miniChatBtn" onclick="toggleMiniChat()" title="Toggle mini video in chat">MINI ON</button>
+          <button class="speech-top-btn" id="flipChatBtn" onclick="flipCamera()" title="Flip camera">⟳ Flip Cam</button>
           <button class="syslog-chat-btn" id="syslogToggleBtn" onclick="toggleSysLogView()" title="Toggle SYS LOG">SYS LOG</button>
-          <button class="syslog-chat-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input">SHOW CHAT</button>
+          <button class="syslog-chat-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input">TYPE IN CHAT</button>
         </div>
         <div class="chat-btn-bar-row">
-          <button class="speech-top-btn active" id="miniChatBtn" onclick="toggleMiniChat()" title="Toggle mini video in chat">MINI ON</button>
           <button class="speech-top-btn" id="chatVideoViewBtn" onclick="toggleChatVideoView()" title="Toggle chat video view">VIDEO REMOTE</button>
           <span class="rec-label">Record</span>
           <button class="speech-top-btn rec-chat-btn" id="recChatBtn" onclick="toggleRecordChat()" title="Record current main feed + mini if visible">⏺ Start</button>
           <button class="speech-top-btn video-off-state" id="videoOffChatBtn" onclick="toggleVideo()" title="Video on/off">Video Off</button>
           <button class="speech-top-btn" id="audioChatBtn" onclick="toggleAudio()" title="Mute/unmute mic">Audio Off</button>
-          <button class="speech-top-btn" id="flipChatBtn" onclick="flipCamera()" title="Flip camera">⟳ Flip Cam</button>
           <button class="speech-top-btn" id="screenChatBtn" onclick="toggleScreenShare()" title="Share screen">Share Off</button>
           <button class="speech-top-btn leave-style" id="leaveChatBtn" onclick="leaveSession()" title="Leave session">✕ Leave</button>
         </div>
@@ -2955,7 +2955,7 @@ function toggleSysLogView() {
       const sp = document.getElementById('speechPanel');
       if (sp) sp.classList.remove('speech-open');
       const sb = document.getElementById('speechToggleBtn');
-      if (sb) { sb.classList.remove('active'); sb.textContent = 'SHOW CHAT'; }
+      if (sb) { sb.classList.remove('active'); sb.textContent = 'TYPE IN CHAT'; }
     }
     if (logPanel) {
       logPanel.classList.add('syslog-open');
@@ -3000,7 +3000,7 @@ function toggleSpeechPanel() {
   } else {
     stopListening();
     if (panel) panel.classList.remove('speech-open');
-    if (btn)   { btn.classList.remove('active'); btn.textContent = 'SHOW CHAT'; }
+    if (btn)   { btn.classList.remove('active'); btn.textContent = 'TYPE IN CHAT'; }
     setChatBtnsDisabled(false);
   }
 }
