@@ -520,6 +520,20 @@
   .channel-row {
     display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
   }
+  /* ── Mini control row ──────────────────────────────────────── */
+  .mini-row {
+    display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
+    flex-shrink: 0; padding: 4px 0;
+  }
+  .rec-label {
+    flex: 0 0 auto; height: 36px; padding: 0 8px;
+    display: flex; align-items: center;
+    font-family: 'Share Tech Mono', monospace; font-size: 10px;
+    letter-spacing: 1.5px; color: var(--text-muted, #7a9ab0);
+    text-transform: uppercase; user-select: none; white-space: nowrap;
+    border-left: 1px solid var(--border); border-right: 1px solid var(--border);
+    margin: 0 1px;
+  }
   .duplex-bar {
     flex: 0 0 auto; height: 42px; padding: 0 16px;
     border-radius: 6px; border: 2px solid #1a2a1a;
@@ -1343,17 +1357,19 @@
   <div class="tab-content">
     <!-- LOCAL TAB -->
     <div class="tab-pane" id="paneLocal">
-      <div class="channel-row" style="flex-shrink:0; padding:4px 0;">
-        <button class="media-btn video-off-state" id="videoBtn" onclick="toggleVideo()">Video Off</button>
-        <button class="media-btn" id="audioBtn" onclick="toggleAudio()">Audio On</button>
+      <div class="mini-row">
         <button class="media-btn" id="miniBtn" onclick="toggleMiniVideo()">Mini Off</button>
+        <button class="media-btn video-off-state" id="videoBtn" onclick="toggleVideo()">Local Video</button>
+        <span class="rec-label">Record</span>
+        <button class="media-btn" id="recBtn" onclick="toggleRecordLocal()">⏺ Start</button>
+        <button class="media-btn video-off-state" id="videoBtn_row2" onclick="toggleVideo()">Video Off</button>
+        <button class="media-btn" id="audioBtn" onclick="toggleAudio()">Audio Off</button>
+        <button class="media-btn" id="flipBtn" onclick="flipCamera()">⟳ Flip Cam</button>
         <button class="media-btn" id="screenBtn" onclick="toggleScreenShare()">Share Off</button>
         <button class="leave-btn" id="leaveBtn" onclick="leaveSession()">✕ Leave</button>
       </div>
       <div class="channel-row" style="flex-shrink:0; padding:0 0 4px 0;">
-        <button class="media-btn" id="recBtn" onclick="toggleRecordLocal()">⏺ Record Local</button>
         <button class="media-btn" id="refreshBtnLocal" onclick="refreshScreen()">↺ Refresh</button>
-        <button class="media-btn" id="flipBtn" onclick="flipCamera()">⟳ Flip</button>
         <button class="speaker-btn speaker-on" id="speakerBtnLocal" onclick="toggleSpeaker()">🔊 Speaker</button>
       </div>
       <div class="zoom-row">
@@ -1379,17 +1395,19 @@
     </div>
     <!-- REMOTE TAB -->
     <div class="tab-pane active" id="paneRemote">
-      <div class="channel-row" style="flex-shrink:0; padding:4px 0;">
-        <button class="media-btn video-off-state" id="videoBtn2" onclick="toggleVideo()">Video Off</button>
-        <button class="media-btn" id="audioBtn2" onclick="toggleAudio()">Audio On</button>
+      <div class="mini-row">
         <button class="media-btn" id="miniBtn2" onclick="toggleMiniVideo()">Mini Off</button>
+        <button class="media-btn video-off-state" id="videoBtn2" onclick="toggleVideo()">Local Video</button>
+        <span class="rec-label">Record</span>
+        <button class="media-btn" id="recBtn2" onclick="toggleRecordRemote()">⏺ Start</button>
+        <button class="media-btn video-off-state" id="videoBtn2_row2" onclick="toggleVideo()">Video Off</button>
+        <button class="media-btn" id="audioBtn2" onclick="toggleAudio()">Audio Off</button>
+        <button class="media-btn" id="flipBtn2" onclick="flipCamera()">⟳ Flip Cam</button>
         <button class="media-btn" id="screenBtn2" onclick="toggleScreenShare()">Share Off</button>
         <button class="leave-btn" id="leaveBtn2" onclick="leaveSession()">✕ Leave</button>
       </div>
       <div class="channel-row" style="flex-shrink:0; padding:0 0 4px 0;">
-        <button class="media-btn" id="recBtn2" onclick="toggleRecordRemote()">Record Remote On</button>
         <button class="media-btn" id="refreshBtn" onclick="refreshScreen()">↺ Refresh</button>
-        <button class="media-btn" id="flipBtn2" onclick="flipCamera()">⟳ Flip</button>
         <button class="speaker-btn speaker-on" id="speakerBtnRemote" onclick="toggleSpeaker()">🔊 Speaker</button>
       </div>
       <div class="gain-row">
@@ -1977,8 +1995,31 @@ function entry(msg, cls='sys') {
 
 }
 
+// ── Auto-scroll: pause while mouse/touch is inside chat, resume on leave ──
+let _chatUserActive = false;  // true while pointer is inside or touching the chat window
+
+(function initChatScrollPause() {
+  // Mouse: pause on enter, resume + snap on leave
+  chat.addEventListener('mouseenter', () => { _chatUserActive = true; });
+  chat.addEventListener('mouseleave', () => {
+    _chatUserActive = false;
+    requestAnimationFrame(() => { chat.scrollTop = chat.scrollHeight; });
+  });
+  // Touch: pause on touchstart, resume + snap on touchend/cancel
+  chat.addEventListener('touchstart', () => { _chatUserActive = true; }, { passive: true });
+  chat.addEventListener('touchend',   () => {
+    _chatUserActive = false;
+    // Short delay so the browser finishes the momentum scroll before we snap
+    setTimeout(() => { if (!_chatUserActive) chat.scrollTop = chat.scrollHeight; }, 200);
+  }, { passive: true });
+  chat.addEventListener('touchcancel', () => {
+    _chatUserActive = false;
+    setTimeout(() => { if (!_chatUserActive) chat.scrollTop = chat.scrollHeight; }, 200);
+  }, { passive: true });
+})();
+
 function scrollToBottom(force) {
-  if (!force && document.activeElement === chat) return;  // user is scrolling — don't interrupt
+  if (!force && _chatUserActive) return;  // user is interacting — don't interrupt
   requestAnimationFrame(() => {
     chat.scrollTop = chat.scrollHeight;
   });
@@ -3478,8 +3519,16 @@ function updateQuality(rtt, lossPct) {
 }
 
 function setVideoButtons(enabled) {
-  const btns = [document.getElementById('videoBtn'), document.getElementById('videoBtn2')];
-  btns.forEach(b => {
+  // Primary "Local Video" buttons (position 2 in mini-row)
+  [document.getElementById('videoBtn'), document.getElementById('videoBtn2')].forEach(b => {
+    if (!b) return;
+    b.textContent = enabled ? 'Local Video' : 'Local Video';
+    b.classList.toggle('video-on', enabled);
+    b.classList.toggle('disabled-state', !enabled);
+    b.classList.toggle('video-off-state', !enabled);
+  });
+  // Shadow "Video Off/On" buttons (position 5 in mini-row)
+  [document.getElementById('videoBtn_row2'), document.getElementById('videoBtn2_row2')].forEach(b => {
     if (!b) return;
     b.textContent = enabled ? 'Video On' : 'Video Off';
     b.classList.toggle('video-on', enabled);
@@ -3558,14 +3607,14 @@ function saveRecordingIfActive() {
   if (recRemote && recRemote.state === 'recording') {
     entry('Connection lost — auto-saving remote recording…', 'sys');
     const btn2 = document.getElementById('recBtn2');
-    if (btn2) { btn2.textContent = 'Record Remote On'; btn2.classList.remove('recording'); }
+    if (btn2) { btn2.textContent = '⏺ Start'; btn2.classList.remove('recording'); }
     recRemoteBusy = true;
     recRemote.stop();
   }
   if (recLocal && recLocal.state === 'recording') {
     entry('Connection lost — auto-saving local recording…', 'sys');
     const btn = document.getElementById('recBtn');
-    if (btn) { btn.textContent = '⏺ Record Local'; btn.classList.remove('recording'); }
+    if (btn) { btn.textContent = '⏺ Start'; btn.classList.remove('recording'); }
     recLocalBusy = true;
     recLocal.stop();
   }
@@ -3829,7 +3878,7 @@ async function toggleRecordRemote() {
   if (recRemote && recRemote.state === 'recording') {
     recRemoteBusy = true;
     recRemote.stop();
-    btn.textContent = 'Record Remote On'; btn.classList.remove('recording');
+    btn.textContent = '⏺ Start'; btn.classList.remove('recording');
     entry('Remote recording stopped — saving…', 'sys');
     return;
   }
@@ -3862,7 +3911,7 @@ async function toggleRecordRemote() {
     saveRec(recRemoteChunks, mimeType, 'remote');
   };
   recRemote.start(1000);
-  btn.textContent = 'Record Remote Off'; btn.classList.add('recording');
+  btn.textContent = '⏹ Stop'; btn.classList.add('recording');
   entry('Remote recording started…', 'ok');
 }
 
@@ -3873,7 +3922,7 @@ async function toggleRecordLocal() {
   if (recLocal && recLocal.state === 'recording') {
     recLocalBusy = true;
     recLocal.stop();
-    btn.textContent = '⏺ Record Local'; btn.classList.remove('recording');
+    btn.textContent = '⏺ Start'; btn.classList.remove('recording');
     entry('Local recording stopped — saving…', 'sys');
     return;
   }
@@ -3908,7 +3957,7 @@ async function toggleRecordLocal() {
     saveRec(recLocalChunks, mimeType, 'local');
   };
   recLocal.start(1000);
-  btn.textContent = '⏹ Stop & Save'; btn.classList.add('recording');
+  btn.textContent = '⏹ Stop'; btn.classList.add('recording');
   entry('Local recording started…', 'ok');
 }
 
