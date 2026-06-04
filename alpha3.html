@@ -1340,7 +1340,7 @@
         <button class="speaker-btn speaker-on" id="speakerBtnLocal" onclick="toggleSpeaker()">🔊 Speaker</button>
       </div>
       <div class="zoom-row">
-        <span>ZOOM</span>
+        <span>ZOOM LOCAL</span>
         <input type="range" id="zoomSliderLocal" min="1" max="4" step="0.1" value="1" oninput="applyZoom(this.value,'local')">
         <span class="zoom-val" id="zoomValLocal">1.0×</span>
       </div>
@@ -1414,8 +1414,8 @@
           <button class="speech-top-btn" onclick="saveChatToFile()" id="saveChatBtn" title="Save chat as HTML">💾 SAVE</button>
           <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR</button>
           <button class="speech-top-btn" id="findChatBtn" title="Find in chat">🔍 FIND</button>
-          <button class="syslog-chat-btn" id="syslogToggleBtn" onclick="toggleSysLogView()" title="Toggle SYS LOG">SHOW SYS LOG</button>
-          <button class="syslog-chat-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input">TYPE CHAT</button>
+          <button class="syslog-chat-btn" id="syslogToggleBtn" onclick="toggleSysLogView()" title="Toggle SYS LOG">SYS LOG ON</button>
+          <button class="syslog-chat-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input">TYPE IN CHAT</button>
         </div>
         <div class="chat-btn-bar-row">
           <button class="speech-top-btn" id="miniChatBtn" onclick="toggleMiniChat()" title="Toggle mini video in chat">MINI ON</button>
@@ -1424,6 +1424,17 @@
       </div>
       <!-- ── Chat / video pane ───────────────────────────────── -->
 
+      <!-- ── Mic gain + Zoom Local sliders above chat window ── -->
+      <div class="gain-row" style="flex-shrink:0;">
+        <div class="gain-label"><span>MIC</span><span>GAIN</span></div>
+        <input type="range" id="micGainSliderChat" min="0" max="3" step="0.05" value="1" oninput="applyMicGain(this.value)">
+        <span class="gain-val" id="micGainValChat">1.00×</span>
+      </div>
+      <div class="zoom-row" style="flex-shrink:0;">
+        <span>ZOOM LOCAL</span>
+        <input type="range" id="zoomSliderChat" min="1" max="4" step="0.1" value="1" oninput="applyZoom(this.value,'local')">
+        <span class="zoom-val" id="zoomValChat">1.0×</span>
+      </div>
       <div class="chat-panel" style="flex:1" id="chatPanel">
         <div class="panel-label">COMMS</div>
         <video id="chatUnderlay" autoplay playsinline muted></video>
@@ -1445,7 +1456,7 @@
       <div id="speechPanel">
         <div class="speech-top-bar" style="display:none"></div>
         <div class="file-preview-strip" id="speechFilePreviewStrip"></div>
-        <textarea id="speechEditBox" placeholder="Tap TALK to start talking — edit or type here." spellcheck="true"></textarea>
+        <textarea id="speechEditBox" placeholder="Tap TALK to start — edit or type here." spellcheck="true"></textarea>
         <div class="speech-btn-row">
           <div class="sbr-left">
             <button id="speechAttachBtn" onclick="speechAttachClick()" title="Attach file or drag &amp; drop">ATTACH</button>
@@ -1460,7 +1471,7 @@
           </div>
           <div class="sbr-right">
             <button id="speechSendBtn" onclick="sendSpeechToChat()" disabled>SEND</button>
-            <button id="speechListenBtn" onclick="toggleListening()">LISTEN</button>
+            <button id="speechListenBtn" onclick="toggleListening()">TALK</button>
           </div>
         </div>
       </div>
@@ -1860,6 +1871,11 @@ function prefillLogin() {
     const gLabel  = document.getElementById('micGainVal');
     if (gSlider && isFinite(savedGain)) { gSlider.value = savedGain; }
     if (gLabel  && isFinite(savedGain)) { gLabel.textContent = savedGain.toFixed(2) + '×'; }
+    // Also sync chat-tab copies
+    const gSliderChat = document.getElementById('micGainSliderChat');
+    const gLabelChat  = document.getElementById('micGainValChat');
+    if (gSliderChat && isFinite(savedGain)) { gSliderChat.value = savedGain; }
+    if (gLabelChat  && isFinite(savedGain)) { gLabelChat.textContent = savedGain.toFixed(2) + '×'; }
     // Restore saved translate language
     const savedLang = localStorage.getItem('alpha_translate_lang');
     if (savedLang) {
@@ -2927,7 +2943,7 @@ function toggleSysLogView() {
       const sp = document.getElementById('speechPanel');
       if (sp) sp.classList.remove('speech-open');
       const sb = document.getElementById('speechToggleBtn');
-      if (sb) { sb.classList.remove('active'); sb.textContent = 'TYPE CHAT'; }
+      if (sb) { sb.classList.remove('active'); sb.textContent = 'TYPE IN CHAT'; }
     }
     if (logPanel) {
       logPanel.classList.add('syslog-open');
@@ -2935,14 +2951,14 @@ function toggleSysLogView() {
       const l = logPanel.querySelector('#log');
       if (l) setTimeout(() => { l.scrollTop = l.scrollHeight; }, 50);
     }
-    if (btn) { btn.classList.add('active'); btn.textContent = 'HIDE SYS LOG'; }
+    if (btn) { btn.classList.add('active'); btn.textContent = 'SYS LOG OFF'; }
     setChatBtnsDisabled(true);
   } else {
     if (logPanel) {
       logPanel.classList.remove('syslog-open');
       logPanel.classList.add('collapsed');
     }
-    if (btn) { btn.classList.remove('active'); btn.textContent = 'SHOW SYS LOG'; }
+    if (btn) { btn.classList.remove('active'); btn.textContent = 'SYS LOG ON'; }
     setChatBtnsDisabled(false);
   }
 }
@@ -2963,16 +2979,16 @@ function toggleSpeechPanel() {
       const lp = document.getElementById('logPanel');
       if (lp) { lp.classList.remove('syslog-open'); lp.classList.add('collapsed'); }
       const lb = document.getElementById('syslogToggleBtn');
-      if (lb) { lb.classList.remove('active'); lb.textContent = 'SHOW SYS LOG'; }
+      if (lb) { lb.classList.remove('active'); lb.textContent = 'SYS LOG ON'; }
     }
     if (panel) panel.classList.add('speech-open');
-    if (btn)   { btn.classList.add('active'); btn.textContent = 'SHOW CHAT'; }
+    if (btn)   { btn.classList.add('active'); btn.textContent = 'TYPE IN CHAT'; }
     updateSpeechSendBtn();
     setChatBtnsDisabled(true);
   } else {
     stopListening();
     if (panel) panel.classList.remove('speech-open');
-    if (btn)   { btn.classList.remove('active'); btn.textContent = 'TYPE CHAT'; }
+    if (btn)   { btn.classList.remove('active'); btn.textContent = 'TYPE IN CHAT'; }
     setChatBtnsDisabled(false);
   }
 }
@@ -3062,7 +3078,7 @@ function stopListening() {
   if (_recognition) { try { _recognition.stop(); } catch(e){} _recognition = null; }
   setStatus('IDLE');
   const lb = document.getElementById('speechListenBtn');
-  if (lb) { lb.classList.remove('listening'); lb.textContent = 'LISTEN'; }
+  if (lb) { lb.classList.remove('listening'); lb.textContent = 'TALK'; }
   const ss = document.getElementById('speechStatus');
   if (ss) ss.classList.remove('listening');
 }
@@ -3681,8 +3697,6 @@ function _doLeave() {
   if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
   if (peer)  { try { peer.destroy(); } catch(e){} peer = null; }
   linked = false;
-  // Export sys log before closing
-  exportSysLog();
   // Close window
   window.close();
   // Fallback if window.close() is blocked — show ended screen (do NOT reload, that returns to login)
@@ -4507,8 +4521,15 @@ let _micGainCtx = null, _micGainNode = null, _micGainDest = null;
 
 function applyMicGain(val) {
   const v = parseFloat(val);
-  const lbl = document.getElementById('micGainVal');
-  if (lbl) lbl.textContent = v.toFixed(2) + '×';
+  // Sync all gain labels and sliders (primary + chat-tab copy)
+  ['micGainVal', 'micGainValChat'].forEach(id => {
+    const lbl = document.getElementById(id);
+    if (lbl) lbl.textContent = v.toFixed(2) + '×';
+  });
+  ['micGainSlider', 'micGainSliderChat'].forEach(id => {
+    const s = document.getElementById(id);
+    if (s && s.value !== String(val)) s.value = val;
+  });
   if (_micGainNode) {
     _micGainNode.gain.setTargetAtTime(v, _micGainCtx.currentTime, 0.01);
   }
@@ -4532,11 +4553,15 @@ function setupMicGainNode(stream) {
       if (oldAudio) stream.removeTrack(oldAudio);
       stream.addTrack(gainedAudio);
     }
-    // Update slider & label to saved value
+    // Update slider & label to saved value (primary + chat-tab copy)
     const slider = document.getElementById('micGainSlider');
     const lbl    = document.getElementById('micGainVal');
     if (slider) slider.value = _micGainNode.gain.value;
     if (lbl)    lbl.textContent = _micGainNode.gain.value.toFixed(2) + '×';
+    const sliderChat = document.getElementById('micGainSliderChat');
+    const lblChat    = document.getElementById('micGainValChat');
+    if (sliderChat) sliderChat.value = _micGainNode.gain.value;
+    if (lblChat)    lblChat.textContent = _micGainNode.gain.value.toFixed(2) + '×';
   } catch(e) { console.warn('Mic gain setup failed:', e); }
 }
 
@@ -4547,8 +4572,15 @@ function applyZoom(val, channel) {
   if (channel === 'local') {
     const vid = document.getElementById('localVideo');
     if (vid) vid.style.transform = v > 1 ? `scale(${v})` : '';
-    const lbl = document.getElementById('zoomValLocal');
-    if (lbl) lbl.textContent = v.toFixed(1) + '×';
+    // Sync all local zoom labels and sliders
+    ['zoomValLocal', 'zoomValChat'].forEach(id => {
+      const lbl = document.getElementById(id);
+      if (lbl) lbl.textContent = v.toFixed(1) + '×';
+    });
+    ['zoomSliderLocal', 'zoomSliderChat'].forEach(id => {
+      const s = document.getElementById(id);
+      if (s && s.value !== String(val)) s.value = val;
+    });
     // Sync remote-tab slider if it exists
     const s2 = document.getElementById('zoomSliderRemote');
     if (s2 && s2.value !== String(val)) { s2.value = val; applyZoom(val, 'remote-sync'); }
