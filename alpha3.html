@@ -585,6 +585,8 @@
     white-space: nowrap;
   }
   .leave-btn:hover { background: rgba(0,212,255,0.3); }
+  .speech-top-btn.leave-style { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.15); }
+  .speech-top-btn.leave-style:hover { background: rgba(0,212,255,0.3); }
   .user-left-notice {
     display: none; align-items: center; gap: 8px;
     font-family: 'Share Tech Mono', monospace; font-size: 11px;
@@ -1418,8 +1420,16 @@
           <button class="syslog-chat-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input">TYPE IN CHAT</button>
         </div>
         <div class="chat-btn-bar-row">
-          <button class="speech-top-btn" id="miniChatBtn" onclick="toggleMiniChat()" title="Toggle mini video in chat">MINI ON</button>
+          <button class="speech-top-btn active" id="miniChatBtn" onclick="toggleMiniChat()" title="Toggle mini video in chat">MINI ON</button>
           <button class="speech-top-btn" id="chatVideoViewBtn" onclick="toggleChatVideoView()" title="Toggle chat video view">VIDEO REMOTE</button>
+          <button class="speech-top-btn video-off-state" id="videoChatBtn" onclick="toggleVideo()" title="Toggle local video">Local Video</button>
+          <span class="rec-label">Record</span>
+          <button class="speech-top-btn" id="recChatBtn" onclick="toggleRecordChat()" title="Record current main feed + mini if visible">⏺ Start</button>
+          <button class="speech-top-btn video-off-state" id="videoOffChatBtn" onclick="toggleVideo()" title="Video on/off">Video Off</button>
+          <button class="speech-top-btn" id="audioChatBtn" onclick="toggleAudio()" title="Mute/unmute mic">Audio Off</button>
+          <button class="speech-top-btn" id="flipChatBtn" onclick="flipCamera()" title="Flip camera">⟳ Flip Cam</button>
+          <button class="speech-top-btn" id="screenChatBtn" onclick="toggleScreenShare()" title="Share screen">Share Off</button>
+          <button class="speech-top-btn leave-style" id="leaveChatBtn" onclick="leaveSession()" title="Leave session">✕ Leave</button>
         </div>
       </div>
       <!-- ── Chat / video pane ───────────────────────────────── -->
@@ -3241,6 +3251,7 @@ function init() {
       entry('AUDIO FLAG: audioMuted now=' + audioMuted, 'sys');
       const ab = document.getElementById('audioBtn'); if(ab){ab.textContent='Audio Off';ab.classList.remove('disabled-state');ab.classList.add('active-on');}
       const ab2 = document.getElementById('audioBtn2'); if(ab2){ab2.textContent='Audio Off';ab2.classList.remove('disabled-state');ab2.classList.add('active-on');}
+      const ab3 = document.getElementById('audioChatBtn'); if(ab3){ab3.textContent='Audio Off';ab3.classList.remove('disabled-state');ab3.classList.add('active-on');}
       entry('Audio disabled (login setting)', 'sys');
     } else {
       entry('AUDIO FLAG: not set, audio stays on', 'sys');
@@ -3542,7 +3553,7 @@ function updateQuality(rtt, lossPct) {
 
 function setVideoButtons(enabled) {
   // Primary "Local Video" buttons (position 2 in mini-row)
-  [document.getElementById('videoBtn'), document.getElementById('videoBtn2')].forEach(b => {
+  [document.getElementById('videoBtn'), document.getElementById('videoBtn2'), document.getElementById('videoChatBtn')].forEach(b => {
     if (!b) return;
     b.textContent = enabled ? 'Local Video' : 'Local Video';
     b.classList.toggle('video-on', enabled);
@@ -3550,7 +3561,7 @@ function setVideoButtons(enabled) {
     b.classList.toggle('video-off-state', !enabled);
   });
   // Shadow "Video Off/On" buttons (position 5 in mini-row)
-  [document.getElementById('videoBtn_row2'), document.getElementById('videoBtn2_row2')].forEach(b => {
+  [document.getElementById('videoBtn_row2'), document.getElementById('videoBtn2_row2'), document.getElementById('videoOffChatBtn')].forEach(b => {
     if (!b) return;
     b.textContent = enabled ? 'Video On' : 'Video Off';
     b.classList.toggle('video-on', enabled);
@@ -3646,6 +3657,13 @@ function saveRecordingIfActive() {
     if (btn) { btn.textContent = '⏺ Start'; btn.classList.remove('recording'); }
     recLocalBusy = true;
     recLocal.stop();
+  }
+  if (recChat && recChat.state === 'recording') {
+    entry('Connection lost — auto-saving chat recording…', 'sys');
+    const btnC = document.getElementById('recChatBtn');
+    if (btnC) { btnC.textContent = '⏺ Start'; btnC.classList.remove('recording'); }
+    recChatBusy = true;
+    recChat.stop();
   }
 }
 
@@ -4027,6 +4045,68 @@ async function toggleRecordLocal() {
   entry(`Local recording started${withMini ? ' (with remote mini overlay)' : ''}…`, 'ok');
 }
 
+// ── Record Chat button — records whichever feed is the chat underlay ─────
+let recChat = null, recChatChunks = [], recChatBusy = false;
+
+async function toggleRecordChat() {
+  const btn = document.getElementById('recChatBtn');
+  if (recChatBusy) return;
+
+  if (recChat && recChat.state === 'recording') {
+    recChatBusy = true;
+    recChat.stop();
+    if (btn) { btn.textContent = '⏺ Start'; btn.classList.remove('recording'); }
+    return;
+  }
+  if (recChat && recChat.state !== 'inactive') return;
+
+  const remoteVideo = document.getElementById('remoteVideo');
+  const localVid    = document.getElementById('localVideo');
+  const remoteAudio = document.getElementById('remoteAudio');
+
+  // Determine main feed based on current chat underlay mode
+  const isLocalMain = (chatUnderlayMode === 'local');
+  const mainVideo   = isLocalMain ? localVid : remoteVideo;
+
+  if (!mainVideo || !mainVideo.srcObject || !mainVideo.srcObject.getVideoTracks().length) {
+    entry('No video available to record', 'err'); return;
+  }
+
+  const { ctx: aCtx, dest: aDest } = await buildAudioMix(
+    localStream,
+    remoteAudio ? remoteAudio.srcObject : (remoteVideo ? remoteVideo.srcObject : null)
+  );
+
+  const mimeType = preferredMime();
+  let stopLoop = null, recStream;
+  const withMini = !!miniChatVisible;  // use chat mini visibility flag
+
+  if (withMini) {
+    // PiP: opposite feed as mini overlay
+    const miniChatVideo = document.getElementById('miniChatVideo');
+    const comp = buildCompositeStream(mainVideo, miniChatVideo, aDest.stream.getAudioTracks());
+    recStream = comp.stream; stopLoop = comp.stopLoop;
+  } else {
+    recStream = new MediaStream([
+      ...mainVideo.srcObject.getVideoTracks(),
+      ...aDest.stream.getAudioTracks()
+    ]);
+  }
+
+  recChatChunks = [];
+  recChat = new MediaRecorder(recStream, { mimeType });
+  recChat.ondataavailable = e => { if (e.data.size > 0) recChatChunks.push(e.data); };
+  recChat.onstop = () => {
+    recChatBusy = false;
+    if (stopLoop) stopLoop();
+    aCtx.close();
+    saveRec(recChatChunks, mimeType, isLocalMain ? 'chat-local' : 'chat-remote');
+  };
+  recChat.start(1000);
+  if (btn) { btn.textContent = '⏹ Stop'; btn.classList.add('recording'); }
+  entry(`Chat recording started (${isLocalMain ? 'local' : 'remote'} main${withMini ? ' + mini' : ''})…`, 'ok');
+}
+
 // Legacy no-op — buttons now call specific functions directly
 function toggleRecord() {}
 
@@ -4061,14 +4141,14 @@ document.addEventListener('DOMContentLoaded', function initScreenShareSupport() 
   const isAndroidChrome = isAndroid && !isFirefox;
   const supported = !isAndroidChrome && !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
   if (!supported) {
-    document.querySelectorAll('#screenBtn, #screenBtn2').forEach(btn => {
+    document.querySelectorAll('#screenBtn, #screenBtn2, #screenChatBtn').forEach(btn => {
       if (btn) btn.style.display = 'none';
     });
   }
 });
 
 async function toggleScreenShare() {
-  const btns = [document.getElementById('screenBtn'), document.getElementById('screenBtn2')];
+  const btns = [document.getElementById('screenBtn'), document.getElementById('screenBtn2'), document.getElementById('screenChatBtn')];
   if (!screenSharing) {
     // ── Start screen share ──
     if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
@@ -4117,7 +4197,7 @@ async function toggleScreenShare() {
 
 async function stopScreenShare() {
   if (!screenSharing) return;
-  const btns = [document.getElementById('screenBtn'), document.getElementById('screenBtn2')];
+  const btns = [document.getElementById('screenBtn'), document.getElementById('screenBtn2'), document.getElementById('screenChatBtn')];
   screenSharing = false;
 
   // Stop screen track
@@ -4326,7 +4406,7 @@ function getSilentTrack() {
 
 function toggleAudio() {
   if (!localStream) return;
-  const btns = [document.getElementById('audioBtn'), document.getElementById('audioBtn2')];
+  const btns = [document.getElementById('audioBtn'), document.getElementById('audioBtn2'), document.getElementById('audioChatBtn')];
   realAudioTrack = localStream.getAudioTracks()[0];
 
   if (!audioMuted) {
