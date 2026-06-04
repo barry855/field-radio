@@ -1896,6 +1896,7 @@ document.getElementById('sessionCode').addEventListener('keydown', e => {
 });
 
 function entry(msg, cls='sys') {
+  if (_logStopped) return;
   const ts = new Date().toTimeString().slice(0,8);
   const d = document.createElement('span');
   d.className = 'log-entry ' + cls;
@@ -4407,11 +4408,6 @@ window.addEventListener('beforeunload', () => { peer?.destroy(); });
 // ── SYS LOG actions ──────────────────────────────────────────────────────────
 let _logStopped = false;
 
-const _origEntry = entry;
-function entry(msg, cls='sys') {
-  if (_logStopped) return;
-  _origEntry(msg, cls);
-}
 
 function saveLog() {
   const lines = Array.from(document.querySelectorAll('#log .log-entry'))
