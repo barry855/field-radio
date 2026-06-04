@@ -1430,10 +1430,11 @@
           <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR</button>
           <button class="speech-top-btn" id="findChatBtn" title="Find in chat">🔍 FIND</button>
           <button class="syslog-chat-btn" id="syslogToggleBtn" onclick="toggleSysLogView()" title="Toggle SYS LOG">SHOW SYS LOG</button>
-          <button class="syslog-chat-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input">INPUT CHAT</button>
+          <button class="syslog-chat-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input">TYPE CHAT</button>
         </div>
         <div class="chat-btn-bar-row">
-          <button class="speech-top-btn" id="miniChatBtn" onclick="toggleMiniChat()" title="Toggle mini video in chat">MINI OFF</button>
+          <button class="speech-top-btn" id="miniChatBtn" onclick="toggleMiniChat()" title="Toggle mini video in chat">MINI ON</button>
+          <button class="speech-top-btn" id="chatVideoViewBtn" onclick="toggleChatVideoView()" title="Toggle chat video view">VIDEO REMOTE</button>
         </div>
       </div>
       <!-- ── Chat / video pane ───────────────────────────────── -->
@@ -1444,6 +1445,7 @@
         <div class="mini-video-overlay" id="miniChatOverlay">
           <video id="miniChatVideo" autoplay playsinline></video>
           <span class="video-label">REMOTE</span>
+          <button class="mini-toggle-btn" title="Hide mini" onclick="toggleMiniChat();event.stopPropagation()">✕</button>
         </div>
         <div class="drop-overlay" id="dropOverlay">
           <div class="drop-overlay-icon">📎</div>
@@ -1458,7 +1460,7 @@
       <div id="speechPanel">
         <div class="speech-top-bar" style="display:none"></div>
         <div class="file-preview-strip" id="speechFilePreviewStrip"></div>
-        <textarea id="speechEditBox" placeholder="Tap LISTEN to start speaking… or type here." spellcheck="true"></textarea>
+        <textarea id="speechEditBox" placeholder="Tap TALK to start talking — edit or type here." spellcheck="true"></textarea>
         <div class="speech-btn-row">
           <div class="sbr-left">
             <button id="speechAttachBtn" onclick="speechAttachClick()" title="Attach file or drag &amp; drop">ATTACH</button>
@@ -2029,27 +2031,77 @@ function syncMiniVideos() {
   if (miniRemote && remoteV && miniRemote.srcObject !== remoteV.srcObject)  miniRemote.srcObject = remoteV.srcObject;
   if (miniLocalOverlay)  miniLocalOverlay.classList.toggle('no-video',  !(localV  && localV.srcObject));
   if (miniRemoteOverlay) miniRemoteOverlay.classList.toggle('no-video', !(remoteV && remoteV.srcObject));
+  syncChatMiniOverlay();
   syncChatUnderlay();
 }
 
 // ── Chat video underlay ───────────────────────────────────────
-// 'up'   = remote main / local mini
-// 'down' = local main / remote mini
+// 'remote' = remote main / local mini  (default)
+// 'local'  = local main  / remote mini
 let chatUnderlayMode = (function() {
-  try { return localStorage.getItem('bravo_underlay_mode') || 'up'; } catch(e) { return 'up'; }
+  try { return localStorage.getItem('bravo_underlay_mode') || 'remote'; } catch(e) { return 'remote'; }
 })();
 
 function syncChatUnderlay() {
   const el = document.getElementById('chatUnderlay');
   if (!el) return;
   const remoteV = document.getElementById('remoteVideo');
-  const stream = remoteV ? remoteV.srcObject : null;
-  if (el.srcObject !== stream) el.srcObject = stream;
-  el.classList.toggle('no-stream', !stream);
+  const localV  = document.getElementById('localVideo');
+  if (chatUnderlayMode === 'local') {
+    const stream = localV ? localV.srcObject : null;
+    if (el.srcObject !== stream) el.srcObject = stream;
+    el.classList.toggle('no-stream', !stream);
+  } else {
+    const stream = remoteV ? remoteV.srcObject : null;
+    if (el.srcObject !== stream) el.srcObject = stream;
+    el.classList.toggle('no-stream', !stream);
+  }
 }
-function flipChatUnderlay() { /* removed */ }
 
-// Init flip button removed
+function syncChatMiniOverlay() {
+  const miniChatVideo = document.getElementById('miniChatVideo');
+  if (!miniChatVideo) return;
+  const remoteV = document.getElementById('remoteVideo');
+  const localV  = document.getElementById('localVideo');
+  const overlay = document.getElementById('miniChatOverlay');
+  const lbl = overlay ? overlay.querySelector('.video-label') : null;
+  if (chatUnderlayMode === 'local') {
+    // main = local, mini = remote
+    const stream = remoteV ? remoteV.srcObject : null;
+    if (miniChatVideo.srcObject !== stream) miniChatVideo.srcObject = stream;
+    if (lbl) lbl.textContent = 'REMOTE';
+    if (overlay) overlay.classList.toggle('no-video', !stream);
+  } else {
+    // main = remote, mini = local
+    const stream = localV ? localV.srcObject : null;
+    if (miniChatVideo.srcObject !== stream) miniChatVideo.srcObject = stream;
+    if (lbl) lbl.textContent = 'LOCAL';
+    if (overlay) overlay.classList.toggle('no-video', !stream);
+  }
+}
+
+function updateChatVideoViewBtn() {
+  const btn = document.getElementById('chatVideoViewBtn');
+  if (!btn) return;
+  if (chatUnderlayMode === 'local') {
+    btn.textContent = 'VIDEO LOCAL';
+    btn.classList.add('active');
+  } else {
+    btn.textContent = 'VIDEO REMOTE';
+    btn.classList.remove('active');
+  }
+}
+
+function toggleChatVideoView() {
+  chatUnderlayMode = (chatUnderlayMode === 'remote') ? 'local' : 'remote';
+  try { localStorage.setItem('bravo_underlay_mode', chatUnderlayMode); } catch(e) {}
+  syncChatUnderlay();
+  syncChatMiniOverlay();
+  updateChatVideoViewBtn();
+}
+
+// init button state on load
+updateChatVideoViewBtn();
 
 // ── Mini video toggle ─────────────────────────────────────────
 let miniVideoVisible = true;
@@ -2076,7 +2128,7 @@ function toggleMiniChat() {
   if (overlay) overlay.classList.toggle('hidden', !miniChatVisible);
   const btn = document.getElementById('miniChatBtn');
   if (btn) {
-    btn.textContent = miniChatVisible ? 'MINI OFF' : 'MINI ON';
+    btn.textContent = miniChatVisible ? 'MINI ON' : 'MINI OFF';
     btn.classList.toggle('active', miniChatVisible);
   }
 }
@@ -2131,7 +2183,7 @@ function makeDraggable(el) {
     document.removeEventListener('touchend', onDragEnd);
   }
 }
-['miniLocalOverlay','miniRemoteOverlay','miniChatOverlay'].forEach(id => {
+['miniLocalOverlay','miniRemoteOverlay'].forEach(id => {
   const el = document.getElementById(id);
   if (el) makeDraggable(el);
 });
@@ -2852,7 +2904,7 @@ function toggleSysLogView() {
       const sp = document.getElementById('speechPanel');
       if (sp) sp.classList.remove('speech-open');
       const sb = document.getElementById('speechToggleBtn');
-      if (sb) { sb.classList.remove('active'); sb.textContent = 'INPUT CHAT'; }
+      if (sb) { sb.classList.remove('active'); sb.textContent = 'TYPE CHAT'; }
     }
     if (logPanel) {
       logPanel.classList.add('syslog-open');
@@ -2897,7 +2949,7 @@ function toggleSpeechPanel() {
   } else {
     stopListening();
     if (panel) panel.classList.remove('speech-open');
-    if (btn)   { btn.classList.remove('active'); btn.textContent = 'INPUT CHAT'; }
+    if (btn)   { btn.classList.remove('active'); btn.textContent = 'TYPE CHAT'; }
     setChatBtnsDisabled(false);
   }
 }
