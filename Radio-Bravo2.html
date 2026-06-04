@@ -326,6 +326,11 @@
   .chat-btn-bar {
     display: flex; gap: 6px; flex-shrink: 0;
     margin-bottom: 4px; align-items: center;
+    flex-wrap: wrap;
+  }
+  .chat-btn-bar-row {
+    display: flex; gap: 6px; align-items: center;
+    width: 100%;
   }
   .chat-btn-bar .mini-chat-wrapper {\n    margin-bottom: 0; margin-left: auto;\n    flex-direction: row; align-items: center; gap: 6px;\n  }
 
@@ -1419,18 +1424,28 @@
         <button class="chat-find-close" id="chatFindClose" title="Close">✕</button>
       </div>
       <div class="chat-btn-bar">
-        <button class="speech-top-btn" onclick="refreshScreen()" title="Refresh / Reconnect">↺ REFRESH</button>
-        <button class="speech-top-btn" onclick="saveChatToFile()" id="saveChatBtn" title="Save chat as HTML">💾 SAVE</button>
-        <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR</button>
-        <button class="speech-top-btn" id="findChatBtn" title="Find in chat">🔍 FIND</button>
-        <button class="syslog-chat-btn" id="syslogToggleBtn" onclick="toggleSysLogView()" title="Toggle SYS LOG">SHOW SYS LOG</button>
-        <button class="syslog-chat-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input">INPUT CHAT</button>
+        <div class="chat-btn-bar-row">
+          <button class="speech-top-btn" onclick="refreshScreen()" title="Refresh / Reconnect">↺ REFRESH</button>
+          <button class="speech-top-btn" onclick="saveChatToFile()" id="saveChatBtn" title="Save chat as HTML">💾 SAVE</button>
+          <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR</button>
+          <button class="speech-top-btn" id="findChatBtn" title="Find in chat">🔍 FIND</button>
+          <button class="syslog-chat-btn" id="syslogToggleBtn" onclick="toggleSysLogView()" title="Toggle SYS LOG">SHOW SYS LOG</button>
+          <button class="syslog-chat-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input">INPUT CHAT</button>
+        </div>
+        <div class="chat-btn-bar-row">
+          <button class="speech-top-btn" id="miniChatBtn" onclick="toggleMiniChat()" title="Toggle mini video in chat">MINI ON</button>
+        </div>
       </div>
       <!-- ── Chat / video pane ───────────────────────────────── -->
 
       <div class="chat-panel" style="flex:1" id="chatPanel">
         <div class="panel-label">COMMS</div>
         <video id="chatUnderlay" autoplay playsinline muted></video>
+        <div class="mini-video-overlay" id="miniChatOverlay">
+          <video id="miniChatVideo" autoplay playsinline></video>
+          <span class="video-label">REMOTE</span>
+          <button class="mini-toggle-btn" title="Hide mini" onclick="toggleMiniChat();event.stopPropagation()">✕</button>
+        </div>
         <div class="drop-overlay" id="dropOverlay">
           <div class="drop-overlay-icon">📎</div>
           <div class="drop-overlay-label">Drop file to attach</div>
@@ -2054,6 +2069,18 @@ function toggleMiniVideo() {
   updateMiniVideoVisibility();
 }
 updateMiniVideoVisibility();
+
+let miniChatVisible = true;
+function toggleMiniChat() {
+  miniChatVisible = !miniChatVisible;
+  const overlay = document.getElementById('miniChatOverlay');
+  if (overlay) overlay.classList.toggle('hidden', !miniChatVisible);
+  const btn = document.getElementById('miniChatBtn');
+  if (btn) {
+    btn.textContent = miniChatVisible ? 'MINI ON' : 'MINI OFF';
+    btn.classList.toggle('active', miniChatVisible);
+  }
+}
 
 // ── Draggable mini video overlays ────────────────────────────
 function makeDraggable(el) {
