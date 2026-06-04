@@ -1408,16 +1408,9 @@
         <div class="chat" id="chat" tabindex="0">
         </div>
       </div>
-      <!-- ── Input below chat pane ───────────────────────────── -->
-      <div class="file-preview-strip" id="filePreviewStrip"></div>
-      <div class="chat-input-row">
-          <button class="attach-btn" id="attachBtn" title="Attach file / photo / video">📎</button>
-          <input type="file" id="fileInput" multiple="" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx" style="display:none">
-          <div class="chat-input-wrap" id="chatInputWrap">
-<textarea class="chat-input" id="chatInput" placeholder="TYPE MESSAGE…" rows="1"></textarea>
-          </div>
-          <button class="btn" id="sendBtn">SEND</button>
-      </div>
+      <!-- hidden shims kept for JS compatibility -->
+      <textarea id="chatInput" style="display:none"></textarea>
+      <input type="file" id="fileInput" multiple="" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx" style="display:none">
       <!-- ── Speech overlay panel ──────────────────────────────── -->
       <div id="speechPanel">
         <div class="file-preview-strip" id="speechFilePreviewStrip"></div>
@@ -1553,18 +1546,7 @@ const sendBtn   = document.getElementById('sendBtn');
 // a fallback for mouse users and assistive technology.
 let _sendBtnTouched = false;
 let _syslogVisible  = false;
-sendBtn.addEventListener('pointerdown', e => {
-  if (e.pointerType !== 'mouse') {
-    _sendBtnTouched = true;
-    e.preventDefault();
-    sendChat();
-  }
-});
-sendBtn.disabled = true;
-sendBtn.addEventListener('click', e => {
-  if (_sendBtnTouched) { _sendBtnTouched = false; return; }
-  sendChat();
-});
+// sendBtn removed — sending is via speech panel only
 
 function startSession() {
   stopPresencePolling();
@@ -2488,8 +2470,8 @@ function sendChat() {
 const pendingFiles = [];  // {file, dataUrl}
 
 const fileInput        = document.getElementById('fileInput');
-const attachBtn        = document.getElementById('attachBtn');
-const filePreviewStrip = document.getElementById('filePreviewStrip');
+const attachBtn        = document.getElementById('attachBtn'); // null — bottom bar removed
+const filePreviewStrip = document.getElementById('speechFilePreviewStrip');
 const chatPanel        = document.getElementById('chatPanel');
 const dropOverlay      = document.getElementById('dropOverlay');
 const lightbox         = document.getElementById('lightbox');
@@ -2554,7 +2536,7 @@ function setupTooltips() {
 setupTooltips();
 
 // Attach button → open file picker
-attachBtn.addEventListener('click', () => fileInput.click());
+if (attachBtn) attachBtn.addEventListener('click', () => fileInput.click());
 fileInput.addEventListener('change', e => { addFiles([...e.target.files]); fileInput.value=''; });
 
 // ── Drag-and-drop (document-level so it works on any tab) ────
@@ -2772,20 +2754,7 @@ function addMediaBubble(name, type, dataUrl, mine) {
 // ── Lightbox close ────────────────────────────────────────────
 lightbox.addEventListener('click', () => { lightbox.classList.remove('open'); lightboxImg.src = ''; });
 
-// Auto-resize textarea as user types
-function resizeChatInput() {
-  chatInput.style.height = 'auto';
-  chatInput.style.height = Math.min(chatInput.scrollHeight, 160) + 'px';
-}
-chatInput.addEventListener('input', resizeChatInput);
-
-// Enter sends, Shift+Enter inserts newline
-chatInput.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    sendChat();
-  }
-});
+// chatInput resize/keydown removed — bottom bar removed; speech panel handles input
 
 function toggleLogPanel() {
   const p = document.getElementById('logPanel');
@@ -2852,14 +2821,11 @@ function sendSpeechToChat() {
   const box = document.getElementById('speechEditBox');
   if (!box) return;
   const txt = box.value.trim();
-  if (!txt) return;
-  if (chatInput) {
-    chatInput.value = txt;
-    chatInput.style.height = 'auto';
-    chatInput.style.height = Math.min(chatInput.scrollHeight, 160) + 'px';
-  }
+  if (!txt && pendingFiles.length === 0) return;
+  if (chatInput) chatInput.value = txt;
   sendChat();
   box.value = '';
+  if (chatInput) chatInput.value = '';
   updateSpeechSendBtn();
 }
 
@@ -3198,7 +3164,7 @@ function attachDataConn(dc) {
     dataConn = dc;
     entry('Chat channel open', 'ok');
     setStatus('reachable');
-    document.getElementById('sendBtn').disabled = false;
+    const sb = document.getElementById('sendBtn'); if (sb) sb.disabled = false;
     sendVideoState();
     if (_pendingChatMsg) {
       const queued = _pendingChatMsg; _pendingChatMsg = null;
@@ -3228,7 +3194,7 @@ function attachDataConn(dc) {
     if (dataConn !== dc) return; // stale handler — a newer DC already took over
     pendingDC = false;
     dataConn = null;
-    document.getElementById('sendBtn').disabled = true;
+    const sb = document.getElementById('sendBtn'); if (sb) sb.disabled = true;
     entry('Chat channel closed', 'sys');
     // Only reopen if the call is still live — capture linked now and re-check
     // after the setTimeout so a concurrent onDrop() doesn't cause a ghost reconnect
