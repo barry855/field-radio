@@ -270,7 +270,7 @@
     margin-left: auto;
   }
   .syslog-chat-btn:hover, .syslog-chat-btn:active { border-color: var(--accent, #00d4ff); color: var(--accent); }
-  .syslog-chat-btn.active { border-color: var(--accent2); color: var(--accent2); }
+  .syslog-chat-btn.active { border-color: #00d4ff; color: #000; background: #00d4ff; }
 
   /* ── Chat button bar (above message area) ──────────────────── */
   .chat-btn-bar {
@@ -587,6 +587,9 @@
   .leave-btn:hover { background: rgba(0,212,255,0.3); }
   .speech-top-btn.leave-style { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.15); }
   .speech-top-btn.leave-style:hover { background: rgba(0,212,255,0.3); }
+  .speech-top-btn.rec-chat-btn { border-color: #3a8fff; color: #3a8fff; }
+  .speech-top-btn.rec-chat-btn:hover { border-color: #6aafff; color: #6aafff; background: rgba(58,143,255,0.15); }
+  .speech-top-btn.rec-chat-btn.recording { border-color: #ff4444; color: #ff4444; background: rgba(255,68,68,0.15); }
   .user-left-notice {
     display: none; align-items: center; gap: 8px;
     font-family: 'Share Tech Mono', monospace; font-size: 11px;
@@ -1416,15 +1419,14 @@
           <button class="speech-top-btn" onclick="saveChatToFile()" id="saveChatBtn" title="Save chat as HTML">💾 SAVE</button>
           <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR</button>
           <button class="speech-top-btn" id="findChatBtn" title="Find in chat">🔍 FIND</button>
-          <button class="syslog-chat-btn" id="syslogToggleBtn" onclick="toggleSysLogView()" title="Toggle SYS LOG">SYS LOG ON</button>
-          <button class="syslog-chat-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input">TYPE IN CHAT</button>
+          <button class="syslog-chat-btn" id="syslogToggleBtn" onclick="toggleSysLogView()" title="Toggle SYS LOG">SYS LOG</button>
+          <button class="syslog-chat-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input">SHOW CHAT</button>
         </div>
         <div class="chat-btn-bar-row">
           <button class="speech-top-btn active" id="miniChatBtn" onclick="toggleMiniChat()" title="Toggle mini video in chat">MINI ON</button>
           <button class="speech-top-btn" id="chatVideoViewBtn" onclick="toggleChatVideoView()" title="Toggle chat video view">VIDEO REMOTE</button>
-          <button class="speech-top-btn video-off-state" id="videoChatBtn" onclick="toggleVideo()" title="Toggle local video">Local Video</button>
           <span class="rec-label">Record</span>
-          <button class="speech-top-btn" id="recChatBtn" onclick="toggleRecordChat()" title="Record current main feed + mini if visible">⏺ Start</button>
+          <button class="speech-top-btn rec-chat-btn" id="recChatBtn" onclick="toggleRecordChat()" title="Record current main feed + mini if visible">⏺ Start</button>
           <button class="speech-top-btn video-off-state" id="videoOffChatBtn" onclick="toggleVideo()" title="Video on/off">Video Off</button>
           <button class="speech-top-btn" id="audioChatBtn" onclick="toggleAudio()" title="Mute/unmute mic">Audio Off</button>
           <button class="speech-top-btn" id="flipChatBtn" onclick="flipCamera()" title="Flip camera">⟳ Flip Cam</button>
@@ -2953,7 +2955,7 @@ function toggleSysLogView() {
       const sp = document.getElementById('speechPanel');
       if (sp) sp.classList.remove('speech-open');
       const sb = document.getElementById('speechToggleBtn');
-      if (sb) { sb.classList.remove('active'); sb.textContent = 'TYPE IN CHAT'; }
+      if (sb) { sb.classList.remove('active'); sb.textContent = 'SHOW CHAT'; }
     }
     if (logPanel) {
       logPanel.classList.add('syslog-open');
@@ -2961,14 +2963,14 @@ function toggleSysLogView() {
       const l = logPanel.querySelector('#log');
       if (l) setTimeout(() => { l.scrollTop = l.scrollHeight; }, 50);
     }
-    if (btn) { btn.classList.add('active'); btn.textContent = 'SYS LOG OFF'; }
+    if (btn) { btn.classList.add('active'); btn.textContent = 'SYS LOG'; }
     setChatBtnsDisabled(true);
   } else {
     if (logPanel) {
       logPanel.classList.remove('syslog-open');
       logPanel.classList.add('collapsed');
     }
-    if (btn) { btn.classList.remove('active'); btn.textContent = 'SYS LOG ON'; }
+    if (btn) { btn.classList.remove('active'); btn.textContent = 'SYS LOG'; }
     setChatBtnsDisabled(false);
   }
 }
@@ -2989,16 +2991,16 @@ function toggleSpeechPanel() {
       const lp = document.getElementById('logPanel');
       if (lp) { lp.classList.remove('syslog-open'); lp.classList.add('collapsed'); }
       const lb = document.getElementById('syslogToggleBtn');
-      if (lb) { lb.classList.remove('active'); lb.textContent = 'SYS LOG ON'; }
+      if (lb) { lb.classList.remove('active'); lb.textContent = 'SYS LOG'; }
     }
     if (panel) panel.classList.add('speech-open');
-    if (btn)   { btn.classList.add('active'); btn.textContent = 'TYPE IN CHAT'; }
+    if (btn)   { btn.classList.add('active'); btn.textContent = 'SHOW CHAT'; }
     updateSpeechSendBtn();
     setChatBtnsDisabled(true);
   } else {
     stopListening();
     if (panel) panel.classList.remove('speech-open');
-    if (btn)   { btn.classList.remove('active'); btn.textContent = 'TYPE IN CHAT'; }
+    if (btn)   { btn.classList.remove('active'); btn.textContent = 'SHOW CHAT'; }
     setChatBtnsDisabled(false);
   }
 }
