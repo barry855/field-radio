@@ -708,6 +708,7 @@
   }
   .speech-top-btn:hover { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
   .speech-top-btn.active { border-color: var(--accent, #00d4ff); color: var(--accent); }
+  .speech-top-btn:disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
   #speechPanel.drag-over { border-color: var(--accent); background: rgba(0,212,255,0.05); }
   /* ── Speech panel file preview strip ─────────────────────── */
   #speechFilePreviewStrip {
@@ -2807,8 +2808,15 @@ function toggleSysLogView() {
   const logPanel = document.getElementById('logPanel');
   const btn      = document.getElementById('syslogToggleBtn');
   if (_syslogVisible) {
-    // Close speech panel if open
-    if (_speechVisible) toggleSpeechPanel();
+    // Close speech panel directly without cross-calling
+    if (_speechVisible) {
+      _speechVisible = false;
+      stopListening();
+      const sp = document.getElementById('speechPanel');
+      if (sp) sp.classList.remove('speech-open');
+      const sb = document.getElementById('speechToggleBtn');
+      if (sb) { sb.classList.remove('active'); sb.textContent = 'INPUT CHAT'; }
+    }
     if (logPanel) {
       logPanel.classList.add('syslog-open');
       logPanel.classList.remove('collapsed');
@@ -2823,7 +2831,7 @@ function toggleSysLogView() {
       logPanel.classList.add('collapsed');
     }
     if (btn) { btn.classList.remove('active'); btn.textContent = 'SHOW SYS LOG'; }
-    if (!_speechVisible) setChatBtnsDisabled(false);
+    setChatBtnsDisabled(false);
   }
 }
 
@@ -2837,8 +2845,14 @@ function toggleSpeechPanel() {
   const panel = document.getElementById('speechPanel');
   const btn   = document.getElementById('speechToggleBtn');
   if (_speechVisible) {
-    // Close syslog if open
-    if (_syslogVisible) toggleSysLogView();
+    // Close syslog directly without cross-calling
+    if (_syslogVisible) {
+      _syslogVisible = false;
+      const lp = document.getElementById('logPanel');
+      if (lp) { lp.classList.remove('syslog-open'); lp.classList.add('collapsed'); }
+      const lb = document.getElementById('syslogToggleBtn');
+      if (lb) { lb.classList.remove('active'); lb.textContent = 'SHOW SYS LOG'; }
+    }
     if (panel) panel.classList.add('speech-open');
     if (btn)   { btn.classList.add('active'); btn.textContent = 'SHOW CHAT'; }
     updateSpeechSendBtn();
@@ -2847,7 +2861,7 @@ function toggleSpeechPanel() {
     stopListening();
     if (panel) panel.classList.remove('speech-open');
     if (btn)   { btn.classList.remove('active'); btn.textContent = 'INPUT CHAT'; }
-    if (!_syslogVisible) setChatBtnsDisabled(false);
+    setChatBtnsDisabled(false);
   }
 }
 
