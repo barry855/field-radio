@@ -1386,7 +1386,7 @@
         <button class="clear-chat-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" title="Clear chat history">🗑</button>
         <button class="find-chat-btn" id="findChatBtn" title="Find in chat">🔍</button>
         <button class="syslog-chat-btn" id="syslogToggleBtn" onclick="toggleSysLogView()" title="Toggle SYS LOG">SYS LOG</button>
-        <button class="syslog-chat-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input">SPEECH</button>
+        <button class="syslog-chat-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input">CHAT</button>
       </div>
       <!-- ── Chat / video pane ───────────────────────────────── -->
 
@@ -1412,10 +1412,6 @@
       </div>
       <!-- ── Speech overlay panel ──────────────────────────────── -->
       <div id="speechPanel">
-        <div class="speech-header">
-          🎤 SPEECH INPUT
-          <span class="speech-status" id="speechStatus">IDLE</span>
-        </div>
         <textarea id="speechEditBox" placeholder="Tap LISTEN to start speaking… or type here." spellcheck="true"></textarea>
         <div class="speech-btn-row">
           <button id="speechSendBtn" onclick="sendSpeechToChat()" disabled>SEND</button>
