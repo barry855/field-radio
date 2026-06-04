@@ -1419,8 +1419,8 @@
       </div>
       <div class="chat-btn-bar">
         <button class="speech-top-btn" onclick="refreshScreen()" title="Refresh / Reconnect">↺ REFRESH</button>
-        <button class="speech-top-btn" onclick="saveChatToFile()" title="Save chat as HTML">💾 SAVE</button>
-        <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" title="Clear chat history">🗑 CLEAR</button>
+        <button class="speech-top-btn" onclick="saveChatToFile()" id="saveChatBtn" title="Save chat as HTML">💾 SAVE</button>
+        <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR</button>
         <button class="speech-top-btn" id="findChatBtn" title="Find in chat">🔍 FIND</button>
         <button class="syslog-chat-btn" id="syslogToggleBtn" onclick="toggleSysLogView()" title="Toggle SYS LOG">SHOW SYS LOG</button>
         <button class="syslog-chat-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input">INPUT CHAT</button>
@@ -2805,6 +2805,13 @@ function toggleLogPanel() {
 }
 
 // ── SYS LOG chat-bar toggle ──────────────────────────────────────────────────
+function setChatBtnsDisabled(disabled) {
+  ['findChatBtn', 'saveChatBtn', 'clearChatBtn'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = disabled;
+  });
+}
+
 function toggleSysLogView() {
   _syslogVisible = !_syslogVisible;
   const logPanel = document.getElementById('logPanel');
@@ -2818,12 +2825,14 @@ function toggleSysLogView() {
       if (l) setTimeout(() => { l.scrollTop = l.scrollHeight; }, 50);
     }
     if (btn) { btn.classList.add('active'); btn.textContent = 'HIDE SYS LOG'; }
+    setChatBtnsDisabled(true);
   } else {
     if (logPanel) {
       logPanel.classList.remove('syslog-open');
       logPanel.classList.add('collapsed');
     }
     if (btn) { btn.classList.remove('active'); btn.textContent = 'SHOW SYS LOG'; }
+    if (!_speechVisible) setChatBtnsDisabled(false);
   }
 }
 
@@ -2842,10 +2851,12 @@ function toggleSpeechPanel() {
     if (panel) panel.classList.add('speech-open');
     if (btn)   { btn.classList.add('active'); btn.textContent = 'SHOW CHAT'; }
     updateSpeechSendBtn();
+    setChatBtnsDisabled(true);
   } else {
     stopListening();
     if (panel) panel.classList.remove('speech-open');
     if (btn)   { btn.classList.remove('active'); btn.textContent = 'INPUT CHAT'; }
+    if (!_syslogVisible) setChatBtnsDisabled(false);
   }
 }
 
