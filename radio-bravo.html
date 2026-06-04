@@ -690,17 +690,17 @@
   #speechEditBox:focus { border-color: var(--accent2); }
   #speechEditBox::placeholder { color: rgba(200,220,240,0.45); }
   .speech-btn-row {
-    display: flex; gap: 8px; justify-content: space-between; align-items: center;
-    flex-shrink: 0;
+    display: flex; gap: 4px; justify-content: space-between; align-items: center;
+    flex-shrink: 0; flex-wrap: wrap;
   }
-  .speech-btn-row .sbr-left  { display: flex; gap: 8px; align-items: center; }
-  .speech-btn-row .sbr-mid   { display: flex; gap: 8px; align-items: center; }
-  .speech-btn-row .sbr-right { display: flex; gap: 8px; align-items: center; }
+  .speech-btn-row .sbr-left  { display: flex; gap: 4px; align-items: center; }
+  .speech-btn-row .sbr-mid   { display: flex; gap: 4px; align-items: center; }
+  .speech-btn-row .sbr-right { display: flex; gap: 4px; align-items: center; }
   /* ── Shared speech button base ── */
   #speechSendBtn, #speechListenBtn, #speechAttachBtn, #speechLoadBtn, #speechSaveBtn, #speechCopyBtn, #speechClearBtn {
     background: var(--btn-bg); border: 1px solid var(--border);
-    color: var(--text); padding: 6px 14px; border-radius: 4px;
-    font-family: 'Share Tech Mono', monospace; font-size: 12px;
+    color: var(--text); padding: 5px 9px; border-radius: 4px;
+    font-family: 'Share Tech Mono', monospace; font-size: 11px;
     cursor: pointer; transition: background 0.15s, border-color 0.15s, color 0.15s;
     white-space: nowrap; letter-spacing: 0.5px;
   }
@@ -1419,14 +1419,14 @@
         <textarea id="speechEditBox" placeholder="Tap LISTEN to start speaking… or type here." spellcheck="true"></textarea>
         <div class="speech-btn-row">
           <div class="sbr-left">
-            <button id="speechAttachBtn" onclick="speechAttachClick()" title="Attach file or drag &amp; drop">📎 ATTACH</button>
+            <button id="speechAttachBtn" onclick="speechAttachClick()" title="Attach file or drag &amp; drop">ATTACH</button>
             <input type="file" id="speechFileInput" multiple style="display:none" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx">
           </div>
           <div class="sbr-mid">
-            <button id="speechLoadBtn" onclick="speechLoadText()" title="Load text file into input box">⬆ LOAD</button>
-            <button id="speechSaveBtn" onclick="speechSaveText()" title="Save input box text to file">⬇ SAVE</button>
-            <button id="speechCopyBtn" onclick="speechCopyText()" title="Copy input box text to clipboard">⎘ COPY</button>
-            <button id="speechClearBtn" onclick="speechClearText()" title="Clear input box">✕ CLEAR</button>
+            <button id="speechLoadBtn" onclick="speechLoadText()" title="Load text file into input box">LOAD</button>
+            <button id="speechSaveBtn" onclick="speechSaveText()" title="Save input box text to file">SAVE</button>
+            <button id="speechClearBtn" onclick="speechClearText()" title="Clear input box">CLEAR</button>
+            <button id="speechCopyBtn" onclick="speechCopyText()" title="Copy input box text to clipboard">COPY</button>
             <input type="file" id="speechTextFileInput" style="display:none" accept=".txt,.md,.text">
           </div>
           <div class="sbr-right">
