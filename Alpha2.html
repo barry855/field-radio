@@ -585,11 +585,11 @@
   .log-panel {
     background: var(--panel); border: 1px solid var(--border);
     border-radius: 8px; padding: 10px 14px;
-    position: absolute; bottom: 0; left: 0; right: 0;
-    z-index: 200; display: none;
+    position: absolute; top: 0; bottom: 0; left: 0; right: 0;
+    z-index: 200; display: none; flex-direction: column;
     transition: padding 0.2s;
   }
-  .log-panel.syslog-open { display: block; }
+  .log-panel.syslog-open { display: flex; }
   .log-panel.collapsed { padding-bottom: 10px; min-height: 44px; }
   .log-panel.collapsed .log { display: none; }
   .log-panel .panel-label {
@@ -616,7 +616,7 @@
   .log-action-btn:hover { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
   .log-action-btn.stopped { border-color: var(--danger); color: var(--danger); }
   .log {
-    height: 76px;
+    flex: 1;
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: #ccc #fff;
@@ -624,6 +624,7 @@
     border-radius: 4px;
     padding: 4px 8px;
     margin-top: 6px;
+    min-height: 0;
   }
   .log-entry {
     font-size: 10px; line-height: 1.9; letter-spacing: 0.5px;
@@ -1373,7 +1374,7 @@
         <button class="save-chat-btn" onclick="saveChatToFile()" title="Save chat as HTML">💾</button>
         <button class="clear-chat-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" title="Clear chat history">🗑</button>
         <button class="find-chat-btn" id="findChatBtn" title="Find in chat">🔍</button>
-        <button class="syslog-chat-btn" id="syslogToggleBtn" onclick="toggleSysLogView()" title="Toggle SYS LOG">SYS LOG</button>
+        <button class="syslog-chat-btn" id="syslogToggleBtn" onclick="toggleSysLogView()" title="Toggle SYS LOG">SHOW SYS LOG</button>
         <button class="syslog-chat-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input">INPUT CHAT</button>
       </div>
       <!-- ── Chat / video pane ───────────────────────────────── -->
@@ -2790,13 +2791,13 @@ function toggleSysLogView() {
       const l = logPanel.querySelector('#log');
       if (l) setTimeout(() => { l.scrollTop = l.scrollHeight; }, 50);
     }
-    if (btn) btn.classList.add('active');
+    if (btn) { btn.classList.add('active'); btn.textContent = 'HIDE SYS LOG'; }
   } else {
     if (logPanel) {
       logPanel.classList.remove('syslog-open');
       logPanel.classList.add('collapsed');
     }
-    if (btn) btn.classList.remove('active');
+    if (btn) { btn.classList.remove('active'); btn.textContent = 'SHOW SYS LOG'; }
   }
 }
 
