@@ -661,7 +661,7 @@
   .speech-btn-row .sbr-mid   { display: flex; gap: 8px; align-items: center; }
   .speech-btn-row .sbr-right { display: flex; gap: 8px; align-items: center; }
   /* ── Shared speech button base ── */
-  #speechSendBtn, #speechListenBtn, #speechAttachBtn, #speechLoadBtn, #speechSaveBtn {
+  #speechSendBtn, #speechListenBtn, #speechAttachBtn, #speechLoadBtn, #speechSaveBtn, #speechCopyBtn, #speechClearBtn {
     background: var(--btn-bg); border: 1px solid var(--border);
     color: var(--text); padding: 6px 14px; border-radius: 4px;
     font-family: 'Share Tech Mono', monospace; font-size: 12px;
@@ -678,6 +678,8 @@
   #speechAttachBtn:hover { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
   #speechLoadBtn:hover   { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
   #speechSaveBtn:hover   { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
+  #speechCopyBtn:hover   { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
+  #speechClearBtn:hover  { background: var(--btn-hover); border-color: var(--danger, #cc2222); color: var(--danger, #cc2222); }
   /* drag-over highlight on speech panel */
   #speechPanel.drag-over { border-color: var(--accent); background: rgba(0,212,255,0.05); }
   /* ── Speech panel file preview strip ─────────────────────── */
@@ -1390,6 +1392,8 @@
           <div class="sbr-mid">
             <button id="speechLoadBtn" onclick="speechLoadText()" title="Load text file into input box">⬆ LOAD</button>
             <button id="speechSaveBtn" onclick="speechSaveText()" title="Save input box text to file">⬇ SAVE</button>
+            <button id="speechCopyBtn" onclick="speechCopyText()" title="Copy input box text to clipboard">⎘ COPY</button>
+            <button id="speechClearBtn" onclick="speechClearText()" title="Clear input box">✕ CLEAR</button>
             <input type="file" id="speechTextFileInput" style="display:none" accept=".txt,.md,.text">
           </div>
           <div class="sbr-right">
@@ -2980,6 +2984,29 @@ function speechSaveText() {
   document.body.appendChild(a); a.click();
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function speechCopyText() {
+  const box = document.getElementById('speechEditBox');
+  if (!box || !box.value.trim()) return;
+  navigator.clipboard.writeText(box.value).then(() => {
+    const btn = document.getElementById('speechCopyBtn');
+    if (!btn) return;
+    const orig = btn.textContent;
+    btn.textContent = '✓ COPIED';
+    setTimeout(() => { btn.textContent = orig; }, 1200);
+  }).catch(() => {
+    // Fallback for file:// or older browsers
+    box.select();
+    document.execCommand('copy');
+  });
+}
+
+function speechClearText() {
+  const box = document.getElementById('speechEditBox');
+  if (!box) return;
+  box.value = '';
+  updateSpeechSendBtn();
 }
 
 function init() {
