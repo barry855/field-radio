@@ -1895,6 +1895,7 @@ document.getElementById('sessionCode').addEventListener('keydown', e => {
   if (e.key === 'Enter') startSession();
 });
 
+let _logStopped = false;
 function entry(msg, cls='sys') {
   if (_logStopped) return;
   const ts = new Date().toTimeString().slice(0,8);
@@ -4406,7 +4407,6 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('beforeunload', () => { peer?.destroy(); });
 
 // ── SYS LOG actions ──────────────────────────────────────────────────────────
-let _logStopped = false;
 
 
 function saveLog() {
