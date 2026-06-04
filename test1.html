@@ -680,6 +680,12 @@
   #speechSaveBtn:hover   { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
   /* drag-over highlight on speech panel */
   #speechPanel.drag-over { border-color: var(--accent); background: rgba(0,212,255,0.05); }
+  /* ── Speech panel file preview strip ─────────────────────── */
+  #speechFilePreviewStrip {
+    display: none; flex-wrap: wrap; gap: 6px; flex-shrink: 0;
+    padding-bottom: 4px; border-bottom: 1px solid var(--border);
+  }
+  #speechFilePreviewStrip.has-files { display: flex; }
 
   .log-entry.sys  { color: #555555; }
   .log-entry.info { color: #0077aa; }
@@ -1379,6 +1385,7 @@
       </div>
       <!-- ── Speech overlay panel ──────────────────────────────── -->
       <div id="speechPanel">
+        <div class="file-preview-strip" id="speechFilePreviewStrip"></div>
         <textarea id="speechEditBox" placeholder="Tap LISTEN to start speaking… or type here." spellcheck="true"></textarea>
         <div class="speech-btn-row">
           <div class="sbr-left">
@@ -2588,39 +2595,47 @@ function addFiles(files) {
 }
 
 function renderFileChip(item, idx) {
-  const chip = document.createElement('div');
-  chip.className = 'file-chip';
-  chip.dataset.idx = idx;
-  if (item.file.type.startsWith('image/')) {
-    const thumb = document.createElement('img');
-    thumb.className = 'file-chip-thumb';
-    thumb.src = item.dataUrl;
-    chip.appendChild(thumb);
-  } else {
-    const icon = document.createElement('span');
-    icon.textContent = fileIcon(item.file.type);
-    icon.style.fontSize = '18px';
-    chip.appendChild(icon);
-  }
-  const name = document.createElement('span');
-  name.className = 'file-chip-name';
-  name.textContent = item.file.name;
-  chip.appendChild(name);
-  const rm = document.createElement('span');
-  rm.className = 'file-chip-remove';
-  rm.textContent = '✕';
-  rm.addEventListener('click', () => removeFile(idx, chip));
-  chip.appendChild(rm);
-  filePreviewStrip.appendChild(chip);
-  filePreviewStrip.classList.add('has-files');
+  [filePreviewStrip, document.getElementById('speechFilePreviewStrip')].forEach(strip => {
+    if (!strip) return;
+    const chip = document.createElement('div');
+    chip.className = 'file-chip';
+    chip.dataset.idx = idx;
+    if (item.file.type.startsWith('image/')) {
+      const thumb = document.createElement('img');
+      thumb.className = 'file-chip-thumb';
+      thumb.src = item.dataUrl;
+      chip.appendChild(thumb);
+    } else {
+      const icon = document.createElement('span');
+      icon.textContent = fileIcon(item.file.type);
+      icon.style.fontSize = '18px';
+      chip.appendChild(icon);
+    }
+    const name = document.createElement('span');
+    name.className = 'file-chip-name';
+    name.textContent = item.file.name;
+    chip.appendChild(name);
+    const rm = document.createElement('span');
+    rm.className = 'file-chip-remove';
+    rm.textContent = '✕';
+    rm.addEventListener('click', () => removeFile(idx, chip));
+    chip.appendChild(rm);
+    strip.appendChild(chip);
+    strip.classList.add('has-files');
+  });
 }
 
 function removeFile(idx, chip) {
   pendingFiles.splice(idx, 1);
-  chip.remove();
-  if (pendingFiles.length === 0) filePreviewStrip.classList.remove('has-files');
-  // Re-index remaining chips
-  [...filePreviewStrip.querySelectorAll('.file-chip')].forEach((c, i) => { c.dataset.idx = i; });
+  // Remove chips with this idx from both strips
+  [filePreviewStrip, document.getElementById('speechFilePreviewStrip')].forEach(strip => {
+    if (!strip) return;
+    const target = [...strip.querySelectorAll('.file-chip')].find(c => c.dataset.idx == chip.dataset.idx);
+    if (target) target.remove();
+    if (strip.querySelectorAll('.file-chip').length === 0) strip.classList.remove('has-files');
+    // Re-index
+    [...strip.querySelectorAll('.file-chip')].forEach((c, i) => { c.dataset.idx = i; });
+  });
 }
 
 function fileIcon(type) {
@@ -2638,6 +2653,8 @@ function sendPendingFiles() {
   pendingFiles.length = 0;
   filePreviewStrip.innerHTML = '';
   filePreviewStrip.classList.remove('has-files');
+  const sStrip = document.getElementById('speechFilePreviewStrip');
+  if (sStrip) { sStrip.innerHTML = ''; sStrip.classList.remove('has-files'); }
 }
 
 function sendFileChunked(item) {
