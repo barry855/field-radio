@@ -654,10 +654,14 @@
   #speechEditBox:focus { border-color: var(--accent); }
   #speechEditBox::placeholder { color: rgba(200,220,240,0.45); }
   .speech-btn-row {
-    display: flex; gap: 8px; justify-content: flex-end; align-items: center;
+    display: flex; gap: 8px; justify-content: space-between; align-items: center;
     flex-shrink: 0;
   }
-  #speechSendBtn {
+  .speech-btn-row .sbr-left  { display: flex; gap: 8px; align-items: center; }
+  .speech-btn-row .sbr-mid   { display: flex; gap: 8px; align-items: center; }
+  .speech-btn-row .sbr-right { display: flex; gap: 8px; align-items: center; }
+  /* ── Shared speech button base ── */
+  #speechSendBtn, #speechListenBtn, #speechAttachBtn, #speechLoadBtn, #speechSaveBtn {
     background: var(--btn-bg); border: 1px solid var(--border);
     color: var(--text); padding: 6px 14px; border-radius: 4px;
     font-family: 'Share Tech Mono', monospace; font-size: 12px;
@@ -666,18 +670,22 @@
   }
   #speechSendBtn:hover { background: var(--btn-hover); border-color: #2a4060; }
   #speechSendBtn:disabled { opacity: 0.35; cursor: not-allowed; }
-  #speechListenBtn {
-    background: var(--btn-bg); border: 1px solid var(--border);
-    color: var(--text); padding: 6px 14px; border-radius: 4px;
-    font-family: 'Share Tech Mono', monospace; font-size: 12px;
-    cursor: pointer; transition: background 0.15s, border-color 0.15s, color 0.15s;
-    white-space: nowrap; letter-spacing: 0.5px;
-  }
   #speechListenBtn:hover { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
   #speechListenBtn.listening {
     border-color: var(--danger, #cc2222); color: var(--danger, #cc2222);
     background: rgba(204,34,34,0.08);
   }
+  #speechAttachBtn:hover { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
+  #speechLoadBtn:hover   { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
+  #speechSaveBtn:hover   { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
+  /* drag-over highlight on speech panel */
+  #speechPanel.drag-over { border-color: var(--accent); background: rgba(0,212,255,0.05); }
+  /* ── Speech panel file preview strip ─────────────────────── */
+  #speechFilePreviewStrip {
+    display: none; flex-wrap: wrap; gap: 6px; flex-shrink: 0;
+    padding-bottom: 4px; border-bottom: 1px solid var(--border);
+  }
+  #speechFilePreviewStrip.has-files { display: flex; }
 
   .log-entry.sys  { color: #555555; }
   .log-entry.info { color: #0077aa; }
@@ -1297,6 +1305,7 @@
         <div class="mini-video-overlay hidden" id="miniRemoteOverlay">
           <video id="miniRemoteVideo" autoplay="" playsinline=""></video>
           <span class="video-label">BRAVO</span>
+          <button class="mini-toggle-btn" title="Hide mini" onclick="toggleMiniVideo();event.stopPropagation()">✕</button>
         </div>
       </div>
     </div>
@@ -1332,6 +1341,7 @@
         <div class="mini-video-overlay hidden" id="miniLocalOverlay">
           <video id="miniLocalVideo" autoplay="" playsinline="" muted=""></video>
           <span class="video-label">ALPHA</span>
+          <button class="mini-toggle-btn" title="Hide mini" onclick="toggleMiniVideo();event.stopPropagation()">✕</button>
         </div>
       </div>
     </div>
@@ -1351,18 +1361,13 @@
         <button class="clear-chat-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" title="Clear chat history">🗑</button>
         <button class="find-chat-btn" id="findChatBtn" title="Find in chat">🔍</button>
         <button class="syslog-chat-btn" id="syslogToggleBtn" onclick="toggleSysLogView()" title="Toggle SYS LOG">SYS LOG</button>
-        <button class="syslog-chat-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input">SPEECH</button>
-        <button class="media-btn" id="miniChatBtn" onclick="toggleMiniChatVideo()" style="margin-left:auto;">Mini On</button>
+        <button class="syslog-chat-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input">CHAT</button>
       </div>
       <!-- ── Chat / video pane ───────────────────────────────── -->
 
       <div class="chat-panel" style="flex:1" id="chatPanel">
         <div class="panel-label">COMMS</div>
         <video id="chatUnderlay" autoplay playsinline muted></video>
-        <div class="mini-video-overlay" id="miniChatOverlay" style="top:8px;right:8px;left:auto;">
-          <video id="miniChatVideo" autoplay="" playsinline=""></video>
-          <span class="video-label">BRAVO</span>
-        </div>
         <div class="drop-overlay" id="dropOverlay">
           <div class="drop-overlay-icon">📎</div>
           <div class="drop-overlay-label">Drop file to attach</div>
@@ -1370,24 +1375,27 @@
         <div class="chat" id="chat" tabindex="0">
         </div>
       </div>
-      <!-- ── Input below chat pane ───────────────────────────── -->
-      <div class="file-preview-strip" id="filePreviewStrip"></div>
-      <div class="chat-input-row">
-          <button class="attach-btn" id="attachBtn" title="Attach file / photo / video">📎</button>
-          <input type="file" id="fileInput" multiple="" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx" style="display:none">
-          <textarea class="chat-input" id="chatInput" placeholder="TYPE MESSAGE…" rows="1"></textarea>
-          <button class="btn" id="sendBtn">SEND</button>
-      </div>
+      <!-- hidden shims kept for JS compatibility -->
+      <textarea id="chatInput" style="display:none"></textarea>
+      <input type="file" id="fileInput" multiple="" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx" style="display:none">
       <!-- ── Speech overlay panel ──────────────────────────────── -->
       <div id="speechPanel">
-        <div class="speech-header">
-          🎤 SPEECH INPUT
-          <span class="speech-status" id="speechStatus">IDLE</span>
-        </div>
+        <div class="file-preview-strip" id="speechFilePreviewStrip"></div>
         <textarea id="speechEditBox" placeholder="Tap LISTEN to start speaking… or type here." spellcheck="true"></textarea>
         <div class="speech-btn-row">
-          <button id="speechSendBtn" onclick="sendSpeechToChat()" disabled>SEND</button>
-          <button id="speechListenBtn" onclick="toggleListening()">LISTEN</button>
+          <div class="sbr-left">
+            <button id="speechAttachBtn" onclick="speechAttachClick()" title="Attach file or drag &amp; drop">📎 ATTACH</button>
+            <input type="file" id="speechFileInput" multiple style="display:none" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx">
+          </div>
+          <div class="sbr-mid">
+            <button id="speechLoadBtn" onclick="speechLoadText()" title="Load text file into input box">⬆ LOAD</button>
+            <button id="speechSaveBtn" onclick="speechSaveText()" title="Save input box text to file">⬇ SAVE</button>
+            <input type="file" id="speechTextFileInput" style="display:none" accept=".txt,.md,.text">
+          </div>
+          <div class="sbr-right">
+            <button id="speechSendBtn" onclick="sendSpeechToChat()" disabled>SEND</button>
+            <button id="speechListenBtn" onclick="toggleListening()">LISTEN</button>
+          </div>
         </div>
       </div>
       <div class="log-panel collapsed" id="logPanel">
@@ -1499,18 +1507,7 @@ const sendBtn   = document.getElementById('sendBtn');
 // On mouse, we defer to click so normal desktop UX is preserved.
 let _sendBtnTouched = false;
 let _syslogVisible  = false;
-sendBtn.addEventListener('pointerdown', e => {
-  if (e.pointerType !== 'mouse') {
-    _sendBtnTouched = true;
-    e.preventDefault();
-    sendChat();
-  }
-});
-sendBtn.disabled = true;
-sendBtn.addEventListener('click', e => {
-  if (_sendBtnTouched) { _sendBtnTouched = false; return; }
-  sendChat();
-});
+// sendBtn removed — sending is via speech panel only
 
 function startSession() {
   stopPresencePolling();
@@ -1952,8 +1949,6 @@ function syncMiniVideos() {
   if (miniChatVideo && remoteVideo && miniChatVideo.srcObject !== remoteVideo.srcObject) {
     miniChatVideo.srcObject = remoteVideo.srcObject;
   }
-  const miniChatOverlay = document.getElementById('miniChatOverlay');
-  if (miniChatOverlay) miniChatOverlay.classList.toggle('no-video', !(remoteVideo && remoteVideo.srcObject));
   syncChatUnderlay();
 }
 
@@ -2051,18 +2046,7 @@ function makeDraggable(el) {
 
 // ── Mini remote screen in Chat tab ───────────────────────────
 let miniChatVisible = true;
-function toggleMiniChatVideo() {
-  miniChatVisible = !miniChatVisible;
-  const overlay = document.getElementById('miniChatOverlay');
-  const btn = document.getElementById('miniChatBtn');
-  if (overlay) overlay.classList.toggle('hidden', !miniChatVisible);
-  if (btn) { btn.textContent = miniChatVisible ? 'Mini On' : 'Mini Off'; btn.classList.toggle('active-on', !miniChatVisible); }
-}
-// init chat mini draggable
-(function() {
-  const overlay = document.getElementById('miniChatOverlay');
-  if (overlay) makeDraggable(overlay);
-})();
+function toggleMiniChatOverlay() { /* removed */ }
 
 function linkify(text) {
   const frag = document.createDocumentFragment();
@@ -2470,8 +2454,8 @@ function sendChat() {
 const pendingFiles = [];  // {file, dataUrl}
 
 const fileInput      = document.getElementById('fileInput');
-const attachBtn      = document.getElementById('attachBtn');
-const filePreviewStrip = document.getElementById('filePreviewStrip');
+const attachBtn      = document.getElementById('attachBtn'); // null — bottom bar removed
+const filePreviewStrip = document.getElementById('speechFilePreviewStrip');
 const chatPanel      = document.getElementById('chatPanel');
 const dropOverlay    = document.getElementById('dropOverlay');
 const lightbox       = document.getElementById('lightbox');
@@ -2536,7 +2520,7 @@ function setupTooltips() {
 setupTooltips();
 
 // Attach button → open file picker
-attachBtn.addEventListener('click', () => fileInput.click());
+if (attachBtn) attachBtn.addEventListener('click', () => fileInput.click());
 fileInput.addEventListener('change', e => { addFiles([...e.target.files]); fileInput.value=''; });
 
 // ── Drag-and-drop (document-level so it works on any tab) ────
@@ -2595,39 +2579,47 @@ function addFiles(files) {
 }
 
 function renderFileChip(item, idx) {
-  const chip = document.createElement('div');
-  chip.className = 'file-chip';
-  chip.dataset.idx = idx;
-  if (item.file.type.startsWith('image/')) {
-    const thumb = document.createElement('img');
-    thumb.className = 'file-chip-thumb';
-    thumb.src = item.dataUrl;
-    chip.appendChild(thumb);
-  } else {
-    const icon = document.createElement('span');
-    icon.textContent = fileIcon(item.file.type);
-    icon.style.fontSize = '18px';
-    chip.appendChild(icon);
-  }
-  const name = document.createElement('span');
-  name.className = 'file-chip-name';
-  name.textContent = item.file.name;
-  chip.appendChild(name);
-  const rm = document.createElement('span');
-  rm.className = 'file-chip-remove';
-  rm.textContent = '✕';
-  rm.addEventListener('click', () => removeFile(idx, chip));
-  chip.appendChild(rm);
-  filePreviewStrip.appendChild(chip);
-  filePreviewStrip.classList.add('has-files');
+  [filePreviewStrip, document.getElementById('speechFilePreviewStrip')].forEach(strip => {
+    if (!strip) return;
+    const chip = document.createElement('div');
+    chip.className = 'file-chip';
+    chip.dataset.idx = idx;
+    if (item.file.type.startsWith('image/')) {
+      const thumb = document.createElement('img');
+      thumb.className = 'file-chip-thumb';
+      thumb.src = item.dataUrl;
+      chip.appendChild(thumb);
+    } else {
+      const icon = document.createElement('span');
+      icon.textContent = fileIcon(item.file.type);
+      icon.style.fontSize = '18px';
+      chip.appendChild(icon);
+    }
+    const name = document.createElement('span');
+    name.className = 'file-chip-name';
+    name.textContent = item.file.name;
+    chip.appendChild(name);
+    const rm = document.createElement('span');
+    rm.className = 'file-chip-remove';
+    rm.textContent = '✕';
+    rm.addEventListener('click', () => removeFile(idx, chip));
+    chip.appendChild(rm);
+    strip.appendChild(chip);
+    strip.classList.add('has-files');
+  });
 }
 
 function removeFile(idx, chip) {
   pendingFiles.splice(idx, 1);
-  chip.remove();
-  if (pendingFiles.length === 0) filePreviewStrip.classList.remove('has-files');
-  // Re-index remaining chips
-  [...filePreviewStrip.querySelectorAll('.file-chip')].forEach((c, i) => { c.dataset.idx = i; });
+  // Remove chips with this idx from both strips
+  [filePreviewStrip, document.getElementById('speechFilePreviewStrip')].forEach(strip => {
+    if (!strip) return;
+    const target = [...strip.querySelectorAll('.file-chip')].find(c => c.dataset.idx == chip.dataset.idx);
+    if (target) target.remove();
+    if (strip.querySelectorAll('.file-chip').length === 0) strip.classList.remove('has-files');
+    // Re-index
+    [...strip.querySelectorAll('.file-chip')].forEach((c, i) => { c.dataset.idx = i; });
+  });
 }
 
 function fileIcon(type) {
@@ -2645,6 +2637,8 @@ function sendPendingFiles() {
   pendingFiles.length = 0;
   filePreviewStrip.innerHTML = '';
   filePreviewStrip.classList.remove('has-files');
+  const sStrip = document.getElementById('speechFilePreviewStrip');
+  if (sStrip) { sStrip.innerHTML = ''; sStrip.classList.remove('has-files'); }
 }
 
 function sendFileChunked(item) {
@@ -2746,20 +2740,7 @@ function addMediaBubble(name, type, dataUrl, mine) {
 // ── Lightbox close ────────────────────────────────────────────
 lightbox.addEventListener('click', () => { lightbox.classList.remove('open'); lightboxImg.src = ''; });
 
-// Auto-resize textarea as user types
-function resizeChatInput() {
-  chatInput.style.height = 'auto';
-  chatInput.style.height = Math.min(chatInput.scrollHeight, 160) + 'px';
-}
-chatInput.addEventListener('input', resizeChatInput);
-
-// Enter sends, Shift+Enter inserts newline
-chatInput.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    sendChat();
-  }
-});
+// chatInput resize/keydown removed — bottom bar removed; speech panel handles input
 
 
 
@@ -2830,16 +2811,11 @@ function sendSpeechToChat() {
   const box = document.getElementById('speechEditBox');
   if (!box) return;
   const txt = box.value.trim();
-  if (!txt) return;
-  // Inject into the main chat input and fire sendChat
-  if (chatInput) {
-    chatInput.value = txt;
-    // trigger auto-resize
-    chatInput.style.height = 'auto';
-    chatInput.style.height = Math.min(chatInput.scrollHeight, 160) + 'px';
-  }
+  if (!txt && pendingFiles.length === 0) return;
+  if (chatInput) chatInput.value = txt;
   sendChat();
   box.value = '';
+  if (chatInput) chatInput.value = '';
   updateSpeechSendBtn();
 }
 
@@ -2880,7 +2856,6 @@ function startListening() {
       else                      { interim    += e.results[i][0].transcript; }
     }
     if (finalChunk) {
-      // Append final text; add space if needed
       const cur = box.value;
       box.value = cur + (cur && !cur.endsWith(' ') ? ' ' : '') + finalChunk.trim();
       _interimText = '';
@@ -2925,7 +2900,87 @@ function setStatus(txt) {
 document.addEventListener('DOMContentLoaded', () => {
   const box = document.getElementById('speechEditBox');
   if (box) box.addEventListener('input', updateSpeechSendBtn);
+
+  // ── Speech panel drag-and-drop for file attach ──
+  const panel = document.getElementById('speechPanel');
+  if (panel) {
+    panel.addEventListener('dragover', e => {
+      e.preventDefault(); panel.classList.add('drag-over');
+    });
+    panel.addEventListener('dragleave', e => {
+      if (!panel.contains(e.relatedTarget)) panel.classList.remove('drag-over');
+    });
+    panel.addEventListener('drop', e => {
+      e.preventDefault(); panel.classList.remove('drag-over');
+      const files = Array.from(e.dataTransfer.files);
+      if (files.length) handleSpeechFiles(files);
+    });
+  }
+
+  // ── Speech attach file input handler ──
+  const sfi = document.getElementById('speechFileInput');
+  if (sfi) sfi.addEventListener('change', () => {
+    if (sfi.files.length) handleSpeechFiles(Array.from(sfi.files));
+    sfi.value = '';
+  });
+
+  // ── Speech load text file input handler ──
+  const stfi = document.getElementById('speechTextFileInput');
+  if (stfi) stfi.addEventListener('change', () => {
+    const f = stfi.files[0]; if (!f) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const box = document.getElementById('speechEditBox');
+      if (box) { box.value = ev.target.result; updateSpeechSendBtn(); }
+    };
+    reader.readAsText(f);
+    stfi.value = '';
+  });
 });
+
+function speechAttachClick() {
+  const sfi = document.getElementById('speechFileInput');
+  if (sfi) sfi.click();
+}
+
+function handleSpeechFiles(files) {
+  // Route files into the main chat attach system if available
+  if (typeof handleFiles === 'function') {
+    handleFiles(files);
+  } else if (typeof pendingAttachments !== 'undefined') {
+    files.forEach(f => pendingAttachments.push(f));
+    if (typeof renderFilePreview === 'function') renderFilePreview();
+  } else {
+    // Fallback: feed into main fileInput and trigger change
+    const fi = document.getElementById('fileInput');
+    if (fi) {
+      const dt = new DataTransfer();
+      files.forEach(f => dt.items.add(f));
+      fi.files = dt.files;
+      fi.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  }
+}
+
+function speechLoadText() {
+  const stfi = document.getElementById('speechTextFileInput');
+  if (stfi) stfi.click();
+}
+
+function speechSaveText() {
+  const box = document.getElementById('speechEditBox');
+  if (!box) return;
+  const text = box.value;
+  if (!text.trim()) return;
+  const blob = new Blob([text], { type: 'text/plain' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const ts   = new Date().toISOString().slice(0,19).replace(/[:T]/g, '-');
+  a.href = url; a.download = 'speech-' + ts + '.txt';
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 
 function init() {
   if (location.protocol !== 'https:' && location.protocol !== 'file:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
@@ -3120,7 +3175,7 @@ function attachDataConn(dc) {
     dataConn = dc;
     entry('Chat channel open', 'ok');
     setStatus('reachable');
-    document.getElementById('sendBtn').disabled = false;
+    const sb = document.getElementById('sendBtn'); if (sb) sb.disabled = false;
     sendVideoState();
     if (_pendingChatMsg) {
       const queued = _pendingChatMsg; _pendingChatMsg = null;
@@ -3150,7 +3205,7 @@ function attachDataConn(dc) {
     if (dataConn !== dc) return; // stale handler — a newer DC already took over
     pendingDC = false;
     dataConn = null;
-    document.getElementById('sendBtn').disabled = true;
+    const sb = document.getElementById('sendBtn'); if (sb) sb.disabled = true;
     entry('Chat channel closed', 'sys');
     // Only reopen if the call is still live — re-check inside the timeout
     // so a concurrent onDrop() doesn't cause a ghost reconnect attempt
