@@ -117,7 +117,6 @@
     flex-direction: column;
     overflow: hidden;
     min-height: 0;
-    isolation: isolate;
   }
   .chat {
     flex: 1;
@@ -621,11 +620,11 @@
   .log-panel {
     background: var(--panel); border: 1px solid var(--border);
     border-radius: 8px; padding: 10px 14px;
-    position: absolute; top: 0; bottom: 0; left: 0; right: 0;
-    z-index: 200; display: none; flex-direction: column;
+    position: absolute; bottom: 0; left: 0; right: 0;
+    z-index: 200; display: none;
     transition: padding 0.2s;
   }
-  .log-panel.syslog-open { display: flex; }
+  .log-panel.syslog-open { display: block; }
   .log-panel.collapsed { padding-bottom: 10px; min-height: 44px; }
   .log-panel.collapsed .log { display: none; }
   .log-panel .panel-label {
@@ -641,18 +640,8 @@
     display: inline-block; line-height: 1;
   }
   .log-panel.collapsed .log-toggle-arrow { transform: rotate(-90deg); }
-  .log-action-btn {
-    background: var(--btn-bg); border: 1px solid var(--border);
-    color: var(--text); padding: 2px 7px; border-radius: 4px;
-    font-family: 'Share Tech Mono', monospace; font-size: 10px;
-    cursor: pointer; letter-spacing: 0.5px;
-    transition: background 0.15s, border-color 0.15s, color 0.15s;
-    flex-shrink: 0;
-  }
-  .log-action-btn:hover { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
-  .log-action-btn.stopped { border-color: var(--danger); color: var(--danger); }
   .log {
-    flex: 1;
+    height: 76px;
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: #ccc #fff;
@@ -660,7 +649,6 @@
     border-radius: 4px;
     padding: 4px 8px;
     margin-top: 6px;
-    min-height: 0;
   }
   .log-entry {
     font-size: 10px; line-height: 1.9; letter-spacing: 0.5px;
@@ -669,7 +657,7 @@
   /* ── Speech overlay panel ──────────────────────────────────── */
   #speechPanel {
     display: none;
-    position: absolute; top: 0; bottom: 0; left: 0; right: 0;
+    position: absolute; bottom: 0; left: 0; right: 0;
     z-index: 300;
     background: var(--panel); border: 1px solid var(--border);
     border-radius: 8px; padding: 10px 14px;
@@ -692,7 +680,7 @@
   }
   @keyframes speech-blink { 50% { opacity: 0; } }
   #speechEditBox {
-    flex: 1; min-height: 80px;
+    flex: 1; min-height: 80px; max-height: 160px;
     background: transparent; border: 1px solid var(--border);
     color: var(--text); padding: 7px 10px; border-radius: 4px;
     font-family: 'Share Tech Mono', monospace; font-size: 14px;
@@ -702,54 +690,30 @@
   #speechEditBox:focus { border-color: var(--accent2); }
   #speechEditBox::placeholder { color: rgba(200,220,240,0.45); }
   .speech-btn-row {
-    display: flex; gap: 4px; justify-content: space-between; align-items: center;
-    flex-shrink: 0; flex-wrap: wrap;
+    display: flex; gap: 8px; justify-content: flex-end; align-items: center;
+    flex-shrink: 0;
   }
-  .speech-btn-row .sbr-left  { display: flex; gap: 4px; align-items: center; }
-  .speech-btn-row .sbr-mid   { display: flex; gap: 4px; align-items: center; }
-  .speech-btn-row .sbr-right { display: flex; gap: 4px; align-items: center; }
-  /* ── Shared speech button base ── */
-  #speechSendBtn, #speechListenBtn, #speechAttachBtn, #speechLoadBtn, #speechSaveBtn, #speechCopyBtn, #speechClearBtn {
+  #speechSendBtn {
     background: var(--btn-bg); border: 1px solid var(--border);
-    color: var(--text); padding: 5px 9px; border-radius: 4px;
-    font-family: 'Share Tech Mono', monospace; font-size: 11px;
+    color: var(--text); padding: 6px 14px; border-radius: 4px;
+    font-family: 'Share Tech Mono', monospace; font-size: 12px;
     cursor: pointer; transition: background 0.15s, border-color 0.15s, color 0.15s;
     white-space: nowrap; letter-spacing: 0.5px;
   }
   #speechSendBtn:hover { background: var(--btn-hover); border-color: #2a4060; }
   #speechSendBtn:disabled { opacity: 0.35; cursor: not-allowed; }
+  #speechListenBtn {
+    background: var(--btn-bg); border: 1px solid var(--border);
+    color: var(--text); padding: 6px 14px; border-radius: 4px;
+    font-family: 'Share Tech Mono', monospace; font-size: 12px;
+    cursor: pointer; transition: background 0.15s, border-color 0.15s, color 0.15s;
+    white-space: nowrap; letter-spacing: 0.5px;
+  }
   #speechListenBtn:hover { background: var(--btn-hover); border-color: var(--accent2); color: var(--accent2); }
   #speechListenBtn.listening {
     border-color: var(--danger, #cc2222); color: var(--danger, #cc2222);
     background: rgba(204,34,34,0.08);
   }
-  #speechAttachBtn:hover { background: var(--btn-hover); border-color: var(--accent2); color: var(--accent2); }
-  #speechLoadBtn:hover   { background: var(--btn-hover); border-color: var(--accent2); color: var(--accent2); }
-  #speechSaveBtn:hover   { background: var(--btn-hover); border-color: var(--accent2); color: var(--accent2); }
-  #speechCopyBtn:hover   { background: var(--btn-hover); border-color: var(--accent2); color: var(--accent2); }
-  #speechClearBtn:hover  { background: var(--btn-hover); border-color: var(--danger, #cc2222); color: var(--danger, #cc2222); }
-  /* drag-over highlight on speech panel */
-  .speech-top-bar {
-    display: flex; gap: 4px; flex-shrink: 0;
-    padding-bottom: 6px;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: 2px;
-  }
-  .speech-top-btn {
-    background: var(--btn-bg); border: 1px solid var(--border);
-    color: var(--text); padding: 4px 8px; border-radius: 4px;
-    font-family: 'Share Tech Mono', monospace; font-size: 11px;
-    cursor: pointer; letter-spacing: 0.5px; white-space: nowrap;
-    transition: background 0.15s, border-color 0.15s, color 0.15s;
-  }
-  .speech-top-btn:hover { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
-  #speechPanel.drag-over { border-color: var(--accent2); background: rgba(0,255,159,0.04); }
-  /* ── Speech panel file preview strip ─────────────────────── */
-  #speechFilePreviewStrip {
-    display: none; flex-wrap: wrap; gap: 6px; flex-shrink: 0;
-    padding-bottom: 4px; border-bottom: 1px solid var(--border);
-  }
-  #speechFilePreviewStrip.has-files { display: flex; }
 
   .log-entry.sys  { color: #555555; }
   .log-entry.info { color: #0077aa; }
@@ -1421,8 +1385,8 @@
         <button class="save-chat-btn" onclick="saveChatToFile()" title="Save chat as HTML">💾</button>
         <button class="clear-chat-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" title="Clear chat history">🗑</button>
         <button class="find-chat-btn" id="findChatBtn" title="Find in chat">🔍</button>
-        <button class="syslog-chat-btn" id="syslogToggleBtn" onclick="toggleSysLogView()" title="Toggle SYS LOG">SHOW SYS LOG</button>
-        <button class="syslog-chat-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input">INPUT CHAT</button>
+        <button class="syslog-chat-btn" id="syslogToggleBtn" onclick="toggleSysLogView()" title="Toggle SYS LOG">SYS LOG</button>
+        <button class="syslog-chat-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input">CHAT</button>
       </div>
       <!-- ── Chat / video pane ───────────────────────────────── -->
 
@@ -1435,44 +1399,27 @@
         </div>
         <div class="chat" id="chat" tabindex="0">
         </div>
-      <!-- hidden shims kept for JS compatibility -->
-      <textarea id="chatInput" style="display:none"></textarea>
-      <input type="file" id="fileInput" multiple="" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx" style="display:none">
+      </div>
+      <!-- ── Input below chat pane ───────────────────────────── -->
+      <div class="file-preview-strip" id="filePreviewStrip"></div>
+      <div class="chat-input-row">
+          <button class="attach-btn" id="attachBtn" title="Attach file / photo / video">📎</button>
+          <input type="file" id="fileInput" multiple="" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx" style="display:none">
+          <div class="chat-input-wrap" id="chatInputWrap">
+<textarea class="chat-input" id="chatInput" placeholder="TYPE MESSAGE…" rows="1"></textarea>
+          </div>
+          <button class="btn" id="sendBtn">SEND</button>
+      </div>
       <!-- ── Speech overlay panel ──────────────────────────────── -->
       <div id="speechPanel">
-        <div class="speech-top-bar">
-          <button class="speech-top-btn" onclick="refreshScreen()" title="Refresh / Reconnect">↺ REFRESH</button>
-          <button class="speech-top-btn" onclick="saveChatToFile()" title="Save chat as HTML">💾 SAVE</button>
-          <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" title="Clear chat history">🗑 CLEAR</button>
-          <button class="speech-top-btn" onclick="document.getElementById('chatFindBar').classList.contains('open')?closeFind():openFind()" title="Find in chat">🔍 FIND</button>
-        </div>
-        <div class="file-preview-strip" id="speechFilePreviewStrip"></div>
         <textarea id="speechEditBox" placeholder="Tap LISTEN to start speaking… or type here." spellcheck="true"></textarea>
         <div class="speech-btn-row">
-          <div class="sbr-left">
-            <button id="speechAttachBtn" onclick="speechAttachClick()" title="Attach file or drag &amp; drop">ATTACH</button>
-            <input type="file" id="speechFileInput" multiple style="display:none" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx">
-          </div>
-          <div class="sbr-mid">
-            <button id="speechLoadBtn" onclick="speechLoadText()" title="Load text file into input box">LOAD</button>
-            <button id="speechSaveBtn" onclick="speechSaveText()" title="Save input box text to file">SAVE</button>
-            <button id="speechClearBtn" onclick="speechClearText()" title="Clear input box">CLEAR</button>
-            <button id="speechCopyBtn" onclick="speechCopyText()" title="Copy input box text to clipboard">COPY</button>
-            <input type="file" id="speechTextFileInput" style="display:none" accept=".txt,.md,.text">
-          </div>
-          <div class="sbr-right">
-            <button id="speechSendBtn" onclick="sendSpeechToChat()" disabled>SEND</button>
-            <button id="speechListenBtn" onclick="toggleListening()">LISTEN</button>
-          </div>
+          <button id="speechSendBtn" onclick="sendSpeechToChat()" disabled>SEND</button>
+          <button id="speechListenBtn" onclick="toggleListening()">LISTEN</button>
         </div>
       </div>
       <div class="log-panel collapsed" id="logPanel">
-        <div class="panel-label" onclick="toggleLogPanel()">SYS LOG<span class="log-toggle-arrow" id="logToggleArrow">▾</span>
-          <button class="log-action-btn" onclick="event.stopPropagation();saveLog()" title="Save log to file">SAVE</button>
-          <button class="log-action-btn" id="logCopyBtn" onclick="event.stopPropagation();copyLog()" title="Copy log to clipboard">COPY</button>
-          <button class="log-action-btn" onclick="event.stopPropagation();clearLog()" title="Clear log">CLEAR</button>
-          <button class="log-action-btn" id="logStopBtn" onclick="event.stopPropagation();toggleLogStop()" title="Pause/resume log">STOP</button>
-        </div>
+        <div class="panel-label" onclick="toggleLogPanel()">SYS LOG<span class="log-toggle-arrow" id="logToggleArrow">▾</span></div>
         <div class="log" id="log"><span class="log-entry sys">16:00:39  PREFILL: code=null vid=false aud=false</span></div>
       </div>
     </div>
@@ -1586,7 +1533,18 @@ const sendBtn   = document.getElementById('sendBtn');
 // a fallback for mouse users and assistive technology.
 let _sendBtnTouched = false;
 let _syslogVisible  = false;
-// sendBtn removed — sending is via speech panel only
+sendBtn.addEventListener('pointerdown', e => {
+  if (e.pointerType !== 'mouse') {
+    _sendBtnTouched = true;
+    e.preventDefault();
+    sendChat();
+  }
+});
+sendBtn.disabled = true;
+sendBtn.addEventListener('click', e => {
+  if (_sendBtnTouched) { _sendBtnTouched = false; return; }
+  sendChat();
+});
 
 function startSession() {
   stopPresencePolling();
@@ -1951,9 +1909,7 @@ document.getElementById('sessionCode').addEventListener('keydown', e => {
   if (e.key === 'Enter') startSession();
 });
 
-let _logStopped = false;
 function entry(msg, cls='sys') {
-  if (_logStopped) return;
   const ts = new Date().toTimeString().slice(0,8);
   const d = document.createElement('span');
   d.className = 'log-entry ' + cls;
@@ -2512,8 +2468,8 @@ function sendChat() {
 const pendingFiles = [];  // {file, dataUrl}
 
 const fileInput        = document.getElementById('fileInput');
-const attachBtn        = document.getElementById('attachBtn'); // null — bottom bar removed
-const filePreviewStrip = document.getElementById('speechFilePreviewStrip');
+const attachBtn        = document.getElementById('attachBtn');
+const filePreviewStrip = document.getElementById('filePreviewStrip');
 const chatPanel        = document.getElementById('chatPanel');
 const dropOverlay      = document.getElementById('dropOverlay');
 const lightbox         = document.getElementById('lightbox');
@@ -2578,7 +2534,7 @@ function setupTooltips() {
 setupTooltips();
 
 // Attach button → open file picker
-if (attachBtn) attachBtn.addEventListener('click', () => fileInput.click());
+attachBtn.addEventListener('click', () => fileInput.click());
 fileInput.addEventListener('change', e => { addFiles([...e.target.files]); fileInput.value=''; });
 
 // ── Drag-and-drop (document-level so it works on any tab) ────
@@ -2637,45 +2593,38 @@ function addFiles(files) {
 }
 
 function renderFileChip(item, idx) {
-  [filePreviewStrip, document.getElementById('speechFilePreviewStrip')].forEach(strip => {
-    if (!strip) return;
-    const chip = document.createElement('div');
-    chip.className = 'file-chip';
-    chip.dataset.idx = idx;
-    if (item.file.type.startsWith('image/')) {
-      const thumb = document.createElement('img');
-      thumb.className = 'file-chip-thumb';
-      thumb.src = item.dataUrl;
-      chip.appendChild(thumb);
-    } else {
-      const icon = document.createElement('span');
-      icon.textContent = fileIcon(item.file.type);
-      icon.style.fontSize = '18px';
-      chip.appendChild(icon);
-    }
-    const name = document.createElement('span');
-    name.className = 'file-chip-name';
-    name.textContent = item.file.name;
-    chip.appendChild(name);
-    const rm = document.createElement('span');
-    rm.className = 'file-chip-remove';
-    rm.textContent = '✕';
-    rm.addEventListener('click', () => removeFile(idx, chip));
-    chip.appendChild(rm);
-    strip.appendChild(chip);
-    strip.classList.add('has-files');
-  });
+  const chip = document.createElement('div');
+  chip.className = 'file-chip';
+  chip.dataset.idx = idx;
+  if (item.file.type.startsWith('image/')) {
+    const thumb = document.createElement('img');
+    thumb.className = 'file-chip-thumb';
+    thumb.src = item.dataUrl;
+    chip.appendChild(thumb);
+  } else {
+    const icon = document.createElement('span');
+    icon.textContent = fileIcon(item.file.type);
+    icon.style.fontSize = '18px';
+    chip.appendChild(icon);
+  }
+  const name = document.createElement('span');
+  name.className = 'file-chip-name';
+  name.textContent = item.file.name;
+  chip.appendChild(name);
+  const rm = document.createElement('span');
+  rm.className = 'file-chip-remove';
+  rm.textContent = '✕';
+  rm.addEventListener('click', () => removeFile(idx, chip));
+  chip.appendChild(rm);
+  filePreviewStrip.appendChild(chip);
+  filePreviewStrip.classList.add('has-files');
 }
 
 function removeFile(idx, chip) {
   pendingFiles.splice(idx, 1);
-  [filePreviewStrip, document.getElementById('speechFilePreviewStrip')].forEach(strip => {
-    if (!strip) return;
-    const target = [...strip.querySelectorAll('.file-chip')].find(c => c.dataset.idx == chip.dataset.idx);
-    if (target) target.remove();
-    if (strip.querySelectorAll('.file-chip').length === 0) strip.classList.remove('has-files');
-    [...strip.querySelectorAll('.file-chip')].forEach((c, i) => { c.dataset.idx = i; });
-  });
+  chip.remove();
+  if (pendingFiles.length === 0) filePreviewStrip.classList.remove('has-files');
+  [...filePreviewStrip.querySelectorAll('.file-chip')].forEach((c, i) => { c.dataset.idx = i; });
 }
 
 function fileIcon(type) {
@@ -2693,8 +2642,6 @@ function sendPendingFiles() {
   pendingFiles.length = 0;
   filePreviewStrip.innerHTML = '';
   filePreviewStrip.classList.remove('has-files');
-  const sStrip = document.getElementById('speechFilePreviewStrip');
-  if (sStrip) { sStrip.innerHTML = ''; sStrip.classList.remove('has-files'); }
 }
 
 function sendFileChunked(item) {
@@ -2796,7 +2743,20 @@ function addMediaBubble(name, type, dataUrl, mine) {
 // ── Lightbox close ────────────────────────────────────────────
 lightbox.addEventListener('click', () => { lightbox.classList.remove('open'); lightboxImg.src = ''; });
 
-// chatInput resize/keydown removed — bottom bar removed; speech panel handles input
+// Auto-resize textarea as user types
+function resizeChatInput() {
+  chatInput.style.height = 'auto';
+  chatInput.style.height = Math.min(chatInput.scrollHeight, 160) + 'px';
+}
+chatInput.addEventListener('input', resizeChatInput);
+
+// Enter sends, Shift+Enter inserts newline
+chatInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendChat();
+  }
+});
 
 function toggleLogPanel() {
   const p = document.getElementById('logPanel');
@@ -2821,13 +2781,13 @@ function toggleSysLogView() {
       const l = logPanel.querySelector('#log');
       if (l) setTimeout(() => { l.scrollTop = l.scrollHeight; }, 50);
     }
-    if (btn) { btn.classList.add('active'); btn.textContent = 'HIDE SYS LOG'; }
+    if (btn) btn.classList.add('active');
   } else {
     if (logPanel) {
       logPanel.classList.remove('syslog-open');
       logPanel.classList.add('collapsed');
     }
-    if (btn) { btn.classList.remove('active'); btn.textContent = 'SHOW SYS LOG'; }
+    if (btn) btn.classList.remove('active');
   }
 }
 
@@ -2844,12 +2804,12 @@ function toggleSpeechPanel() {
   if (_speechVisible) {
     if (_syslogVisible) toggleSysLogView();
     if (panel) panel.classList.add('speech-open');
-    if (btn)   { btn.classList.add('active'); btn.textContent = 'SHOW CHAT'; }
+    if (btn)   btn.classList.add('active');
     updateSpeechSendBtn();
   } else {
     stopListening();
     if (panel) panel.classList.remove('speech-open');
-    if (btn)   { btn.classList.remove('active'); btn.textContent = 'INPUT CHAT'; }
+    if (btn)   btn.classList.remove('active');
   }
 }
 
@@ -2863,11 +2823,14 @@ function sendSpeechToChat() {
   const box = document.getElementById('speechEditBox');
   if (!box) return;
   const txt = box.value.trim();
-  if (!txt && pendingFiles.length === 0) return;
-  if (chatInput) chatInput.value = txt;
+  if (!txt) return;
+  if (chatInput) {
+    chatInput.value = txt;
+    chatInput.style.height = 'auto';
+    chatInput.style.height = Math.min(chatInput.scrollHeight, 160) + 'px';
+  }
   sendChat();
   box.value = '';
-  if (chatInput) chatInput.value = '';
   updateSpeechSendBtn();
 }
 
@@ -2949,107 +2912,7 @@ function setStatus(txt) {
 document.addEventListener('DOMContentLoaded', () => {
   const box = document.getElementById('speechEditBox');
   if (box) box.addEventListener('input', updateSpeechSendBtn);
-
-  // ── Speech panel drag-and-drop for file attach ──
-  const panel = document.getElementById('speechPanel');
-  if (panel) {
-    panel.addEventListener('dragover', e => {
-      e.preventDefault(); panel.classList.add('drag-over');
-    });
-    panel.addEventListener('dragleave', e => {
-      if (!panel.contains(e.relatedTarget)) panel.classList.remove('drag-over');
-    });
-    panel.addEventListener('drop', e => {
-      e.preventDefault(); panel.classList.remove('drag-over');
-      const files = Array.from(e.dataTransfer.files);
-      if (files.length) handleSpeechFiles(files);
-    });
-  }
-
-  // ── Speech attach file input handler ──
-  const sfi = document.getElementById('speechFileInput');
-  if (sfi) sfi.addEventListener('change', () => {
-    if (sfi.files.length) handleSpeechFiles(Array.from(sfi.files));
-    sfi.value = '';
-  });
-
-  // ── Speech load text file input handler ──
-  const stfi = document.getElementById('speechTextFileInput');
-  if (stfi) stfi.addEventListener('change', () => {
-    const f = stfi.files[0]; if (!f) return;
-    const reader = new FileReader();
-    reader.onload = ev => {
-      const box = document.getElementById('speechEditBox');
-      if (box) { box.value = ev.target.result; updateSpeechSendBtn(); }
-    };
-    reader.readAsText(f);
-    stfi.value = '';
-  });
 });
-
-function speechAttachClick() {
-  const sfi = document.getElementById('speechFileInput');
-  if (sfi) sfi.click();
-}
-
-function handleSpeechFiles(files) {
-  if (typeof handleFiles === 'function') {
-    handleFiles(files);
-  } else if (typeof pendingAttachments !== 'undefined') {
-    files.forEach(f => pendingAttachments.push(f));
-    if (typeof renderFilePreview === 'function') renderFilePreview();
-  } else {
-    const fi = document.getElementById('fileInput');
-    if (fi) {
-      const dt = new DataTransfer();
-      files.forEach(f => dt.items.add(f));
-      fi.files = dt.files;
-      fi.dispatchEvent(new Event('change', { bubbles: true }));
-    }
-  }
-}
-
-function speechLoadText() {
-  const stfi = document.getElementById('speechTextFileInput');
-  if (stfi) stfi.click();
-}
-
-function speechSaveText() {
-  const box = document.getElementById('speechEditBox');
-  if (!box) return;
-  const text = box.value;
-  if (!text.trim()) return;
-  const blob = new Blob([text], { type: 'text/plain' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  const ts   = new Date().toISOString().slice(0,19).replace(/[:T]/g, '-');
-  a.href = url; a.download = 'speech-' + ts + '.txt';
-  document.body.appendChild(a); a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
-function speechCopyText() {
-  const box = document.getElementById('speechEditBox');
-  if (!box || !box.value.trim()) return;
-  navigator.clipboard.writeText(box.value).then(() => {
-    const btn = document.getElementById('speechCopyBtn');
-    if (!btn) return;
-    const orig = btn.textContent;
-    btn.textContent = '✓ COPIED';
-    setTimeout(() => { btn.textContent = orig; }, 1200);
-  }).catch(() => {
-    box.select();
-    document.execCommand('copy');
-  });
-}
-
-function speechClearText() {
-  const box = document.getElementById('speechEditBox');
-  if (!box) return;
-  box.value = '';
-  updateSpeechSendBtn();
-}
 
 function init() {
   if (location.protocol !== 'https:' && location.protocol !== 'file:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
@@ -3228,7 +3091,7 @@ function attachDataConn(dc) {
     dataConn = dc;
     entry('Chat channel open', 'ok');
     setStatus('reachable');
-    const sb = document.getElementById('sendBtn'); if (sb) sb.disabled = false;
+    document.getElementById('sendBtn').disabled = false;
     sendVideoState();
     if (_pendingChatMsg) {
       const queued = _pendingChatMsg; _pendingChatMsg = null;
@@ -3258,7 +3121,7 @@ function attachDataConn(dc) {
     if (dataConn !== dc) return; // stale handler — a newer DC already took over
     pendingDC = false;
     dataConn = null;
-    const sb = document.getElementById('sendBtn'); if (sb) sb.disabled = true;
+    document.getElementById('sendBtn').disabled = true;
     entry('Chat channel closed', 'sys');
     // Only reopen if the call is still live — capture linked now and re-check
     // after the setTimeout so a concurrent onDrop() doesn't cause a ghost reconnect
@@ -4311,39 +4174,6 @@ document.addEventListener('visibilitychange', () => {
 });
 
 window.addEventListener('beforeunload', () => { peer?.destroy(); });
-
-// ── SYS LOG actions ──────────────────────────────────────────────────────────
-
-
-function saveLog() {
-  const lines = Array.from(document.querySelectorAll('#log .log-entry'))
-    .map(el => el.textContent).join('\n');
-  const blob = new Blob([lines], { type: 'text/plain' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'syslog-' + new Date().toISOString().slice(0,19).replace(/[:T]/g,'-') + '.txt';
-  a.click();
-}
-
-function copyLog() {
-  const lines = Array.from(document.querySelectorAll('#log .log-entry'))
-    .map(el => el.textContent).join('\n');
-  navigator.clipboard.writeText(lines).then(() => {
-    const btn = document.getElementById('logCopyBtn');
-    if (btn) { const orig = btn.textContent; btn.textContent = 'COPIED'; setTimeout(() => btn.textContent = orig, 1200); }
-  });
-}
-
-function clearLog() {
-  const log = document.getElementById('log');
-  if (log) log.innerHTML = '';
-}
-
-function toggleLogStop() {
-  _logStopped = !_logStopped;
-  const btn = document.getElementById('logStopBtn');
-  if (btn) { btn.textContent = _logStopped ? 'RUN' : 'STOP'; btn.classList.toggle('stopped', _logStopped); }
-}
 </script>
 
 
