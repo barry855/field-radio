@@ -654,10 +654,14 @@
   #speechEditBox:focus { border-color: var(--accent); }
   #speechEditBox::placeholder { color: rgba(200,220,240,0.45); }
   .speech-btn-row {
-    display: flex; gap: 8px; justify-content: flex-end; align-items: center;
+    display: flex; gap: 8px; justify-content: space-between; align-items: center;
     flex-shrink: 0;
   }
-  #speechSendBtn {
+  .speech-btn-row .sbr-left  { display: flex; gap: 8px; align-items: center; }
+  .speech-btn-row .sbr-mid   { display: flex; gap: 8px; align-items: center; }
+  .speech-btn-row .sbr-right { display: flex; gap: 8px; align-items: center; }
+  /* ── Shared speech button base ── */
+  #speechSendBtn, #speechListenBtn, #speechAttachBtn, #speechLoadBtn, #speechSaveBtn {
     background: var(--btn-bg); border: 1px solid var(--border);
     color: var(--text); padding: 6px 14px; border-radius: 4px;
     font-family: 'Share Tech Mono', monospace; font-size: 12px;
@@ -666,18 +670,16 @@
   }
   #speechSendBtn:hover { background: var(--btn-hover); border-color: #2a4060; }
   #speechSendBtn:disabled { opacity: 0.35; cursor: not-allowed; }
-  #speechListenBtn {
-    background: var(--btn-bg); border: 1px solid var(--border);
-    color: var(--text); padding: 6px 14px; border-radius: 4px;
-    font-family: 'Share Tech Mono', monospace; font-size: 12px;
-    cursor: pointer; transition: background 0.15s, border-color 0.15s, color 0.15s;
-    white-space: nowrap; letter-spacing: 0.5px;
-  }
   #speechListenBtn:hover { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
   #speechListenBtn.listening {
     border-color: var(--danger, #cc2222); color: var(--danger, #cc2222);
     background: rgba(204,34,34,0.08);
   }
+  #speechAttachBtn:hover { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
+  #speechLoadBtn:hover   { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
+  #speechSaveBtn:hover   { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
+  /* drag-over highlight on speech panel */
+  #speechPanel.drag-over { border-color: var(--accent); background: rgba(0,212,255,0.05); }
 
   .log-entry.sys  { color: #555555; }
   .log-entry.info { color: #0077aa; }
@@ -1379,8 +1381,19 @@
       <div id="speechPanel">
         <textarea id="speechEditBox" placeholder="Tap LISTEN to start speaking… or type here." spellcheck="true"></textarea>
         <div class="speech-btn-row">
-          <button id="speechSendBtn" onclick="sendSpeechToChat()" disabled>SEND</button>
-          <button id="speechListenBtn" onclick="toggleListening()">LISTEN</button>
+          <div class="sbr-left">
+            <button id="speechAttachBtn" onclick="speechAttachClick()" title="Attach file or drag &amp; drop">📎 ATTACH</button>
+            <input type="file" id="speechFileInput" multiple style="display:none" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx">
+          </div>
+          <div class="sbr-mid">
+            <button id="speechLoadBtn" onclick="speechLoadText()" title="Load text file into input box">⬆ LOAD</button>
+            <button id="speechSaveBtn" onclick="speechSaveText()" title="Save input box text to file">⬇ SAVE</button>
+            <input type="file" id="speechTextFileInput" style="display:none" accept=".txt,.md,.text">
+          </div>
+          <div class="sbr-right">
+            <button id="speechSendBtn" onclick="sendSpeechToChat()" disabled>SEND</button>
+            <button id="speechListenBtn" onclick="toggleListening()">LISTEN</button>
+          </div>
         </div>
       </div>
       <div class="log-panel collapsed" id="logPanel">
@@ -2902,7 +2915,87 @@ function setStatus(txt) {
 document.addEventListener('DOMContentLoaded', () => {
   const box = document.getElementById('speechEditBox');
   if (box) box.addEventListener('input', updateSpeechSendBtn);
+
+  // ── Speech panel drag-and-drop for file attach ──
+  const panel = document.getElementById('speechPanel');
+  if (panel) {
+    panel.addEventListener('dragover', e => {
+      e.preventDefault(); panel.classList.add('drag-over');
+    });
+    panel.addEventListener('dragleave', e => {
+      if (!panel.contains(e.relatedTarget)) panel.classList.remove('drag-over');
+    });
+    panel.addEventListener('drop', e => {
+      e.preventDefault(); panel.classList.remove('drag-over');
+      const files = Array.from(e.dataTransfer.files);
+      if (files.length) handleSpeechFiles(files);
+    });
+  }
+
+  // ── Speech attach file input handler ──
+  const sfi = document.getElementById('speechFileInput');
+  if (sfi) sfi.addEventListener('change', () => {
+    if (sfi.files.length) handleSpeechFiles(Array.from(sfi.files));
+    sfi.value = '';
+  });
+
+  // ── Speech load text file input handler ──
+  const stfi = document.getElementById('speechTextFileInput');
+  if (stfi) stfi.addEventListener('change', () => {
+    const f = stfi.files[0]; if (!f) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const box = document.getElementById('speechEditBox');
+      if (box) { box.value = ev.target.result; updateSpeechSendBtn(); }
+    };
+    reader.readAsText(f);
+    stfi.value = '';
+  });
 });
+
+function speechAttachClick() {
+  const sfi = document.getElementById('speechFileInput');
+  if (sfi) sfi.click();
+}
+
+function handleSpeechFiles(files) {
+  // Route files into the main chat attach system if available
+  if (typeof handleFiles === 'function') {
+    handleFiles(files);
+  } else if (typeof pendingAttachments !== 'undefined') {
+    files.forEach(f => pendingAttachments.push(f));
+    if (typeof renderFilePreview === 'function') renderFilePreview();
+  } else {
+    // Fallback: feed into main fileInput and trigger change
+    const fi = document.getElementById('fileInput');
+    if (fi) {
+      const dt = new DataTransfer();
+      files.forEach(f => dt.items.add(f));
+      fi.files = dt.files;
+      fi.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  }
+}
+
+function speechLoadText() {
+  const stfi = document.getElementById('speechTextFileInput');
+  if (stfi) stfi.click();
+}
+
+function speechSaveText() {
+  const box = document.getElementById('speechEditBox');
+  if (!box) return;
+  const text = box.value;
+  if (!text.trim()) return;
+  const blob = new Blob([text], { type: 'text/plain' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const ts   = new Date().toISOString().slice(0,19).replace(/[:T]/g, '-');
+  a.href = url; a.download = 'speech-' + ts + '.txt';
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 
 function init() {
   if (location.protocol !== 'https:' && location.protocol !== 'file:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
