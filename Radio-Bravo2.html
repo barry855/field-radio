@@ -4181,7 +4181,8 @@ function toggleAudio() {
 
 // ── Refresh Screen — reloads page (Unit ID pre-fills from localStorage) ──
 function refreshScreen() {
-  // Notify remote peer so they auto-refresh in sync
+  // Notify remote peer so they auto-refresh in sync — both sides reload after
+  // the same delay so the reload is as simultaneous as possible.
   try { dcSend({ __control: 'refresh' }); } catch(e) {}
   peerRefreshing = true;  // suppress onDrop login redirect
   // Flag survives the reload so the fresh page auto-reconnects via login countdown
@@ -4189,7 +4190,9 @@ function refreshScreen() {
   // Show login box immediately on the refreshing side too
   document.getElementById('sessionOverlay').style.display = 'flex';
   document.getElementById('unitIdDisplay').style.display = 'none';
-  setTimeout(() => window.location.reload(), 400);
+  // Local side waits 500 ms; remote starts its 400 ms timer on message receipt.
+  // With ~100 ms one-way latency both reloads fire at roughly the same instant.
+  setTimeout(() => window.location.reload(), 500);
 }
 
 // ── Camera flip (Android front/back) ─────────────────────────
@@ -4411,7 +4414,13 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-window.addEventListener('beforeunload', () => { peer?.destroy(); });
+window.addEventListener('beforeunload', () => {
+  // Notify remote that this side is leaving before the peer tears down
+  if (!leftPermanently) {
+    try { dcSend({ __control: 'leave' }); } catch(e) {}
+  }
+  peer?.destroy();
+});
 
 // ── SYS LOG actions ──────────────────────────────────────────────────────────
 
