@@ -641,6 +641,16 @@
     display: inline-block; line-height: 1;
   }
   .log-panel.collapsed .log-toggle-arrow { transform: rotate(-90deg); }
+  .log-action-btn {
+    background: var(--btn-bg); border: 1px solid var(--border);
+    color: var(--text); padding: 2px 7px; border-radius: 4px;
+    font-family: 'Share Tech Mono', monospace; font-size: 10px;
+    cursor: pointer; letter-spacing: 0.5px;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    flex-shrink: 0;
+  }
+  .log-action-btn:hover { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
+  .log-action-btn.stopped { border-color: var(--danger); color: var(--danger); }
   .log {
     height: 76px;
     overflow-y: auto;
@@ -1437,7 +1447,12 @@
       </div>
       </div><!-- /chatPanel -->
       <div class="log-panel collapsed" id="logPanel">
-        <div class="panel-label" onclick="toggleLogPanel()">SYS LOG<span class="log-toggle-arrow" id="logToggleArrow">▾</span></div>
+        <div class="panel-label" onclick="toggleLogPanel()">SYS LOG<span class="log-toggle-arrow" id="logToggleArrow">▾</span>
+          <button class="log-action-btn" onclick="event.stopPropagation();saveLog()" title="Save log to file">SAVE</button>
+          <button class="log-action-btn" id="logCopyBtn" onclick="event.stopPropagation();copyLog()" title="Copy log to clipboard">COPY</button>
+          <button class="log-action-btn" onclick="event.stopPropagation();clearLog()" title="Clear log">CLEAR</button>
+          <button class="log-action-btn" id="logStopBtn" onclick="event.stopPropagation();toggleLogStop()" title="Pause/resume log">STOP</button>
+        </div>
         <div class="log" id="log"><span class="log-entry sys">16:00:39  PREFILL: code=null vid=false aud=false</span></div>
       </div>
     </div>
@@ -4274,6 +4289,45 @@ document.addEventListener('visibilitychange', () => {
 });
 
 window.addEventListener('beforeunload', () => { peer?.destroy(); });
+
+// ── SYS LOG actions ──────────────────────────────────────────────────────────
+let _logStopped = false;
+
+const _origEntry = entry;
+function entry(msg, cls='sys') {
+  if (_logStopped) return;
+  _origEntry(msg, cls);
+}
+
+function saveLog() {
+  const lines = Array.from(document.querySelectorAll('#log .log-entry'))
+    .map(el => el.textContent).join('\n');
+  const blob = new Blob([lines], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'syslog-' + new Date().toISOString().slice(0,19).replace(/[:T]/g,'-') + '.txt';
+  a.click();
+}
+
+function copyLog() {
+  const lines = Array.from(document.querySelectorAll('#log .log-entry'))
+    .map(el => el.textContent).join('\n');
+  navigator.clipboard.writeText(lines).then(() => {
+    const btn = document.getElementById('logCopyBtn');
+    if (btn) { const orig = btn.textContent; btn.textContent = 'COPIED'; setTimeout(() => btn.textContent = orig, 1200); }
+  });
+}
+
+function clearLog() {
+  const log = document.getElementById('log');
+  if (log) log.innerHTML = '';
+}
+
+function toggleLogStop() {
+  _logStopped = !_logStopped;
+  const btn = document.getElementById('logStopBtn');
+  if (btn) { btn.textContent = _logStopped ? 'RUN' : 'STOP'; btn.classList.toggle('stopped', _logStopped); }
+}
 </script>
 
 
