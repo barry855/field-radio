@@ -2797,12 +2797,12 @@ function toggleSpeechPanel() {
     // Close syslog if open
     if (_syslogVisible) toggleSysLogView();
     if (panel) panel.classList.add('speech-open');
-    if (btn)   { btn.classList.add('active'); btn.textContent = 'INPUT CHAT'; }
+    if (btn)   { btn.classList.add('active'); btn.textContent = 'SHOW CHAT'; }
     updateSpeechSendBtn();
   } else {
     stopListening();
     if (panel) panel.classList.remove('speech-open');
-    if (btn)   { btn.classList.remove('active'); btn.textContent = 'SHOW CHAT'; }
+    if (btn)   { btn.classList.remove('active'); btn.textContent = 'INPUT CHAT'; }
   }
 }
 
