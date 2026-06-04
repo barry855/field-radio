@@ -1381,7 +1381,7 @@
       <textarea id="chatInput" style="display:none"></textarea>
       <input type="file" id="fileInput" multiple="" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx" style="display:none">
       <!-- ── Speech overlay panel ──────────────────────────────── -->
-      <div id="speechPanel" class="speech-open">
+      <div id="speechPanel">
         <div class="file-preview-strip" id="speechFilePreviewStrip"></div>
         <textarea id="speechEditBox" placeholder="Tap LISTEN to start speaking… or type here." spellcheck="true"></textarea>
         <div class="speech-btn-row">
@@ -2784,7 +2784,7 @@ function toggleSysLogView() {
 }
 
 // ── Speech panel toggle + Web Speech API ────────────────────────────────────
-let _speechVisible = true;
+let _speechVisible = false;
 let _recognition   = null;
 let _listening     = false;
 let _interimText   = '';
