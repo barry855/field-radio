@@ -1544,6 +1544,7 @@ const sendBtn   = document.getElementById('sendBtn');
 // On mouse, we defer to click so normal desktop UX is preserved.
 let _sendBtnTouched = false;
 let _syslogVisible  = false;
+let _speechVisible  = false;
 // sendBtn removed — sending is via speech panel only
 
 function startSession() {
@@ -2827,7 +2828,6 @@ function toggleSysLogView() {
 }
 
 // ── Speech panel toggle + Web Speech API ────────────────────────────────────
-let _speechVisible = false;
 let _recognition   = null;
 let _listening     = false;
 let _interimText   = '';
