@@ -1297,6 +1297,7 @@
         <div class="mini-video-overlay hidden" id="miniRemoteOverlay">
           <video id="miniRemoteVideo" autoplay="" playsinline=""></video>
           <span class="video-label">BRAVO</span>
+          <button class="mini-toggle-btn" title="Hide mini" onclick="toggleMiniVideo();event.stopPropagation()">✕</button>
         </div>
       </div>
     </div>
@@ -1332,6 +1333,7 @@
         <div class="mini-video-overlay hidden" id="miniLocalOverlay">
           <video id="miniLocalVideo" autoplay="" playsinline="" muted=""></video>
           <span class="video-label">ALPHA</span>
+          <button class="mini-toggle-btn" title="Hide mini" onclick="toggleMiniVideo();event.stopPropagation()">✕</button>
         </div>
       </div>
     </div>
@@ -1352,17 +1354,12 @@
         <button class="find-chat-btn" id="findChatBtn" title="Find in chat">🔍</button>
         <button class="syslog-chat-btn" id="syslogToggleBtn" onclick="toggleSysLogView()" title="Toggle SYS LOG">SYS LOG</button>
         <button class="syslog-chat-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input">SPEECH</button>
-        <button class="media-btn" id="miniChatBtn" onclick="toggleMiniChatVideo()" style="margin-left:auto;">Mini On</button>
       </div>
       <!-- ── Chat / video pane ───────────────────────────────── -->
 
       <div class="chat-panel" style="flex:1" id="chatPanel">
         <div class="panel-label">COMMS</div>
         <video id="chatUnderlay" autoplay playsinline muted></video>
-        <div class="mini-video-overlay" id="miniChatOverlay" style="top:8px;right:8px;left:auto;">
-          <video id="miniChatVideo" autoplay="" playsinline=""></video>
-          <span class="video-label">BRAVO</span>
-        </div>
         <div class="drop-overlay" id="dropOverlay">
           <div class="drop-overlay-icon">📎</div>
           <div class="drop-overlay-label">Drop file to attach</div>
@@ -1952,8 +1949,6 @@ function syncMiniVideos() {
   if (miniChatVideo && remoteVideo && miniChatVideo.srcObject !== remoteVideo.srcObject) {
     miniChatVideo.srcObject = remoteVideo.srcObject;
   }
-  const miniChatOverlay = document.getElementById('miniChatOverlay');
-  if (miniChatOverlay) miniChatOverlay.classList.toggle('no-video', !(remoteVideo && remoteVideo.srcObject));
   syncChatUnderlay();
 }
 
@@ -2051,18 +2046,7 @@ function makeDraggable(el) {
 
 // ── Mini remote screen in Chat tab ───────────────────────────
 let miniChatVisible = true;
-function toggleMiniChatVideo() {
-  miniChatVisible = !miniChatVisible;
-  const overlay = document.getElementById('miniChatOverlay');
-  const btn = document.getElementById('miniChatBtn');
-  if (overlay) overlay.classList.toggle('hidden', !miniChatVisible);
-  if (btn) { btn.textContent = miniChatVisible ? 'Mini On' : 'Mini Off'; btn.classList.toggle('active-on', !miniChatVisible); }
-}
-// init chat mini draggable
-(function() {
-  const overlay = document.getElementById('miniChatOverlay');
-  if (overlay) makeDraggable(overlay);
-})();
+function toggleMiniChatOverlay() { /* removed */ }
 
 function linkify(text) {
   const frag = document.createDocumentFragment();
