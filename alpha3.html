@@ -273,10 +273,32 @@
   .syslog-chat-btn.active { border-color: #00d4ff; color: #000; background: #00d4ff; }
 
   /* ── Chat button bar (above message area) ──────────────────── */
+  .chat-menu-toggle {
+    display: flex; align-items: center; gap: 6px;
+    flex-shrink: 0; margin-bottom: 4px;
+  }
+  .chat-menu-toggle-btn {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(0,212,255,0.08); border: 1px solid rgba(0,212,255,0.35);
+    color: var(--text-dim, #8899aa); border-radius: 4px;
+    font-family: 'Share Tech Mono', monospace; font-size: 11px;
+    letter-spacing: 0.5px; cursor: pointer; padding: 4px 10px;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+  .chat-menu-toggle-btn:hover { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
+  .chat-menu-toggle-btn .menu-arrow {
+    font-size: 10px; transition: transform 0.2s ease;
+    display: inline-block;
+  }
+  .chat-menu-toggle-btn.open .menu-arrow { transform: rotate(180deg); }
   .chat-btn-bar {
-    display: flex; gap: 6px; flex-shrink: 0;
+    display: none; gap: 6px; flex-shrink: 0;
     margin-bottom: 4px; align-items: center;
     flex-wrap: wrap;
+  }
+  .chat-btn-bar.open {
+    display: flex;
   }
   .chat-btn-bar-row {
     display: flex; gap: 6px; align-items: center;
@@ -290,6 +312,7 @@
     position: relative; top: auto; left: auto; right: auto;
     width: 80px; flex-shrink: 0;
   }
+  /* ── Keep translate bar visible but pushed down when menu closed ── */
   /* ── Chat video underlay ──────────────────────────────────── */
   #chatUnderlay {
     position: absolute; inset: 0; z-index: 0;
@@ -1324,7 +1347,12 @@
         <button class="chat-find-nav" id="chatFindNext" title="Next match">▼</button>
         <button class="chat-find-close" id="chatFindClose" title="Close">✕</button>
       </div>
-      <div class="chat-btn-bar">
+      <div class="chat-menu-toggle">
+        <button class="chat-menu-toggle-btn" id="chatMenuToggleBtn" onclick="toggleChatMenu()" title="Show/hide chat controls">
+          ▼ MENU <span class="menu-arrow">▼</span>
+        </button>
+      </div>
+      <div class="chat-btn-bar" id="chatBtnBar">
         <div class="chat-btn-bar-row">
           <button class="speech-top-btn" onclick="refreshScreen()" title="Refresh / Reconnect">↺ REFRESH</button>
           <button class="speech-top-btn" onclick="saveChatToFile()" id="saveChatBtn" title="Save chat as HTML">💾 SAVE</button>
@@ -2193,6 +2221,14 @@ function toggleMiniVideo() {
   updateMiniVideoVisibility();
 }
 updateMiniVideoVisibility();
+
+function toggleChatMenu() {
+  const bar = document.getElementById('chatBtnBar');
+  const btn = document.getElementById('chatMenuToggleBtn');
+  const isOpen = bar.classList.toggle('open');
+  btn.classList.toggle('open', isOpen);
+  btn.innerHTML = (isOpen ? '▲ MENU ' : '▼ MENU ') + '<span class="menu-arrow">▼</span>';
+}
 
 let miniChatVisible = true;
 function toggleMiniChat() {
