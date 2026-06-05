@@ -188,11 +188,10 @@
     border-radius: 3px; color: rgba(255,255,255,0.7);
     font-size: 11px; font-weight: 900; line-height: 1;
     cursor: pointer; display: flex; align-items: center; justify-content: center;
-    opacity: 0; transition: opacity 0.15s, background 0.15s;
+    opacity: 0.7; transition: opacity 0.15s, background 0.15s;
     z-index: 5; user-select: none; font-family: monospace;
   }
-  .bubble:hover .bubble-copy-btn,
-  .bubble.peek-locked .bubble-copy-btn { opacity: 1; }
+  .bubble:hover .bubble-copy-btn { opacity: 1; background: rgba(0,0,0,0.4); }
   .bubble-copy-btn:hover { background: rgba(0,0,0,0.5); color: #fff; }
   .bubble-copy-btn.copied { background: rgba(0,200,100,0.5); color: #fff; opacity: 1; }
   /* Original-text peek on hover / tap */
@@ -2355,9 +2354,19 @@ function saveMessage(text, mine) {
   try {
     const key = HISTORY_KEY();
     const history = JSON.parse(localStorage.getItem(key) || '[]');
-    history.push({ text, mine, ts: Date.now() });
+    history.push({ text, mine, ts: Date.now(), status: mine ? 'sent' : null });
     if (history.length > HISTORY_MAX) history.splice(0, history.length - HISTORY_MAX);
     localStorage.setItem(key, JSON.stringify(history));
+  } catch(e) {}
+}
+
+function updateMessageStatus(text, ts, newStatus) {
+  try {
+    const key = HISTORY_KEY();
+    const history = JSON.parse(localStorage.getItem(key) || '[]');
+    // Find the matching message by ts (most reliable key)
+    const entry = history.find(m => m.ts === ts && m.mine);
+    if (entry) { entry.status = newStatus; localStorage.setItem(key, JSON.stringify(history)); }
   } catch(e) {}
 }
 
@@ -2379,7 +2388,7 @@ function restoreChat() {
     divider.style.cssText = 'text-align:center;font-size:9px;color:#888;letter-spacing:2px;padding:4px 0;';
     divider.textContent = '— RESTORED SESSION —';
     chatEl.appendChild(divider);
-    history.forEach(m => addBubble(m.text, m.mine, m.ts, false));
+    history.forEach(m => addBubble(m.text, m.mine, m.ts, false, m.status || (m.mine ? 'seen' : null)));
     const divider2 = document.createElement('div');
     divider2.style.cssText = 'text-align:center;font-size:9px;color:#888;letter-spacing:2px;padding:4px 0;';
     divider2.textContent = '— NOW —';
@@ -2657,7 +2666,7 @@ function _toggleLock(wrap) {
   }
 }
 
-function addBubble(text, mine, ts, save = true) {
+function addBubble(text, mine, ts, save = true, restoredStatus = null) {
   if (save) saveMessage(text, mine);
   const now = ts || Date.now();
   const wrap = document.createElement('div');
@@ -2675,24 +2684,39 @@ function addBubble(text, mine, ts, save = true) {
   // Delivery status for sent messages
   if (mine) {
     const status = document.createElement('span');
-    status.className = 'delivery-status sent';
-    status.title = 'Sent';
-    status.textContent = '✓';
-    time.appendChild(status);
-    // Simulate delivery progression
-    setTimeout(() => {
+    status.className = 'delivery-status';
+    if (restoredStatus === 'seen') {
+      // Restored message — show final seen state immediately
+      status.className = 'delivery-status seen';
+      status.title = 'Seen';
+      status.textContent = '✓✓';
+      status.style.color = '#00ccff';
+    } else if (restoredStatus === 'delivered') {
       status.className = 'delivery-status delivered';
       status.title = 'Delivered';
       status.textContent = '✓✓';
-    }, 1200);
-    setTimeout(() => {
-      if (linked) {
-        status.className = 'delivery-status seen';
-        status.title = 'Seen';
+    } else {
+      // Fresh message — animate through states
+      status.className = 'delivery-status sent';
+      status.title = 'Sent';
+      status.textContent = '✓';
+      setTimeout(() => {
+        status.className = 'delivery-status delivered';
+        status.title = 'Delivered';
         status.textContent = '✓✓';
-        status.style.color = '#00ccff';
-      }
-    }, 3500);
+        updateMessageStatus(text, now, 'delivered');
+      }, 1200);
+      setTimeout(() => {
+        if (linked) {
+          status.className = 'delivery-status seen';
+          status.title = 'Seen';
+          status.textContent = '✓✓';
+          status.style.color = '#00ccff';
+          updateMessageStatus(text, now, 'seen');
+        }
+      }, 3500);
+    }
+    time.appendChild(status);
   }
   const timeText = document.createTextNode(formatTs(now));
   time.appendChild(timeText);
