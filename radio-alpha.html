@@ -1663,6 +1663,10 @@ function startSession() {
   if (!code) { document.getElementById('sessionCode').focus(); return; }
   MY_ID     = 'alpha-' + code;
   REMOTE_ID = 'bravo-' + code;
+  // Keep writing our heartbeat for the whole session so Firebase shows us as online
+  const myKey = 'alpha-' + code;
+  presenceWrite(myKey); // immediate write
+  presenceWriteTimer = setInterval(() => presenceWrite(myKey), 5000);
   // Persist code and checkbox states for next load
   const disVidChecked = document.getElementById('loginDisableVideo').checked;
   const disAudChecked = document.getElementById('loginDisableAudio').checked;
