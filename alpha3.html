@@ -1156,10 +1156,10 @@
     <input type="text" id="sessionCode" maxlength="8" placeholder="ENTER CODE" autocomplete="off">
     <div class="session-checks">
       <label class="session-check-item">
-        <input type="checkbox" id="loginDisableVideo"> Disable Video
+        <input type="checkbox" id="loginDisableVideo" onchange="try{localStorage.setItem('alpha_disable_video',this.checked?'1':'0')}catch(e){}"> Disable Video
       </label>
       <label class="session-check-item">
-        <input type="checkbox" id="loginDisableAudio"> Disable Audio
+        <input type="checkbox" id="loginDisableAudio" onchange="try{localStorage.setItem('alpha_disable_audio',this.checked?'1':'0')}catch(e){}"> Disable Audio
       </label>
     </div>
     <div class="login-timeout">
