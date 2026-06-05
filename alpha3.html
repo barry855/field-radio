@@ -1320,6 +1320,11 @@
         <button class="chat-find-nav" id="chatFindNext" title="Next match">▼</button>
         <button class="chat-find-close" id="chatFindClose" title="Close">✕</button>
       </div>
+      <div class="chat-btn-bar-row" style="flex-shrink:0; margin-bottom:4px;">
+        <button class="speech-top-btn" onclick="refreshScreen()" title="Refresh / Reconnect">↺ REFRESH</button>
+        <button class="speech-top-btn leave-style" id="leaveChatBtn" onclick="leaveSession()" title="Leave session">✕ Leave</button>
+        <button class="syslog-chat-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input" style="margin-left:auto;">TALK OR TYPE IN CHAT</button>
+      </div>
       <div class="mini-row-wrap" id="miniRowWrapChat">
         <div class="mini-row-toggle" onclick="toggleMiniRowWrap('miniRowWrapChat')">
           <span class="mini-row-arrow">▼</span>
@@ -1328,14 +1333,12 @@
         </div>
         <div class="mini-row" style="flex-direction:column; align-items:stretch; gap:4px;">
           <div class="chat-btn-bar-row">
-            <button class="speech-top-btn" onclick="refreshScreen()" title="Refresh / Reconnect">↺ REFRESH</button>
             <button class="speech-top-btn" onclick="saveChatToFile()" id="saveChatBtn" title="Save chat as HTML">💾 SAVE</button>
             <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR</button>
             <button class="speech-top-btn" id="findChatBtn" title="Find in chat">🔍 FIND</button>
             <button class="speech-top-btn active" id="miniChatBtn" onclick="toggleMiniChat()" title="Toggle mini video in chat">MINI ON</button>
             <button class="speech-top-btn" id="flipChatBtn" onclick="flipCamera()" title="Flip camera">⟳ Flip Cam</button>
             <button class="syslog-chat-btn" id="syslogToggleBtn" onclick="toggleSysLogView()" title="Toggle SYS LOG">SYS LOG</button>
-            <button class="syslog-chat-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input">TYPE IN CHAT</button>
           </div>
           <div class="chat-btn-bar-row">
             <button class="speech-top-btn" id="chatVideoViewBtn" onclick="toggleChatVideoView()" title="Toggle chat video view">VIDEO REMOTE</button>
@@ -1344,7 +1347,6 @@
             <button class="speech-top-btn video-off-state" id="videoOffChatBtn" onclick="toggleVideo()" title="Video on/off">Video Off</button>
             <button class="speech-top-btn" id="audioChatBtn" onclick="toggleAudio()" title="Mute/unmute mic">Audio Off</button>
             <button class="speech-top-btn" id="screenChatBtn" onclick="toggleScreenShare()" title="Share screen">Share Off</button>
-            <button class="speech-top-btn leave-style" id="leaveChatBtn" onclick="leaveSession()" title="Leave session">✕ Leave</button>
           </div>
           <div class="gain-row">
             <div class="gain-label"><span>MIC</span><span>GAIN</span></div>
@@ -2256,7 +2258,7 @@ function makeDraggable(el) {
     document.removeEventListener('touchend', onDragEnd);
   }
 }
-['miniLocalOverlay','miniRemoteOverlay'].forEach(id => {
+['miniLocalOverlay','miniRemoteOverlay','miniChatOverlay'].forEach(id => {
   const el = document.getElementById(id);
   if (el) makeDraggable(el);
 });
@@ -2989,7 +2991,7 @@ function toggleSysLogView() {
       const sp = document.getElementById('speechPanel');
       if (sp) sp.classList.remove('speech-open');
       const sb = document.getElementById('speechToggleBtn');
-      if (sb) { sb.classList.remove('active'); sb.textContent = 'TYPE IN CHAT'; }
+      if (sb) { sb.classList.remove('active'); sb.textContent = 'TALK OR TYPE IN CHAT'; }
     }
     if (logPanel) {
       logPanel.classList.add('syslog-open');
@@ -3034,7 +3036,7 @@ function toggleSpeechPanel() {
   } else {
     stopListening();
     if (panel) panel.classList.remove('speech-open');
-    if (btn)   { btn.classList.remove('active'); btn.textContent = 'TYPE IN CHAT'; }
+    if (btn)   { btn.classList.remove('active'); btn.textContent = 'TALK OR TYPE IN CHAT'; }
     setChatBtnsDisabled(false);
   }
 }
