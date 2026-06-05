@@ -1218,15 +1218,15 @@
       </div>
     </div>
   </header>
-  <div class="tab-bar">
-    <button class="tab-btn" id="tabLocalBtn" onclick="switchTab(&#39;local&#39;)">LOCAL</button>
-    <button class="tab-btn active" id="tabRemoteBtn" onclick="switchTab(&#39;remote&#39;)">REMOTE</button>
-    <button class="tab-btn" id="tabChatBtn" onclick="switchTab(&#39;chat&#39;)">CHAT <span class="msg-badge" id="msgBadge">0</span></button>
+  <div class="tab-bar" style="display:none;">
+    <button class="tab-btn" id="tabLocalBtn" style="display:none" onclick="switchTab(&#39;local&#39;)">LOCAL</button>
+    <button class="tab-btn" id="tabRemoteBtn" style="display:none" onclick="switchTab(&#39;remote&#39;)">REMOTE</button>
+    <button class="tab-btn active" id="tabChatBtn" onclick="switchTab(&#39;chat&#39;)">CHAT <span class="msg-badge" id="msgBadge">0</span></button>
   </div>
   <div class="tab-content">
     <!-- LOCAL TAB -->
     <div class="tab-pane" id="paneLocal">
-      <div class="mini-row-wrap" id="miniRowWrapLocal">
+      <div class="mini-row-wrap open" id="miniRowWrapLocal">
         <div class="mini-row-toggle" onclick="toggleMiniRowWrap('miniRowWrapLocal')">
           <span class="mini-row-arrow">▼</span>
           <span class="mini-row-label">CONTROLS</span>
@@ -1268,8 +1268,8 @@
       </div>
     </div>
     <!-- REMOTE TAB -->
-    <div class="tab-pane active" id="paneRemote">
-      <div class="mini-row-wrap" id="miniRowWrapRemote">
+    <div class="tab-pane" id="paneRemote">
+      <div class="mini-row-wrap open" id="miniRowWrapRemote">
         <div class="mini-row-toggle" onclick="toggleMiniRowWrap('miniRowWrapRemote')">
           <span class="mini-row-arrow">▼</span>
           <span class="mini-row-label">CONTROLS</span>
@@ -1311,7 +1311,7 @@
       </div>
     </div>
     <!-- CHAT TAB -->
-    <div class="tab-pane" id="paneChat">
+    <div class="tab-pane active" id="paneChat">
       <!-- ── Toolbar above chat pane ─────────────────────────── -->
       <div class="chat-find-bar" id="chatFindBar">
         <input class="chat-find-input" id="chatFindInput" placeholder="Find in chat…" autocomplete="off" spellcheck="false">
@@ -1325,7 +1325,7 @@
         <button class="speech-top-btn leave-style" id="leaveChatBtn" onclick="leaveSession()" title="Leave session">✕ Leave</button>
         <button class="syslog-chat-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input" style="margin-left:auto;">TALK OR TYPE IN CHAT</button>
       </div>
-      <div class="mini-row-wrap" id="miniRowWrapChat">
+      <div class="mini-row-wrap open" id="miniRowWrapChat">
         <div class="mini-row-toggle" onclick="toggleMiniRowWrap('miniRowWrapChat')">
           <span class="mini-row-arrow">▼</span>
           <span class="mini-row-label">CONTROLS</span>
@@ -2058,7 +2058,7 @@ function setStatus(state) {
   else                            { statusEl.textContent = 'OFFLINE'; }
 }
 
-let activeTab = 'remote';
+let activeTab = 'chat';
 let unreadCount = 0;
 let miniVideoVisible = true;
 const msgBadge = document.getElementById('msgBadge');
@@ -2188,6 +2188,7 @@ function toggleMiniRowWrap(id) {
   const wrap = document.getElementById(id);
   if (!wrap) return;
   wrap.classList.toggle('open');
+  try { localStorage.setItem('alpha_mrw_' + id, wrap.classList.contains('open') ? '1' : '0'); } catch(e) {}
 }
 
 function toggleMiniVideo() {
@@ -3139,6 +3140,15 @@ function setStatus(txt) {
 
 // Enable/disable send btn as user types in the speech edit box
 document.addEventListener('DOMContentLoaded', () => {
+  switchTab('chat');
+  // Restore controls dropdown states (default open)
+  ['miniRowWrapLocal','miniRowWrapRemote','miniRowWrapChat'].forEach(id => {
+    const stored = localStorage.getItem('alpha_mrw_' + id);
+    const wrap = document.getElementById(id);
+    if (!wrap) return;
+    if (stored === '0') wrap.classList.remove('open');
+    else wrap.classList.add('open');
+  });
   const box = document.getElementById('speechEditBox');
   if (box) box.addEventListener('input', updateSpeechSendBtn);
 
