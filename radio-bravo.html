@@ -167,7 +167,33 @@
   .bubble .ts {
     font-size: 11px; color: #888; letter-spacing: 0.5px;
     margin-top: 5px; text-align: right;
+    display: flex; align-items: center; justify-content: flex-end; gap: 5px;
   }
+  /* Delivery status check marks */
+  .bubble .delivery-status {
+    font-size: 12px; letter-spacing: -2px;
+    display: inline-flex; align-items: center;
+  }
+  .bubble.mine .delivery-status { color: #555; }
+  .bubble.mine .delivery-status.sent    { color: #777; }
+  .bubble.mine .delivery-status.delivered { color: #007744; }
+  .bubble.mine .delivery-status.seen    { color: #00aa66; }
+  /* Copy (+) button in bubble top-right */
+  .bubble { position: relative; }
+  .bubble-copy-btn {
+    position: absolute; top: 5px; right: 5px;
+    width: 18px; height: 18px;
+    background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 3px; color: rgba(255,255,255,0.7);
+    font-size: 11px; font-weight: 900; line-height: 1;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity 0.15s, background 0.15s;
+    z-index: 5; user-select: none; font-family: monospace;
+  }
+  .bubble:hover .bubble-copy-btn,
+  .bubble.peek-locked .bubble-copy-btn { opacity: 1; }
+  .bubble-copy-btn:hover { background: rgba(0,0,0,0.5); color: #fff; }
+  .bubble-copy-btn.copied { background: rgba(0,200,100,0.5); color: #fff; opacity: 1; }
   /* Original-text peek on hover / tap */
   .bubble[data-orig] { cursor: default; }
   .bubble[data-orig] .msg-text { transition: opacity 0.15s; }
@@ -1395,6 +1421,7 @@
     <button id="translateTrigger" onclick="toggleTranslateDrop(event)">SELECT LANGUAGE</button>
     <button id="translateResetBtn" onclick="resetTranslate()">ORIGINAL</button>
     <div id="translateDropdownWrap"><input id="translateSearch" type="text" placeholder="Search language…" oninput="filterLangs(this.value)" autocomplete="off"><ul id="translateDropdown">
+          <li data-lang="__orig__" tabindex="0" id="origLangItem" style="border-bottom:2px solid rgba(0,212,255,0.3);font-weight:bold;">🌐 Original (System Language)</li>
           <li data-lang="af" tabindex="0">Afrikaans</li>
           <li data-lang="sq" tabindex="0">Albanian</li>
           <li data-lang="am" tabindex="0">Amharic</li>
@@ -1923,6 +1950,9 @@ function resetTranslate() {
     } catch(e) { browserLangName = navigator.language || 'ORIGINAL'; }
   }
   document.getElementById('translateTrigger').textContent = browserLangName.toUpperCase();
+  // Update the orig item label in the dropdown to show system language
+  const origItem = document.getElementById('origLangItem');
+  if (origItem) origItem.textContent = '🌐 Original — ' + browserLangName;
   // Clear selected state in dropdown
   document.querySelectorAll('#translateDropdown li').forEach(li => li.classList.remove('selected'));
   // Restore original text in all bubbles
@@ -1937,8 +1967,16 @@ function resetTranslate() {
 
 // Wire up list items
 document.querySelectorAll('#translateDropdown li').forEach(li => {
-  li.addEventListener('click', () => applyTranslate(li.dataset.lang, li.textContent.trim()));
-  li.addEventListener('keydown', e => { if (e.key === 'Enter') applyTranslate(li.dataset.lang, li.textContent.trim()); });
+  li.addEventListener('click', () => {
+    if (li.dataset.lang === '__orig__') { resetTranslate(); document.getElementById('translateDropdownWrap').classList.remove('open'); }
+    else applyTranslate(li.dataset.lang, li.textContent.trim());
+  });
+  li.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      if (li.dataset.lang === '__orig__') { resetTranslate(); document.getElementById('translateDropdownWrap').classList.remove('open'); }
+      else applyTranslate(li.dataset.lang, li.textContent.trim());
+    }
+  });
 });
 
 // Close dropdown on outside click
@@ -1983,6 +2021,21 @@ function prefillLogin() {
   } catch(e) {}
 }
 prefillLogin();
+// Initialize orig lang item with browser language on load
+(function() {
+  const origItem = document.getElementById('origLangItem');
+  if (!origItem) return;
+  const browserLangCode = (navigator.language || 'en').split('-')[0].toLowerCase();
+  let browserLangName = null;
+  document.querySelectorAll('#translateDropdown li').forEach(li => {
+    const liCode = (li.dataset.lang || '').toLowerCase();
+    if (!browserLangName && liCode === browserLangCode) browserLangName = li.textContent.trim();
+  });
+  if (!browserLangName) {
+    try { browserLangName = new Intl.DisplayNames([navigator.language], { type: 'language' }).of(navigator.language); } catch(e) { browserLangName = navigator.language || 'System Language'; }
+  }
+  origItem.textContent = '🌐 Original — ' + (browserLangName || 'System Language');
+})();
 
 function showReconnecting() {
   document.getElementById('reconnectOverlay').classList.add('active');
@@ -2643,8 +2696,58 @@ function addBubble(text, mine, ts, save = true) {
   origPeek.className = 'orig-peek';
   const time = document.createElement('div');
   time.className = 'ts';
-  time.textContent = formatTs(now);
+  // Delivery status for sent messages
+  if (mine) {
+    const status = document.createElement('span');
+    status.className = 'delivery-status sent';
+    status.title = 'Sent';
+    status.textContent = '✓';
+    time.appendChild(status);
+    setTimeout(() => {
+      status.className = 'delivery-status delivered';
+      status.title = 'Delivered';
+      status.textContent = '✓✓';
+    }, 1200);
+    setTimeout(() => {
+      if (linked) {
+        status.className = 'delivery-status seen';
+        status.title = 'Seen';
+        status.textContent = '✓✓';
+        status.style.color = '#00ff9f';
+      }
+    }, 3500);
+  }
+  const timeText = document.createTextNode(formatTs(now));
+  time.appendChild(timeText);
   wrap.dataset.orig = text;
+  // Copy (+) button
+  const copyBtn = document.createElement('button');
+  copyBtn.className = 'bubble-copy-btn';
+  copyBtn.title = 'Copy message (+ translation)';
+  copyBtn.textContent = '+';
+  copyBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    const msgDiv = wrap.querySelector('.msg-text');
+    const origText = wrap.dataset.orig || '';
+    const translatedText = msgDiv ? (msgDiv.innerText || msgDiv.textContent) : '';
+    let toCopy = translatedText;
+    if (origText && origText !== translatedText) {
+      toCopy = translatedText + '\n[Original: ' + origText + ']';
+    }
+    navigator.clipboard.writeText(toCopy).then(() => {
+      copyBtn.textContent = '✓';
+      copyBtn.classList.add('copied');
+      setTimeout(() => { copyBtn.textContent = '+'; copyBtn.classList.remove('copied'); }, 1400);
+    }).catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = toCopy; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+      document.body.removeChild(ta);
+      copyBtn.textContent = '✓'; copyBtn.classList.add('copied');
+      setTimeout(() => { copyBtn.textContent = '+'; copyBtn.classList.remove('copied'); }, 1400);
+    });
+  });
+  wrap.appendChild(copyBtn);
   wrap.appendChild(who);
   wrap.appendChild(msg);
   wrap.appendChild(origPeek);
@@ -2967,6 +3070,19 @@ function addMediaBubble(name, type, dataUrl, mine) {
   const who = document.createElement('div');
   who.className = 'who';
   who.textContent = mine ? 'BRAVO' : 'ALPHA';
+  // Copy (+) button for media bubbles
+  const copyBtn = document.createElement('button');
+  copyBtn.className = 'bubble-copy-btn';
+  copyBtn.title = 'Copy filename';
+  copyBtn.textContent = '+';
+  copyBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(name).then(() => {
+      copyBtn.textContent = '✓'; copyBtn.classList.add('copied');
+      setTimeout(() => { copyBtn.textContent = '+'; copyBtn.classList.remove('copied'); }, 1400);
+    }).catch(() => {});
+  });
+  wrap.appendChild(copyBtn);
   wrap.appendChild(who);
   if (type.startsWith('image/')) {
     const img = document.createElement('img');
