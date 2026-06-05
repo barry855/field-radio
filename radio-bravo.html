@@ -171,13 +171,12 @@
   }
   /* Delivery status check marks */
   .bubble .delivery-status {
-    font-size: 12px; letter-spacing: -2px;
+    font-size: 12px; letter-spacing: 0px; gap: 0;
     display: inline-flex; align-items: center;
   }
-  .bubble.mine .delivery-status { color: #555; }
-  .bubble.mine .delivery-status.sent    { color: #777; }
-  .bubble.mine .delivery-status.delivered { color: #007744; }
-  .bubble.mine .delivery-status.seen    { color: #00aa66; }
+  .bubble.mine .delivery-status.sent      { color: rgba(0,0,0,0.35); }
+  .bubble.mine .delivery-status.delivered { color: rgba(0,0,0,0.55); }
+  .bubble.mine .delivery-status.seen      { color: rgba(0,0,0,0.85); font-weight: bold; }
   /* Copy (+) button in bubble top-right */
   .bubble { position: relative; }
   .bubble-copy-btn {
@@ -2712,7 +2711,6 @@ function addBubble(text, mine, ts, save = true, restoredStatus = null) {
       status.className = 'delivery-status seen';
       status.title = 'Seen';
       status.textContent = '✓✓';
-      status.style.color = '#00ff9f';
     } else if (restoredStatus === 'delivered') {
       status.className = 'delivery-status delivered';
       status.title = 'Delivered';
@@ -2732,7 +2730,6 @@ function addBubble(text, mine, ts, save = true, restoredStatus = null) {
           status.className = 'delivery-status seen';
           status.title = 'Seen';
           status.textContent = '✓✓';
-          status.style.color = '#00ff9f';
           updateMessageStatus(text, now, 'seen');
         }
       }, 3500);
