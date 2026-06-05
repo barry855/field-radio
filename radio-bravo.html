@@ -877,25 +877,6 @@
     cursor: pointer; margin: 0;
   }
 
-  /* 60-second login timeout bar */
-  .login-timeout {
-    margin-bottom: 14px;
-  }
-  .login-timeout-label {
-    display: flex; justify-content: space-between;
-    font-size: 9px; color: var(--text-dim); letter-spacing: 1.5px;
-    text-transform: uppercase; margin-bottom: 4px;
-  }
-  .login-timeout-label span { color: var(--warn); font-family: 'Orbitron', sans-serif; }
-  .login-timeout-track {
-    width: 100%; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden;
-  }
-  .login-timeout-fill {
-    height: 100%; background: var(--accent2); border-radius: 2px;
-    transition: width 1s linear, background 0.5s;
-    width: 100%;
-  }
-
   /* ── video ── */
   .video-panel {
     background: var(--panel); border: 1px solid var(--border);
@@ -1233,12 +1214,6 @@
       <label class="session-check-item">
         <input type="checkbox" id="loginDisableAudio" onchange="try{localStorage.setItem('bravo_disable_audio',this.checked?'1':'0')}catch(e){}"> Disable Audio
       </label>
-    </div>
-    <div class="login-timeout">
-      <div class="login-timeout-label">
-        <span>Auto Login</span><span id="loginTimeoutSec">10s</span>
-      </div>
-      <div class="login-timeout-track"><div class="login-timeout-fill" id="loginTimeoutFill" style="width: 100%; background: var(--accent2);"></div></div>
     </div>
     <button class="session-go" onclick="startSession()">CONNECT</button>
   </div>
