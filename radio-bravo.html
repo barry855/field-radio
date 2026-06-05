@@ -1271,7 +1271,7 @@
           <span class="rec-label">Record</span>
           <button class="media-btn" id="recBtn" onclick="toggleRecordLocal()">⏺ Start</button>
           <button class="media-btn video-off-state" id="videoBtn_row2" onclick="toggleVideo()">Video Off</button>
-          <button class="media-btn" id="audioBtn" onclick="toggleAudio()">Audio Off</button>
+          <button class="media-btn" id="audioBtn" onclick="toggleAudio()">Audio On</button>
           <button class="media-btn" id="flipBtn" onclick="flipCamera()">⟳ Flip Cam</button>
           <button class="media-btn" id="screenBtn" onclick="toggleScreenShare()">Share Off</button>
           <button class="speaker-btn speaker-on" id="speakerBtnLocal" onclick="toggleSpeaker()">🔊 Speaker</button>
@@ -1314,7 +1314,7 @@
           <span class="rec-label">Record</span>
           <button class="media-btn" id="recBtn2" onclick="toggleRecordRemote()">⏺ Start</button>
           <button class="media-btn video-off-state" id="videoBtn2_row2" onclick="toggleVideo()">Video Off</button>
-          <button class="media-btn" id="audioBtn2" onclick="toggleAudio()">Audio Off</button>
+          <button class="media-btn" id="audioBtn2" onclick="toggleAudio()">Audio On</button>
           <button class="media-btn" id="flipBtn2" onclick="flipCamera()">⟳ Flip Cam</button>
           <button class="media-btn" id="screenBtn2" onclick="toggleScreenShare()">Share Off</button>
           <button class="speaker-btn speaker-on" id="speakerBtnRemote" onclick="toggleSpeaker()">🔊 Speaker</button>
@@ -1367,6 +1367,7 @@
         <div class="mini-row" style="flex-direction:column; align-items:stretch; gap:4px;">
           <div class="chat-btn-bar-row">
             <button class="speech-top-btn" onclick="saveChatToFile()" id="saveChatBtn" title="Save chat as HTML">💾 SAVE</button>
+            <button class="speech-top-btn" onclick="restoreChat()" id="restoreChatBtn" title="Restore previous session chat">↩ RESTORE</button>
             <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR</button>
             <button class="speech-top-btn" id="findChatBtn" title="Find in chat">🔍 FIND</button>
             <button class="speech-top-btn active" id="miniChatBtn" onclick="toggleMiniChat()" title="Toggle mini video in chat">MINI ON</button>
@@ -1378,7 +1379,7 @@
             <span class="rec-label">Record</span>
             <button class="speech-top-btn rec-chat-btn" id="recChatBtn" onclick="toggleRecordChat()" title="Record current main feed + mini if visible">⏺ Start</button>
             <button class="speech-top-btn video-off-state" id="videoOffChatBtn" onclick="toggleVideo()" title="Video on/off">Video Off</button>
-            <button class="speech-top-btn" id="audioChatBtn" onclick="toggleAudio()" title="Mute/unmute mic">Audio Off</button>
+            <button class="speech-top-btn" id="audioChatBtn" onclick="toggleAudio()" title="Mute/unmute mic">Audio On</button>
             <button class="speech-top-btn" id="screenChatBtn" onclick="toggleScreenShare()" title="Share screen">Share Off</button>
           </div>
           <div class="gain-row">
@@ -1910,7 +1911,22 @@ function resetTranslate() {
   _translateLang = null;
   _translateName = null;
   try { localStorage.removeItem('bravo_translate_lang'); } catch(e) {}
-  document.getElementById('translateTrigger').textContent = 'SELECT LANGUAGE';
+  // Show the browser's detected language in the dropdown trigger
+  const browserLangCode = (navigator.language || 'en').split('-')[0].toLowerCase();
+  const browserLangFull = (navigator.language || 'en').toLowerCase();
+  let browserLangName = null;
+  document.querySelectorAll('#translateDropdown li').forEach(li => {
+    const liCode = (li.dataset.lang || '').toLowerCase();
+    if (!browserLangName && (liCode === browserLangFull || liCode === browserLangCode)) {
+      browserLangName = li.textContent.trim();
+    }
+  });
+  if (!browserLangName) {
+    try {
+      browserLangName = new Intl.DisplayNames([navigator.language], { type: 'language' }).of(navigator.language) || navigator.language;
+    } catch(e) { browserLangName = navigator.language || 'ORIGINAL'; }
+  }
+  document.getElementById('translateTrigger').textContent = browserLangName.toUpperCase();
   // Clear selected state in dropdown
   document.querySelectorAll('#translateDropdown li').forEach(li => li.classList.remove('selected'));
   // Restore original text in all bubbles
@@ -2326,21 +2342,31 @@ function saveMessage(text, mine) {
 }
 
 function loadHistory() {
+  // Clear chat screen on program start — do not auto-restore previous session
+  const chatEl = document.getElementById('chat');
+  if (chatEl) chatEl.innerHTML = '';
+}
+
+function restoreChat() {
   try {
     const key = HISTORY_KEY();
     const history = JSON.parse(localStorage.getItem(key) || '[]');
-    if (history.length === 0) return;
+    if (history.length === 0) { entry('No previous chat history to restore.', 'sys'); return; }
+    const chatEl = document.getElementById('chat');
+    if (!chatEl) return;
+    chatEl.innerHTML = '';
     const divider = document.createElement('div');
     divider.style.cssText = 'text-align:center;font-size:9px;color:#888;letter-spacing:2px;padding:4px 0;';
-    divider.textContent = '— PREVIOUS SESSION —';
-    chat.appendChild(divider);
+    divider.textContent = '— RESTORED SESSION —';
+    chatEl.appendChild(divider);
     history.forEach(m => addBubble(m.text, m.mine, m.ts, false));
     const divider2 = document.createElement('div');
     divider2.style.cssText = 'text-align:center;font-size:9px;color:#888;letter-spacing:2px;padding:4px 0;';
     divider2.textContent = '— NOW —';
-    chat.appendChild(divider2);
+    chatEl.appendChild(divider2);
     scrollToBottom();
-  } catch(e) {}
+    entry('Chat history restored (' + history.length + ' message(s)).', 'ok');
+  } catch(e) { entry('Restore failed: ' + e.message, 'err'); }
 }
 
 function clearHistory() {
@@ -2992,7 +3018,7 @@ function toggleLogPanel() {
 
 // ── SYS LOG chat-bar toggle ──────────────────────────────────────────────────
 function setChatBtnsDisabled(disabled) {
-  ['findChatBtn', 'saveChatBtn', 'clearChatBtn'].forEach(id => {
+  ['findChatBtn', 'saveChatBtn', 'restoreChatBtn', 'clearChatBtn'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.disabled = disabled;
   });
@@ -3315,6 +3341,10 @@ function init() {
       const ab3 = document.getElementById('audioChatBtn'); if(ab3){ab3.textContent='Audio Off';ab3.classList.remove('disabled-state');ab3.classList.add('active-on');}
       entry('Audio disabled (login setting)', 'sys');
     } else {
+      // Audio is enabled — ensure buttons reflect the correct On state
+      const ab = document.getElementById('audioBtn'); if(ab){ab.textContent='Audio On';ab.classList.remove('active-on','disabled-state');}
+      const ab2 = document.getElementById('audioBtn2'); if(ab2){ab2.textContent='Audio On';ab2.classList.remove('active-on','disabled-state');}
+      const ab3 = document.getElementById('audioChatBtn'); if(ab3){ab3.textContent='Audio On';ab3.classList.remove('active-on','disabled-state');}
       entry('AUDIO FLAG: not set, audio stays on', 'sys');
     }
     startPeer();
