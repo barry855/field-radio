@@ -4065,10 +4065,12 @@ function toggleVideo() {
   if (track.enabled) {
     track.enabled = false;
     setVideoButtons(false);
+    try { localStorage.setItem('bravo_disable_video', '1'); document.getElementById('loginDisableVideo').checked = true; } catch(e) {}
     entry('Local video disabled', 'sys');
   } else {
     track.enabled = true;
     setVideoButtons(true);
+    try { localStorage.setItem('bravo_disable_video', '0'); document.getElementById('loginDisableVideo').checked = false; } catch(e) {}
     entry('Local video enabled', 'sys');
   }
   updateLocalVideoState();
@@ -4304,6 +4306,7 @@ function toggleAudio() {
       } catch(e) {}
     }
     btns.forEach(b => { if(b){ b.textContent = 'Audio Off'; b.classList.remove('disabled-state'); b.classList.add('active-on'); }});
+    try { localStorage.setItem('bravo_disable_audio', '1'); document.getElementById('loginDisableAudio').checked = true; } catch(e) {}
     entry('Local audio muted', 'sys');
   } else {
     audioMuted = false;
@@ -4319,6 +4322,7 @@ function toggleAudio() {
       } catch(e) {}
     }
     btns.forEach(b => { if(b){ b.textContent = 'Audio On'; b.classList.remove('disabled-state'); b.classList.remove('active-on'); }});
+    try { localStorage.setItem('bravo_disable_audio', '0'); document.getElementById('loginDisableAudio').checked = false; } catch(e) {}
     entry('Local audio unmuted', 'sys');
   }
 }
