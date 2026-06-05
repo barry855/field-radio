@@ -273,36 +273,10 @@
   .syslog-chat-btn.active { border-color: #00d4ff; color: #000; background: #00d4ff; }
 
   /* ── Chat button bar (above message area) ──────────────────── */
-  .chat-menu-toggle {
-    display: flex; align-items: center; gap: 6px;
-    flex-shrink: 0; margin-bottom: 4px;
-  }
-  .chat-menu-toggle-btn {
-    display: flex; align-items: center; gap: 6px;
-    background: rgba(0,212,255,0.08); border: 1px solid rgba(0,212,255,0.35);
-    color: var(--text-dim, #8899aa); border-radius: 4px;
-    font-family: 'Share Tech Mono', monospace; font-size: 11px;
-    letter-spacing: 0.5px; cursor: pointer; padding: 4px 10px;
-    transition: background 0.15s, border-color 0.15s, color 0.15s;
-    white-space: nowrap;
-  }
-  .chat-menu-toggle-btn:hover { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
-  .chat-menu-toggle-btn .menu-arrow {
-    font-size: 10px; transition: transform 0.2s ease;
-    display: inline-block;
-  }
-  .chat-menu-toggle-btn.open .menu-arrow { transform: rotate(180deg); }
-  .chat-btn-bar {
-    display: none; gap: 6px; flex-shrink: 0;
-    margin-bottom: 4px; align-items: center;
-    flex-wrap: wrap;
-  }
-  .chat-btn-bar.open {
-    display: flex;
-  }
+  /* ── Chat button bar rows inside mini-row-wrap ─────────────── */
   .chat-btn-bar-row {
     display: flex; gap: 6px; align-items: center;
-    width: 100%;
+    width: 100%; flex-wrap: wrap;
   }
   .chat-btn-bar .mini-chat-wrapper {
     margin-bottom: 0; margin-left: auto;
@@ -312,7 +286,6 @@
     position: relative; top: auto; left: auto; right: auto;
     width: 80px; flex-shrink: 0;
   }
-  /* ── Keep translate bar visible but pushed down when menu closed ── */
   /* ── Chat video underlay ──────────────────────────────────── */
   #chatUnderlay {
     position: absolute; inset: 0; z-index: 0;
@@ -1347,44 +1320,43 @@
         <button class="chat-find-nav" id="chatFindNext" title="Next match">▼</button>
         <button class="chat-find-close" id="chatFindClose" title="Close">✕</button>
       </div>
-      <div class="chat-menu-toggle">
-        <button class="chat-menu-toggle-btn" id="chatMenuToggleBtn" onclick="toggleChatMenu()" title="Show/hide chat controls">
-          ▼ MENU <span class="menu-arrow">▼</span>
-        </button>
-      </div>
-      <div class="chat-btn-bar" id="chatBtnBar">
-        <div class="chat-btn-bar-row">
-          <button class="speech-top-btn" onclick="refreshScreen()" title="Refresh / Reconnect">↺ REFRESH</button>
-          <button class="speech-top-btn" onclick="saveChatToFile()" id="saveChatBtn" title="Save chat as HTML">💾 SAVE</button>
-          <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR</button>
-          <button class="speech-top-btn" id="findChatBtn" title="Find in chat">🔍 FIND</button>
-          <button class="speech-top-btn active" id="miniChatBtn" onclick="toggleMiniChat()" title="Toggle mini video in chat">MINI ON</button>
-          <button class="speech-top-btn" id="flipChatBtn" onclick="flipCamera()" title="Flip camera">⟳ Flip Cam</button>
-          <button class="syslog-chat-btn" id="syslogToggleBtn" onclick="toggleSysLogView()" title="Toggle SYS LOG">SYS LOG</button>
-          <button class="syslog-chat-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input">TYPE IN CHAT</button>
+      <div class="mini-row-wrap" id="miniRowWrapChat">
+        <div class="mini-row-toggle" onclick="toggleMiniRowWrap('miniRowWrapChat')">
+          <span class="mini-row-arrow">▼</span>
+          <span class="mini-row-label">CONTROLS</span>
+          <span class="mini-row-arrow">▼</span>
         </div>
-        <div class="chat-btn-bar-row">
-          <button class="speech-top-btn" id="chatVideoViewBtn" onclick="toggleChatVideoView()" title="Toggle chat video view">VIDEO REMOTE</button>
-          <span class="rec-label">Record</span>
-          <button class="speech-top-btn rec-chat-btn" id="recChatBtn" onclick="toggleRecordChat()" title="Record current main feed + mini if visible">⏺ Start</button>
-          <button class="speech-top-btn video-off-state" id="videoOffChatBtn" onclick="toggleVideo()" title="Video on/off">Video Off</button>
-          <button class="speech-top-btn" id="audioChatBtn" onclick="toggleAudio()" title="Mute/unmute mic">Audio Off</button>
-          <button class="speech-top-btn" id="screenChatBtn" onclick="toggleScreenShare()" title="Share screen">Share Off</button>
-          <button class="speech-top-btn leave-style" id="leaveChatBtn" onclick="leaveSession()" title="Leave session">✕ Leave</button>
+        <div class="mini-row" style="flex-direction:column; align-items:stretch; gap:4px;">
+          <div class="chat-btn-bar-row">
+            <button class="speech-top-btn" onclick="refreshScreen()" title="Refresh / Reconnect">↺ REFRESH</button>
+            <button class="speech-top-btn" onclick="saveChatToFile()" id="saveChatBtn" title="Save chat as HTML">💾 SAVE</button>
+            <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR</button>
+            <button class="speech-top-btn" id="findChatBtn" title="Find in chat">🔍 FIND</button>
+            <button class="speech-top-btn active" id="miniChatBtn" onclick="toggleMiniChat()" title="Toggle mini video in chat">MINI ON</button>
+            <button class="speech-top-btn" id="flipChatBtn" onclick="flipCamera()" title="Flip camera">⟳ Flip Cam</button>
+            <button class="syslog-chat-btn" id="syslogToggleBtn" onclick="toggleSysLogView()" title="Toggle SYS LOG">SYS LOG</button>
+            <button class="syslog-chat-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input">TYPE IN CHAT</button>
+          </div>
+          <div class="chat-btn-bar-row">
+            <button class="speech-top-btn" id="chatVideoViewBtn" onclick="toggleChatVideoView()" title="Toggle chat video view">VIDEO REMOTE</button>
+            <span class="rec-label">Record</span>
+            <button class="speech-top-btn rec-chat-btn" id="recChatBtn" onclick="toggleRecordChat()" title="Record current main feed + mini if visible">⏺ Start</button>
+            <button class="speech-top-btn video-off-state" id="videoOffChatBtn" onclick="toggleVideo()" title="Video on/off">Video Off</button>
+            <button class="speech-top-btn" id="audioChatBtn" onclick="toggleAudio()" title="Mute/unmute mic">Audio Off</button>
+            <button class="speech-top-btn" id="screenChatBtn" onclick="toggleScreenShare()" title="Share screen">Share Off</button>
+            <button class="speech-top-btn leave-style" id="leaveChatBtn" onclick="leaveSession()" title="Leave session">✕ Leave</button>
+          </div>
+          <div class="gain-row">
+            <div class="gain-label"><span>MIC</span><span>GAIN</span></div>
+            <input type="range" id="micGainSliderChat" min="0" max="3" step="0.05" value="1" oninput="applyMicGain(this.value)">
+            <span class="gain-val" id="micGainValChat">1.00×</span>
+          </div>
+          <div class="zoom-row">
+            <span>ZOOM LOCAL</span>
+            <input type="range" id="zoomSliderChat" min="1" max="4" step="0.1" value="1" oninput="applyZoom(this.value,'local')">
+            <span class="zoom-val" id="zoomValChat">1.0×</span>
+          </div>
         </div>
-      </div>
-      <!-- ── Chat / video pane ───────────────────────────────── -->
-
-      <!-- ── Mic gain + Zoom Local sliders above chat window ── -->
-      <div class="gain-row" style="flex-shrink:0;">
-        <div class="gain-label"><span>MIC</span><span>GAIN</span></div>
-        <input type="range" id="micGainSliderChat" min="0" max="3" step="0.05" value="1" oninput="applyMicGain(this.value)">
-        <span class="gain-val" id="micGainValChat">1.00×</span>
-      </div>
-      <div class="zoom-row" style="flex-shrink:0;">
-        <span>ZOOM LOCAL</span>
-        <input type="range" id="zoomSliderChat" min="1" max="4" step="0.1" value="1" oninput="applyZoom(this.value,'local')">
-        <span class="zoom-val" id="zoomValChat">1.0×</span>
       </div>
 <div id="translateBar">
     <label>🌐 TRANSLATE</label>
@@ -2221,14 +2193,6 @@ function toggleMiniVideo() {
   updateMiniVideoVisibility();
 }
 updateMiniVideoVisibility();
-
-function toggleChatMenu() {
-  const bar = document.getElementById('chatBtnBar');
-  const btn = document.getElementById('chatMenuToggleBtn');
-  const isOpen = bar.classList.toggle('open');
-  btn.classList.toggle('open', isOpen);
-  btn.innerHTML = (isOpen ? '▲ MENU ' : '▼ MENU ') + '<span class="menu-arrow">▼</span>';
-}
 
 let miniChatVisible = true;
 function toggleMiniChat() {
