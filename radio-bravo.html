@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <!-- Field Radio v6 — BRAVO -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -320,11 +321,16 @@
     margin-left: auto;
   }
   .syslog-chat-btn:hover, .syslog-chat-btn:active { opacity: 1; border-color: var(--accent2, #00ffaa); color: var(--accent2); }
-  .syslog-chat-btn.active { opacity: 1; border-color: var(--accent2); color: var(--accent2); }
+  .syslog-chat-btn.active { opacity: 1; border-color: var(--accent2); color: #000; background: var(--accent2); }
 
   .chat-btn-bar {
     display: flex; gap: 6px; flex-shrink: 0;
     margin-bottom: 4px; align-items: center;
+    flex-wrap: wrap;
+  }
+  .chat-btn-bar-row {
+    display: flex; gap: 6px; align-items: center;
+    width: 100%;
   }
   .chat-btn-bar .mini-chat-wrapper {\n    margin-bottom: 0; margin-left: auto;\n    flex-direction: row; align-items: center; gap: 6px;\n  }
 
@@ -514,6 +520,20 @@
   .channel-row {
     display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
   }
+  /* ── Mini control row ──────────────────────────────────────── */
+  .mini-row {
+    display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
+    flex-shrink: 0; padding: 4px 0;
+  }
+  .rec-label {
+    flex: 0 0 auto; height: 36px; padding: 0 8px;
+    display: flex; align-items: center;
+    font-family: 'Share Tech Mono', monospace; font-size: 10px;
+    letter-spacing: 1.5px; color: #3a8fff;
+    text-transform: uppercase; user-select: none; white-space: nowrap;
+    border-left: 1px solid var(--border); border-right: 1px solid var(--border);
+    margin: 0 1px;
+  }
   .duplex-bar {
     flex: 0 0 auto; height: 42px; padding: 0 16px;
     border-radius: 6px; border: 2px solid #1a2a1a;
@@ -601,6 +621,11 @@
     white-space: nowrap;
   }
   .leave-btn:hover { background: rgba(0,212,255,0.3); }
+  .speech-top-btn.leave-style { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.15); }
+  .speech-top-btn.leave-style:hover { background: rgba(0,212,255,0.3); }
+  .speech-top-btn.rec-chat-btn { border-color: #3a8fff; color: #3a8fff; }
+  .speech-top-btn.rec-chat-btn:hover { border-color: #6aafff; color: #6aafff; background: rgba(58,143,255,0.15); }
+  .speech-top-btn.rec-chat-btn.recording { border-color: #ff4444; color: #ff4444; background: rgba(255,68,68,0.15); }
   .user-left-notice {
     display: none; align-items: center; gap: 8px;
     font-family: 'Share Tech Mono', monospace; font-size: 11px;
@@ -1164,10 +1189,10 @@
     <input type="text" id="sessionCode" maxlength="8" placeholder="ENTER CODE" autocomplete="off">
     <div class="session-checks">
       <label class="session-check-item">
-        <input type="checkbox" id="loginDisableVideo"> Disable Video
+        <input type="checkbox" id="loginDisableVideo" onchange="try{localStorage.setItem('bravo_disable_video',this.checked?'1':'0')}catch(e){}"> Disable Video
       </label>
       <label class="session-check-item">
-        <input type="checkbox" id="loginDisableAudio"> Disable Audio
+        <input type="checkbox" id="loginDisableAudio" onchange="try{localStorage.setItem('bravo_disable_audio',this.checked?'1':'0')}catch(e){}"> Disable Audio
       </label>
     </div>
     <div class="login-timeout">
@@ -1211,8 +1236,128 @@
       </div>
     </div>
   </header>
+  <div class="tab-bar">
+    <button class="tab-btn" id="tabLocalBtn" onclick="switchTab(&#39;local&#39;)">LOCAL</button>
+    <button class="tab-btn active" id="tabRemoteBtn" onclick="switchTab(&#39;remote&#39;)">REMOTE</button>
+    <button class="tab-btn" id="tabChatBtn" onclick="switchTab(&#39;chat&#39;)">CHAT <span class="msg-badge" id="msgBadge">0</span></button>
+  </div>
+  <div class="tab-content">
+    <!-- LOCAL TAB -->
+    <div class="tab-pane" id="paneLocal">
+      <div class="mini-row">
+        <button class="media-btn" id="miniBtn" onclick="toggleMiniVideo()">Mini Off</button>
+        <button class="media-btn video-off-state" id="videoBtn" onclick="toggleVideo()">Local Video</button>
+        <span class="rec-label">Record</span>
+        <button class="media-btn" id="recBtn" onclick="toggleRecordLocal()">⏺ Start</button>
+        <button class="media-btn video-off-state" id="videoBtn_row2" onclick="toggleVideo()">Video Off</button>
+        <button class="media-btn" id="audioBtn" onclick="toggleAudio()">Audio Off</button>
+        <button class="media-btn" id="flipBtn" onclick="flipCamera()">⟳ Flip Cam</button>
+        <button class="media-btn" id="screenBtn" onclick="toggleScreenShare()">Share Off</button>
+        <button class="leave-btn" id="leaveBtn" onclick="leaveSession()">✕ Leave</button>
+      </div>
+      <div class="channel-row" style="flex-shrink:0; padding:0 0 4px 0;">
+        <button class="media-btn" id="refreshBtnLocal" onclick="refreshScreen()">↺ Refresh</button>
+        <button class="speaker-btn speaker-on" id="speakerBtnLocal" onclick="toggleSpeaker()">🔊 Speaker</button>
+      </div>
+      <div class="zoom-row">
+        <span>ZOOM LOCAL</span>
+        <input type="range" id="zoomSliderLocal" min="1" max="4" step="0.1" value="1" oninput="applyZoom(this.value,'local')">
+        <span class="zoom-val" id="zoomValLocal">1.0×</span>
+      </div>
+      <div class="video-panel">
+        <div class="panel-label">LOCAL — BRAVO</div>
+        <div class="video-grid">
+          <div class="video-wrap" id="localWrap">
+            <video id="localVideo" autoplay="" playsinline="" muted=""></video>
+            <span class="video-label">BRAVO</span>
+            <span class="duplex-overlay" id="duplexBar">OFFLINE</span>
+          </div>
+        </div>
+        <div class="mini-video-overlay hidden" id="miniRemoteOverlay">
+          <video id="miniRemoteVideo" autoplay="" playsinline=""></video>
+          <span class="video-label">ALPHA</span>
+          <button class="mini-toggle-btn" title="Hide mini" onclick="toggleMiniVideo();event.stopPropagation()">✕</button>
+        </div>
+      </div>
+    </div>
+    <!-- REMOTE TAB -->
+    <div class="tab-pane active" id="paneRemote">
+      <div class="mini-row">
+        <button class="media-btn" id="miniBtn2" onclick="toggleMiniVideo()">Mini Off</button>
+        <button class="media-btn video-off-state" id="videoBtn2" onclick="toggleVideo()">Local Video</button>
+        <span class="rec-label">Record</span>
+        <button class="media-btn" id="recBtn2" onclick="toggleRecordRemote()">⏺ Start</button>
+        <button class="media-btn video-off-state" id="videoBtn2_row2" onclick="toggleVideo()">Video Off</button>
+        <button class="media-btn" id="audioBtn2" onclick="toggleAudio()">Audio Off</button>
+        <button class="media-btn" id="flipBtn2" onclick="flipCamera()">⟳ Flip Cam</button>
+        <button class="media-btn" id="screenBtn2" onclick="toggleScreenShare()">Share Off</button>
+        <button class="leave-btn" id="leaveBtn2" onclick="leaveSession()">✕ Leave</button>
+      </div>
+      <div class="channel-row" style="flex-shrink:0; padding:0 0 4px 0;">
+        <button class="media-btn" id="refreshBtn" onclick="refreshScreen()">↺ Refresh</button>
+        <button class="speaker-btn speaker-on" id="speakerBtnRemote" onclick="toggleSpeaker()">🔊 Speaker</button>
+      </div>
+      <div class="gain-row">
+        <div class="gain-label"><span>MIC</span><span>GAIN</span></div>
+        <input type="range" id="micGainSlider" min="0" max="3" step="0.05" value="1" oninput="applyMicGain(this.value)">
+        <span class="gain-val" id="micGainVal">1.00×</span>
+      </div>
+      <div class="video-panel">
+        <div class="panel-label">REMOTE — ALPHA</div>
+        <div class="video-grid">
+          <div class="video-wrap waiting" id="remoteWrap">
+            <video id="remoteVideo" autoplay="" playsinline=""></video>
+            <span class="video-label">ALPHA</span>
+            <span class="duplex-overlay" id="duplexBar2">OFFLINE</span>
+          </div>
+        </div>
+        <div class="mini-video-overlay hidden" id="miniLocalOverlay">
+          <video id="miniLocalVideo" autoplay="" playsinline="" muted=""></video>
+          <span class="video-label">BRAVO</span>
+          <button class="mini-toggle-btn" title="Hide mini" onclick="toggleMiniVideo();event.stopPropagation()">✕</button>
+        </div>
+      </div>
+    </div>
+    <!-- CHAT TAB -->
+    <div class="tab-pane" id="paneChat">
+      <!-- ── Toolbar above chat pane ─────────────────────────── -->
+      <div class="chat-find-bar" id="chatFindBar">
+        <input class="chat-find-input" id="chatFindInput" placeholder="Find in chat…" autocomplete="off" spellcheck="false">
+        <span class="chat-find-count" id="chatFindCount"></span>
+        <button class="chat-find-nav" id="chatFindPrev" title="Previous match">▲</button>
+        <button class="chat-find-nav" id="chatFindNext" title="Next match">▼</button>
+        <button class="chat-find-close" id="chatFindClose" title="Close">✕</button>
+      </div>
+      <div class="chat-btn-bar">
+        <div class="chat-btn-bar-row">
+          <button class="speech-top-btn" onclick="refreshScreen()" title="Refresh / Reconnect">↺ REFRESH</button>
+          <button class="speech-top-btn" onclick="saveChatToFile()" id="saveChatBtn" title="Save chat as HTML">💾 SAVE</button>
+          <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR</button>
+          <button class="speech-top-btn" id="findChatBtn" title="Find in chat">🔍 FIND</button>
+          <button class="speech-top-btn active" id="miniChatBtn" onclick="toggleMiniChat()" title="Toggle mini video in chat">MINI ON</button>
+          <button class="speech-top-btn" id="flipChatBtn" onclick="flipCamera()" title="Flip camera">⟳ Flip Cam</button>
+          <button class="syslog-chat-btn" id="syslogToggleBtn" onclick="toggleSysLogView()" title="Toggle SYS LOG">SYS LOG</button>
+          <button class="syslog-chat-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input">TYPE IN CHAT</button>
+        </div>
+        <div class="chat-btn-bar-row">
+          <button class="speech-top-btn" id="chatVideoViewBtn" onclick="toggleChatVideoView()" title="Toggle chat video view">VIDEO REMOTE</button>
+          <span class="rec-label">Record</span>
+          <button class="speech-top-btn rec-chat-btn" id="recChatBtn" onclick="toggleRecordChat()" title="Record current main feed + mini if visible">⏺ Start</button>
+          <button class="speech-top-btn video-off-state" id="videoOffChatBtn" onclick="toggleVideo()" title="Video on/off">Video Off</button>
+          <button class="speech-top-btn" id="audioChatBtn" onclick="toggleAudio()" title="Mute/unmute mic">Audio Off</button>
+          <button class="speech-top-btn" id="screenChatBtn" onclick="toggleScreenShare()" title="Share screen">Share Off</button>
+          <button class="speech-top-btn leave-style" id="leaveChatBtn" onclick="leaveSession()" title="Leave session">✕ Leave</button>
+        </div>
+      </div>
+      <!-- ── Chat / video pane ───────────────────────────────── -->
 
-  <div id="translateBar">
+      <!-- ── Mic gain + Zoom Local sliders above chat window ── -->
+      <div class="gain-row" style="flex-shrink:0;">
+        <div class="gain-label"><span>MIC</span><span>GAIN</span></div>
+        <input type="range" id="micGainSliderChat" min="0" max="3" step="0.05" value="1" oninput="applyMicGain(this.value)">
+        <span class="gain-val" id="micGainValChat">1.00×</span>
+      </div>
+<div id="translateBar">
     <label>🌐 TRANSLATE</label>
     <button id="translateTrigger" onclick="toggleTranslateDrop(event)">SELECT LANGUAGE</button>
     <button id="translateResetBtn" onclick="resetTranslate()">ORIGINAL</button>
@@ -1329,107 +1474,19 @@
     </ul>
   </div>
   </div>
-  <div class="tab-bar">
-    <button class="tab-btn" id="tabLocalBtn" onclick="switchTab(&#39;local&#39;)">LOCAL</button>
-    <button class="tab-btn active" id="tabRemoteBtn" onclick="switchTab(&#39;remote&#39;)">REMOTE</button>
-    <button class="tab-btn" id="tabChatBtn" onclick="switchTab(&#39;chat&#39;)">CHAT <span class="msg-badge" id="msgBadge">0</span></button>
-  </div>
-  <div class="tab-content">
-    <!-- LOCAL TAB -->
-    <div class="tab-pane" id="paneLocal">
-      <div class="channel-row" style="flex-shrink:0; padding:4px 0;">
-        <button class="media-btn video-off-state" id="videoBtn" onclick="toggleVideo()">Video Off</button>
-        <button class="media-btn" id="audioBtn" onclick="toggleAudio()">Audio On</button>
-        <button class="media-btn" id="miniBtn" onclick="toggleMiniVideo()">Mini Off</button>
-        <button class="media-btn" id="screenBtn" onclick="toggleScreenShare()">Share Off</button>
-        <button class="leave-btn" id="leaveBtn" onclick="leaveSession()">✕ Leave</button>
+      <div class="zoom-row" style="flex-shrink:0;">
+        <span>ZOOM LOCAL</span>
+        <input type="range" id="zoomSliderChat" min="1" max="4" step="0.1" value="1" oninput="applyZoom(this.value,'local')">
+        <span class="zoom-val" id="zoomValChat">1.0×</span>
       </div>
-      <div class="channel-row" style="flex-shrink:0; padding:0 0 4px 0;">
-        <button class="media-btn" id="recBtn" onclick="toggleRecordLocal()">⏺ Record Local</button>
-        <button class="media-btn" id="refreshBtnLocal" onclick="refreshScreen()">↺ Refresh</button>
-        <button class="media-btn" id="flipBtn" onclick="flipCamera()">⟳ Flip</button>
-        <button class="speaker-btn speaker-on" id="speakerBtnLocal" onclick="toggleSpeaker()">🔊 Speaker</button>
-      </div>
-      <div class="zoom-row">
-        <span>ZOOM</span>
-        <input type="range" id="zoomSliderLocal" min="1" max="4" step="0.1" value="1" oninput="applyZoom(this.value,'local')">
-        <span class="zoom-val" id="zoomValLocal">1.0×</span>
-      </div>
-      <div class="video-panel">
-        <div class="panel-label">LOCAL — BRAVO</div>
-        <div class="video-grid">
-          <div class="video-wrap" id="localWrap">
-            <video id="localVideo" autoplay="" playsinline="" muted=""></video>
-            <span class="video-label">BRAVO</span>
-            <span class="duplex-overlay" id="duplexBar">OFFLINE</span>
-          </div>
-        </div>
-        <div class="mini-video-overlay hidden" id="miniRemoteOverlay">
-          <video id="miniRemoteVideo" autoplay="" playsinline=""></video>
-          <span class="video-label">ALPHA</span>
-          <button class="mini-toggle-btn" title="Hide mini" onclick="toggleMiniVideo();event.stopPropagation()">✕</button>
-        </div>
-      </div>
-    </div>
-    <!-- REMOTE TAB -->
-    <div class="tab-pane active" id="paneRemote">
-      <div class="channel-row" style="flex-shrink:0; padding:4px 0;">
-        <button class="media-btn video-off-state" id="videoBtn2" onclick="toggleVideo()">Video Off</button>
-        <button class="media-btn" id="audioBtn2" onclick="toggleAudio()">Audio On</button>
-        <button class="media-btn" id="miniBtn2" onclick="toggleMiniVideo()">Mini Off</button>
-        <button class="media-btn" id="screenBtn2" onclick="toggleScreenShare()">Share Off</button>
-        <button class="leave-btn" id="leaveBtn2" onclick="leaveSession()">✕ Leave</button>
-      </div>
-      <div class="channel-row" style="flex-shrink:0; padding:0 0 4px 0;">
-        <button class="media-btn" id="recBtn2" onclick="toggleRecordRemote()">Record Remote On</button>
-        <button class="media-btn" id="refreshBtn" onclick="refreshScreen()">↺ Refresh</button>
-        <button class="media-btn" id="flipBtn2" onclick="flipCamera()">⟳ Flip</button>
-        <button class="speaker-btn speaker-on" id="speakerBtnRemote" onclick="toggleSpeaker()">🔊 Speaker</button>
-      </div>
-      <div class="gain-row">
-        <div class="gain-label"><span>MIC</span><span>GAIN</span></div>
-        <input type="range" id="micGainSlider" min="0" max="3" step="0.05" value="1" oninput="applyMicGain(this.value)">
-        <span class="gain-val" id="micGainVal">1.00×</span>
-      </div>
-      <div class="video-panel">
-        <div class="panel-label">REMOTE — ALPHA</div>
-        <div class="video-grid">
-          <div class="video-wrap waiting" id="remoteWrap">
-            <video id="remoteVideo" autoplay="" playsinline=""></video>
-            <span class="video-label">ALPHA</span>
-            <span class="duplex-overlay" id="duplexBar2">OFFLINE</span>
-          </div>
-        </div>
-        <div class="mini-video-overlay hidden" id="miniLocalOverlay">
-          <video id="miniLocalVideo" autoplay="" playsinline="" muted=""></video>
-          <span class="video-label">BRAVO</span>
-          <button class="mini-toggle-btn" title="Hide mini" onclick="toggleMiniVideo();event.stopPropagation()">✕</button>
-        </div>
-      </div>
-    </div>
-    <!-- CHAT TAB -->
-    <div class="tab-pane" id="paneChat">
-      <!-- ── Toolbar above chat pane ─────────────────────────── -->
-      <div class="chat-find-bar" id="chatFindBar">
-        <input class="chat-find-input" id="chatFindInput" placeholder="Find in chat…" autocomplete="off" spellcheck="false">
-        <span class="chat-find-count" id="chatFindCount"></span>
-        <button class="chat-find-nav" id="chatFindPrev" title="Previous match">▲</button>
-        <button class="chat-find-nav" id="chatFindNext" title="Next match">▼</button>
-        <button class="chat-find-close" id="chatFindClose" title="Close">✕</button>
-      </div>
-      <div class="chat-btn-bar">
-        <button class="speech-top-btn" onclick="refreshScreen()" title="Refresh / Reconnect">↺ REFRESH</button>
-        <button class="speech-top-btn" onclick="saveChatToFile()" id="saveChatBtn" title="Save chat as HTML">💾 SAVE</button>
-        <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR</button>
-        <button class="speech-top-btn" id="findChatBtn" title="Find in chat">🔍 FIND</button>
-        <button class="syslog-chat-btn" id="syslogToggleBtn" onclick="toggleSysLogView()" title="Toggle SYS LOG">SHOW SYS LOG</button>
-        <button class="syslog-chat-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input">INPUT CHAT</button>
-      </div>
-      <!-- ── Chat / video pane ───────────────────────────────── -->
-
       <div class="chat-panel" style="flex:1" id="chatPanel">
         <div class="panel-label">COMMS</div>
         <video id="chatUnderlay" autoplay playsinline muted></video>
+        <div class="mini-video-overlay" id="miniChatOverlay">
+          <video id="miniChatVideo" autoplay playsinline></video>
+          <span class="video-label">REMOTE</span>
+          <button class="mini-toggle-btn" title="Hide mini" onclick="toggleMiniChat();event.stopPropagation()">✕</button>
+        </div>
         <div class="drop-overlay" id="dropOverlay">
           <div class="drop-overlay-icon">📎</div>
           <div class="drop-overlay-label">Drop file to attach</div>
@@ -1443,7 +1500,7 @@
       <div id="speechPanel">
         <div class="speech-top-bar" style="display:none"></div>
         <div class="file-preview-strip" id="speechFilePreviewStrip"></div>
-        <textarea id="speechEditBox" placeholder="Tap LISTEN to start speaking… or type here." spellcheck="true"></textarea>
+        <textarea id="speechEditBox" placeholder="Tap TALK to start — edit or type here." spellcheck="true"></textarea>
         <div class="speech-btn-row">
           <div class="sbr-left">
             <button id="speechAttachBtn" onclick="speechAttachClick()" title="Attach file or drag &amp; drop">ATTACH</button>
@@ -1458,7 +1515,7 @@
           </div>
           <div class="sbr-right">
             <button id="speechSendBtn" onclick="sendSpeechToChat()" disabled>SEND</button>
-            <button id="speechListenBtn" onclick="toggleListening()">LISTEN</button>
+            <button id="speechListenBtn" onclick="toggleListening()">TALK</button>
           </div>
         </div>
       </div>
@@ -1863,6 +1920,11 @@ function prefillLogin() {
     const gLabel  = document.getElementById('micGainVal');
     if (gSlider && isFinite(savedGain)) { gSlider.value = savedGain; }
     if (gLabel  && isFinite(savedGain)) { gLabel.textContent = savedGain.toFixed(2) + '×'; }
+    // Also sync chat-tab copies
+    const gSliderChat = document.getElementById('micGainSliderChat');
+    const gLabelChat  = document.getElementById('micGainValChat');
+    if (gSliderChat && isFinite(savedGain)) { gSliderChat.value = savedGain; }
+    if (gLabelChat  && isFinite(savedGain)) { gLabelChat.textContent = savedGain.toFixed(2) + '×'; }
     // Restore saved translate language
     const savedLang = localStorage.getItem('bravo_translate_lang');
     if (savedLang) {
@@ -1960,8 +2022,31 @@ function entry(msg, cls='sys') {
 
 }
 
+// ── Auto-scroll: pause while mouse/touch is inside chat, resume on leave ──
+let _chatUserActive = false;  // true while pointer is inside or touching the chat window
+
+(function initChatScrollPause() {
+  // Mouse: pause on enter, resume + snap on leave
+  chat.addEventListener('mouseenter', () => { _chatUserActive = true; });
+  chat.addEventListener('mouseleave', () => {
+    _chatUserActive = false;
+    requestAnimationFrame(() => { chat.scrollTop = chat.scrollHeight; });
+  });
+  // Touch: pause on touchstart, resume + snap on touchend/cancel
+  chat.addEventListener('touchstart', () => { _chatUserActive = true; }, { passive: true });
+  chat.addEventListener('touchend',   () => {
+    _chatUserActive = false;
+    // Short delay so the browser finishes the momentum scroll before we snap
+    setTimeout(() => { if (!_chatUserActive) chat.scrollTop = chat.scrollHeight; }, 200);
+  }, { passive: true });
+  chat.addEventListener('touchcancel', () => {
+    _chatUserActive = false;
+    setTimeout(() => { if (!_chatUserActive) chat.scrollTop = chat.scrollHeight; }, 200);
+  }, { passive: true });
+})();
+
 function scrollToBottom(force) {
-  if (!force && document.activeElement === chat) return;  // user is scrolling — don't interrupt
+  if (!force && _chatUserActive) return;  // user is interacting — don't interrupt
   requestAnimationFrame(() => {
     chat.scrollTop = chat.scrollHeight;
   });
@@ -2014,27 +2099,77 @@ function syncMiniVideos() {
   if (miniRemote && remoteV && miniRemote.srcObject !== remoteV.srcObject)  miniRemote.srcObject = remoteV.srcObject;
   if (miniLocalOverlay)  miniLocalOverlay.classList.toggle('no-video',  !(localV  && localV.srcObject));
   if (miniRemoteOverlay) miniRemoteOverlay.classList.toggle('no-video', !(remoteV && remoteV.srcObject));
+  syncChatMiniOverlay();
   syncChatUnderlay();
 }
 
 // ── Chat video underlay ───────────────────────────────────────
-// 'up'   = remote main / local mini
-// 'down' = local main / remote mini
+// 'remote' = remote main / local mini  (default)
+// 'local'  = local main  / remote mini
 let chatUnderlayMode = (function() {
-  try { return localStorage.getItem('bravo_underlay_mode') || 'up'; } catch(e) { return 'up'; }
+  try { return localStorage.getItem('bravo_underlay_mode') || 'remote'; } catch(e) { return 'remote'; }
 })();
 
 function syncChatUnderlay() {
   const el = document.getElementById('chatUnderlay');
   if (!el) return;
   const remoteV = document.getElementById('remoteVideo');
-  const stream = remoteV ? remoteV.srcObject : null;
-  if (el.srcObject !== stream) el.srcObject = stream;
-  el.classList.toggle('no-stream', !stream);
+  const localV  = document.getElementById('localVideo');
+  if (chatUnderlayMode === 'local') {
+    const stream = localV ? localV.srcObject : null;
+    if (el.srcObject !== stream) el.srcObject = stream;
+    el.classList.toggle('no-stream', !stream);
+  } else {
+    const stream = remoteV ? remoteV.srcObject : null;
+    if (el.srcObject !== stream) el.srcObject = stream;
+    el.classList.toggle('no-stream', !stream);
+  }
 }
-function flipChatUnderlay() { /* removed */ }
 
-// Init flip button removed
+function syncChatMiniOverlay() {
+  const miniChatVideo = document.getElementById('miniChatVideo');
+  if (!miniChatVideo) return;
+  const remoteV = document.getElementById('remoteVideo');
+  const localV  = document.getElementById('localVideo');
+  const overlay = document.getElementById('miniChatOverlay');
+  const lbl = overlay ? overlay.querySelector('.video-label') : null;
+  if (chatUnderlayMode === 'local') {
+    // main = local, mini = remote
+    const stream = remoteV ? remoteV.srcObject : null;
+    if (miniChatVideo.srcObject !== stream) miniChatVideo.srcObject = stream;
+    if (lbl) lbl.textContent = 'REMOTE';
+    if (overlay) overlay.classList.toggle('no-video', !stream);
+  } else {
+    // main = remote, mini = local
+    const stream = localV ? localV.srcObject : null;
+    if (miniChatVideo.srcObject !== stream) miniChatVideo.srcObject = stream;
+    if (lbl) lbl.textContent = 'LOCAL';
+    if (overlay) overlay.classList.toggle('no-video', !stream);
+  }
+}
+
+function updateChatVideoViewBtn() {
+  const btn = document.getElementById('chatVideoViewBtn');
+  if (!btn) return;
+  if (chatUnderlayMode === 'local') {
+    btn.textContent = 'VIDEO LOCAL';
+    btn.classList.add('active');
+  } else {
+    btn.textContent = 'VIDEO REMOTE';
+    btn.classList.remove('active');
+  }
+}
+
+function toggleChatVideoView() {
+  chatUnderlayMode = (chatUnderlayMode === 'remote') ? 'local' : 'remote';
+  try { localStorage.setItem('bravo_underlay_mode', chatUnderlayMode); } catch(e) {}
+  syncChatUnderlay();
+  syncChatMiniOverlay();
+  updateChatVideoViewBtn();
+}
+
+// init button state on load
+updateChatVideoViewBtn();
 
 // ── Mini video toggle ─────────────────────────────────────────
 let miniVideoVisible = true;
@@ -2053,6 +2188,18 @@ function toggleMiniVideo() {
   updateMiniVideoVisibility();
 }
 updateMiniVideoVisibility();
+
+let miniChatVisible = true;
+function toggleMiniChat() {
+  miniChatVisible = !miniChatVisible;
+  const overlay = document.getElementById('miniChatOverlay');
+  if (overlay) overlay.classList.toggle('hidden', !miniChatVisible);
+  const btn = document.getElementById('miniChatBtn');
+  if (btn) {
+    btn.textContent = miniChatVisible ? 'MINI ON' : 'MINI OFF';
+    btn.classList.toggle('active', miniChatVisible);
+  }
+}
 
 // ── Draggable mini video overlays ────────────────────────────
 function makeDraggable(el) {
@@ -2825,7 +2972,7 @@ function toggleSysLogView() {
       const sp = document.getElementById('speechPanel');
       if (sp) sp.classList.remove('speech-open');
       const sb = document.getElementById('speechToggleBtn');
-      if (sb) { sb.classList.remove('active'); sb.textContent = 'INPUT CHAT'; }
+      if (sb) { sb.classList.remove('active'); sb.textContent = 'TYPE IN CHAT'; }
     }
     if (logPanel) {
       logPanel.classList.add('syslog-open');
@@ -2833,14 +2980,14 @@ function toggleSysLogView() {
       const l = logPanel.querySelector('#log');
       if (l) setTimeout(() => { l.scrollTop = l.scrollHeight; }, 50);
     }
-    if (btn) { btn.classList.add('active'); btn.textContent = 'HIDE SYS LOG'; }
+    if (btn) { btn.classList.add('active'); btn.textContent = 'SYS LOG'; }
     setChatBtnsDisabled(true);
   } else {
     if (logPanel) {
       logPanel.classList.remove('syslog-open');
       logPanel.classList.add('collapsed');
     }
-    if (btn) { btn.classList.remove('active'); btn.textContent = 'SHOW SYS LOG'; }
+    if (btn) { btn.classList.remove('active'); btn.textContent = 'SYS LOG'; }
     setChatBtnsDisabled(false);
   }
 }
@@ -2861,7 +3008,7 @@ function toggleSpeechPanel() {
       const lp = document.getElementById('logPanel');
       if (lp) { lp.classList.remove('syslog-open'); lp.classList.add('collapsed'); }
       const lb = document.getElementById('syslogToggleBtn');
-      if (lb) { lb.classList.remove('active'); lb.textContent = 'SHOW SYS LOG'; }
+      if (lb) { lb.classList.remove('active'); lb.textContent = 'SYS LOG'; }
     }
     if (panel) panel.classList.add('speech-open');
     if (btn)   { btn.classList.add('active'); btn.textContent = 'SHOW CHAT'; }
@@ -2870,7 +3017,7 @@ function toggleSpeechPanel() {
   } else {
     stopListening();
     if (panel) panel.classList.remove('speech-open');
-    if (btn)   { btn.classList.remove('active'); btn.textContent = 'INPUT CHAT'; }
+    if (btn)   { btn.classList.remove('active'); btn.textContent = 'TYPE IN CHAT'; }
     setChatBtnsDisabled(false);
   }
 }
@@ -2958,7 +3105,7 @@ function stopListening() {
   if (_recognition) { try { _recognition.stop(); } catch(e){} _recognition = null; }
   setStatus('IDLE');
   const lb = document.getElementById('speechListenBtn');
-  if (lb) { lb.classList.remove('listening'); lb.textContent = 'LISTEN'; }
+  if (lb) { lb.classList.remove('listening'); lb.textContent = 'TALK'; }
   const ss = document.getElementById('speechStatus');
   if (ss) ss.classList.remove('listening');
 }
@@ -3117,6 +3264,7 @@ function init() {
       entry('AUDIO FLAG: audioMuted now=' + audioMuted, 'sys');
       const ab = document.getElementById('audioBtn'); if(ab){ab.textContent='Audio Off';ab.classList.remove('disabled-state');ab.classList.add('active-on');}
       const ab2 = document.getElementById('audioBtn2'); if(ab2){ab2.textContent='Audio Off';ab2.classList.remove('disabled-state');ab2.classList.add('active-on');}
+      const ab3 = document.getElementById('audioChatBtn'); if(ab3){ab3.textContent='Audio Off';ab3.classList.remove('disabled-state');ab3.classList.add('active-on');}
       entry('Audio disabled (login setting)', 'sys');
     } else {
       entry('AUDIO FLAG: not set, audio stays on', 'sys');
@@ -3399,8 +3547,16 @@ function updateQuality(rtt, lossPct) {
 }
 
 function setVideoButtons(enabled) {
-  const btns = [document.getElementById('videoBtn'), document.getElementById('videoBtn2')];
-  btns.forEach(b => {
+  // Primary "Local Video" buttons (position 2 in mini-row)
+  [document.getElementById('videoBtn'), document.getElementById('videoBtn2'), document.getElementById('videoChatBtn')].forEach(b => {
+    if (!b) return;
+    b.textContent = enabled ? 'Local Video' : 'Local Video';
+    b.classList.toggle('video-on', enabled);
+    b.classList.toggle('disabled-state', !enabled);
+    b.classList.toggle('video-off-state', !enabled);
+  });
+  // Shadow "Video Off/On" buttons (position 5 in mini-row)
+  [document.getElementById('videoBtn_row2'), document.getElementById('videoBtn2_row2'), document.getElementById('videoOffChatBtn')].forEach(b => {
     if (!b) return;
     b.textContent = enabled ? 'Video On' : 'Video Off';
     b.classList.toggle('video-on', enabled);
@@ -3479,16 +3635,23 @@ function saveRecordingIfActive() {
   if (recRemote && recRemote.state === 'recording') {
     entry('Connection lost — auto-saving remote recording…', 'sys');
     const btn2 = document.getElementById('recBtn2');
-    if (btn2) { btn2.textContent = 'Record Remote On'; btn2.classList.remove('recording'); }
+    if (btn2) { btn2.textContent = '⏺ Start'; btn2.classList.remove('recording'); }
     recRemoteBusy = true;
     recRemote.stop();
   }
   if (recLocal && recLocal.state === 'recording') {
     entry('Connection lost — auto-saving local recording…', 'sys');
     const btn = document.getElementById('recBtn');
-    if (btn) { btn.textContent = '⏺ Record Local'; btn.classList.remove('recording'); }
+    if (btn) { btn.textContent = '⏺ Start'; btn.classList.remove('recording'); }
     recLocalBusy = true;
     recLocal.stop();
+  }
+  if (recChat && recChat.state === 'recording') {
+    entry('Connection lost — auto-saving chat recording…', 'sys');
+    const btnC = document.getElementById('recChatBtn');
+    if (btnC) { btnC.textContent = '⏺ Start'; btnC.classList.remove('recording'); }
+    recChatBusy = true;
+    recChat.stop();
   }
 }
 
@@ -3750,7 +3913,7 @@ async function toggleRecordRemote() {
   if (recRemote && recRemote.state === 'recording') {
     recRemoteBusy = true;
     recRemote.stop();
-    btn.textContent = 'Record Remote On'; btn.classList.remove('recording');
+    btn.textContent = '⏺ Start'; btn.classList.remove('recording');
     entry('Remote recording stopped — saving…', 'sys');
     return;
   }
@@ -3783,7 +3946,7 @@ async function toggleRecordRemote() {
     saveRec(recRemoteChunks, mimeType, 'remote');
   };
   recRemote.start(1000);
-  btn.textContent = 'Record Remote Off'; btn.classList.add('recording');
+  btn.textContent = '⏹ Stop'; btn.classList.add('recording');
   entry('Remote recording started…', 'ok');
 }
 
@@ -3794,7 +3957,7 @@ async function toggleRecordLocal() {
   if (recLocal && recLocal.state === 'recording') {
     recLocalBusy = true;
     recLocal.stop();
-    btn.textContent = '⏺ Record Local'; btn.classList.remove('recording');
+    btn.textContent = '⏺ Start'; btn.classList.remove('recording');
     entry('Local recording stopped — saving…', 'sys');
     return;
   }
@@ -3829,11 +3992,71 @@ async function toggleRecordLocal() {
     saveRec(recLocalChunks, mimeType, 'local');
   };
   recLocal.start(1000);
-  btn.textContent = '⏹ Stop & Save'; btn.classList.add('recording');
+  btn.textContent = '⏹ Stop'; btn.classList.add('recording');
   entry('Local recording started…', 'ok');
 }
 
 function toggleRecord() {}
+
+// ── Record Chat button — records whichever feed is the chat underlay ─────
+let recChat = null, recChatChunks = [], recChatBusy = false;
+
+async function toggleRecordChat() {
+  const btn = document.getElementById('recChatBtn');
+  if (recChatBusy) return;
+
+  if (recChat && recChat.state === 'recording') {
+    recChatBusy = true;
+    recChat.stop();
+    if (btn) { btn.textContent = '⏺ Start'; btn.classList.remove('recording'); }
+    return;
+  }
+  if (recChat && recChat.state !== 'inactive') return;
+
+  const remoteVideo = document.getElementById('remoteVideo');
+  const localVid    = document.getElementById('localVideo');
+  const remoteAudio = document.getElementById('remoteAudio');
+
+  const isLocalMain = (chatUnderlayMode === 'local');
+  const mainVideo   = isLocalMain ? localVid : remoteVideo;
+
+  if (!mainVideo || !mainVideo.srcObject || !mainVideo.srcObject.getVideoTracks().length) {
+    entry('No video available to record', 'err'); return;
+  }
+
+  const { ctx: aCtx, dest: aDest } = await buildAudioMix(
+    localStream,
+    remoteAudio ? remoteAudio.srcObject : (remoteVideo ? remoteVideo.srcObject : null)
+  );
+
+  const mimeType = preferredMime();
+  let stopLoop = null, recStream;
+  const withMini = !!miniChatVisible;
+
+  if (withMini) {
+    const miniChatVideo = document.getElementById('miniChatVideo');
+    const comp = buildCompositeStream(mainVideo, miniChatVideo, aDest.stream.getAudioTracks());
+    recStream = comp.stream; stopLoop = comp.stopLoop;
+  } else {
+    recStream = new MediaStream([
+      ...mainVideo.srcObject.getVideoTracks(),
+      ...aDest.stream.getAudioTracks()
+    ]);
+  }
+
+  recChatChunks = [];
+  recChat = new MediaRecorder(recStream, { mimeType });
+  recChat.ondataavailable = e => { if (e.data.size > 0) recChatChunks.push(e.data); };
+  recChat.onstop = () => {
+    recChatBusy = false;
+    if (stopLoop) stopLoop();
+    aCtx.close();
+    saveRec(recChatChunks, mimeType, isLocalMain ? 'chat-local' : 'chat-remote');
+  };
+  recChat.start(1000);
+  if (btn) { btn.textContent = '⏹ Stop'; btn.classList.add('recording'); }
+  entry(`Chat recording started (${isLocalMain ? 'local' : 'remote'} main${withMini ? ' + mini' : ''})…`, 'ok');
+}
 
 function toggleVideo() {
   if (!localStream) return;
@@ -3866,14 +4089,14 @@ document.addEventListener('DOMContentLoaded', function initScreenShareSupport() 
   const isAndroidChrome = isAndroid && !isFirefox;
   const supported = !isAndroidChrome && !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
   if (!supported) {
-    document.querySelectorAll('#screenBtn, #screenBtn2').forEach(btn => {
+    document.querySelectorAll('#screenBtn, #screenBtn2, #screenChatBtn').forEach(btn => {
       if (btn) btn.style.display = 'none';
     });
   }
 });
 
 async function toggleScreenShare() {
-  const btns = [document.getElementById('screenBtn'), document.getElementById('screenBtn2')];
+  const btns = [document.getElementById('screenBtn'), document.getElementById('screenBtn2'), document.getElementById('screenChatBtn')];
   if (!screenSharing) {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
       entry('Screen share not supported in this browser', 'err'); return;
@@ -3915,7 +4138,7 @@ async function toggleScreenShare() {
 
 async function stopScreenShare() {
   if (!screenSharing) return;
-  const btns = [document.getElementById('screenBtn'), document.getElementById('screenBtn2')];
+  const btns = [document.getElementById('screenBtn'), document.getElementById('screenBtn2'), document.getElementById('screenChatBtn')];
   screenSharing = false;
 
   if (screenTrack) { screenTrack.stop(); screenTrack = null; }
@@ -4061,7 +4284,7 @@ function getSilentTrack() {
 
 function toggleAudio() {
   if (!localStream) return;
-  const btns = [document.getElementById('audioBtn'), document.getElementById('audioBtn2')];
+  const btns = [document.getElementById('audioBtn'), document.getElementById('audioBtn2'), document.getElementById('audioChatBtn')];
   realAudioTrack = localStream.getAudioTracks()[0];
 
   if (!audioMuted) {
@@ -4102,7 +4325,8 @@ function toggleAudio() {
 
 // ── Refresh Screen — reloads page (Unit ID pre-fills from localStorage) ──
 function refreshScreen() {
-  // Notify remote peer so they auto-refresh in sync
+  // Notify remote peer so they auto-refresh in sync — both sides reload after
+  // the same delay so the reload is as simultaneous as possible.
   try { dcSend({ __control: 'refresh' }); } catch(e) {}
   peerRefreshing = true;  // suppress onDrop login redirect
   // Flag survives the reload so the fresh page auto-reconnects via login countdown
@@ -4110,7 +4334,9 @@ function refreshScreen() {
   // Show login box immediately on the refreshing side too
   document.getElementById('sessionOverlay').style.display = 'flex';
   document.getElementById('unitIdDisplay').style.display = 'none';
-  setTimeout(() => window.location.reload(), 400);
+  // Local side waits 500 ms; remote starts its 400 ms timer on message receipt.
+  // With ~100 ms one-way latency both reloads fire at roughly the same instant.
+  setTimeout(() => window.location.reload(), 500);
 }
 
 // ── Camera flip (Android front/back) ─────────────────────────
@@ -4239,8 +4465,15 @@ let _micGainCtx = null, _micGainNode = null, _micGainDest = null;
 
 function applyMicGain(val) {
   const v = parseFloat(val);
-  const lbl = document.getElementById('micGainVal');
-  if (lbl) lbl.textContent = v.toFixed(2) + '×';
+  // Sync all gain labels and sliders (primary + chat-tab copy)
+  ['micGainVal', 'micGainValChat'].forEach(id => {
+    const lbl = document.getElementById(id);
+    if (lbl) lbl.textContent = v.toFixed(2) + '×';
+  });
+  ['micGainSlider', 'micGainSliderChat'].forEach(id => {
+    const s = document.getElementById(id);
+    if (s && s.value !== String(val)) s.value = val;
+  });
   if (_micGainNode) {
     _micGainNode.gain.setTargetAtTime(v, _micGainCtx.currentTime, 0.01);
   }
@@ -4264,11 +4497,15 @@ function setupMicGainNode(stream) {
       if (oldAudio) stream.removeTrack(oldAudio);
       stream.addTrack(gainedAudio);
     }
-    // Update slider & label to saved value
+    // Update slider & label to saved value (primary + chat-tab copy)
     const slider = document.getElementById('micGainSlider');
     const lbl    = document.getElementById('micGainVal');
     if (slider && isFinite(savedGain)) { slider.value = savedGain; }
     if (lbl    && isFinite(savedGain)) { lbl.textContent = savedGain.toFixed(2) + '×'; }
+    const sliderChat = document.getElementById('micGainSliderChat');
+    const lblChat    = document.getElementById('micGainValChat');
+    if (sliderChat && isFinite(savedGain)) { sliderChat.value = savedGain; }
+    if (lblChat    && isFinite(savedGain)) { lblChat.textContent = savedGain.toFixed(2) + '×'; }
   } catch(e) { console.warn('Mic gain setup failed:', e); }
 }
 
@@ -4278,8 +4515,15 @@ function applyZoom(val, channel) {
   if (channel === 'local') {
     const vid = document.getElementById('localVideo');
     if (vid) vid.style.transform = v > 1 ? `scale(${v})` : '';
-    const lbl = document.getElementById('zoomValLocal');
-    if (lbl) lbl.textContent = v.toFixed(1) + '×';
+    // Sync all local zoom labels and sliders
+    ['zoomValLocal', 'zoomValChat'].forEach(id => {
+      const lbl = document.getElementById(id);
+      if (lbl) lbl.textContent = v.toFixed(1) + '×';
+    });
+    ['zoomSliderLocal', 'zoomSliderChat'].forEach(id => {
+      const s = document.getElementById(id);
+      if (s && s.value !== String(val)) s.value = val;
+    });
     const s2 = document.getElementById('zoomSliderRemote');
     if (s2 && s2.value !== String(val)) { s2.value = val; applyZoom(val, 'remote-sync'); }
   } else if (channel === 'remote-sync') {
@@ -4332,7 +4576,14 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-window.addEventListener('beforeunload', () => { peer?.destroy(); });
+window.addEventListener('beforeunload', () => {
+  // Notify remote that this side is leaving — but NOT during a refresh-reload,
+  // otherwise the remote wrongly shows the leave screen instead of reconnecting.
+  if (!leftPermanently && !peerRefreshing) {
+    try { dcSend({ __control: 'leave' }); } catch(e) {}
+  }
+  peer?.destroy();
+});
 
 // ── SYS LOG actions ──────────────────────────────────────────────────────────
 
