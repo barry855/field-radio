@@ -2124,9 +2124,8 @@ function syncMiniVideos() {
 // ── Chat video underlay ───────────────────────────────────────
 // 'remote' = remote main / local mini  (default)
 // 'local'  = local main  / remote mini
-let chatUnderlayMode = (function() {
-  try { return localStorage.getItem('alpha_underlay_mode') || 'remote'; } catch(e) { return 'remote'; }
-})();
+let chatUnderlayMode = 'remote'; // always start with remote as main
+try { localStorage.setItem('alpha_underlay_mode', 'remote'); } catch(e) {}
 
 function syncChatUnderlay() {
   const el = document.getElementById('chatUnderlay');
