@@ -1989,22 +1989,10 @@ let loginSecsLeft = 10;
 function startLoginTimeout() {
   clearInterval(loginTimeoutInterval);  // prevent double-interval from stale saved HTML
   loginSecsLeft = 10;
-  const fill = document.getElementById('loginTimeoutFill');
-  const sec  = document.getElementById('loginTimeoutSec');
-  fill.style.width = '100%';
-  fill.style.background = 'var(--accent)';
-  sec.textContent = '10s';
   loginTimeoutInterval = setInterval(() => {
     loginSecsLeft--;
-    const pct = (loginSecsLeft / 10) * 100;
-    fill.style.width = pct + '%';
-    sec.textContent = loginSecsLeft + 's';
-    if (loginSecsLeft <= 5) fill.style.background = 'var(--warn)';
-    if (loginSecsLeft <= 3) fill.style.background = 'var(--danger)';
     if (loginSecsLeft <= 0) {
       clearInterval(loginTimeoutInterval);
-      sec.textContent = '0s';
-      fill.style.width = '0%';
       // Auto-connect
       startSession();
     }
