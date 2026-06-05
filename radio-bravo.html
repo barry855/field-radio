@@ -376,8 +376,10 @@
     width: 100%; height: 100%;
     object-fit: cover; pointer-events: none;
     opacity: 1; border-radius: 8px;
+    transition: opacity 0.3s;
   }
   #chatUnderlay.no-stream { display: none; }
+  #chatUnderlay.dimmed { opacity: 0.35; }
 
   /* ── Underlay flip button ─────────────────────────────────── */
   .underlay-flip-btn {
@@ -3116,6 +3118,13 @@ function toggleLogPanel() {
   }
 }
 
+// ── Chat underlay opacity — full when clear, dimmed when panel overlays it ───
+function syncUnderlayOpacity() {
+  const cu = document.getElementById('chatUnderlay');
+  if (!cu) return;
+  cu.classList.toggle('dimmed', _syslogVisible || _speechVisible);
+}
+
 // ── SYS LOG chat-bar toggle ──────────────────────────────────────────────────
 function setChatBtnsDisabled(disabled) {
   ['findChatBtn', 'saveChatBtn', 'restoreChatBtn', 'clearChatBtn'].forEach(id => {
@@ -3154,6 +3163,7 @@ function toggleSysLogView() {
     if (btn) { btn.classList.remove('active'); btn.textContent = 'SYS LOG'; }
     setChatBtnsDisabled(false);
   }
+  syncUnderlayOpacity();
 }
 
 // ── Speech panel toggle + Web Speech API ────────────────────────────────────
@@ -3184,6 +3194,7 @@ function toggleSpeechPanel() {
     if (btn)   { btn.classList.remove('active'); btn.textContent = 'TALK OR TYPE IN CHAT'; }
     setChatBtnsDisabled(false);
   }
+  syncUnderlayOpacity();
 }
 
 function updateSpeechSendBtn() {
