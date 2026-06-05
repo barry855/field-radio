@@ -3959,55 +3959,11 @@ function muteLocal() {
   // no-op — full duplex, mic always open when linked
 }
 
-// ── Session timeout (10 min inactivity) ──────────────────────
+// ── Session timeout (disabled — session runs indefinitely) ────
 let lockTimer;
 let autoReconnectTimer;
 let dropTimer;  // cancellable handle for onDrop's leave-vs-drop grace period
-function resetLockTimer() {
-  clearTimeout(lockTimer);
-  lockTimer = setTimeout(() => {
-    document.getElementById('sessionOverlay').style.display = 'flex';
-    document.getElementById('unitIdDisplay').style.display = 'none';
-    prefillLogin();
-    saveRecordingIfActive();
-    if (peer) { peer.destroy(); }
-    entry('Session timed out — auto-reconnecting…', 'sys');
-    // Auto-reconnect after 3 seconds (only on timeout, not on manual Refresh)
-    let autoSecs = 3;
-    const btn = document.querySelector('.session-go');
-    const origText = btn.textContent;
-    btn.textContent = `AUTO-CONNECT (${autoSecs}s) — TAP TO CANCEL`;
-    btn.style.borderColor = 'var(--warn)';
-    btn.style.color = 'var(--warn)';
-    const cancelOnce = () => {
-      clearTimeout(autoReconnectTimer);
-      clearInterval(autoCountdown);
-      btn.textContent = origText;
-      btn.style.borderColor = '';
-      btn.style.color = '';
-      startLoginTimeout();
-      btn.removeEventListener('click', cancelOnce);
-    };
-    btn.addEventListener('click', cancelOnce, { once: true });
-    const autoCountdown = setInterval(() => {
-      autoSecs--;
-      if (autoSecs > 0) {
-        btn.textContent = `AUTO-CONNECT (${autoSecs}s) — TAP TO CANCEL`;
-      } else {
-        clearInterval(autoCountdown);
-        btn.removeEventListener('click', cancelOnce);
-        btn.textContent = origText;
-        btn.style.borderColor = '';
-        btn.style.color = '';
-        startSession();
-      }
-    }, 1000);
-  }, 10 * 60 * 1000);
-}
-['click','keydown','mousemove','touchstart'].forEach(ev =>
-  document.addEventListener(ev, resetLockTimer, { passive: true })
-);
-resetLockTimer();
+function resetLockTimer() { /* inactivity lock disabled */ }
 
 // ── Video+Mixed Audio Recording ───────────────────────────────
 let recRemote = null, recRemoteChunks = [], recRemoteBusy = false;
