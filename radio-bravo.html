@@ -1387,7 +1387,7 @@
             <input type="range" id="micGainSliderChat" min="0" max="3" step="0.05" value="1" oninput="applyMicGain(this.value)">
             <span class="gain-val" id="micGainValChat">1.00×</span>
           </div>
-          <div class="zoom-row">
+          <div class="zoom-row" style="display:none;">
             <span>ZOOM LOCAL</span>
             <input type="range" id="zoomSliderChat" min="1" max="4" step="0.1" value="1" oninput="applyZoom(this.value,'local')">
             <span class="zoom-val" id="zoomValChat">1.0×</span>
@@ -3837,20 +3837,24 @@ function onDrop() {
   setStatus('standby');
   if (leftPermanently) return; // permanent leave handled by leaveSession()
   if (remotePeerLeft) return;  // remote sent leave signal — stay on leave screen
-  if (peerRefreshing)  return;  // a refresh-reload is in progress — do not show login
+  // Check sessionStorage in case the refresh control message raced with the drop
+  try { if (sessionStorage.getItem('fieldRadioRefreshing') === '1') peerRefreshing = true; } catch(e) {}
+  if (peerRefreshing) return;  // a refresh-reload is in progress — do not show login
   // Show reconnect screen after a short grace period.
   // handleRemoteLeave() will cancel this timer if a 'leave' signal arrives first,
   // ensuring a clean leave goes to the leave screen, not the reconnect screen.
   clearTimeout(dropTimer);
   dropTimer = setTimeout(() => {
     if (remotePeerLeft) return; // leave message arrived — handled by handleRemoteLeave
-    if (peerRefreshing)  return; // refresh in progress — do not show login
+    // Re-check in case the refresh signal arrived during the grace period
+    try { if (sessionStorage.getItem('fieldRadioRefreshing') === '1') peerRefreshing = true; } catch(e) {}
+    if (peerRefreshing) return; // refresh in progress — do not show login
     entry('Link lost — returning to reconnect screen', 'sys');
     document.getElementById('sessionOverlay').style.display = 'flex';
     document.getElementById('unitIdDisplay').style.display = 'none';
     prefillLogin();
     startLoginTimeout();
-  }, 400);
+  }, 600);
 }
 
 function muteLocal() {
