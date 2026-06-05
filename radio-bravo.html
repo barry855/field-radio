@@ -1216,10 +1216,6 @@
       </div>
       <div class="login-timeout-track"><div class="login-timeout-fill" id="loginTimeoutFill" style="width: 100%; background: var(--accent2);"></div></div>
     </div>
-    <div class="login-presence" id="loginPresence">
-      <div class="pled" id="loginPresenceLed"></div>
-      <span class="ptxt" id="loginPresenceTxt">ENTER CODE</span>
-    </div>
     <button class="session-go" onclick="startSession()">CONNECT</button>
   </div>
 </div>
@@ -1231,7 +1227,7 @@
     <div class="statusbar">
       <div class="status-item">
         <div class="led" id="linkLed"></div>
-        <span id="statusText">OFFLINE</span>
+        <span id="statusText"></span>
       </div>
       <div class="status-item" id="unitIdDisplay" style="display:none;">
         <span style="color:var(--text-dim);font-size:10px;letter-spacing:1px;">UNIT ID</span>
@@ -2104,9 +2100,9 @@ function scrollToBottom(force) {
 function setStatus(state) {
   linkLed.className = 'led';
   if (state === 'standby')      { linkLed.classList.add('on-cyan');   statusEl.textContent = 'STANDBY'; }
-  else if (state === 'reachable') { linkLed.classList.add('on-amber');  statusEl.textContent = 'REACHABLE'; }
+  else if (state === 'reachable') { linkLed.classList.add('on-amber');  statusEl.textContent = 'WAITING'; }
   else if (state === 'linked')    { linkLed.classList.add('on-green');  statusEl.textContent = 'LINKED'; }
-  else                            { statusEl.textContent = 'OFFLINE'; }
+  else                            { statusEl.textContent = ''; }
 }
 
 let activeTab = 'chat';
