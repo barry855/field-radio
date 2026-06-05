@@ -525,6 +525,25 @@
     display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
     flex-shrink: 0; padding: 4px 0;
   }
+  .mini-row-wrap { flex-shrink: 0; }
+  .mini-row-toggle {
+    display: flex; align-items: center; gap: 6px;
+    width: 100%; padding: 4px 8px; cursor: pointer;
+    background: var(--btn-bg); border: 1px solid var(--border);
+    border-radius: 4px; color: var(--text);
+    font-family: 'Share Tech Mono', monospace; font-size: 11px;
+    letter-spacing: 1px; user-select: none;
+    transition: background 0.15s;
+  }
+  .mini-row-toggle:hover { background: var(--btn-hover); }
+  .mini-row-arrow { font-size: 10px; transition: transform 0.2s; }
+  .mini-row-wrap.open .mini-row-arrow { transform: rotate(180deg); }
+  .mini-row-label { flex: 1; text-align: center; letter-spacing: 2px; }
+  .mini-row-wrap .mini-row {
+    display: none; align-items: center; gap: 5px; flex-wrap: wrap;
+    flex-shrink: 0; padding: 4px 0;
+  }
+  .mini-row-wrap.open .mini-row { display: flex; }
   .rec-label {
     flex: 0 0 auto; height: 36px; padding: 0 8px;
     display: flex; align-items: center;
@@ -1244,18 +1263,25 @@
   <div class="tab-content">
     <!-- LOCAL TAB -->
     <div class="tab-pane" id="paneLocal">
-      <div class="mini-row">
-        <button class="media-btn" id="miniBtn" onclick="toggleMiniVideo()">Mini Off</button>
-        <button class="media-btn video-off-state" id="videoBtn" onclick="toggleVideo()">Local Video</button>
-        <span class="rec-label">Record</span>
-        <button class="media-btn" id="recBtn" onclick="toggleRecordLocal()">⏺ Start</button>
-        <button class="media-btn video-off-state" id="videoBtn_row2" onclick="toggleVideo()">Video Off</button>
-        <button class="media-btn" id="audioBtn" onclick="toggleAudio()">Audio Off</button>
-        <button class="media-btn" id="flipBtn" onclick="flipCamera()">⟳ Flip Cam</button>
-        <button class="media-btn" id="screenBtn" onclick="toggleScreenShare()">Share Off</button>
-        <button class="speaker-btn speaker-on" id="speakerBtnLocal" onclick="toggleSpeaker()">🔊 Speaker</button>
-        <button class="leave-btn" id="leaveBtn" onclick="leaveSession()">✕ Leave</button>
-        <button class="media-btn" id="refreshBtnLocal" onclick="refreshScreen()" style="margin-left:auto;">↺ Refresh</button>
+      <div class="mini-row-wrap" id="miniRowWrapLocal">
+        <div class="mini-row-toggle" onclick="toggleMiniRowWrap('miniRowWrapLocal')">
+          <span class="mini-row-arrow">▼</span>
+          <span class="mini-row-label">CONTROLS</span>
+          <span class="mini-row-arrow">▼</span>
+        </div>
+        <div class="mini-row">
+          <button class="media-btn" id="miniBtn" onclick="toggleMiniVideo()">Mini Off</button>
+          <button class="media-btn video-off-state" id="videoBtn" onclick="toggleVideo()">Local Video</button>
+          <span class="rec-label">Record</span>
+          <button class="media-btn" id="recBtn" onclick="toggleRecordLocal()">⏺ Start</button>
+          <button class="media-btn video-off-state" id="videoBtn_row2" onclick="toggleVideo()">Video Off</button>
+          <button class="media-btn" id="audioBtn" onclick="toggleAudio()">Audio Off</button>
+          <button class="media-btn" id="flipBtn" onclick="flipCamera()">⟳ Flip Cam</button>
+          <button class="media-btn" id="screenBtn" onclick="toggleScreenShare()">Share Off</button>
+          <button class="speaker-btn speaker-on" id="speakerBtnLocal" onclick="toggleSpeaker()">🔊 Speaker</button>
+          <button class="leave-btn" id="leaveBtn" onclick="leaveSession()">✕ Leave</button>
+          <button class="media-btn" id="refreshBtnLocal" onclick="refreshScreen()" style="margin-left:auto;">↺ Refresh</button>
+        </div>
       </div>
       <div class="zoom-row">
         <span>ZOOM LOCAL</span>
@@ -1280,18 +1306,25 @@
     </div>
     <!-- REMOTE TAB -->
     <div class="tab-pane active" id="paneRemote">
-      <div class="mini-row">
-        <button class="media-btn" id="miniBtn2" onclick="toggleMiniVideo()">Mini Off</button>
-        <button class="media-btn video-off-state" id="videoBtn2" onclick="toggleVideo()">Local Video</button>
-        <span class="rec-label">Record</span>
-        <button class="media-btn" id="recBtn2" onclick="toggleRecordRemote()">⏺ Start</button>
-        <button class="media-btn video-off-state" id="videoBtn2_row2" onclick="toggleVideo()">Video Off</button>
-        <button class="media-btn" id="audioBtn2" onclick="toggleAudio()">Audio Off</button>
-        <button class="media-btn" id="flipBtn2" onclick="flipCamera()">⟳ Flip Cam</button>
-        <button class="media-btn" id="screenBtn2" onclick="toggleScreenShare()">Share Off</button>
-        <button class="speaker-btn speaker-on" id="speakerBtnRemote" onclick="toggleSpeaker()">🔊 Speaker</button>
-        <button class="leave-btn" id="leaveBtn2" onclick="leaveSession()">✕ Leave</button>
-        <button class="media-btn" id="refreshBtn" onclick="refreshScreen()" style="margin-left:auto;">↺ Refresh</button>
+      <div class="mini-row-wrap" id="miniRowWrapRemote">
+        <div class="mini-row-toggle" onclick="toggleMiniRowWrap('miniRowWrapRemote')">
+          <span class="mini-row-arrow">▼</span>
+          <span class="mini-row-label">CONTROLS</span>
+          <span class="mini-row-arrow">▼</span>
+        </div>
+        <div class="mini-row">
+          <button class="media-btn" id="miniBtn2" onclick="toggleMiniVideo()">Mini Off</button>
+          <button class="media-btn video-off-state" id="videoBtn2" onclick="toggleVideo()">Local Video</button>
+          <span class="rec-label">Record</span>
+          <button class="media-btn" id="recBtn2" onclick="toggleRecordRemote()">⏺ Start</button>
+          <button class="media-btn video-off-state" id="videoBtn2_row2" onclick="toggleVideo()">Video Off</button>
+          <button class="media-btn" id="audioBtn2" onclick="toggleAudio()">Audio Off</button>
+          <button class="media-btn" id="flipBtn2" onclick="flipCamera()">⟳ Flip Cam</button>
+          <button class="media-btn" id="screenBtn2" onclick="toggleScreenShare()">Share Off</button>
+          <button class="speaker-btn speaker-on" id="speakerBtnRemote" onclick="toggleSpeaker()">🔊 Speaker</button>
+          <button class="leave-btn" id="leaveBtn2" onclick="leaveSession()">✕ Leave</button>
+          <button class="media-btn" id="refreshBtn" onclick="refreshScreen()" style="margin-left:auto;">↺ Refresh</button>
+        </div>
       </div>
       <div class="gain-row">
         <div class="gain-label"><span>MIC</span><span>GAIN</span></div>
@@ -2179,6 +2212,12 @@ function updateMiniVideoVisibility() {
   });
   syncMiniVideos();
 }
+function toggleMiniRowWrap(id) {
+  const wrap = document.getElementById(id);
+  if (!wrap) return;
+  wrap.classList.toggle('open');
+}
+
 function toggleMiniVideo() {
   miniVideoVisible = !miniVideoVisible;
   updateMiniVideoVisibility();
