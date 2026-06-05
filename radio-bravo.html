@@ -682,7 +682,7 @@
   .user-left-notice .leave-chat-btn:hover { background: rgba(0,212,255,0.3); }
 
   .log-panel {
-    background: var(--panel); border: 1px solid var(--border);
+    background: rgba(75,85,99,0.55); backdrop-filter: blur(2px); border: 1px solid var(--border);
     border-radius: 8px; padding: 10px 14px;
     position: absolute; top: 0; bottom: 0; left: 0; right: 0;
     z-index: 200; display: none; flex-direction: column;
@@ -718,8 +718,8 @@
     flex: 1;
     overflow-y: auto;
     scrollbar-width: thin;
-    scrollbar-color: #ccc #fff;
-    background: #ffffff;
+    scrollbar-color: #ccc transparent;
+    background: rgba(255,255,255,0.15);
     border-radius: 4px;
     padding: 4px 8px;
     margin-top: 6px;
@@ -734,7 +734,7 @@
     display: none;
     position: absolute; top: 0; bottom: 0; left: 0; right: 0;
     z-index: 300;
-    background: var(--panel); border: 1px solid var(--border);
+    background: rgba(75,85,99,0.55); backdrop-filter: blur(2px); border: 1px solid var(--border);
     border-radius: 8px; padding: 10px 14px;
     flex-direction: column; gap: 8px;
   }
@@ -816,11 +816,11 @@
   }
   #speechFilePreviewStrip.has-files { display: flex; }
 
-  .log-entry.sys  { color: #555555; }
-  .log-entry.info { color: #0077aa; }
-  .log-entry.ok   { color: #007744; }
-  .log-entry.err  { color: #cc2222; }
-  .log-entry.tx   { color: #996600; }
+  .log-entry.sys  { color: #aabbcc; }
+  .log-entry.info { color: #55bbee; }
+  .log-entry.ok   { color: #44cc88; }
+  .log-entry.err  { color: #ff5555; }
+  .log-entry.tx   { color: #ffcc44; }
 
 
 
