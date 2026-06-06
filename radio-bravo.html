@@ -3423,7 +3423,22 @@ function init() {
     return;
   }
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    entry('ERROR: Mic API not available (try Chrome)', 'err');
+    entry('ERROR: Mic/camera API not available', 'err');
+    if (location.protocol === 'file:') {
+      entry('Android Chrome blocks mic/camera on file:// — serve over HTTPS for audio', 'err');
+    } else {
+      entry('Try Chrome or Firefox over HTTPS', 'err');
+    }
+    entry('Starting in audio-unavailable mode — data channel only', 'sys');
+    try {
+      const sCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const sDest = sCtx.createMediaStreamDestination();
+      const sOsc = sCtx.createOscillator();
+      const sGain = sCtx.createGain(); sGain.gain.value = 0;
+      sOsc.connect(sGain); sGain.connect(sDest); sOsc.start();
+      localStream = sDest.stream;
+    } catch(ex) { localStream = new MediaStream(); }
+    startPeer();
     return;
   }
   // Acquire mic + camera — facingMode only used as a soft hint on mobile,
@@ -3465,14 +3480,33 @@ function init() {
 
   function handleMediaError(e) {
     if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError') {
-      entry('Mic blocked — click padlock in address bar, set Microphone to Allow, reload', 'err');
+      entry('Mic blocked — microphone permission denied', 'err');
+      if (location.protocol === 'file:') {
+        entry('On Android Chrome, file:// pages cannot access mic/camera — serve over HTTPS', 'err');
+      } else {
+        entry('Tap the padlock/camera icon in the address bar and allow mic access, then reload', 'err');
+      }
     } else if (e.name === 'NotFoundError') {
       entry('No microphone found on this device', 'err');
     } else if (e.name === 'SecurityError') {
-      entry('Mic blocked by browser security policy', 'err');
+      entry('Mic blocked by browser security policy (HTTPS required)', 'err');
     } else {
       entry('Mic error: ' + e.name + ' — ' + e.message, 'err');
     }
+    // Even without real media, register with the signalling server using a silent
+    // stream so Bravo can still be reached over the data channel (chat/text mode).
+    entry('Starting in audio-unavailable mode — data channel only', 'sys');
+    try {
+      const sCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const sDest = sCtx.createMediaStreamDestination();
+      const sOsc  = sCtx.createOscillator();
+      const sGain = sCtx.createGain(); sGain.gain.value = 0;
+      sOsc.connect(sGain); sGain.connect(sDest); sOsc.start();
+      localStream = sDest.stream;
+    } catch(ex) {
+      localStream = new MediaStream();
+    }
+    startPeer();
   }
 
   navigator.mediaDevices.getUserMedia({
