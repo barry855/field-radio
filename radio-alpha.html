@@ -1653,24 +1653,22 @@ function startSession() {
   const myKey = 'alpha-' + code;
   presenceWrite(myKey); // immediate write
   presenceWriteTimer = setInterval(() => presenceWrite(myKey), 5000);
-  // Poll Firebase for BRAVO's actual peer ID in case it has a suffix (ghost-avoidance).
-  // Update REMOTE_ID whenever BRAVO publishes a new peerId.
-  const bravoPollKey = 'bravo-' + code;
-  async function refreshRemoteId() {
+  // Poll Firebase for BRAVO's actual peer ID (may have suffix) and keep REMOTE_ID current.
+  const _bravoPollKey = 'bravo-' + code;
+  async function _refreshRemoteId() {
     try {
-      const res = await fetch(FB_URL + '/presence/' + bravoPollKey + '.json');
-      const data = await res.json();
-      if (data && data.peerId && data.peerId !== REMOTE_ID) {
-        entry('BRAVO re-registered as: ' + data.peerId, 'sys');
-        REMOTE_ID = data.peerId;
+      const _r = await fetch(FB_URL + '/presence/' + _bravoPollKey + '.json');
+      const _d = await _r.json();
+      if (_d && _d.peerId && _d.peerId !== REMOTE_ID) {
+        entry('BRAVO re-registered as: ' + _d.peerId, 'sys');
+        REMOTE_ID = _d.peerId;
       }
     } catch(e) {}
   }
-  refreshRemoteId();
-  const remoteIdPollTimer = setInterval(refreshRemoteId, 5000);
-  // Clear this timer when we leave the session (piggyback on presenceWriteTimer teardown)
-  const _origStop = stopPresencePolling;
-  stopPresencePolling = function() { clearInterval(remoteIdPollTimer); stopPresencePolling = _origStop; _origStop(); };
+  _refreshRemoteId();
+  const _remoteIdPollTimer = setInterval(_refreshRemoteId, 5000);
+  const _stopPresenceOrig = stopPresencePolling;
+  stopPresencePolling = function() { clearInterval(_remoteIdPollTimer); stopPresencePolling = _stopPresenceOrig; _stopPresenceOrig(); };
   // Persist code and checkbox states for next load
   const disVidChecked = document.getElementById('loginDisableVideo').checked;
   const disAudChecked = document.getElementById('loginDisableAudio').checked;
@@ -1738,7 +1736,7 @@ async function presencePoll(partnerKey, myKey) {
     const res = await fetch(FB_URL + '/presence/' + partnerKey + '.json');
     const data = await res.json();
     if (data && data.ts && (Date.now() - data.ts) < PRESENCE_STALE_MS) {
-      // If BRAVO published its actual peer ID (suffixed), update REMOTE_ID so we dial correctly
+      // BRAVO publishes its suffixed peer ID — update REMOTE_ID so we dial correctly
       if (data.peerId && data.peerId !== REMOTE_ID) {
         entry('BRAVO peer ID: ' + data.peerId, 'sys');
         REMOTE_ID = data.peerId;
@@ -3597,9 +3595,10 @@ function startPeer() {
   });
 
   peer.on('disconnected', () => {
+    if (!peer || peer.destroyed) return;  // intentional destroy — do not reconnect
     entry('Signalling server disconnected — reconnecting…', 'sys');
     saveRecordingIfActive();
-    if (!peer.destroyed) peer.reconnect();
+    peer.reconnect();
   });
 
   peer.on('error', e => {
@@ -3924,7 +3923,7 @@ function attachCall(c) {
       }
       if (pc.iceConnectionState === 'failed') {
         entry('DIAG: ICE FAILED — attempting ICE restart', 'err');
-        try { pc.restartIce(); } catch(e) { entry('ICE restart unavailable: ' + e.message, 'sys'); }
+        try { pc.restartIce(); } catch(e2) { entry('ICE restart unavailable: ' + e2.message, 'sys'); }
       }
     });
     pc.addEventListener('connectionstatechange', () => {
