@@ -3584,7 +3584,9 @@ function startPeer() {
       call = null;
       linked = false;
     }
-    incoming.answer(getCallStream());
+    const _as = getCallStream();
+    entry('DIAG: answering with ' + _as.getTracks().length + ' tracks (audio=' + _as.getAudioTracks().length + ' video=' + _as.getVideoTracks().length + ')', 'sys');
+    incoming.answer(_as);
     attachCall(incoming);
   });
 
@@ -3842,8 +3844,36 @@ function attachCall(c) {
   // on Android (zero-track stream or ontrack-only WebRTC path).
   const _pcReady = () => {
     const pc = c.peerConnection || c._pc;
-    if (!pc) return;
+    if (!pc) { entry('DIAG: peerConnection not ready — retrying…', 'sys'); setTimeout(_pcReady, 200); return; }
+    entry('DIAG: RTCPeerConnection obtained, signalingState=' + pc.signalingState, 'sys');
+    pc.addEventListener('icegatheringstatechange', () => {
+      entry('DIAG: ICE gathering → ' + pc.iceGatheringState, 'sys');
+    });
+    pc.addEventListener('icecandidate', ev => {
+      if (ev.candidate) {
+        entry('DIAG: local candidate ' + ev.candidate.type + ' ' + ev.candidate.protocol, 'sys');
+      } else {
+        entry('DIAG: ICE gathering complete', 'sys');
+      }
+    });
+    pc.addEventListener('iceconnectionstatechange', () => {
+      entry('DIAG: ICE → ' + pc.iceConnectionState, 'sys');
+      if ((pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') && !linked) {
+        entry('ICE connected — marking linked', 'sys');
+        markLinked();
+      }
+      if (pc.iceConnectionState === 'failed') {
+        entry('DIAG: ICE FAILED — no path found between peers', 'err');
+      }
+    });
+    pc.addEventListener('connectionstatechange', () => {
+      entry('DIAG: connection state → ' + pc.connectionState, 'sys');
+    });
+    pc.addEventListener('signalingstatechange', () => {
+      entry('DIAG: signaling → ' + pc.signalingState, 'sys');
+    });
     pc.addEventListener('track', ev => {
+      entry('DIAG: track received kind=' + ev.track.kind, 'sys');
       if (!ev.streams || !ev.streams[0]) return;
       const stream = ev.streams[0];
       document.getElementById('remoteAudio').srcObject = stream;
@@ -3854,12 +3884,6 @@ function attachCall(c) {
       document.getElementById('remoteWrap').classList.remove('waiting', 'stale');
       updateRemoteVideoState(true, stream.getVideoTracks().length > 0);
       markLinked();
-    });
-    pc.addEventListener('iceconnectionstatechange', () => {
-      if ((pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') && !linked) {
-        entry('ICE connected (no stream tracks) — marking linked', 'sys');
-        markLinked();
-      }
     });
   };
   if (c.peerConnection || c._pc) { _pcReady(); }
