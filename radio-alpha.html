@@ -3408,6 +3408,21 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   const box = document.getElementById('speechEditBox');
   if (box) box.addEventListener('input', updateSpeechSendBtn);
+  // Init speech lang select: saved choice > system language > en-US
+  (function() {
+    const sel = document.getElementById('speechLangSelect');
+    if (!sel) return;
+    const saved = localStorage.getItem('alpha_speech_lang');
+    const sysLang = navigator.language || 'en-US';
+    const target = saved || sysLang;
+    // Try exact match first, then prefix match (e.g. 'fr' matches 'fr-FR')
+    const opts = Array.from(sel.options);
+    const exact = opts.find(o => o.value.toLowerCase() === target.toLowerCase());
+    const prefix = !exact && opts.find(o => o.value.toLowerCase().startsWith(target.split('-')[0].toLowerCase()));
+    if (exact) sel.value = exact.value;
+    else if (prefix) sel.value = prefix.value;
+    // else stays at en-US (first option)
+  })();
 
   // ── Speech panel drag-and-drop for file attach ──
   const panel = document.getElementById('speechPanel');
