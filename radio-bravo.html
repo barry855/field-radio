@@ -1626,14 +1626,20 @@ document.addEventListener('click', function() {
   if (_actx && _actx.state === 'suspended') _actx.resume();
 }, true);
 
-// Free public TURN servers (Open Relay Project) — essential for mobile/carrier-NAT networks
+// ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
+// turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
 const ICE_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
+  { urls: 'stun:stun2.l.google.com:19302' },
+  { urls: 'stun:stun3.l.google.com:19302' },
+  { urls: 'stun:stun.cloudflare.com:3478' },
   { urls: 'stun:openrelay.metered.ca:80' },
-  { urls: 'turn:openrelay.metered.ca:80',       username: 'openrelayproject', credential: 'openrelayproject' },
-  { urls: 'turn:openrelay.metered.ca:443',      username: 'openrelayproject', credential: 'openrelayproject' },
-  { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
+  { urls: 'turn:openrelay.metered.ca:80',              username: 'openrelayproject', credential: 'openrelayproject' },
+  { urls: 'turn:openrelay.metered.ca:443',             username: 'openrelayproject', credential: 'openrelayproject' },
+  { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+  { urls: 'turns:openrelay.metered.ca:443',            username: 'openrelayproject', credential: 'openrelayproject' },
+  { urls: 'turns:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
 ];
 
 let MY_ID, REMOTE_ID;
@@ -1678,9 +1684,10 @@ function startSession() {
   stopPresencePolling();
   const code = document.getElementById('sessionCode').value.trim().toUpperCase().replace(/\s+/g,'');
   if (!code) { document.getElementById('sessionCode').focus(); return; }
-  MY_ID     = 'bravo-' + code;
+  MY_ID     = 'bravo-' + code + '-' + Math.random().toString(16).slice(2, 6);
   REMOTE_ID = 'alpha-' + code;
-  // Keep writing our heartbeat for the whole session so Firebase shows us as online
+  // Keep writing our heartbeat for the whole session so Firebase shows us as online.
+  // Include peerId so ALPHA can dial our actual (suffixed) peer ID.
   const myKey = 'bravo-' + code;
   presenceWrite(myKey); // immediate write
   presenceWriteTimer = setInterval(() => presenceWrite(myKey), 5000);
@@ -1739,7 +1746,7 @@ async function presenceWrite(myKey) {
   try {
     await fetch(FB_URL + '/presence/' + myKey + '.json', {
       method: 'PUT',
-      body: JSON.stringify({ ts: Date.now() })
+      body: JSON.stringify({ ts: Date.now(), peerId: MY_ID })
     });
   } catch(e) {}
 }
@@ -2351,7 +2358,7 @@ function linkify(text) {
 }
 
 // ── Chat history (localStorage) ──────────────────────────────
-const HISTORY_KEY = () => 'bravo_chat_' + (MY_ID || 'unknown');
+const HISTORY_KEY = () => 'bravo_chat_' + (MY_ID ? MY_ID.replace(/-[0-9a-f]{4}$/, '') : 'unknown');
 const HISTORY_MAX = 200;
 
 function saveMessage(text, mine) {
@@ -3611,14 +3618,13 @@ function startPeer() {
     entry('Peer error [' + e.type + ']: ' + e.message, 'err');
     if (e.type === 'browser-incompatible') return;
     if (e.type === 'unavailable-id') {
-      // Stale session holds the ID — wait for PeerJS server to release it, then retry
-      // with the SAME ID so REMOTE_ID on the other side stays valid. Do NOT change MY_ID.
-      // Exponential backoff: 10s, 20s, 40s, capped at 60s — hammering resets the server timer.
-      _unavailIdRetries = (_unavailIdRetries || 0) + 1;
-      const _unavailDelay = Math.min(10000 * Math.pow(2, _unavailIdRetries - 1), 60000);
-      entry('ID taken — retrying same ID in ' + Math.round(_unavailDelay/1000) + 's (attempt ' + _unavailIdRetries + ')…', 'sys');
+      // Ghost session holds the ID — pick a fresh suffix and retry immediately.
+      // presenceWrite will push the new peerId to Firebase so ALPHA dials correctly.
+      const code = MY_ID.replace(/^bravo-/, '').replace(/-[0-9a-f]{4}$/, '');
+      MY_ID = 'bravo-' + code + '-' + Math.random().toString(16).slice(2, 6);
+      entry('ID taken — retrying with new ID: ' + MY_ID, 'sys');
       peer.destroy();
-      setTimeout(startPeer, _unavailDelay);
+      setTimeout(startPeer, 500);
       return;
     }
     if (e.type === 'peer-unavailable') {
@@ -3878,7 +3884,8 @@ function attachCall(c) {
         markLinked();
       }
       if (pc.iceConnectionState === 'failed') {
-        entry('DIAG: ICE FAILED — no path found between peers', 'err');
+        entry('DIAG: ICE FAILED — attempting ICE restart', 'err');
+        try { pc.restartIce(); } catch(e) { entry('ICE restart unavailable: ' + e.message, 'sys'); }
       }
     });
     pc.addEventListener('connectionstatechange', () => {
