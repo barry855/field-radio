@@ -1622,8 +1622,17 @@ function playTone(name) {
     if (_actx.state === 'suspended') { _actx.resume().then(play); } else { play(); }
   } catch(e) { console.warn('playTone:', e); }
 }
+function ensureRemoteAudioPlaying() {
+  const ra = document.getElementById('remoteAudio');
+  if (ra && ra.srcObject && ra.paused) {
+    ra.play().catch(e => entry('remoteAudio play retry: ' + e.message, 'sys'));
+  }
+  const rv = document.getElementById('remoteVideo');
+  if (rv && rv.srcObject && rv.paused) rv.play().catch(() => {});
+}
 document.addEventListener('click', function() {
   if (_actx && _actx.state === 'suspended') _actx.resume();
+  ensureRemoteAudioPlaying();
 }, true);
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
@@ -3898,7 +3907,7 @@ function attachCall(c) {
       if (!ev.streams || !ev.streams[0]) return;
       const stream = ev.streams[0];
       const _ra = document.getElementById('remoteAudio');
-      _ra.srcObject = stream; _ra.play().catch(() => {});
+      _ra.srcObject = stream; _ra.play().catch(e => { entry('remoteAudio play (track): ' + e.message, 'sys'); });
       const _rv = document.getElementById('remoteVideo');
       _rv.srcObject = stream; _rv.play().catch(() => {});
       const _cu = document.getElementById('chatUnderlay');
@@ -3914,7 +3923,7 @@ function attachCall(c) {
 
   c.on('stream', stream => {
     const remoteAudio = document.getElementById('remoteAudio');
-    remoteAudio.srcObject = stream; remoteAudio.play().catch(() => {});
+    remoteAudio.srcObject = stream; remoteAudio.play().catch(e => { entry('remoteAudio play (stream): ' + e.message, 'sys'); });
     const remoteVideo = document.getElementById('remoteVideo');
     remoteVideo.srcObject = stream; remoteVideo.play().catch(() => {});
     const _cu = document.getElementById('chatUnderlay');
