@@ -3524,6 +3524,7 @@ function init() {
   });
 }
 
+let _unavailIdRetries = 0;
 function startPeer() {
   // Guard: PeerJS CDN may still be loading on slow mobile connections
   if (typeof Peer === 'undefined') {
@@ -3547,6 +3548,7 @@ function startPeer() {
   });
 
   peer.on('open', () => {
+    _unavailIdRetries = 0; // ID claimed — reset backoff
     entry('Radio online', 'ok');
     setStatus('calling');
     // Delay first dial to give Android Bravo time to acquire camera/mic
@@ -3587,10 +3589,13 @@ function startPeer() {
     }
     if (e.type === 'unavailable-id') {
       // Stale session holds the ID — wait for PeerJS server to release it, then retry
-      // with the SAME ID so REMOTE_ID on Bravo stays valid. Do NOT change MY_ID here.
-      entry('ID taken by stale session — retrying same ID in 8s…', 'sys');
+      // with the SAME ID so REMOTE_ID on the other side stays valid. Do NOT change MY_ID.
+      // Exponential backoff: 10s, 20s, 40s, capped at 60s — hammering resets the server timer.
+      _unavailIdRetries = (_unavailIdRetries || 0) + 1;
+      const _unavailDelay = Math.min(10000 * Math.pow(2, _unavailIdRetries - 1), 60000);
+      entry('ID taken — retrying same ID in ' + Math.round(_unavailDelay/1000) + 's (attempt ' + _unavailIdRetries + ')…', 'sys');
       peer.destroy();
-      setTimeout(startPeer, 8000);
+      setTimeout(startPeer, _unavailDelay);
       return;
     }
     // network / server-error / socket-error / socket-closed
