@@ -3585,26 +3585,10 @@ function startPeer() {
     _unavailIdRetries = 0; // ID claimed — reset backoff
     entry('Radio online', 'ok');
     setStatus('calling');
-    // Poll Firebase until BRAVO's suffixed peer ID is known, then dial.
-    // On Android, BRAVO may take >4s to publish its peerId after a fresh open.
-    // We poll every 1.5s for up to 30s; if still not found we dial anyway with
-    // the base ID (works if BRAVO is also on the old non-suffix build).
-    let _dialPollCount = 0;
-    const _dialPollMax = 20; // 20 x 1500ms = 30s max wait
-    function _pollAndDial() {
-      _refreshRemoteId().then(() => {
-        _dialPollCount++;
-        const hasSuffix = REMOTE_ID && /-[0-9a-f]{4}$/.test(REMOTE_ID);
-        if (hasSuffix || _dialPollCount >= _dialPollMax) {
-          if (!hasSuffix) entry('BRAVO peerId not found after 30s — dialling base ID', 'sys');
-          dial();
-        } else {
-          entry('Waiting for BRAVO peerId... (' + _dialPollCount + ')', 'sys');
-          setTimeout(_pollAndDial, 1500);
-        }
-      });
-    }
-    _pollAndDial();
+    // Refresh BRAVO's suffixed peer ID from Firebase then dial immediately.
+    // The 5s poll (_setupRemoteIdPoll) keeps REMOTE_ID current so peer-unavailable
+    // retries will pick up the correct ID if BRAVO publishes later.
+    _refreshRemoteId().then(dial);
   });
 
   peer.on('connection', dc => {
