@@ -1279,14 +1279,20 @@ document.addEventListener('click', function() {
   if (_actx && _actx.state === 'suspended') _actx.resume();
 }, true);
 
-// Free public TURN servers (Open Relay Project) — essential for mobile/carrier-NAT networks
+// ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
+// turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
 const ICE_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
+  { urls: 'stun:stun2.l.google.com:19302' },
+  { urls: 'stun:stun3.l.google.com:19302' },
   { urls: 'stun:stun.cloudflare.com:3478' },
-  { urls: 'turn:turn.cloudflare.com:3478',      username: 'free',             credential: 'free' },
-  { urls: 'turn:turn.cloudflare.com:5349',      username: 'free',             credential: 'free' },
-  { urls: 'turn:turn.cloudflare.com:5349?transport=tcp', username: 'free',    credential: 'free' }
+  { urls: 'stun:openrelay.metered.ca:80' },
+  { urls: 'turn:openrelay.metered.ca:80',              username: 'openrelayproject', credential: 'openrelayproject' },
+  { urls: 'turn:openrelay.metered.ca:443',             username: 'openrelayproject', credential: 'openrelayproject' },
+  { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+  { urls: 'turns:openrelay.metered.ca:443',            username: 'openrelayproject', credential: 'openrelayproject' },
+  { urls: 'turns:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
 ];
 
 let MY_ID, REMOTE_ID;
