@@ -3822,8 +3822,49 @@ function sendVideoState() {
   } catch(e) {}
 }
 
+function markLinked() {
+  if (linked) return;
+  linked = true;
+  setStatus('linked');
+  entry('Linked to Alpha — full duplex active', 'ok');
+  duplexBar.textContent = '● LIVE';
+  duplexBar.className = 'duplex-overlay live';
+  syncControls();
+  startQualityPolling();
+  // Alpha owns data channel initiation — Bravo only accepts inbound DCs.
+  applyMuteToSenders();
+}
+
 function attachCall(c) {
   call = c;
+
+  // Safety net: hook ontrack directly in case PeerJS 'stream' event doesn't fire
+  // on Android (zero-track stream or ontrack-only WebRTC path).
+  const _pcReady = () => {
+    const pc = c.peerConnection || c._pc;
+    if (!pc) return;
+    pc.addEventListener('track', ev => {
+      if (!ev.streams || !ev.streams[0]) return;
+      const stream = ev.streams[0];
+      document.getElementById('remoteAudio').srcObject = stream;
+      document.getElementById('remoteVideo').srcObject = stream;
+      const _cu = document.getElementById('chatUnderlay');
+      if (_cu) { _cu.srcObject = stream; _cu.classList.remove('no-stream'); }
+      syncMiniVideos();
+      document.getElementById('remoteWrap').classList.remove('waiting', 'stale');
+      updateRemoteVideoState(true, stream.getVideoTracks().length > 0);
+      markLinked();
+    });
+    pc.addEventListener('iceconnectionstatechange', () => {
+      if ((pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') && !linked) {
+        entry('ICE connected (no stream tracks) — marking linked', 'sys');
+        markLinked();
+      }
+    });
+  };
+  if (c.peerConnection || c._pc) { _pcReady(); }
+  else { setTimeout(_pcReady, 0); }
+
   c.on('stream', stream => {
     document.getElementById('remoteAudio').srcObject = stream;
     const remoteVideo = document.getElementById('remoteVideo');
@@ -3839,17 +3880,7 @@ function attachCall(c) {
       track.addEventListener('ended', () => updateRemoteVideoState(false, false));
     });
     if (linked) return;
-    linked = true;
-    setStatus('linked');
-    entry('Linked to Alpha — full duplex active', 'ok');
-    duplexBar.textContent = '● LIVE';
-    duplexBar.className = 'duplex-overlay live';
-    syncControls();
-    startQualityPolling();
-    // Alpha owns data channel initiation — do not call openDataConn() here.
-    // Bravo only accepts inbound DCs via peer.on('connection').
-    // Re-enforce mute/unmute state now that WebRTC senders are live.
-    applyMuteToSenders();
+    markLinked();
   });
   c.on('close', () => { if (call === c) onDrop(); });
   c.on('error', e => { entry('Call error: ' + e.message, 'err'); if (call === c) onDrop(); });
