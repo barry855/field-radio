@@ -1127,6 +1127,10 @@
   }
 
   /* ── Mic gain slider row ────────────────────────────────────── */
+  .speech-save-row {
+    display: flex; gap: 4px; align-items: center; flex-shrink: 0;
+    padding: 2px 8px;
+  }
   .gain-row {
     display: flex; align-items: center; gap: 8px;
     flex-shrink: 0; padding: 2px 0;
@@ -1180,7 +1184,7 @@
 <div class="session-overlay" id="sessionOverlay">
   <div class="session-box">
     <div class="reconnect-overlay" id="reconnectOverlay"><p>Please wait while I<br>try to reconnect…</p></div>
-    <span class="session-title" style="color:#00ff9f;text-shadow:0 0 20px rgba(0,255,159,0.5);">CALLER</span>
+    <span class="session-title" style="color:#00ff9f;text-shadow:0 0 20px rgba(0,255,159,0.5);">ALPHA</span>
     <label>Unit ID</label>
     <input type="text" id="sessionCode" maxlength="8" placeholder="ENTER CODE" autocomplete="off">
     <div class="session-checks">
@@ -1198,7 +1202,7 @@
 <div class="shell">
 
   <header>
-    <div class="logo" style="color:#00ff9f;text-shadow:0 0 20px rgba(0,255,159,0.5);">CALLER</div>
+    <div class="logo" style="color:#00ff9f;text-shadow:0 0 20px rgba(0,255,159,0.5);">ALPHA</div>
     <div class="statusbar">
       <div class="status-item">
         <div class="led" id="linkLed" style="display:none;"></div>
@@ -1336,15 +1340,6 @@
         </div>
         <div class="mini-row" style="flex-direction:column; align-items:stretch; gap:4px;">
           <div class="chat-btn-bar-row">
-            <button class="speech-top-btn" onclick="saveChatToFile()" id="saveChatBtn" title="Save chat as HTML">💾 SAVE</button>
-            <button class="speech-top-btn" onclick="restoreChat()" id="restoreChatBtn" title="Restore previous session chat">↩ RESTORE</button>
-            <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR</button>
-            <button class="speech-top-btn" id="findChatBtn" title="Find in chat">🔍 FIND</button>
-            <button class="speech-top-btn active" id="miniChatBtn" onclick="toggleMiniChat()" title="Toggle mini video in chat">MINI ON</button>
-            <button class="speech-top-btn" id="flipChatBtn" onclick="flipCamera()" title="Flip camera">⟳ Flip Cam</button>
-            <button class="syslog-chat-btn" id="syslogToggleBtn" onclick="toggleSysLogView()" title="Toggle SYS LOG">SYS LOG</button>
-          </div>
-          <div class="chat-btn-bar-row">
             <button class="speech-top-btn" id="chatVideoViewBtn" onclick="toggleChatVideoView()" title="Toggle chat video view">VIDEO REMOTE</button>
             <button class="speech-top-btn rec-chat-btn" id="recChatBtn" onclick="toggleRecordChat()" title="Record current main feed + mini if visible">➤ RECORD</button>
             <button class="speech-top-btn video-off-state" id="videoOffChatBtn" onclick="toggleVideo()" title="Video on/off">Video Off</button>
@@ -1355,6 +1350,15 @@
             <div class="gain-label"><span>MIC</span><span>GAIN</span></div>
             <input type="range" id="micGainSliderChat" min="0" max="3" step="0.05" value="1" oninput="applyMicGain(this.value)">
             <span class="gain-val" id="micGainValChat">1.00×</span>
+          </div>
+          <div class="chat-btn-bar-row">
+            <button class="speech-top-btn" onclick="saveChatToFile()" id="saveChatBtn" title="Save chat as HTML">💾 SAVE</button>
+            <button class="speech-top-btn" onclick="restoreChat()" id="restoreChatBtn" title="Restore previous session chat">↩ RESTORE</button>
+            <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR</button>
+            <button class="speech-top-btn" id="findChatBtn" title="Find in chat">🔍 FIND</button>
+            <button class="speech-top-btn active" id="miniChatBtn" onclick="toggleMiniChat()" title="Toggle mini video in chat">MINI ON</button>
+            <button class="speech-top-btn" id="flipChatBtn" onclick="flipCamera()" title="Flip camera">⟳ Flip Cam</button>
+            <button class="syslog-chat-btn" id="syslogToggleBtn" onclick="toggleSysLogView()" title="Toggle SYS LOG">SYS LOG</button>
           </div>
           <div class="zoom-row" style="display:none;">
             <span>ZOOM LOCAL</span>
