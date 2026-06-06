@@ -1623,16 +1623,23 @@ function playTone(name) {
     if (_actx.state === 'suspended') { _actx.resume().then(play); } else { play(); }
   } catch(e) { console.warn('playTone:', e); }
 }
+let _raPlayTimer = null;
+function scheduleRemoteAudioPlay() {
+  // Debounce: wait for srcObject assignments to settle before calling play(),
+  // so rapid track events don't cause "interrupted by new load" errors.
+  clearTimeout(_raPlayTimer);
+  _raPlayTimer = setTimeout(() => {
+    const ra = document.getElementById('remoteAudio');
+    if (ra && ra.srcObject && ra.paused) {
+      ra.play().catch(e => {
+        entry('remoteAudio play: ' + e.message, 'sys');
+        showAudioUnlockBtn();
+      });
+    }
+  }, 100);
+}
 function ensureRemoteAudioPlaying() {
-  const ra = document.getElementById('remoteAudio');
-  if (ra && ra.srcObject && ra.paused) {
-    ra.play().catch(e => {
-      entry('remoteAudio play retry: ' + e.message, 'sys');
-      showAudioUnlockBtn();
-    });
-  }
-  const rv = document.getElementById('remoteVideo');
-  if (rv && rv.srcObject && rv.paused) rv.play().catch(() => {});
+  scheduleRemoteAudioPlay();
 }
 function showAudioUnlockBtn() {
   const btn = document.getElementById('audioUnlockBtn');
@@ -3923,15 +3930,16 @@ function attachCall(c) {
       if (!ev.streams || !ev.streams[0]) return;
       const stream = ev.streams[0];
       const _ra = document.getElementById('remoteAudio');
-      _ra.srcObject = stream; _ra.play().catch(e => { entry('remoteAudio play (track): ' + e.message, 'sys'); showAudioUnlockBtn(); });
+      if (_ra.srcObject !== stream) _ra.srcObject = stream;
       const _rv = document.getElementById('remoteVideo');
-      _rv.srcObject = stream; _rv.play().catch(() => {});
+      if (_rv.srcObject !== stream) _rv.srcObject = stream;
       const _cu = document.getElementById('chatUnderlay');
       if (_cu) { _cu.srcObject = stream; _cu.classList.remove('no-stream'); }
       syncMiniVideos();
       document.getElementById('remoteWrap').classList.remove('waiting', 'stale');
       updateRemoteVideoState(true, stream.getVideoTracks().length > 0);
       markLinked();
+      scheduleRemoteAudioPlay();
     });
   };
   if (c.peerConnection || c._pc) { _pcReady(); }
@@ -3939,9 +3947,9 @@ function attachCall(c) {
 
   c.on('stream', stream => {
     const remoteAudio = document.getElementById('remoteAudio');
-    remoteAudio.srcObject = stream; remoteAudio.play().catch(e => { entry('remoteAudio play (stream): ' + e.message, 'sys'); showAudioUnlockBtn(); });
+    if (remoteAudio.srcObject !== stream) remoteAudio.srcObject = stream;
     const remoteVideo = document.getElementById('remoteVideo');
-    remoteVideo.srcObject = stream; remoteVideo.play().catch(() => {});
+    if (remoteVideo.srcObject !== stream) remoteVideo.srcObject = stream;
     const _cu = document.getElementById('chatUnderlay');
     if (_cu) { _cu.srcObject = stream; _cu.classList.remove('no-stream'); }
     syncMiniVideos();
@@ -3954,6 +3962,7 @@ function attachCall(c) {
     });
     if (linked) return;
     markLinked();
+    scheduleRemoteAudioPlay();
   });
   c.on('close', () => { if (call === c) onDrop(); });
   c.on('error', e => { entry('Call error: ' + e.message, 'err'); if (call === c) onDrop(); });
