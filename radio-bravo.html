@@ -4565,6 +4565,7 @@ function toggleAudio() {
       } catch(e) {}
     }
     btns.forEach(b => { if(b){ b.textContent = 'Audio Off'; b.classList.remove('disabled-state'); b.classList.add('active-on'); }});
+    try { localStorage.setItem('bravo_disable_audio', '1'); document.getElementById('loginDisableAudio').checked = true; } catch(e) {}
     entry('Local audio muted', 'sys');
   } else {
     audioMuted = false;
@@ -4580,6 +4581,7 @@ function toggleAudio() {
       } catch(e) {}
     }
     btns.forEach(b => { if(b){ b.textContent = 'Audio On'; b.classList.remove('disabled-state'); b.classList.remove('active-on'); }});
+    try { localStorage.setItem('bravo_disable_audio', '0'); document.getElementById('loginDisableAudio').checked = false; } catch(e) {}
     entry('Local audio unmuted', 'sys');
   }
 }
