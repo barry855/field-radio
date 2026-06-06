@@ -2041,6 +2041,7 @@ function startLoginTimeout() {
   }, 1000);
 }
 // If this page load is the result of a refresh, show the login box and auto-reconnect
+let _loginTimeoutStarted = false;
 (function() {
   try {
     if (sessionStorage.getItem('fieldRadioRefreshing') === '1') {
@@ -2049,12 +2050,14 @@ function startLoginTimeout() {
       document.getElementById('sessionOverlay').style.display = 'flex';
       prefillLogin();
       startLoginTimeout();
+      _loginTimeoutStarted = true;
     }
   } catch(e) {}
 })();
 
 // Only start login timeout if the overlay wasn't already dismissed by auto-login
-if (document.getElementById('sessionOverlay').style.display !== 'none') {
+// and the refresh path above hasn't already started it
+if (!_loginTimeoutStarted && document.getElementById('sessionOverlay').style.display !== 'none') {
   startLoginTimeout();
 }
 
