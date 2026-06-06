@@ -3705,7 +3705,6 @@ function attachDataConn(dc) {
     pendingDC = false;
     dataConn = dc;
     entry('Chat channel open', 'ok');
-    setStatus('reachable');
     const sb = document.getElementById('sendBtn'); if (sb) sb.disabled = false;
     sendVideoState();
     if (_pendingChatMsg) {
