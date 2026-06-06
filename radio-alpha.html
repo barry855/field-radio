@@ -1666,9 +1666,8 @@ function startSession() {
     } catch(e) {}
   }
   _refreshRemoteId();
-  const _remoteIdPollTimer = setInterval(_refreshRemoteId, 5000);
-  const _stopPresenceOrig = stopPresencePolling;
-  stopPresencePolling = function() { clearInterval(_remoteIdPollTimer); stopPresencePolling = _stopPresenceOrig; _stopPresenceOrig(); };
+  if (window._remoteIdPollTimer) clearInterval(window._remoteIdPollTimer);
+  window._remoteIdPollTimer = setInterval(_refreshRemoteId, 5000);
   // Persist code and checkbox states for next load
   const disVidChecked = document.getElementById('loginDisableVideo').checked;
   const disAudChecked = document.getElementById('loginDisableAudio').checked;
@@ -1770,6 +1769,7 @@ function startPresencePolling(code) {
 function stopPresencePolling() {
   clearInterval(presencePollTimer);
   clearInterval(presenceWriteTimer);
+  if (window._remoteIdPollTimer) { clearInterval(window._remoteIdPollTimer); window._remoteIdPollTimer = null; }
   presencePollTimer = null;
 }
 
