@@ -1686,8 +1686,7 @@ function startSession() {
   if (!code) { document.getElementById('sessionCode').focus(); return; }
   MY_ID     = 'bravo-' + code + '-' + Math.random().toString(16).slice(2, 6);
   REMOTE_ID = 'alpha-' + code;
-  // Keep writing our heartbeat for the whole session so Firebase shows us as online.
-  // Include peerId so ALPHA can dial our actual (suffixed) peer ID.
+  // Keep writing our heartbeat for the whole session so Firebase shows us as online
   const myKey = 'bravo-' + code;
   presenceWrite(myKey); // immediate write
   presenceWriteTimer = setInterval(() => presenceWrite(myKey), 5000);
@@ -3609,21 +3608,23 @@ function startPeer() {
   });
 
   peer.on('disconnected', () => {
+    if (!peer || peer.destroyed) return;  // intentional destroy — do not reconnect
     entry('Signalling server disconnected — reconnecting…', 'sys');
     saveRecordingIfActive();
-    if (!peer.destroyed) peer.reconnect();
+    peer.reconnect();
   });
 
   peer.on('error', e => {
     entry('Peer error [' + e.type + ']: ' + e.message, 'err');
     if (e.type === 'browser-incompatible') return;
     if (e.type === 'unavailable-id') {
-      // Ghost session holds the ID — pick a fresh suffix and retry immediately.
-      // presenceWrite will push the new peerId to Firebase so ALPHA dials correctly.
-      const code = MY_ID.replace(/^bravo-/, '').replace(/-[0-9a-f]{4}$/, '');
-      MY_ID = 'bravo-' + code + '-' + Math.random().toString(16).slice(2, 6);
+      // Ghost session holds this ID. Pick a new suffix and retry in 500ms.
+      // presenceWrite will publish the new peerId so ALPHA dials correctly.
+      const _code = MY_ID.replace(/^bravo-/, '').replace(/-[0-9a-f]{4}$/, '');
+      MY_ID = 'bravo-' + _code + '-' + Math.random().toString(16).slice(2, 6);
       entry('ID taken — retrying with new ID: ' + MY_ID, 'sys');
-      peer.destroy();
+      const _stale = peer; peer = null;
+      try { _stale.off('disconnected'); _stale.destroy(); } catch(e2) {}
       setTimeout(startPeer, 500);
       return;
     }
@@ -3885,7 +3886,7 @@ function attachCall(c) {
       }
       if (pc.iceConnectionState === 'failed') {
         entry('DIAG: ICE FAILED — attempting ICE restart', 'err');
-        try { pc.restartIce(); } catch(e) { entry('ICE restart unavailable: ' + e.message, 'sys'); }
+        try { pc.restartIce(); } catch(e2) { entry('ICE restart unavailable: ' + e2.message, 'sys'); }
       }
     });
     pc.addEventListener('connectionstatechange', () => {
