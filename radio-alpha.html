@@ -3842,8 +3842,53 @@ function sendVideoState() {
   } catch(e) {}
 }
 
+function markLinked() {
+  if (linked) return;
+  linked = true;
+  setStatus('linked');
+  entry('Linked to Bravo — full duplex active', 'ok');
+  duplexBar.textContent = '● LIVE';
+  duplexBar.className = 'duplex-overlay live';
+  syncControls();
+  startQualityPolling();
+  openDataConn();
+  applyMuteToSenders();
+}
+
 function attachCall(c) {
   call = c;
+
+  // Safety net: PeerJS emits 'stream' but on some Android/WebRTC versions it
+  // never fires when the remote stream has no video tracks or when addStream
+  // isn't used. Hook ontrack directly so we never miss the connection.
+  const _pcReady = () => {
+    const pc = c.peerConnection || c._pc;
+    if (!pc) return;
+    pc.addEventListener('track', ev => {
+      if (!ev.streams || !ev.streams[0]) return;
+      const stream = ev.streams[0];
+      document.getElementById('remoteAudio').srcObject = stream;
+      document.getElementById('remoteVideo').srcObject = stream;
+      const _cu = document.getElementById('chatUnderlay');
+      if (_cu) { _cu.srcObject = stream; _cu.classList.remove('no-stream'); }
+      syncMiniVideos();
+      document.getElementById('remoteWrap').classList.remove('waiting', 'stale');
+      updateRemoteVideoState(true, stream.getVideoTracks().length > 0);
+      markLinked();
+    });
+    // Also watch ICE connection state — if ICE succeeds but no tracks arrive
+    // (e.g. audio-unavailable mode on both ends), still mark linked.
+    pc.addEventListener('iceconnectionstatechange', () => {
+      if ((pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') && !linked) {
+        entry('ICE connected (no stream tracks) — marking linked', 'sys');
+        markLinked();
+      }
+    });
+  };
+  // peerConnection may not exist yet at attachCall time; wait one tick
+  if (c.peerConnection || c._pc) { _pcReady(); }
+  else { setTimeout(_pcReady, 0); }
+
   c.on('stream', stream => {
     document.getElementById('remoteAudio').srcObject = stream;
     const remoteVideo = document.getElementById('remoteVideo');
@@ -3864,17 +3909,7 @@ function attachCall(c) {
       track.addEventListener('ended', () => updateRemoteVideoState(false, false));
     });
     if (linked) return;
-    linked = true;
-    setStatus('linked');
-    entry('Linked to Bravo — full duplex active', 'ok');
-    duplexBar.textContent = '● LIVE';
-    duplexBar.className = 'duplex-overlay live';
-    syncControls();
-    startQualityPolling();
-    // Ensure data channel is open (may have failed during retry storm)
-    openDataConn();
-    // Re-enforce mute/unmute state now that WebRTC senders are live.
-    applyMuteToSenders();
+    markLinked();
   });
   // Only trigger onDrop if this is still the active call (guards against stale calls
   // from a previous dial attempt closing and racing with the current one)
