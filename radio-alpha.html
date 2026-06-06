@@ -3618,7 +3618,9 @@ function dial() {
     call = null;
   }
   entry('Calling Bravo…', 'info');
-  const c = peer.call(REMOTE_ID, getCallStream());
+  const _cs = getCallStream();
+  entry('DIAG: calling with ' + _cs.getTracks().length + ' tracks (audio=' + _cs.getAudioTracks().length + ' video=' + _cs.getVideoTracks().length + ')', 'sys');
+  const c = peer.call(REMOTE_ID, _cs);
   attachCall(c);
   openDataConn();
   // Watchdog: if no stream arrives within 90s, close and redial
@@ -3863,8 +3865,36 @@ function attachCall(c) {
   // isn't used. Hook ontrack directly so we never miss the connection.
   const _pcReady = () => {
     const pc = c.peerConnection || c._pc;
-    if (!pc) return;
+    if (!pc) { entry('DIAG: peerConnection not ready — retrying…', 'sys'); setTimeout(_pcReady, 200); return; }
+    entry('DIAG: RTCPeerConnection obtained, signalingState=' + pc.signalingState, 'sys');
+    pc.addEventListener('icegatheringstatechange', () => {
+      entry('DIAG: ICE gathering → ' + pc.iceGatheringState, 'sys');
+    });
+    pc.addEventListener('icecandidate', ev => {
+      if (ev.candidate) {
+        entry('DIAG: local candidate ' + ev.candidate.type + ' ' + ev.candidate.protocol, 'sys');
+      } else {
+        entry('DIAG: ICE gathering complete', 'sys');
+      }
+    });
+    pc.addEventListener('iceconnectionstatechange', () => {
+      entry('DIAG: ICE → ' + pc.iceConnectionState, 'sys');
+      if ((pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') && !linked) {
+        entry('ICE connected — marking linked', 'sys');
+        markLinked();
+      }
+      if (pc.iceConnectionState === 'failed') {
+        entry('DIAG: ICE FAILED — no path found between peers', 'err');
+      }
+    });
+    pc.addEventListener('connectionstatechange', () => {
+      entry('DIAG: connection state → ' + pc.connectionState, 'sys');
+    });
+    pc.addEventListener('signalingstatechange', () => {
+      entry('DIAG: signaling → ' + pc.signalingState, 'sys');
+    });
     pc.addEventListener('track', ev => {
+      entry('DIAG: track received kind=' + ev.track.kind, 'sys');
       if (!ev.streams || !ev.streams[0]) return;
       const stream = ev.streams[0];
       document.getElementById('remoteAudio').srcObject = stream;
@@ -3876,16 +3906,7 @@ function attachCall(c) {
       updateRemoteVideoState(true, stream.getVideoTracks().length > 0);
       markLinked();
     });
-    // Also watch ICE connection state — if ICE succeeds but no tracks arrive
-    // (e.g. audio-unavailable mode on both ends), still mark linked.
-    pc.addEventListener('iceconnectionstatechange', () => {
-      if ((pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') && !linked) {
-        entry('ICE connected (no stream tracks) — marking linked', 'sys');
-        markLinked();
-      }
-    });
   };
-  // peerConnection may not exist yet at attachCall time; wait one tick
   if (c.peerConnection || c._pc) { _pcReady(); }
   else { setTimeout(_pcReady, 0); }
 
