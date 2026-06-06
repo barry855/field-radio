@@ -1988,12 +1988,12 @@ function showLoginBox() {
   document.getElementById('reconnectOverlay').classList.remove('active');
 }
 
-// ── 10-second auto-login countdown ───────────────────────────
+// ── 3-second auto-login countdown ────────────────────────────
 let loginTimeoutInterval;
-let loginSecsLeft = 10;
+let loginSecsLeft = 3;
 function startLoginTimeout() {
   clearInterval(loginTimeoutInterval);  // prevent double-interval from stale saved HTML
-  loginSecsLeft = 10;
+  loginSecsLeft = 3;
   loginTimeoutInterval = setInterval(() => {
     loginSecsLeft--;
     if (loginSecsLeft <= 0) {
@@ -3546,7 +3546,9 @@ function startPeer() {
   peer.on('open', () => {
     entry('Radio online', 'ok');
     setStatus('calling');
-    dial();
+    // Delay first dial to give Android Bravo time to acquire camera/mic
+    // before the call arrives (getUserMedia + permission dialog can take 3-5s)
+    setTimeout(dial, 4000);
   });
 
   peer.on('connection', dc => {
@@ -3934,7 +3936,20 @@ function attachCall(c) {
   });
   // Only trigger onDrop if this is still the active call (guards against stale calls
   // from a previous dial attempt closing and racing with the current one)
-  c.on('close', () => { if (call === c) onDrop(); });
+  c.on('close', () => {
+    if (call !== c) return;
+    if (!linked) {
+      // Call was rejected before linking (e.g. Bravo media not ready yet) —
+      // redial quickly without returning to the login screen
+      call = null;
+      if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
+      pendingDC = false;
+      entry('Call rejected before link — redialling in 3s…', 'sys');
+      retryTimer = setTimeout(dial, 3000);
+    } else {
+      onDrop();
+    }
+  });
   c.on('error', e => { entry('Call error: ' + e.message, 'err'); if (call === c) onDrop(); });
 }
 
