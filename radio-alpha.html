@@ -1261,7 +1261,7 @@
           </div>
         </div>
         <div class="mini-video-overlay hidden" id="miniRemoteOverlay">
-          <video id="miniRemoteVideo" autoplay="" playsinline=""></video>
+          <video id="miniRemoteVideo" autoplay="" playsinline="" muted=""></video>
           <span class="video-label">BRAVO</span>
           <button class="mini-toggle-btn" title="Hide mini" onclick="toggleMiniVideo();event.stopPropagation()">✕</button>
         </div>
@@ -1298,7 +1298,7 @@
         <div class="panel-label">REMOTE — BRAVO</div>
         <div class="video-grid">
           <div class="video-wrap waiting" id="remoteWrap">
-            <video id="remoteVideo" autoplay="" playsinline=""></video>
+            <video id="remoteVideo" autoplay="" playsinline="" muted=""></video>
             <span class="video-label">BRAVO</span>
             <span class="duplex-overlay" id="duplexBar2">OFFLINE</span>
           </div>
@@ -1483,7 +1483,7 @@
         <div class="panel-label">COMMS</div>
         <video id="chatUnderlay" autoplay playsinline muted></video>
         <div class="mini-video-overlay" id="miniChatOverlay">
-          <video id="miniChatVideo" autoplay playsinline></video>
+          <video id="miniChatVideo" autoplay playsinline muted></video>
           <span class="video-label">REMOTE</span>
           <button class="mini-toggle-btn" title="Hide mini" onclick="toggleMiniChat();event.stopPropagation()">✕</button>
         </div>
