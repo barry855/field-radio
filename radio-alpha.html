@@ -1654,20 +1654,7 @@ function startSession() {
   presenceWrite(myKey); // immediate write
   presenceWriteTimer = setInterval(() => presenceWrite(myKey), 5000);
   // Poll Firebase for BRAVO's actual peer ID (may have suffix) and keep REMOTE_ID current.
-  const _bravoPollKey = 'bravo-' + code;
-  async function _refreshRemoteId() {
-    try {
-      const _r = await fetch(FB_URL + '/presence/' + _bravoPollKey + '.json');
-      const _d = await _r.json();
-      if (_d && _d.peerId && _d.peerId !== REMOTE_ID) {
-        entry('BRAVO re-registered as: ' + _d.peerId, 'sys');
-        REMOTE_ID = _d.peerId;
-      }
-    } catch(e) {}
-  }
-  _refreshRemoteId();
-  if (window._remoteIdPollTimer) clearInterval(window._remoteIdPollTimer);
-  window._remoteIdPollTimer = setInterval(_refreshRemoteId, 5000);
+  _setupRemoteIdPoll('bravo-' + code);
   // Persist code and checkbox states for next load
   const disVidChecked = document.getElementById('loginDisableVideo').checked;
   const disAudChecked = document.getElementById('loginDisableAudio').checked;
@@ -3549,6 +3536,27 @@ function init() {
       handleMediaError(e);
     }
   });
+}
+
+// Module-level: refreshes REMOTE_ID from Firebase (BRAVO's suffixed peer ID).
+// Must be module-level so startPeer's peer.on('open') closure can reference it.
+async function _refreshRemoteId() {
+  try {
+    const _bravoPollKey = 'bravo-' + (MY_ID ? MY_ID.replace(/^alpha-/, '') : '');
+    if (!_bravoPollKey || _bravoPollKey === 'bravo-') return;
+    const _r = await fetch(FB_URL + '/presence/' + _bravoPollKey + '.json');
+    const _d = await _r.json();
+    if (_d && _d.peerId && _d.peerId !== REMOTE_ID) {
+      entry('BRAVO peer ID: ' + _d.peerId, 'sys');
+      REMOTE_ID = _d.peerId;
+    }
+  } catch(e) {}
+}
+
+function _setupRemoteIdPoll(bravoPollKey) {
+  _refreshRemoteId();
+  if (window._remoteIdPollTimer) clearInterval(window._remoteIdPollTimer);
+  window._remoteIdPollTimer = setInterval(_refreshRemoteId, 5000);
 }
 
 let _unavailIdRetries = 0;
