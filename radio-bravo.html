@@ -3578,12 +3578,18 @@ function startPeer() {
       incoming.close();
       return;
     }
-    // If already linked, close the previous call cleanly before answering the new one
+    // If already linked or a previous call exists, close it silently WITHOUT going
+    // through onDrop — Alpha is simply re-dialling (e.g. ICE restart or brief drop
+    // on its side). Calling onDrop here would push Bravo to the reconnect screen and
+    // trigger a startSession() → unavailable-id spiral.
     if (call) {
-      try { call.close(); } catch(e) {}
+      try { call.off('close'); call.off('error'); call.close(); } catch(e) {}
       call = null;
-      linked = false;
     }
+    // Keep linked=true if we were already linked so the UI stays live
+    const wasLinked = linked;
+    linked = false; // will be re-set by markLinked() once ICE connects on new call
+    if (wasLinked) entry('Re-answering call from Alpha (reconnect)…', 'sys');
     const _as = getCallStream();
     entry('DIAG: answering with ' + _as.getTracks().length + ' tracks (audio=' + _as.getAudioTracks().length + ' video=' + _as.getVideoTracks().length + ')', 'sys');
     incoming.answer(_as);
@@ -3600,11 +3606,11 @@ function startPeer() {
     entry('Peer error [' + e.type + ']: ' + e.message, 'err');
     if (e.type === 'browser-incompatible') return;
     if (e.type === 'unavailable-id') {
-      const suffix = Math.random().toString(36).slice(2,6).toUpperCase();
-      MY_ID = MY_ID.replace(/-[A-Z0-9]{4}$/, '') + '-' + suffix || MY_ID + '-' + suffix;
-      entry('ID taken (stale session) — retrying as ' + MY_ID + '…', 'sys');
+      // Stale session holds the ID — wait for PeerJS server to release it, then retry
+      // with the SAME ID so REMOTE_ID on Alpha stays valid. Do NOT change MY_ID here.
+      entry('ID taken by stale session — retrying same ID in 8s…', 'sys');
       peer.destroy();
-      setTimeout(startPeer, 1500);
+      setTimeout(startPeer, 8000);
       return;
     }
     if (e.type === 'peer-unavailable') {
@@ -3827,6 +3833,7 @@ function sendVideoState() {
 function markLinked() {
   if (linked) return;
   linked = true;
+  clearTimeout(retryTimer); // cancel any pending retry/watchdog
   setStatus('linked');
   entry('Linked to Alpha — full duplex active', 'ok');
   duplexBar.textContent = '● LIVE';
