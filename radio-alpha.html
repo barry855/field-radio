@@ -1594,14 +1594,20 @@ document.addEventListener('click', function() {
   if (_actx && _actx.state === 'suspended') _actx.resume();
 }, true);
 
-// Free public TURN servers (Open Relay Project) — essential for mobile/carrier-NAT networks
+// ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
+// turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
 const ICE_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
+  { urls: 'stun:stun2.l.google.com:19302' },
+  { urls: 'stun:stun3.l.google.com:19302' },
+  { urls: 'stun:stun.cloudflare.com:3478' },
   { urls: 'stun:openrelay.metered.ca:80' },
-  { urls: 'turn:openrelay.metered.ca:80',       username: 'openrelayproject', credential: 'openrelayproject' },
-  { urls: 'turn:openrelay.metered.ca:443',      username: 'openrelayproject', credential: 'openrelayproject' },
-  { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
+  { urls: 'turn:openrelay.metered.ca:80',              username: 'openrelayproject', credential: 'openrelayproject' },
+  { urls: 'turn:openrelay.metered.ca:443',             username: 'openrelayproject', credential: 'openrelayproject' },
+  { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+  { urls: 'turns:openrelay.metered.ca:443',            username: 'openrelayproject', credential: 'openrelayproject' },
+  { urls: 'turns:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
 ];
 
 let MY_ID, REMOTE_ID;
@@ -1647,6 +1653,24 @@ function startSession() {
   const myKey = 'alpha-' + code;
   presenceWrite(myKey); // immediate write
   presenceWriteTimer = setInterval(() => presenceWrite(myKey), 5000);
+  // Poll Firebase for BRAVO's actual peer ID in case it has a suffix (ghost-avoidance).
+  // Update REMOTE_ID whenever BRAVO publishes a new peerId.
+  const bravoPollKey = 'bravo-' + code;
+  async function refreshRemoteId() {
+    try {
+      const res = await fetch(FB_URL + '/presence/' + bravoPollKey + '.json');
+      const data = await res.json();
+      if (data && data.peerId && data.peerId !== REMOTE_ID) {
+        entry('BRAVO re-registered as: ' + data.peerId, 'sys');
+        REMOTE_ID = data.peerId;
+      }
+    } catch(e) {}
+  }
+  refreshRemoteId();
+  const remoteIdPollTimer = setInterval(refreshRemoteId, 5000);
+  // Clear this timer when we leave the session (piggyback on presenceWriteTimer teardown)
+  const _origStop = stopPresencePolling;
+  stopPresencePolling = function() { clearInterval(remoteIdPollTimer); stopPresencePolling = _origStop; _origStop(); };
   // Persist code and checkbox states for next load
   const disVidChecked = document.getElementById('loginDisableVideo').checked;
   const disAudChecked = document.getElementById('loginDisableAudio').checked;
@@ -1714,6 +1738,11 @@ async function presencePoll(partnerKey, myKey) {
     const res = await fetch(FB_URL + '/presence/' + partnerKey + '.json');
     const data = await res.json();
     if (data && data.ts && (Date.now() - data.ts) < PRESENCE_STALE_MS) {
+      // If BRAVO published its actual peer ID (suffixed), update REMOTE_ID so we dial correctly
+      if (data.peerId && data.peerId !== REMOTE_ID) {
+        entry('BRAVO peer ID: ' + data.peerId, 'sys');
+        REMOTE_ID = data.peerId;
+      }
       loginPresenceSetState('reachable', 'BRAVO REACHABLE');
     } else {
       loginPresenceSetState('offline', 'BRAVO OFFLINE');
@@ -3894,7 +3923,8 @@ function attachCall(c) {
         markLinked();
       }
       if (pc.iceConnectionState === 'failed') {
-        entry('DIAG: ICE FAILED — no path found between peers', 'err');
+        entry('DIAG: ICE FAILED — attempting ICE restart', 'err');
+        try { pc.restartIce(); } catch(e) { entry('ICE restart unavailable: ' + e.message, 'sys'); }
       }
     });
     pc.addEventListener('connectionstatechange', () => {
