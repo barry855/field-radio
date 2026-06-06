@@ -1,5 +1,4 @@
 
-
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -2006,6 +2005,7 @@ function startLoginTimeout() {
 }
 // If this page load is the result of a refresh, show the reconnect overlay
 // over the login box until auto-login fires (sessionStorage survives reload)
+let _loginTimeoutStarted = false;
 (function() {
   try {
     if (sessionStorage.getItem('fieldRadioRefreshing') === '1') {
@@ -2014,12 +2014,14 @@ function startLoginTimeout() {
       document.getElementById('sessionOverlay').style.display = 'flex';
       prefillLogin();
       startLoginTimeout();
+      _loginTimeoutStarted = true;
     }
   } catch(e) {}
 })();
 
 // Only start login timeout if the overlay wasn't already dismissed by auto-login
-if (document.getElementById('sessionOverlay').style.display !== 'none') {
+// and the refresh path above hasn't already started it
+if (!_loginTimeoutStarted && document.getElementById('sessionOverlay').style.display !== 'none') {
   startLoginTimeout();
 }
 
@@ -3584,12 +3586,11 @@ function startPeer() {
       return;
     }
     if (e.type === 'unavailable-id') {
-      // Stale session holds the preferred ID — claim a random suffix variant immediately
-      const suffix = Math.random().toString(36).slice(2,6).toUpperCase();
-      MY_ID = MY_ID.replace(/-[A-Z0-9]{4}$/, '') + '-' + suffix || MY_ID + '-' + suffix;
-      entry('ID taken (stale session) — retrying as ' + MY_ID + '…', 'sys');
+      // Stale session holds the ID — wait for PeerJS server to release it, then retry
+      // with the SAME ID so REMOTE_ID on Bravo stays valid. Do NOT change MY_ID here.
+      entry('ID taken by stale session — retrying same ID in 8s…', 'sys');
       peer.destroy();
-      setTimeout(startPeer, 1500);
+      setTimeout(startPeer, 8000);
       return;
     }
     // network / server-error / socket-error / socket-closed
@@ -3850,6 +3851,7 @@ function sendVideoState() {
 function markLinked() {
   if (linked) return;
   linked = true;
+  clearTimeout(retryTimer); // cancel 90s watchdog and any pending redial
   setStatus('linked');
   entry('Linked to Bravo — full duplex active', 'ok');
   duplexBar.textContent = '● LIVE';
