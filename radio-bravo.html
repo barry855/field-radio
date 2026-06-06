@@ -666,8 +666,8 @@
   .leave-btn:hover { background: rgba(0,212,255,0.3); }
   .speech-top-btn.leave-style { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.15); }
   .speech-top-btn.leave-style:hover { background: rgba(0,212,255,0.3); }
-  .speech-top-btn.rec-chat-btn { border-color: #ff8c00; color: #ff8c00; }
-  .speech-top-btn.rec-chat-btn:hover { border-color: #ffaa33; color: #ffaa33; background: rgba(255,140,0,0.15); }
+  .speech-top-btn.rec-chat-btn { border-color: #3a8fff; color: #3a8fff; }
+  .speech-top-btn.rec-chat-btn:hover { border-color: #6aafff; color: #6aafff; background: rgba(58,143,255,0.15); }
   .speech-top-btn.rec-chat-btn.recording { border-color: #ff4444; color: #ff4444; background: rgba(255,68,68,0.15); }
   .user-left-notice {
     display: none; align-items: center; gap: 8px;
@@ -1375,7 +1375,8 @@
           </div>
           <div class="chat-btn-bar-row">
             <button class="speech-top-btn" id="chatVideoViewBtn" onclick="toggleChatVideoView()" title="Toggle chat video view">VIDEO REMOTE</button>
-            <button class="speech-top-btn rec-chat-btn" id="recChatBtn" onclick="toggleRecordChat()" title="Record current main feed + mini if visible">&#x27A4; RECORD</button>
+            <span class="rec-label chat-rec-label">&#x27A4;&nbsp;RECORD:</span>
+            <button class="speech-top-btn rec-chat-btn" id="recChatBtn" onclick="toggleRecordChat()" title="Record current main feed + mini if visible">⏺ Start</button>
             <button class="speech-top-btn video-off-state" id="videoOffChatBtn" onclick="toggleVideo()" title="Video on/off">Video Off</button>
             <button class="speech-top-btn" id="audioChatBtn" onclick="toggleAudio()" title="Mute/unmute mic">Audio On</button>
             <button class="speech-top-btn" id="screenChatBtn" onclick="toggleScreenShare()" title="Share screen">Share Off</button>
@@ -3642,6 +3643,7 @@ function attachDataConn(dc) {
     pendingDC = false;
     dataConn = dc;
     entry('Chat channel open', 'ok');
+    setStatus('reachable');
     const sb = document.getElementById('sendBtn'); if (sb) sb.disabled = false;
     sendVideoState();
     if (_pendingChatMsg) {
@@ -3895,8 +3897,10 @@ function attachCall(c) {
       entry('DIAG: track received kind=' + ev.track.kind, 'sys');
       if (!ev.streams || !ev.streams[0]) return;
       const stream = ev.streams[0];
-      document.getElementById('remoteAudio').srcObject = stream;
-      document.getElementById('remoteVideo').srcObject = stream;
+      const _ra = document.getElementById('remoteAudio');
+      _ra.srcObject = stream; _ra.play().catch(() => {});
+      const _rv = document.getElementById('remoteVideo');
+      _rv.srcObject = stream; _rv.play().catch(() => {});
       const _cu = document.getElementById('chatUnderlay');
       if (_cu) { _cu.srcObject = stream; _cu.classList.remove('no-stream'); }
       syncMiniVideos();
@@ -3909,9 +3913,10 @@ function attachCall(c) {
   else { setTimeout(_pcReady, 0); }
 
   c.on('stream', stream => {
-    document.getElementById('remoteAudio').srcObject = stream;
+    const remoteAudio = document.getElementById('remoteAudio');
+    remoteAudio.srcObject = stream; remoteAudio.play().catch(() => {});
     const remoteVideo = document.getElementById('remoteVideo');
-    remoteVideo.srcObject = stream;
+    remoteVideo.srcObject = stream; remoteVideo.play().catch(() => {});
     const _cu = document.getElementById('chatUnderlay');
     if (_cu) { _cu.srcObject = stream; _cu.classList.remove('no-stream'); }
     syncMiniVideos();
@@ -3948,7 +3953,7 @@ function saveRecordingIfActive() {
   if (recChat && recChat.state === 'recording') {
     entry('Connection lost — auto-saving chat recording…', 'sys');
     const btnC = document.getElementById('recChatBtn');
-    if (btnC) { btnC.textContent = '➤ RECORD'; btnC.classList.remove('recording'); }
+    if (btnC) { btnC.textContent = '⏺ Start'; btnC.classList.remove('recording'); }
     recChatBusy = true;
     recChat.stop();
   }
@@ -4267,7 +4272,7 @@ async function toggleRecordChat() {
   if (recChat && recChat.state === 'recording') {
     recChatBusy = true;
     recChat.stop();
-    if (btn) { btn.textContent = '➤ RECORD'; btn.classList.remove('recording'); }
+    if (btn) { btn.textContent = '⏺ Start'; btn.classList.remove('recording'); }
     return;
   }
   if (recChat && recChat.state !== 'inactive') return;
@@ -4313,7 +4318,7 @@ async function toggleRecordChat() {
     saveRec(recChatChunks, mimeType, isLocalMain ? 'chat-local' : 'chat-remote');
   };
   recChat.start(1000);
-  if (btn) { btn.textContent = '⏹ STOP'; btn.classList.add('recording'); }
+  if (btn) { btn.textContent = '⏹ Stop'; btn.classList.add('recording'); }
   entry(`Chat recording started (${isLocalMain ? 'local' : 'remote'} main${withMini ? ' + mini' : ''})…`, 'ok');
 }
 
