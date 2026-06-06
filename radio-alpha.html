@@ -3209,7 +3209,7 @@ function toggleListening() {
 function startListening() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
-    setStatus('NOT SUPPORTED');
+    setSpeechStatus('NOT SUPPORTED');
     return;
   }
   if (_recognition) { try { _recognition.abort(); } catch(e){} }
@@ -3221,7 +3221,7 @@ function startListening() {
   _recognition.onstart = () => {
     _listening = true;
     _interimText = '';
-    setStatus('● LISTENING');
+    setSpeechStatus('● LISTENING');
     const lb = document.getElementById('speechListenBtn');
     if (lb) lb.classList.add('listening');
     const ss = document.getElementById('speechStatus');
@@ -3250,7 +3250,7 @@ function startListening() {
 
   _recognition.onerror = (e) => {
     if (e.error === 'no-speech') return; // ignore silence
-    setStatus('ERR: ' + e.error.toUpperCase());
+    setSpeechStatus('ERR: ' + e.error.toUpperCase());
     stopListening();
   };
 
@@ -3261,20 +3261,20 @@ function startListening() {
     }
   };
 
-  try { _recognition.start(); } catch(e) { setStatus('ERR: START FAILED'); }
+  try { _recognition.start(); } catch(e) { setSpeechStatus('ERR: START FAILED'); }
 }
 
 function stopListening() {
   _listening = false;
   if (_recognition) { try { _recognition.stop(); } catch(e){} _recognition = null; }
-  setStatus('IDLE');
+  setSpeechStatus('IDLE');
   const lb = document.getElementById('speechListenBtn');
   if (lb) { lb.classList.remove('listening'); lb.textContent = 'TALK'; }
   const ss = document.getElementById('speechStatus');
   if (ss) ss.classList.remove('listening');
 }
 
-function setStatus(txt) {
+function setSpeechStatus(txt) {
   const ss = document.getElementById('speechStatus');
   if (ss) ss.textContent = txt;
 }
