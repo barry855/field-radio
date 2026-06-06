@@ -1331,6 +1331,7 @@
         <div class="video-grid">
           <div class="video-wrap waiting" id="remoteWrap">
             <video id="remoteVideo" autoplay="" playsinline=""></video>
+            <button id="audioUnlockBtn" onclick="unlockRemoteAudio()" style="display:none;position:absolute;bottom:28px;left:50%;transform:translateX(-50%);z-index:30;background:rgba(0,200,120,0.92);color:#000;border:none;border-radius:6px;padding:8px 18px;font-size:13px;font-family:monospace;font-weight:bold;letter-spacing:1px;cursor:pointer;">▶ TAP TO HEAR</button>
             <span class="video-label">ALPHA</span>
             <span class="duplex-overlay" id="duplexBar2">OFFLINE</span>
           </div>
@@ -1625,10 +1626,25 @@ function playTone(name) {
 function ensureRemoteAudioPlaying() {
   const ra = document.getElementById('remoteAudio');
   if (ra && ra.srcObject && ra.paused) {
-    ra.play().catch(e => entry('remoteAudio play retry: ' + e.message, 'sys'));
+    ra.play().catch(e => {
+      entry('remoteAudio play retry: ' + e.message, 'sys');
+      showAudioUnlockBtn();
+    });
   }
   const rv = document.getElementById('remoteVideo');
   if (rv && rv.srcObject && rv.paused) rv.play().catch(() => {});
+}
+function showAudioUnlockBtn() {
+  const btn = document.getElementById('audioUnlockBtn');
+  if (btn) btn.style.display = 'block';
+}
+function unlockRemoteAudio() {
+  const ra = document.getElementById('remoteAudio');
+  if (ra) ra.play().then(() => {
+    const btn = document.getElementById('audioUnlockBtn');
+    if (btn) btn.style.display = 'none';
+    entry('Remote audio unlocked by user tap', 'sys');
+  }).catch(e => entry('Audio unlock failed: ' + e.message, 'err'));
 }
 document.addEventListener('click', function() {
   if (_actx && _actx.state === 'suspended') _actx.resume();
@@ -3907,7 +3923,7 @@ function attachCall(c) {
       if (!ev.streams || !ev.streams[0]) return;
       const stream = ev.streams[0];
       const _ra = document.getElementById('remoteAudio');
-      _ra.srcObject = stream; _ra.play().catch(e => { entry('remoteAudio play (track): ' + e.message, 'sys'); });
+      _ra.srcObject = stream; _ra.play().catch(e => { entry('remoteAudio play (track): ' + e.message, 'sys'); showAudioUnlockBtn(); });
       const _rv = document.getElementById('remoteVideo');
       _rv.srcObject = stream; _rv.play().catch(() => {});
       const _cu = document.getElementById('chatUnderlay');
@@ -3923,7 +3939,7 @@ function attachCall(c) {
 
   c.on('stream', stream => {
     const remoteAudio = document.getElementById('remoteAudio');
-    remoteAudio.srcObject = stream; remoteAudio.play().catch(e => { entry('remoteAudio play (stream): ' + e.message, 'sys'); });
+    remoteAudio.srcObject = stream; remoteAudio.play().catch(e => { entry('remoteAudio play (stream): ' + e.message, 'sys'); showAudioUnlockBtn(); });
     const remoteVideo = document.getElementById('remoteVideo');
     remoteVideo.srcObject = stream; remoteVideo.play().catch(() => {});
     const _cu = document.getElementById('chatUnderlay');
