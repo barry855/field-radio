@@ -3578,9 +3578,9 @@ function startPeer() {
     _unavailIdRetries = 0; // ID claimed — reset backoff
     entry('Radio online', 'ok');
     setStatus('calling');
-    // Delay first dial to give Android Bravo time to acquire camera/mic
-    // before the call arrives (getUserMedia + permission dialog can take 3-5s)
-    setTimeout(dial, 4000);
+    // Fetch BRAVO's actual peer ID from Firebase before dialling, then wait
+    // the camera-acquire delay so getUserMedia + permission dialog can complete.
+    _refreshRemoteId().then(() => setTimeout(dial, 4000));
   });
 
   peer.on('connection', dc => {
@@ -3612,7 +3612,8 @@ function startPeer() {
       // Clear stale pendingDC so the next dial() can open a fresh data channel
       if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
       pendingDC = false;
-      retryTimer = setTimeout(dial, 5000);
+      // Refresh BRAVO's peer ID — it may have re-registered with a new suffix
+      retryTimer = setTimeout(() => _refreshRemoteId().then(dial), 5000);
       return;
     }
     if (e.type === 'unavailable-id') {
