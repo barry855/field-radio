@@ -767,7 +767,7 @@
     transition: border-color 0.2s;
   }
   #speechEditBox:focus { border-color: var(--accent2); }
-  #speechEditBox::placeholder { color: rgba(200,220,240,0.45); }
+  #speechEditBox::placeholder { color: rgba(200,220,240,0.75); }
   .speech-btn-row {
     display: flex; gap: 4px; justify-content: space-between; align-items: center;
     flex-shrink: 0; flex-wrap: wrap;
@@ -1215,6 +1215,31 @@
   }
   .login-presence .ptxt.p-reachable { color: #ffaa00; }
   .login-presence .ptxt.p-offline   { color: #ff4444; }
+
+  /* ── LANDSCAPE: full-screen video only ─────────────────────── */
+  @media (orientation: landscape) {
+    header, .tab-bar { display: none !important; }
+    .shell { padding: 0; gap: 0; }
+    .tab-content { padding: 0; gap: 0; border: none; border-radius: 0; background: #000; }
+    #paneChat { gap: 0; }
+    .chat-btn-bar-row,
+    .gain-row,
+    .zoom-row,
+    #chatFindBar,
+    #logPanel,
+    #speechPanel,
+    #chat,
+    #translateBar,
+    .chat-panel > .panel-label { display: none !important; }
+    #chatPanel {
+      position: fixed; inset: 0; z-index: 50;
+      border-radius: 0; border: none;
+      padding: 0; background: #000;
+    }
+    #chatUnderlay { border-radius: 0; }
+    /* keep mini overlay and its close button accessible */
+    #miniChatOverlay { z-index: 55; }
+  }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js"></script></head>
 <body>
@@ -1383,7 +1408,7 @@
         <div class="gain-label"><span>MIC</span><span>GAIN</span></div>
         <input type="range" id="micGainSliderChat" min="0" max="3" step="0.05" value="1" oninput="applyMicGain(this.value)" style="max-width:80px;">
         <span class="gain-val" id="micGainValChat">1.00×</span>
-        <button class="syslog-chat-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input" style="margin-left:auto; flex-shrink:0; white-space:nowrap;">TALK OR TYPE IN CHAT</button>
+        <button class="speech-top-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input" style="margin-left:auto; flex-shrink:0; white-space:nowrap;">TALK OR TYPE IN CHAT</button>
       </div>
       <div class="zoom-row" style="display:none;">
         <span>ZOOM LOCAL</span>
@@ -1538,7 +1563,7 @@
       <div id="speechPanel">
         <div class="speech-top-bar" style="display:none"></div>
         <div class="file-preview-strip" id="speechFilePreviewStrip"></div>
-        <textarea id="speechEditBox" placeholder="Tap TALK to start — edit or type here." spellcheck="true"></textarea>
+        <textarea id="speechEditBox" placeholder="Tap Talk… or type here." spellcheck="true"></textarea>
 
         <div class="speech-btn-row">
           <div class="sbr-left">
