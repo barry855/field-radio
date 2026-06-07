@@ -1538,16 +1538,18 @@
         <div class="file-preview-strip" id="speechFilePreviewStrip"></div>
         <textarea id="speechEditBox" placeholder="Tap TALK to start — edit or type here." spellcheck="true"></textarea>
         <div class="speech-btn-row" style="justify-content:flex-start; gap:4px;">
+          <span class="sbr-label">CHAT:</span>
           <button class="speech-top-btn" onclick="saveChatToFile()" id="saveChatBtn" title="Save chat as HTML">💾 SAVE</button>
           <button class="speech-top-btn" onclick="restoreChat()" id="restoreChatBtn" title="Restore previous session chat">↩ RESTORE</button>
           <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR</button>
           <button class="speech-top-btn" id="findChatBtn" title="Find in chat">🔍 FIND</button>
         </div>
+        <div class="speech-btn-row speech-btn-row-spacer"></div>
         <div class="speech-btn-row">
           <div class="sbr-left">
-            <span class="sbr-label">CHAT:</span>
-          </div>
-          <div class="sbr-mid">
+            <span class="sbr-label">INPUT:</span>
+            <button id="speechAttachBtn" onclick="speechAttachClick()" title="Attach file or drag &amp; drop">ATTACH</button>
+            <input type="file" id="speechFileInput" multiple style="display:none" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx">
             <button id="speechLoadBtn" onclick="speechLoadText()" title="Load text file into input box">LOAD</button>
             <button id="speechSaveBtn" onclick="speechSaveText()" title="Save input box text to file">SAVE</button>
             <button id="speechClearBtn" onclick="speechClearText()" title="Clear input box">CLEAR</button>
@@ -1610,16 +1612,6 @@
             </select>
             <button id="speechSendBtn" onclick="sendSpeechToChat()" disabled>SEND</button>
             <button id="speechListenBtn" onclick="toggleListening()">TALK</button>
-          </div>
-        </div>
-        <div class="speech-btn-row speech-btn-row-spacer"></div>
-        <div class="speech-btn-row">
-          <div class="sbr-left">
-            <span class="sbr-label">INPUT:</span>
-          </div>
-          <div class="sbr-mid">
-            <button id="speechAttachBtn" onclick="speechAttachClick()" title="Attach file or drag &amp; drop">ATTACH</button>
-            <input type="file" id="speechFileInput" multiple style="display:none" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx">
           </div>
         </div>
       </div>
@@ -4180,8 +4172,11 @@ function onDrop() {
   syncControls();
   const _ra = document.getElementById('remoteAudio');
   if (_ra) { try { _ra.pause(); _ra.srcObject = null; } catch(e){} }
-  const _rv = document.getElementById('remoteVideo');
-  if (_rv) { try { _rv.srcObject = null; _rv.load(); } catch(e){} }
+  // Clear last stale frame from all remote video surfaces
+  ['remoteVideo','miniRemoteVideo','chatUnderlay'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { try { el.pause(); el.srcObject = null; el.load(); } catch(e){} }
+  });
   syncMiniVideos();
   document.getElementById('remoteWrap').classList.remove('video-off', 'no-video', 'waiting');
   document.getElementById('remoteWrap').classList.add('stale');
