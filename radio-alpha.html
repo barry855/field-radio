@@ -5179,12 +5179,12 @@ function saveLog() {
   const rows = Array.from(document.querySelectorAll('#log .log-entry'));
   const bodyHtml = rows.map(el => {
     const cls = el.className.replace('log-entry','').trim();
-    const colors = { sys:'#222', info:'#0066bb', ok:'#007744', err:'#cc2200', tx:'#886600' };
-    const col = colors[cls] || '#222';
-    return `<div style="color:${col};font-family:monospace;font-size:13px;line-height:1.5;">${el.textContent}</div>`;
+    const colors = { sys:'#aabbcc', info:'#55bbee', ok:'#44cc88', err:'#ff5555', tx:'#ffcc44' };
+    const col = colors[cls] || '#aabbcc';
+    return `<div style="color:${col};font-family:monospace;font-size:13px;line-height:1.5;white-space:pre-wrap;">${el.textContent}</div>`;
   }).join('');
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>SYS LOG ${ts}</title>`
-    + `<style>body{background:#fff;padding:16px;margin:0;}</style></head><body>${bodyHtml}</body></html>`;
+    + `<style>body{background:#0a1520;padding:16px;margin:0;}</style></head><body>${bodyHtml}</body></html>`;
   const blob = new Blob([html], { type: 'text/html' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
