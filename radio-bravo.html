@@ -3228,10 +3228,7 @@ function syncUnderlayOpacity() {
 
 // ── SYS LOG chat-bar toggle ──────────────────────────────────────────────────
 function setChatBtnsDisabled(disabled) {
-  ['findChatBtn', 'saveChatBtn', 'restoreChatBtn', 'clearChatBtn'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.disabled = disabled;
-  });
+  // buttons always remain enabled
 }
 
 function toggleSysLogView() {
