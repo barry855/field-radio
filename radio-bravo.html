@@ -4148,12 +4148,13 @@ function _doLeave() {
   if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
   if (peer)  { try { peer.destroy(); } catch(e){} peer = null; }
   linked = false;
-  // Close window
-  window.close();
-  // Fallback if window.close() is blocked — show ended screen (do NOT reload, that returns to login)
-  setTimeout(() => {
-    document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0a1520;color:#f1f5f9;font-family:monospace;font-size:18px;letter-spacing:1px;">SESSION ENDED — YOU MAY CLOSE THIS TAB</div>';
-  }, 300);
+  // Always show the ended screen — never call window.close() as Android Chrome
+  // closes the tab immediately, revealing whatever was behind it before the
+  // session ended message can appear.
+  document.body.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;height:100vh;background:#0a1520;color:#f1f5f9;font-family:monospace;text-align:center;padding:20px;">'
+    + '<div style="font-size:22px;letter-spacing:2px;font-weight:bold;">SESSION ENDED</div>'
+    + '<div style="font-size:15px;color:#94a3b8;letter-spacing:1px;">You may now close this tab.</div>'
+    + '</div>';
 }
 
 function handleRemoteLeave() {
