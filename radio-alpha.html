@@ -1363,6 +1363,7 @@
         <button class="speech-top-btn" onclick="refreshScreen()" title="Refresh / Reconnect" style="flex-shrink:0;">↺ REFRESH</button>
         <button class="speech-top-btn leave-style" id="leaveChatBtn" onclick="leaveSession()" title="Leave session" style="flex-shrink:0;">✕ Leave</button>
         <button class="speech-top-btn" id="flipChatBtn" onclick="flipCamera()" title="Flip camera" style="margin-left:auto; flex-shrink:0;">⟳ Flip Cam</button>
+        <button class="speech-top-btn" id="fsChatBtn" onclick="toggleFullScreen()" title="Full Screen Toggle" style="flex-shrink:0;">FS OFF</button>
         <button class="speech-top-btn active" id="miniChatBtn" onclick="toggleMiniChat()" title="Toggle mini video in chat" style="flex-shrink:0;">MINI ON</button>
       </div>
       <div class="chat-btn-bar-row" style="flex-shrink:0;">
@@ -5018,6 +5019,31 @@ async function flipCamera() {
   }
 }
 
+
+// ── Full Screen toggle ────────────────────────────────────────
+function toggleFullScreen() {
+  const btn = document.getElementById('fsChatBtn');
+  const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+  if (!isFs) {
+    const el = document.documentElement;
+    if (el.requestFullscreen)       el.requestFullscreen();
+    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    if (btn) { btn.textContent = 'FS ON'; btn.classList.add('active'); }
+  } else {
+    if (document.exitFullscreen)       document.exitFullscreen();
+    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    if (btn) { btn.textContent = 'FS OFF'; btn.classList.remove('active'); }
+  }
+}
+document.addEventListener('fullscreenchange',       _syncFsBtn);
+document.addEventListener('webkitfullscreenchange', _syncFsBtn);
+function _syncFsBtn() {
+  const btn = document.getElementById('fsChatBtn');
+  if (!btn) return;
+  const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+  btn.textContent = isFs ? 'FS ON' : 'FS OFF';
+  isFs ? btn.classList.add('active') : btn.classList.remove('active');
+}
 
 // ── Speaker / Earphone toggle ─────────────────────────────────
 // Toggles between loudspeaker and earphone/headset output.
