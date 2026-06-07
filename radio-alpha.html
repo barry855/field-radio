@@ -1514,7 +1514,6 @@
 
         <div class="speech-btn-row">
           <div class="sbr-left">
-            <span class="sbr-label">INPUT:</span>
             <button id="speechAttachBtn" onclick="speechAttachClick()" title="Attach file or drag &amp; drop">ATTACH</button>
             <input type="file" id="speechFileInput" multiple style="display:none" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx">
             <button id="speechLoadBtn" onclick="speechLoadText()" title="Load text file into input box">LOAD</button>
@@ -1525,57 +1524,14 @@
           </div>
           <div class="sbr-right">
             <select id="speechLangSelect" title="Speech recognition language" onchange="setSpeechLang(this.value)">
-              <option value="en-US">EN</option>
-              <option value="en-GB">EN-GB</option>
-              <option value="af-ZA">AF</option>
-              <option value="ar-SA">AR</option>
-              <option value="bg-BG">BG</option>
-              <option value="ca-ES">CA</option>
-              <option value="zh-CN">ZH</option>
-              <option value="zh-TW">ZH-TW</option>
-              <option value="hr-HR">HR</option>
-              <option value="cs-CZ">CS</option>
-              <option value="da-DK">DA</option>
-              <option value="nl-NL">NL</option>
-              <option value="et-EE">ET</option>
-              <option value="fi-FI">FI</option>
-              <option value="fr-FR">FR</option>
-              <option value="de-DE">DE</option>
-              <option value="el-GR">EL</option>
-              <option value="gu-IN">GU</option>
-              <option value="he-IL">HE</option>
-              <option value="hi-IN">HI</option>
-              <option value="hu-HU">HU</option>
-              <option value="id-ID">ID</option>
-              <option value="it-IT">IT</option>
-              <option value="ja-JP">JA</option>
-              <option value="kn-IN">KN</option>
-              <option value="ko-KR">KO</option>
-              <option value="lv-LV">LV</option>
-              <option value="lt-LT">LT</option>
-              <option value="ms-MY">MS</option>
-              <option value="ml-IN">ML</option>
-              <option value="mr-IN">MR</option>
-              <option value="nb-NO">NB</option>
-              <option value="pl-PL">PL</option>
-              <option value="pt-BR">PT-BR</option>
-              <option value="pt-PT">PT-PT</option>
-              <option value="ro-RO">RO</option>
-              <option value="ru-RU">RU</option>
-              <option value="sr-RS">SR</option>
-              <option value="sk-SK">SK</option>
-              <option value="sl-SI">SL</option>
-              <option value="es-ES">ES</option>
-              <option value="es-MX">ES-MX</option>
-              <option value="sw-KE">SW</option>
-              <option value="sv-SE">SV</option>
-              <option value="ta-IN">TA</option>
-              <option value="te-IN">TE</option>
-              <option value="th-TH">TH</option>
-              <option value="tr-TR">TR</option>
-              <option value="uk-UA">UK</option>
-              <option value="ur-PK">UR</option>
-              <option value="vi-VN">VI</option>
+              <option value="en-US">Eng</option>
+              <option value="en-GB">Eng UK</option>
+              <option value="es-ES">ESP</option>
+              <option value="fr-FR">French</option>
+              <option value="de-DE">German</option>
+              <option value="ja-JP">Japan</option>
+              <option value="zh-CN">Chinese</option>
+              <option value="pt-BR">Port</option>
             </select>
             <button id="speechSendBtn" onclick="sendSpeechToChat()" disabled>SEND</button>
             <button id="speechListenBtn" onclick="toggleListening()">TALK</button>
