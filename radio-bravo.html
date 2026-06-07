@@ -1367,7 +1367,6 @@
         <button class="speech-top-btn leave-style" id="leaveChatBtn" onclick="leaveSession()" title="Leave session" style="flex-shrink:0;">✕ Leave</button>
         <button class="speech-top-btn" id="flipChatBtn" onclick="flipCamera()" title="Flip camera" style="margin-left:auto; flex-shrink:0;">⟳ Flip Cam</button>
         <button class="speech-top-btn active" id="miniChatBtn" onclick="toggleMiniChat()" title="Toggle mini video in chat" style="flex-shrink:0;">MINI ON</button>
-        <button class="syslog-chat-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input" style="flex-shrink:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">TALK OR TYPE IN CHAT</button>
       </div>
       <div class="chat-btn-bar-row" style="flex-shrink:0;">
         <button class="speech-top-btn" id="chatVideoViewBtn" onclick="toggleChatVideoView()" title="Toggle chat video view">SEEING THEM</button>
@@ -1379,8 +1378,9 @@
       </div>
       <div class="gain-row" style="flex-shrink:0;">
         <div class="gain-label"><span>MIC</span><span>GAIN</span></div>
-        <input type="range" id="micGainSliderChat" min="0" max="3" step="0.05" value="1" oninput="applyMicGain(this.value)">
+        <input type="range" id="micGainSliderChat" min="0" max="3" step="0.05" value="1" oninput="applyMicGain(this.value)" style="max-width:80px;">
         <span class="gain-val" id="micGainValChat">1.00×</span>
+        <button class="syslog-chat-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input" style="margin-left:auto; flex-shrink:0; white-space:nowrap;">TALK OR TYPE IN CHAT</button>
       </div>
       <div class="zoom-row" style="display:none;">
         <span>ZOOM LOCAL</span>
