@@ -2215,10 +2215,10 @@ function scrollToBottom(force) {
 
 function setStatus(state) {
   linkLed.className = 'led';
-  if (state === 'calling')      { linkLed.classList.add('on-yellow'); statusEl.textContent = 'CALLING…'; }
-  else if (state === 'reachable') { linkLed.classList.add('on-amber');  statusEl.textContent = 'WAITING'; }
-  else if (state === 'linked')    { linkLed.classList.add('on-green');  statusEl.textContent = 'LINKED'; }
-  else                            { statusEl.textContent = ''; }
+  if (state === 'calling')        { linkLed.classList.add('on-yellow'); statusEl.textContent = 'CALLING…'; document.title = '📡 CALLING… — ALPHA — Field Radio v6'; }
+  else if (state === 'reachable') { linkLed.classList.add('on-amber');  statusEl.textContent = 'WAITING';  document.title = '🟡 WAITING — ALPHA — Field Radio v6'; }
+  else if (state === 'linked')    { linkLed.classList.add('on-green');  statusEl.textContent = 'LINKED';   document.title = '🟢 LINKED — ALPHA — Field Radio v6'; }
+  else                            { statusEl.textContent = ''; document.title = 'ALPHA — Field Radio v6'; }
 }
 
 let activeTab = 'chat';
