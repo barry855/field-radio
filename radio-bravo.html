@@ -771,6 +771,8 @@
   .speech-btn-row .sbr-left  { display: flex; gap: 4px; align-items: center; }
   .speech-btn-row .sbr-mid   { display: flex; gap: 4px; align-items: center; }
   .speech-btn-row .sbr-right { display: flex; gap: 4px; align-items: center; }
+  .speech-btn-row-spacer     { height: 6px; min-height: 6px; }
+  .sbr-label { font-size: 0.75rem; font-weight: bold; color: var(--accent, #00d4ff); letter-spacing: 0.05em; white-space: nowrap; padding: 0 4px; }
   #speechLangSelect {
     background: var(--btn-bg); border: 1px solid var(--border);
     color: var(--text); font-family: 'Share Tech Mono', monospace;
@@ -1543,8 +1545,7 @@
         </div>
         <div class="speech-btn-row">
           <div class="sbr-left">
-            <button id="speechAttachBtn" onclick="speechAttachClick()" title="Attach file or drag &amp; drop">ATTACH</button>
-            <input type="file" id="speechFileInput" multiple style="display:none" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx">
+            <span class="sbr-label">CHAT:</span>
           </div>
           <div class="sbr-mid">
             <button id="speechLoadBtn" onclick="speechLoadText()" title="Load text file into input box">LOAD</button>
@@ -1609,6 +1610,16 @@
             </select>
             <button id="speechSendBtn" onclick="sendSpeechToChat()" disabled>SEND</button>
             <button id="speechListenBtn" onclick="toggleListening()">TALK</button>
+          </div>
+        </div>
+        <div class="speech-btn-row speech-btn-row-spacer"></div>
+        <div class="speech-btn-row">
+          <div class="sbr-left">
+            <span class="sbr-label">INPUT:</span>
+          </div>
+          <div class="sbr-mid">
+            <button id="speechAttachBtn" onclick="speechAttachClick()" title="Attach file or drag &amp; drop">ATTACH</button>
+            <input type="file" id="speechFileInput" multiple style="display:none" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx">
           </div>
         </div>
       </div>
