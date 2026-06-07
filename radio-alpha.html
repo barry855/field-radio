@@ -1185,8 +1185,8 @@
   .login-presence .ptxt.p-reachable { color: #ffaa00; }
   .login-presence .ptxt.p-offline   { color: #ff4444; }
 
-  /* ── LANDSCAPE: full-screen video only ─────────────────────── */
-  @media (orientation: landscape) {
+  /* ── LANDSCAPE: full-screen video only (mobile/touch only) ─── */
+  @media (orientation: landscape) and (max-height: 500px) and (pointer: coarse) {
     header, .tab-bar { display: none !important; }
     .shell { padding: 0; gap: 0; }
     .tab-content { padding: 0; gap: 0; border: none; border-radius: 0; background: #000; }
