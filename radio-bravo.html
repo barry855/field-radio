@@ -1364,7 +1364,9 @@
       <div class="chat-btn-bar-row" style="flex-shrink:0; margin-bottom:4px;">
         <button class="speech-top-btn" onclick="refreshScreen()" title="Refresh / Reconnect">↺ REFRESH</button>
         <button class="speech-top-btn leave-style" id="leaveChatBtn" onclick="leaveSession()" title="Leave session">✕ Leave</button>
-        <button class="syslog-chat-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input" style="margin-left:auto;">TALK OR TYPE IN CHAT</button>
+        <button class="speech-top-btn" id="flipChatBtn" onclick="flipCamera()" title="Flip camera">⟳ Flip Cam</button>
+        <button class="syslog-chat-btn" id="syslogToggleBtn" onclick="toggleSysLogView()" title="Toggle SYS LOG" style="margin:0 auto;">SYS LOG</button>
+        <button class="syslog-chat-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input">TALK OR TYPE IN CHAT</button>
       </div>
       <div class="mini-row-wrap open" id="miniRowWrapChat">
         <div class="mini-row-toggle" onclick="toggleMiniRowWrap('miniRowWrapChat')">
@@ -1374,22 +1376,19 @@
         </div>
         <div class="mini-row" style="flex-direction:column; align-items:stretch; gap:4px;">
           <div class="chat-btn-bar-row">
-            <button class="speech-top-btn" id="chatVideoViewBtn" onclick="toggleChatVideoView()" title="Toggle chat video view">VIDEO REMOTE</button>
+            <button class="speech-top-btn" id="chatVideoViewBtn" onclick="toggleChatVideoView()" title="Toggle chat video view">SEEING THEM</button>
             <button class="speech-top-btn rec-chat-btn" id="recChatBtn" onclick="toggleRecordChat()" title="Record current main feed + mini if visible">➤ RECORD</button>
             <button class="speech-top-btn video-off-state" id="videoOffChatBtn" onclick="toggleVideo()" title="Video on/off">Video Off</button>
             <button class="speech-top-btn" id="audioChatBtn" onclick="toggleAudio()" title="Mute/unmute mic">Audio On</button>
             <button class="speech-top-btn" id="screenChatBtn" onclick="toggleScreenShare()" title="Share screen">Share Off</button>
+            <button class="speech-top-btn active" id="miniChatBtn" onclick="toggleMiniChat()" title="Toggle mini video in chat" style="margin-left:auto;">MINI ON</button>
           </div>
           <div class="gain-row">
             <div class="gain-label"><span>MIC</span><span>GAIN</span></div>
             <input type="range" id="micGainSliderChat" min="0" max="3" step="0.05" value="1" oninput="applyMicGain(this.value)">
             <span class="gain-val" id="micGainValChat">1.00×</span>
           </div>
-          <div class="chat-btn-bar-row">
-            <button class="speech-top-btn active" id="miniChatBtn" onclick="toggleMiniChat()" title="Toggle mini video in chat">MINI ON</button>
-            <button class="speech-top-btn" id="flipChatBtn" onclick="flipCamera()" title="Flip camera">⟳ Flip Cam</button>
-            <button class="syslog-chat-btn" id="syslogToggleBtn" onclick="toggleSysLogView()" title="Toggle SYS LOG">SYS LOG</button>
-          </div>
+
           <div class="zoom-row" style="display:none;">
             <span>ZOOM LOCAL</span>
             <input type="range" id="zoomSliderChat" min="1" max="4" step="0.1" value="1" oninput="applyZoom(this.value,'local')">
@@ -2163,15 +2162,31 @@ let _loginTimeoutStarted = false;
 // 'input' + 'keyup' + 'change' — covers older Android WebViews where 'input' can be silent
 (function() {
   let _lastCode = '';
+  let _resumeTimer = null;
   function _onCodeChange() {
     const code = document.getElementById('sessionCode').value.trim().toUpperCase().replace(/\s+/g,'');
     if (code === _lastCode) return;
     _lastCode = code;
     startPresencePolling(code);
+    // Suspend auto-login countdown while user is typing
+    clearInterval(loginTimeoutInterval);
+    clearTimeout(_resumeTimer);
+    // Resume countdown 2 s after they stop typing
+    _resumeTimer = setTimeout(() => { startLoginTimeout(); }, 2000);
   }
   ['input','keyup','change'].forEach(ev =>
     document.getElementById('sessionCode').addEventListener(ev, _onCodeChange)
   );
+  // Also suspend on focus so pasting / tapping the field halts the timer
+  document.getElementById('sessionCode').addEventListener('focus', () => {
+    clearInterval(loginTimeoutInterval);
+    clearTimeout(_resumeTimer);
+  });
+  // Resume countdown when user leaves the field without pressing Connect
+  document.getElementById('sessionCode').addEventListener('blur', () => {
+    clearTimeout(_resumeTimer);
+    startLoginTimeout();
+  });
 })();
 document.getElementById('sessionCode').addEventListener('keydown', e => {
   if (e.key === 'Enter') startSession();
@@ -2321,10 +2336,10 @@ function updateChatVideoViewBtn() {
   const btn = document.getElementById('chatVideoViewBtn');
   if (!btn) return;
   if (chatUnderlayMode === 'local') {
-    btn.textContent = 'VIDEO LOCAL';
+    btn.textContent = 'SEEING YOU';
     btn.classList.add('active');
   } else {
-    btn.textContent = 'VIDEO REMOTE';
+    btn.textContent = 'SEEING THEM';
     btn.classList.remove('active');
   }
 }
