@@ -1397,6 +1397,13 @@
           </div>
         </div>
       </div>
+<div style="display:flex; flex-shrink:0; flex-wrap:wrap; align-items:center; gap:4px; padding:3px 6px; border-top:1px solid rgba(255,255,255,0.08);">
+  <span class="sbr-label">CHAT:</span>
+  <button class="speech-top-btn" onclick="saveChatToFile()" id="saveChatBtn" title="Save chat as HTML">💾 SAVE</button>
+  <button class="speech-top-btn" onclick="restoreChat()" id="restoreChatBtn" title="Restore previous session chat">↩ RESTORE</button>
+  <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR</button>
+  <button class="speech-top-btn" id="findChatBtn" title="Find in chat">🔍 FIND</button>
+</div>
 <div id="translateBar">
     <label>🌐 TRANSLATE</label>
     <button id="translateTrigger" onclick="toggleTranslateDrop(event)">SELECT LANGUAGE</button>
@@ -1537,14 +1544,7 @@
         <div class="speech-top-bar" style="display:none"></div>
         <div class="file-preview-strip" id="speechFilePreviewStrip"></div>
         <textarea id="speechEditBox" placeholder="Tap TALK to start — edit or type here." spellcheck="true"></textarea>
-        <div class="speech-btn-row" style="justify-content:flex-start; gap:4px;">
-          <span class="sbr-label">CHAT:</span>
-          <button class="speech-top-btn" onclick="saveChatToFile()" id="saveChatBtn" title="Save chat as HTML">💾 SAVE</button>
-          <button class="speech-top-btn" onclick="restoreChat()" id="restoreChatBtn" title="Restore previous session chat">↩ RESTORE</button>
-          <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR</button>
-          <button class="speech-top-btn" id="findChatBtn" title="Find in chat">🔍 FIND</button>
-        </div>
-        <div class="speech-btn-row speech-btn-row-spacer"></div>
+
         <div class="speech-btn-row">
           <div class="sbr-left">
             <span class="sbr-label">INPUT:</span>
