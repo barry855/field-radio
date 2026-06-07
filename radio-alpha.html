@@ -286,16 +286,20 @@
   .find-chat-btn.active { border-color: var(--accent, #00d4ff); color: var(--accent); }
 
   .syslog-chat-btn {
-    background: #000; border: 1px solid #444;
-    border-radius: 4px; color: #fff;
-    font-size: 11px; line-height: 1;
-    padding: 4px 8px; cursor: pointer;
-    font-family: 'Share Tech Mono', monospace; letter-spacing: 1px;
-    transition: border-color 0.15s, color 0.15s;
-    margin-left: auto;
+    background: transparent; border: none;
+    padding: 0; cursor: pointer;
+    margin-left: auto; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
   }
-  .syslog-chat-btn:hover, .syslog-chat-btn:active { border-color: var(--accent, #00d4ff); color: var(--accent); }
-  .syslog-chat-btn.active { border-color: #00d4ff; color: #000; background: #00d4ff; }
+  .syslog-led {
+    display: block; width: 10px; height: 10px;
+    border-radius: 50%;
+    background: #1a6e1a;
+    box-shadow: 0 0 4px #1a6e1a, 0 0 2px #0f0 inset;
+    transition: background 0.15s, box-shadow 0.15s;
+  }
+  .syslog-chat-btn:hover .syslog-led { background: #2aaa2a; box-shadow: 0 0 6px #2aaa2a, 0 0 3px #0f0 inset; }
+  .syslog-chat-btn.active .syslog-led { background: #ccaa00; box-shadow: 0 0 7px #ffdd00, 0 0 3px #ffe066 inset; }
 
   /* ── Chat button bar (above message area) ──────────────────── */
   /* ── Chat button bar rows inside mini-row-wrap ─────────────── */
@@ -1342,7 +1346,7 @@
         <button class="speech-top-btn video-off-state" id="videoOffChatBtn" onclick="toggleVideo()" title="Video on/off">Video Off</button>
         <button class="speech-top-btn" id="audioChatBtn" onclick="toggleAudio()" title="Mute/unmute mic">Audio On</button>
         <button class="speech-top-btn" id="screenChatBtn" onclick="toggleScreenShare()" title="Share screen">Share Off</button>
-        <button class="syslog-chat-btn" id="syslogToggleBtn" onclick="toggleSysLogView()" title="Toggle SYS LOG" style="margin-left:auto;">SYS LOG</button>
+        <button class="syslog-chat-btn" id="syslogToggleBtn" onclick="toggleSysLogView()" title="Toggle SYS LOG" style="margin-left:auto;"><span class="syslog-led"></span></button>
       </div>
       <div class="gain-row" style="flex-shrink:0;">
         <div class="gain-label"><span>MIC</span><span>GAIN</span></div>
@@ -3213,14 +3217,14 @@ function toggleSysLogView() {
       const l = logPanel.querySelector('#log');
       if (l) setTimeout(() => { l.scrollTop = l.scrollHeight; }, 50);
     }
-    if (btn) { btn.classList.add('active'); btn.textContent = 'SYS LOG'; }
+    if (btn) { btn.classList.add('active'); }
     setChatBtnsDisabled(true);
   } else {
     if (logPanel) {
       logPanel.classList.remove('syslog-open');
       logPanel.classList.add('collapsed');
     }
-    if (btn) { btn.classList.remove('active'); btn.textContent = 'SYS LOG'; }
+    if (btn) { btn.classList.remove('active'); }
     setChatBtnsDisabled(false);
   }
   syncUnderlayOpacity();
@@ -3242,7 +3246,7 @@ function toggleSpeechPanel() {
       const lp = document.getElementById('logPanel');
       if (lp) { lp.classList.remove('syslog-open'); lp.classList.add('collapsed'); }
       const lb = document.getElementById('syslogToggleBtn');
-      if (lb) { lb.classList.remove('active'); lb.textContent = 'SYS LOG'; }
+      if (lb) { lb.classList.remove('active'); }
     }
     if (panel) panel.classList.add('speech-open');
     if (btn)   { btn.classList.add('active'); btn.textContent = 'SHOW CHAT'; }
