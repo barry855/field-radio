@@ -684,7 +684,7 @@
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: #ccc transparent;
-    background: rgba(255,255,255,0.15);
+    background: #ffffff;
     border-radius: 4px;
     padding: 4px 8px;
     margin-top: 6px;
@@ -791,11 +791,11 @@
   }
   #speechFilePreviewStrip.has-files { display: flex; }
 
-  .log-entry.sys  { color: #aabbcc; }
-  .log-entry.info { color: #55bbee; }
-  .log-entry.ok   { color: #44cc88; }
-  .log-entry.err  { color: #ff5555; }
-  .log-entry.tx   { color: #ffcc44; }
+  .log-entry.sys  { color: #222222; }
+  .log-entry.info { color: #0066bb; }
+  .log-entry.ok   { color: #007744; }
+  .log-entry.err  { color: #cc2200; }
+  .log-entry.tx   { color: #886600; }
 
 
 
@@ -3591,7 +3591,7 @@ function init() {
   // Acquire mic + camera — facingMode only used as a soft hint on mobile,
   // omitted on desktop to avoid OverconstrainedError on macOS.
   const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
-  const videoConstraint = isMobile ? { facingMode: 'user' } : true;
+  const videoConstraint = isMobile ? { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } : { width: { ideal: 1920 }, height: { ideal: 1080 } };
 
   function applyStreamFlags(stream) {
     localStream = stream;
