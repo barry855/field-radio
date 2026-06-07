@@ -3366,8 +3366,13 @@ function startListening() {
 
   _recognition.onend = () => {
     if (_listening) {
-      // Auto-restart for continuous mode (browser may stop after silence)
-      try { _recognition.start(); } catch(e) { stopListening(); }
+      // Auto-restart for continuous mode. Use a fresh instance with a short
+      // delay so Android fully tears down the mic before reopening it —
+      // prevents the OS from playing its mic-off tone mid-session.
+      setTimeout(() => {
+        if (!_listening) return;
+        try { startListening(); } catch(e) { stopListening(); }
+      }, 250);
     }
   };
 
