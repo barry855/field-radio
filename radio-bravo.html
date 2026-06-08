@@ -1955,8 +1955,8 @@ async function translateText(text, targetLang) {
 }
 
 async function translateBubblesSequentially(langCode) {
-  const bubbles = Array.from(document.querySelectorAll('#chat .bubble'));
-  if (bubbles.length === 0) { entry('No messages to translate yet', 'sys'); return; }
+  const bubbles = Array.from(document.querySelectorAll('#chat .bubble.theirs'));
+  if (bubbles.length === 0) { entry('No incoming messages to translate yet', 'sys'); return; }
   entry('Translating ' + bubbles.length + ' message(s)…', 'sys');
   let count = 0;
   for (const b of bubbles) {
@@ -2856,8 +2856,8 @@ function addBubble(text, mine, ts, save = true, restoredStatus = null) {
     void msgBadge.offsetWidth; // reflow to restart animation
     msgBadge.classList.add('visible');
   }
-  // Auto-translate bubbles if language is active
-  if (_translateLang) {
+  // Auto-translate incoming bubbles if language is active
+  if (_translateLang && !mine) {
     wrap.dataset.orig = text;
     translateText(text, _translateLang).then(t => {
       if (t) { const md = wrap.querySelector('.msg-text'); if (md) md.textContent = t; }
