@@ -3852,7 +3852,7 @@ function attachDataConn(dc) {
     if (f) {
       if (f.__control === 'video') { updateRemoteVideoState(f.enabled, f.hasTrack !== false); return; }
       if (f.__control === 'leave') { handleRemoteLeave(); return; }
-      if (f.__control === 'refresh') { entry('Remote refreshed — reloading…', 'sys'); peerRefreshing = true; try { sessionStorage.setItem('fieldRadioRefreshing', '1'); } catch(e) {} setTimeout(() => window.location.reload(), 400); return; }
+      if (f.__control === 'refresh') { entry('Remote refreshed — restarting…', 'sys'); setTimeout(() => refreshScreen(), 400); return; }
       if (f.__file  === true)      { addMediaBubble(f.name, f.type, f.data, false); return; }
       if (f.__chunk === true)      { receiveChunk(f); return; }
       addBubble(JSON.stringify(f), false);
@@ -4789,18 +4789,20 @@ function toggleAudio() {
 
 // ── Refresh Screen — reloads page (Unit ID pre-fills from localStorage) ──
 function refreshScreen() {
-  // Notify remote peer so they auto-refresh in sync — both sides reload after
-  // the same delay so the reload is as simultaneous as possible.
+  // Notify remote peer so they also restart
   try { dcSend({ __control: 'refresh' }); } catch(e) {}
   peerRefreshing = true;  // suppress onDrop login redirect
-  // Flag survives the reload so the fresh page auto-reconnects via login countdown
-  try { sessionStorage.setItem('fieldRadioRefreshing', '1'); } catch(e) {}
-  // Show login box immediately on the refreshing side too
-  document.getElementById('sessionOverlay').style.display = 'flex';
-  document.getElementById('unitIdDisplay').style.display = 'none';
-  // Local side waits 500 ms; remote starts its 400 ms timer on message receipt.
-  // With ~100 ms one-way latency both reloads fire at roughly the same instant.
-  setTimeout(() => window.location.reload(), 500);
+  entry('Refreshing connection…', 'sys');
+  // Tear down current peer/call cleanly then restart immediately
+  clearTimeout(retryTimer);
+  if (call)     { try { call.off('close', onDrop); call.close(); }  catch(e) {} call = null; }
+  if (dataConn) { try { dataConn.close(); }                         catch(e) {} dataConn = null; }
+  if (peer && !peer.destroyed) { try { peer.destroy(); }            catch(e) {} }
+  peer = null;
+  linked = false;
+  pendingDC = false;
+  peerRefreshing = false;
+  startSession();
 }
 
 // ── Camera flip (Android front/back) ─────────────────────────
