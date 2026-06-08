@@ -4087,6 +4087,9 @@ function markLinked() {
   startQualityPolling();
   openDataConn();
   applyMuteToSenders();
+  // Hide RECONNECTING overlay now that link is established
+  const ro = document.getElementById('reconnectingOverlay');
+  if (ro) ro.classList.remove('visible');
 }
 
 function attachCall(c) {
@@ -4976,9 +4979,8 @@ function refreshScreen() {
   pendingDC = false;
   peerRefreshing = false;
   setTimeout(() => {
-    if (ro) ro.classList.remove('visible');
     startSession();
-  }, 2000);
+  }, 500);
 }
 
 // ── Camera flip (Android front/back) ─────────────────────────
