@@ -3894,6 +3894,7 @@ function attachDataConn(dc) {
       if (f.__control === 'leave') { handleRemoteLeave(); return; }
       if (f.__control === 'refresh') {
         entry('Remote refreshed — waiting for reconnect…', 'sys');
+        autoSaveLog('refresh-received');
         const _ro = document.getElementById('reconnectingOverlay');
         if (_ro) _ro.classList.add('visible');
         // Let normal onDrop flow handle redial, but hide the login box so only
@@ -4982,6 +4983,8 @@ function toggleAudio() {
 
 // ── Refresh Screen — restarts session in-place (no page reload) ──
 function refreshScreen() {
+  // Auto-save syslog for diagnostics before teardown
+  autoSaveLog('refresh-initiated');
   // Show full-screen RECONNECTING overlay immediately
   const ro = document.getElementById('reconnectingOverlay');
   if (ro) ro.classList.add('visible');
@@ -5255,6 +5258,27 @@ window.addEventListener('beforeunload', () => {
 });
 
 // ── SYS LOG actions ──────────────────────────────────────────────────────────
+
+// Auto-save log silently (used during refresh cycle for diagnostics)
+function autoSaveLog(label) {
+  try {
+    const ts = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+    const rows = Array.from(document.querySelectorAll('#log .log-entry'));
+    const bodyHtml = rows.map(el => {
+      const cls = el.className.replace('log-entry','').trim();
+      const colors = { sys:'#aabbcc', info:'#55bbee', ok:'#44cc88', err:'#ff5555', tx:'#ffcc44' };
+      const col = colors[cls] || '#aabbcc';
+      return `<div style="color:${col};font-family:monospace;font-size:13px;line-height:1.5;white-space:pre-wrap;">${el.textContent}</div>`;
+    }).join('');
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>ALPHA SYSLOG ${ts}</title>`
+      + `<style>body{background:#0a1520;padding:16px;margin:0;}</style></head><body>${bodyHtml}</body></html>`;
+    const blob = new Blob([html], { type: 'text/html' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `alpha-syslog-${label}-${ts}.html`;
+    a.click();
+  } catch(e) {}
+}
 
 
 function saveLog() {
