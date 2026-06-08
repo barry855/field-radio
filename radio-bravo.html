@@ -206,6 +206,11 @@
   .bubble.show-orig .orig-peek { display: block; }
   .bubble.peek-locked { outline: 2px solid rgba(255,200,0,0.55); outline-offset: 2px; }
   .bubble.peek-locked .orig-peek { opacity: 1; }
+  .trans-sub {
+    font-style: italic; opacity: 0.72; font-size: 0.85em; margin-top: 4px;
+    border-top: 1px dashed rgba(128,128,128,0.4); padding-top: 4px;
+    user-select: text; -webkit-user-select: text;
+  }
 
   /* connection quality */
   .quality-item {
@@ -2853,7 +2858,7 @@ function _toggleLock(wrap) {
   }
 }
 
-function addBubble(text, mine, ts, save = true, restoredStatus = null, orig = null) {
+function addBubble(text, mine, ts, save = true, restoredStatus = null, orig = null, sub = null) {
   if (save) saveMessage(text, mine);
   const now = ts || Date.now();
   const wrap = document.createElement('div');
@@ -2864,6 +2869,9 @@ function addBubble(text, mine, ts, save = true, restoredStatus = null, orig = nu
   const msg = document.createElement('div');
   msg.className = 'msg-text';
   msg.appendChild(linkify(text));
+  const transSub = document.createElement('div');
+  transSub.className = 'trans-sub';
+  if (sub) { transSub.textContent = sub; } else { transSub.style.display = 'none'; }
   const origPeek = document.createElement('div');
   origPeek.className = 'orig-peek';
   const time = document.createElement('div');
@@ -2934,6 +2942,7 @@ function addBubble(text, mine, ts, save = true, restoredStatus = null, orig = nu
   wrap.appendChild(copyBtn);
   wrap.appendChild(who);
   wrap.appendChild(msg);
+  wrap.appendChild(transSub);
   wrap.appendChild(origPeek);
   wrap.appendChild(time);
   // Show original text on hover (desktop) or tap (mobile); click to lock open for copying
@@ -2991,19 +3000,25 @@ async function sendChat(overrideText) {
     chatInput.value = ''; chatInput.style.height = 'auto';
     // Translate outgoing text if a language is selected
     let toSend = txt;
+    let translated = null;
     if (_translateLang) {
       entry('Translating outgoing message\u2026', 'sys');
-      const translated = await translateText(txt, _translateLang);
-      if (translated && translated !== txt) toSend = translated;
+      const t = await translateText(txt, _translateLang);
+      if (t && t !== txt) { translated = t; toSend = t; }
     }
     try {
-      dcSend(toSend);
+      // Send as __chat object so receiver knows both original and translated
+      if (translated) {
+        dcSend({ __chat: true, orig: txt, translated: translated });
+      } else {
+        dcSend(toSend);
+      }
     } catch(e) {
       entry('Send failed: ' + e.message, 'err');
       return;
     }
-    // Show translated text in bubble; store original in data-orig for peek/copy
-    addBubble(toSend, true, null, true, null, toSend !== txt ? txt : null);
+    // Show translated text in bubble with original as always-visible sub-line
+    addBubble(toSend, true, null, true, null, toSend !== txt ? txt : null, translated ? txt : null);
   }
   if (hasFiles) {
     sendPendingFiles();
@@ -3955,6 +3970,13 @@ function attachDataConn(dc) {
       if (f.__control === 'refresh') { entry('Remote refreshed — reloading…', 'sys'); peerRefreshing = true; try { sessionStorage.setItem('fieldRadioRefreshing', '1'); } catch(e) {} setTimeout(() => window.location.reload(), 400); return; }
       if (f.__file  === true)      { addMediaBubble(f.name, f.type, f.data, false); return; }
       if (f.__chunk === true)      { receiveChunk(f); return; }
+      if (f.__chat  === true) {
+        // Show translated text (what was sent) + original as sub-line
+        const mainText = f.translated || f.orig;
+        const subText  = (f.translated && f.translated !== f.orig) ? f.orig : null;
+        addBubble(mainText, false, null, true, null, subText ? mainText : null, subText);
+        return;
+      }
       addBubble(JSON.stringify(f), false);
     } else {
       addBubble(text, false);
