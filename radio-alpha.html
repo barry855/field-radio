@@ -847,7 +847,7 @@
     position: fixed; inset: 0; z-index: 200;
     background: rgba(0,0,0,0.82);
     align-items: center; justify-content: center; flex-direction: column;
-    gap: 18px;
+    gap: 20px;
   }
   .reconnecting-banner.active { display: flex; }
   .reconnecting-text {
@@ -857,20 +857,25 @@
     letter-spacing: 6px;
     color: #00ff9f;
     text-shadow: 0 0 24px rgba(0,255,159,0.8), 0 0 60px rgba(0,255,159,0.4);
-    animation: reconnFlash 0.6s step-end infinite;
     text-align: center;
     padding: 0 16px;
   }
-  .reconnecting-sub {
-    font-family: 'Orbitron', sans-serif;
-    font-size: clamp(10px, 2.5vw, 13px);
-    letter-spacing: 3px;
-    color: rgba(0,255,159,0.55);
-    text-align: center;
+  .reconnecting-bar-wrap {
+    width: clamp(200px, 50vw, 320px);
+    height: 6px;
+    background: rgba(0,255,159,0.15);
+    border-radius: 3px;
+    overflow: hidden;
   }
-  @keyframes reconnFlash {
-    0%, 49% { opacity: 1; }
-    50%, 100% { opacity: 0; }
+  .reconnecting-bar-fill {
+    height: 100%;
+    width: 100%;
+    background: #00ff9f;
+    box-shadow: 0 0 10px rgba(0,255,159,0.7);
+    border-radius: 3px;
+    transform-origin: left;
+    transform: scaleX(1);
+    transition: transform 1s linear;
   }
 
 
@@ -1247,7 +1252,7 @@
 
 <div class="reconnecting-banner" id="reconnectingBanner">
   <div class="reconnecting-text">RECONNECTING…</div>
-  <div class="reconnecting-sub">PLEASE WAIT</div>
+  <div class="reconnecting-bar-wrap"><div class="reconnecting-bar-fill" id="reconnectingBarFill"></div></div>
 </div>
 
 <div class="session-overlay" id="sessionOverlay">
@@ -2122,6 +2127,17 @@ function showLoginBox() {
 // ── 3-second auto-login countdown ────────────────────────────
 let loginTimeoutInterval;
 let loginSecsLeft = 3;
+function _startReconnectBar(totalSecs) {
+  const fill = document.getElementById('reconnectingBarFill');
+  if (!fill) return;
+  // Reset to full instantly (no transition), then animate to zero over totalSecs
+  fill.style.transition = 'none';
+  fill.style.transform = 'scaleX(1)';
+  // Force reflow so the reset takes effect before we apply the transition
+  fill.getBoundingClientRect();
+  fill.style.transition = 'transform ' + totalSecs + 's linear';
+  fill.style.transform = 'scaleX(0)';
+}
 function startLoginTimeout() {
   clearInterval(loginTimeoutInterval);  // prevent double-interval from stale saved HTML
   loginSecsLeft = 3;
@@ -2145,6 +2161,7 @@ let _loginTimeoutStarted = false;
       document.getElementById('sessionOverlay').style.display = 'flex';
       // Keep RECONNECTING banner up through the countdown wait
       document.getElementById('reconnectingBanner').classList.add('active');
+      _startReconnectBar(3);
       prefillLogin();
       startLoginTimeout();
       _loginTimeoutStarted = true;
