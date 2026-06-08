@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -837,8 +838,67 @@
   }
   .session-go:hover { background: var(--btn-hover); border-color: var(--accent); }
 
-  /* ── Reconnect overlay — hidden, login screen shown instead ── */
-  .reconnect-overlay { display: none !important; }
+  /* ── Reconnect overlay — full-screen countdown ── */
+  .reconnect-overlay {
+    display: none;
+    position: fixed; inset: 0; z-index: 200;
+    background: var(--bg);
+    flex-direction: column; align-items: center; justify-content: center;
+    gap: 32px;
+  }
+  .reconnect-overlay.active { display: flex; }
+  .reconnect-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(32px, 8vw, 64px);
+    font-weight: 900;
+    color: var(--accent);
+    letter-spacing: 6px;
+    text-shadow: 0 0 40px rgba(0,212,255,0.6), 0 0 80px rgba(0,212,255,0.3);
+    animation: reconnect-pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes reconnect-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.65; }
+  }
+  .reconnect-sub {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px; letter-spacing: 3px; color: var(--text-dim);
+    text-transform: uppercase;
+  }
+  .reconnect-countdown-wrap {
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    width: min(320px, 80vw);
+  }
+  .reconnect-secs {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 48px; font-weight: 900;
+    color: var(--text); line-height: 1;
+  }
+  .reconnect-slider {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 6px; border-radius: 3px;
+    background: var(--border); outline: none; cursor: default;
+    pointer-events: none;
+  }
+  .reconnect-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px rgba(0,212,255,0.7);
+  }
+  .reconnect-slider::-moz-range-thumb {
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--accent); border: none;
+    box-shadow: 0 0 8px rgba(0,212,255,0.7);
+  }
+  .reconnect-cancel {
+    font-family: 'Orbitron', sans-serif; font-size: 11px; letter-spacing: 2px;
+    padding: 8px 20px; border-radius: 4px;
+    background: var(--btn-bg); border: 1px solid var(--border);
+    color: var(--text-dim); cursor: pointer; text-transform: uppercase;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .reconnect-cancel:hover { border-color: var(--accent); color: var(--text); }
 
 
   /* login checkboxes */
@@ -1214,7 +1274,6 @@
 
 <div class="session-overlay" id="sessionOverlay">
   <div class="session-box">
-    <div class="reconnect-overlay" id="reconnectOverlay"><p>Please wait while I<br>try to reconnect…</p></div>
     <span class="session-title" style="color:#00ff9f;text-shadow:0 0 20px rgba(0,255,159,0.5);">ALPHA</span>
     <label>Unit ID</label>
     <input type="text" id="sessionCode" maxlength="8" placeholder="ENTER CODE" autocomplete="off">
@@ -1228,6 +1287,16 @@
     </div>
     <button class="session-go" onclick="startSession()">CONNECT</button>
   </div>
+</div>
+
+<div class="reconnect-overlay" id="reconnectOverlay">
+  <div class="reconnect-title">RECONNECTING</div>
+  <div class="reconnect-sub">Attempting to re-establish link</div>
+  <div class="reconnect-countdown-wrap">
+    <div class="reconnect-secs" id="reconnectSecs">10</div>
+    <input type="range" class="reconnect-slider" id="reconnectSlider" min="0" max="10" value="10" readonly>
+  </div>
+  <button class="reconnect-cancel" onclick="cancelReconnect()">Cancel</button>
 </div>
 
 <div class="shell">
@@ -2072,10 +2141,44 @@ prefillLogin();
   if (!savedLang && trigger) trigger.textContent = name.toUpperCase();
 })();
 
-function showReconnecting() {
-  document.getElementById('reconnectOverlay').classList.add('active');
+let _reconnectCountdownTimer = null;
+function showReconnecting(secs) {
+  const total = (secs != null) ? secs : 10;
+  const el = document.getElementById('reconnectOverlay');
+  const secsEl = document.getElementById('reconnectSecs');
+  const slider = document.getElementById('reconnectSlider');
+  if (!el) return;
+  // Cancel any running countdown first
+  clearInterval(_reconnectCountdownTimer);
+  // Set up slider range
+  slider.max = total;
+  slider.value = total;
+  secsEl.textContent = total;
+  el.classList.add('active');
+  let remaining = total;
+  _reconnectCountdownTimer = setInterval(() => {
+    remaining--;
+    secsEl.textContent = remaining;
+    slider.value = remaining;
+    if (remaining <= 0) {
+      clearInterval(_reconnectCountdownTimer);
+      el.classList.remove('active');
+      prefillLogin();
+      startSession();
+    }
+  }, 1000);
+}
+function cancelReconnect() {
+  clearInterval(_reconnectCountdownTimer);
+  document.getElementById('reconnectOverlay').classList.remove('active');
+  // Fall back to login screen
+  document.getElementById('sessionOverlay').style.display = 'flex';
+  document.getElementById('unitIdDisplay').style.display = 'none';
+  prefillLogin();
+  startLoginTimeout();
 }
 function showLoginBox() {
+  clearInterval(_reconnectCountdownTimer);
   document.getElementById('reconnectOverlay').classList.remove('active');
 }
 
@@ -2101,11 +2204,10 @@ let _loginTimeoutStarted = false;
   try {
     if (sessionStorage.getItem('fieldRadioRefreshing') === '1') {
       sessionStorage.removeItem('fieldRadioRefreshing');
-      // Show login box and start auto-reconnect countdown
-      document.getElementById('sessionOverlay').style.display = 'flex';
-      prefillLogin();
-      startLoginTimeout();
+      // Show reconnect countdown overlay instead of login box
       _loginTimeoutStarted = true;
+      // Wait for DOM to be ready, then show reconnect overlay
+      showReconnecting(5);
     }
   } catch(e) {}
 })();
@@ -4302,11 +4404,9 @@ function onDrop() {
   dropTimer = setTimeout(() => {
     if (remotePeerLeft) return; // leave message arrived — handled by handleRemoteLeave
     if (peerRefreshing)  return; // refresh in progress — do not show login
-    entry('Link lost — returning to reconnect screen', 'sys');
-    document.getElementById('sessionOverlay').style.display = 'flex';
+    entry('Link lost — showing reconnect countdown', 'sys');
     document.getElementById('unitIdDisplay').style.display = 'none';
-    prefillLogin();
-    startLoginTimeout();
+    showReconnecting(10);
   }, 400);
 }
 
