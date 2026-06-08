@@ -3879,7 +3879,19 @@ function attachDataConn(dc) {
     if (f) {
       if (f.__control === 'video') { updateRemoteVideoState(f.enabled, f.hasTrack !== false); return; }
       if (f.__control === 'leave') { handleRemoteLeave(); return; }
-      if (f.__control === 'refresh') { entry('Remote refreshed — waiting for reconnect…', 'sys'); const _ro=document.getElementById('reconnectingOverlay'); if(_ro) _ro.classList.add('visible'); return; }
+      if (f.__control === 'refresh') {
+        entry('Remote refreshed — waiting for reconnect…', 'sys');
+        const _ro = document.getElementById('reconnectingOverlay');
+        if (_ro) _ro.classList.add('visible');
+        // Let normal onDrop flow handle redial, but hide the login box so only
+        // the RECONNECTING overlay is visible. markLinked() will clear the overlay.
+        setTimeout(() => {
+          prefillLogin();
+          document.getElementById('sessionOverlay').style.display = 'none';
+          startLoginTimeout();
+        }, 600);
+        return;
+      }
       if (f.__file  === true)      { addMediaBubble(f.name, f.type, f.data, false); return; }
       if (f.__chunk === true)      { receiveChunk(f); return; }
       addBubble(JSON.stringify(f), false);
@@ -4290,8 +4302,6 @@ function onDrop() {
   // Check sessionStorage in case the refresh control message raced with the drop
   try { if (sessionStorage.getItem('fieldRadioRefreshing') === '1') peerRefreshing = true; } catch(e) {}
   if (peerRefreshing) return;  // a refresh-reload is in progress — do not show login
-  const _reconn = document.getElementById('reconnectingOverlay');
-  if (_reconn && _reconn.classList.contains('visible')) return; // waiting for remote refresh — do not show login
   // Show reconnect screen after a short grace period.
   // handleRemoteLeave() will cancel this timer if a 'leave' signal arrives first,
   // ensuring a clean leave goes to the leave screen, not the reconnect screen.
@@ -4301,13 +4311,19 @@ function onDrop() {
     // Re-check in case the refresh signal arrived during the grace period
     try { if (sessionStorage.getItem('fieldRadioRefreshing') === '1') peerRefreshing = true; } catch(e) {}
     if (peerRefreshing) return; // refresh in progress — do not show login
-    const _ro2 = document.getElementById('reconnectingOverlay');
-    if (_ro2 && _ro2.classList.contains('visible')) return; // remote refresh in progress
     entry('Link lost — returning to reconnect screen', 'sys');
-    document.getElementById('sessionOverlay').style.display = 'flex';
-    document.getElementById('unitIdDisplay').style.display = 'none';
-    prefillLogin();
-    startLoginTimeout();
+    const _roCheck = document.getElementById('reconnectingOverlay');
+    if (_roCheck && _roCheck.classList.contains('visible')) {
+      // Remote refresh in progress — keep RECONNECTING overlay, hide login box, auto-redial
+      document.getElementById('sessionOverlay').style.display = 'none';
+      prefillLogin();
+      startLoginTimeout();
+    } else {
+      document.getElementById('sessionOverlay').style.display = 'flex';
+      document.getElementById('unitIdDisplay').style.display = 'none';
+      prefillLogin();
+      startLoginTimeout();
+    }
   }, 600);
 }
 
