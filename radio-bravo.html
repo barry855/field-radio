@@ -3947,9 +3947,11 @@ function attachDataConn(dc) {
       if (f.__chat === true && f.text) {
         const srcText = f.text;
         const srcLang = f.lang || null;  // sender's language code
-        if (_myLang && srcLang && srcLang !== _myLang) {
+        // Target: our chosen language, or fall back to browser language
+        const targetLang = _myLang || (navigator.language || 'en').split('-')[0];
+        if (srcLang && srcLang !== targetLang) {
           // Translate sender's text into our language
-          translateText(srcText, _myLang).then(translated => {
+          translateText(srcText, targetLang).then(translated => {
             if (translated && translated !== srcText) {
               // Show translated text; original accessible via hover/tap
               addBubble(translated, false, null, true, null, srcText);
@@ -3958,7 +3960,7 @@ function attachDataConn(dc) {
             }
           });
         } else {
-          // No translation needed (same lang or no lang set) — show as-is
+          // Same language or no lang tag — show as-is
           addBubble(srcText, false);
         }
         return;
