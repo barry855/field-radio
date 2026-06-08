@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <!-- Field Radio v6 — BRAVO -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -1315,7 +1316,7 @@ try {
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js"></script></head>
 <body>
 
-<div class="session-overlay" id="sessionOverlay">
+<div class="session-overlay" id="sessionOverlay" style="display:none">
   <div class="session-box">
     <span class="session-title" style="color:#00d4ff;text-shadow:0 0 20px rgba(0,212,255,0.5);">BRAVO</span>
     <label>Unit ID</label>
@@ -2242,11 +2243,14 @@ let _loginTimeoutStarted = false;
   try {
     if (sessionStorage.getItem('fieldRadioRefreshing') === '1') {
       sessionStorage.removeItem('fieldRadioRefreshing');
-      // Show reconnect countdown overlay instead of login box
+      // Refresh path — show reconnect overlay, keep login hidden
       _loginTimeoutStarted = true;
       showReconnecting(5);
+      return;
     }
   } catch(e) {}
+  // Normal startup — make the login overlay visible now
+  document.getElementById('sessionOverlay').style.display = 'flex';
 })();
 
 // Auto-login countdown only runs after a refresh (code pre-filled from localStorage).
