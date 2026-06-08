@@ -1790,6 +1790,8 @@ let silentCtx = null;
 let silentTrack = null;
 
 let peer, call, dataConn, localStream, linked = false, retryTimer;
+let _preRegistered = false;   // true once preRegister() has opened the peer
+let _preRegCode    = '';      // the code that was pre-registered
 
 const linkLed   = document.getElementById('linkLed');
 const statusEl  = document.getElementById('statusText');
@@ -1819,12 +1821,43 @@ let _syslogVisible  = false;
 let _speechVisible  = false;
 // sendBtn removed — sending is via speech panel only
 
+// ── Pre-registration: register peer silently while user is on login screen ───
+// Called when code reaches exactly 6 chars. Registers the peer and starts
+// Firebase presence so Alpha finds us before the user even clicks Connect.
+function preRegister(code) {
+  if (_preRegistered && _preRegCode === code) return; // already done for this code
+  cancelPreRegister(); // tear down any prior pre-registration
+  _preRegCode = code;
+  MY_ID     = 'bravo-' + code + '-' + Math.random().toString(16).slice(2, 6);
+  REMOTE_ID = 'alpha-' + code;
+  entry('Pre-registering peer for code ' + code + '…', 'sys');
+  startPresencePolling(code); // write our presence & poll for Alpha
+  startPeer();                // register with PeerJS signalling server
+  _preRegistered = true;
+}
+
+function cancelPreRegister() {
+  if (!_preRegistered) return;
+  entry('Pre-registration cancelled (code changed)', 'sys');
+  _preRegistered = false;
+  _preRegCode    = '';
+  if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e){} }
+  peer = null;
+  linked = false;
+  pendingDC = false;
+}
+
 function startSession() {
   stopPresencePolling();
   const code = document.getElementById('sessionCode').value.trim().toUpperCase().replace(/\s+/g,'');
   if (!code) { document.getElementById('sessionCode').focus(); return; }
-  MY_ID     = 'bravo-' + code + '-' + Math.random().toString(16).slice(2, 6);
-  REMOTE_ID = 'alpha-' + code;
+  const usingPreReg = _preRegistered && _preRegCode === code;
+  if (!usingPreReg) {
+    // Normal path: assign IDs fresh (pre-registration didn't fire or used a different code)
+    MY_ID     = 'bravo-' + code + '-' + Math.random().toString(16).slice(2, 6);
+    REMOTE_ID = 'alpha-' + code;
+  }
+  _preRegistered = false; _preRegCode = ''; // consumed
   // Keep writing our heartbeat for the whole session so Firebase shows us as online
   const myKey = 'bravo-' + code;
   presenceWrite(myKey); // immediate write
@@ -1858,7 +1891,12 @@ function startSession() {
   remotePeerLeft = false;
   document.getElementById('unitIdValue').textContent = code;
   document.getElementById('qualityDisplay').style.display = 'flex';
-  init();
+  if (usingPreReg) {
+    entry('Using pre-registered peer — acquiring media only', 'sys');
+    initMediaOnly();
+  } else {
+    init();
+  }
   setTimeout(loadHistory, 100);
 }
 
@@ -2113,6 +2151,8 @@ function prefillLogin() {
     setTimeout(() => entry('PREFILL: code=' + last + ' vid=' + disVid + ' aud=' + disAud + ' ls=' + (typeof localStorage !== 'undefined' ? 'ok' : 'blocked'), 'sys'), 500);
     // Start presence polling immediately if code was pre-filled
     if (last) startPresencePolling(last);
+    // Pre-register peer immediately if saved code is exactly 6 chars
+    if (last && last.length === 6) preRegister(last);
     // Prefill mic gain slider from saved value
     const savedGain = parseFloat(localStorage.getItem('bravo_mic_gain') || '1');
     const gSlider = document.getElementById('micGainSlider');
@@ -2242,6 +2282,11 @@ let _loginTimeoutStarted = false;
     if (code === _lastCode) return;
     _lastCode = code;
     startPresencePolling(code);
+    if (code.length === 6) {
+      preRegister(code);
+    } else {
+      cancelPreRegister();
+    }
     // Suspend auto-login countdown while user is typing
     clearInterval(loginTimeoutInterval);
     clearTimeout(_resumeTimer);
@@ -3629,6 +3674,75 @@ function speechClearText() {
   if (!box) return;
   box.value = '';
   updateSpeechSendBtn();
+}
+
+// ── Media-only init: used when peer is already pre-registered ────────────────
+// Acquires mic/camera and calls dial() on the already-open peer.
+// Mirrors the media-acquisition path in init() without rebuilding the peer.
+function initMediaOnly() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    entry('Mic/camera API not available — data channel only', 'sys');
+    try {
+      const sCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const sDest = sCtx.createMediaStreamDestination();
+      const sOsc = sCtx.createOscillator();
+      const sGain = sCtx.createGain(); sGain.gain.value = 0;
+      sOsc.connect(sGain); sGain.connect(sDest); sOsc.start();
+      localStream = sDest.stream;
+    } catch(ex) { localStream = new MediaStream(); }
+    if (!linked) dial();
+    return;
+  }
+  const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+  const videoConstraint = isMobile ? { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } : { width: { ideal: 1920 }, height: { ideal: 1080 } };
+
+  function applyAndDial(stream) {
+    localStream = stream;
+    setupMicGainNode(stream);
+    document.getElementById('localVideo').srcObject = stream;
+    entry('Mic + camera ready', 'ok');
+    syncMiniVideos();
+    updateLocalVideoState();
+    if (loginDisableVideoFlag) {
+      const vt = stream.getVideoTracks()[0];
+      if (vt) { vt.enabled = false; }
+      updateLocalVideoState();
+      entry('Video disabled (login setting)', 'sys');
+    }
+    if (loginDisableAudioFlag) {
+      const at = stream.getAudioTracks()[0];
+      if (at) { realAudioTrack = at; at.enabled = false; audioMuted = true; }
+      const ab = document.getElementById('audioBtn'); if(ab){ab.textContent='Audio Off';ab.classList.remove('disabled-state');ab.classList.add('active-on');}
+      const ab2 = document.getElementById('audioBtn2'); if(ab2){ab2.textContent='Audio Off';ab2.classList.remove('disabled-state');ab2.classList.add('active-on');}
+      const ab3 = document.getElementById('audioChatBtn'); if(ab3){ab3.textContent='Audio Off';ab3.classList.remove('disabled-state');ab3.classList.add('active-on');}
+      entry('Audio disabled (login setting)', 'sys');
+    }
+    // Peer is already open — dial directly if not already connected
+    if (!linked) dial();
+  }
+
+  navigator.mediaDevices.getUserMedia({
+    audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+    video: videoConstraint
+  })
+  .then(applyAndDial)
+  .catch(e => {
+    entry('Media error (' + e.name + ') — falling back to audio-only', 'sys');
+    navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } })
+      .then(applyAndDial)
+      .catch(e2 => {
+        entry('Mic also failed (' + e2.name + ') — data channel only', 'err');
+        try {
+          const sCtx = new (window.AudioContext || window.webkitAudioContext)();
+          const sDest = sCtx.createMediaStreamDestination();
+          const sOsc = sCtx.createOscillator();
+          const sGain = sCtx.createGain(); sGain.gain.value = 0;
+          sOsc.connect(sGain); sGain.connect(sDest); sOsc.start();
+          localStream = sDest.stream;
+        } catch(ex) { localStream = new MediaStream(); }
+        if (!linked) dial();
+      });
+  });
 }
 
 function init() {
