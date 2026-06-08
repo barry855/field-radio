@@ -3771,7 +3771,9 @@ function startPeer() {
     let _dialPollCount = 0;
     const _dialPollMax = 20; // 20 × 1500ms = 30s max wait
     function _pollAndDial() {
+      if (linked) return; // already connected — stop polling
       _refreshRemoteId().then(() => {
+        if (linked) return; // connected while fetch was in flight
         _dialPollCount++;
         const hasSuffix = REMOTE_ID && /-[0-9a-f]{4}$/.test(REMOTE_ID);
         if (hasSuffix || _dialPollCount >= _dialPollMax) {
@@ -3879,19 +3881,6 @@ function attachDataConn(dc) {
     if (f) {
       if (f.__control === 'video') { updateRemoteVideoState(f.enabled, f.hasTrack !== false); return; }
       if (f.__control === 'leave') { handleRemoteLeave(); return; }
-      if (f.__control === 'refresh') {
-        entry('Remote refreshed — waiting for reconnect…', 'sys');
-        autoSaveLog('refresh-received');
-        const _ro = document.getElementById('reconnectingOverlay');
-        if (_ro) _ro.classList.add('visible');
-        // Cancel any running login countdown, hide login box, then restart session once
-        clearInterval(loginTimeoutInterval);
-        clearTimeout(dropTimer);
-        document.getElementById('sessionOverlay').style.display = 'none';
-        prefillLogin();
-        setTimeout(() => { startSession(); }, 800);
-        return;
-      }
       if (f.__file  === true)      { addMediaBubble(f.name, f.type, f.data, false); return; }
       if (f.__chunk === true)      { receiveChunk(f); return; }
       addBubble(JSON.stringify(f), false);
@@ -4275,6 +4264,7 @@ function onDrop() {
   clearTimeout(retryTimer);
   saveRecordingIfActive();
   _pendingChatMsg = null;  // discard any queued message — it belongs to the dropped session
+  const _wasLinked = linked; // capture before clearing — used below to decide overlay vs login
   linked = false;
   call = null;
   // Reset data channel state so it re-opens cleanly on reconnect
@@ -4297,28 +4287,25 @@ function onDrop() {
   // Mark mini remote overlays as stale too
   
   setStatus('standby');
-  if (leftPermanently) return; // permanent leave handled by leaveSession()
-  if (remotePeerLeft) return;  // remote sent leave signal — stay on leave screen
-  // Check sessionStorage in case the refresh control message raced with the drop
+  if (leftPermanently) return;
+  if (remotePeerLeft) return;
   try { if (sessionStorage.getItem('fieldRadioRefreshing') === '1') peerRefreshing = true; } catch(e) {}
-  if (peerRefreshing) return;  // a refresh-reload is in progress — do not show login
-  // Show reconnect screen after a short grace period.
-  // handleRemoteLeave() will cancel this timer if a 'leave' signal arrives first,
-  // ensuring a clean leave goes to the leave screen, not the reconnect screen.
+  if (peerRefreshing) return;
   clearTimeout(dropTimer);
   dropTimer = setTimeout(() => {
     if (remotePeerLeft) return;
     try { if (sessionStorage.getItem('fieldRadioRefreshing') === '1') peerRefreshing = true; } catch(e) {}
     if (peerRefreshing) return;
-    entry('Link lost — returning to reconnect screen', 'sys');
-    const _roCheck = document.getElementById('reconnectingOverlay');
-    if (_roCheck && _roCheck.classList.contains('visible')) {
-      // Remote refresh in progress — keep overlay, restart session directly (no login timeout loop)
-      clearInterval(loginTimeoutInterval);
+    if (_wasLinked) {
+      // Drop from an established session — ALPHA is refreshing and will call back.
+      // Stay registered, show RECONNECTING overlay, do NOT restart (would change peer ID).
+      entry('Link dropped — waiting for Alpha to reconnect…', 'sys');
+      const _ro = document.getElementById('reconnectingOverlay');
+      if (_ro) _ro.classList.add('visible');
       document.getElementById('sessionOverlay').style.display = 'none';
-      prefillLogin();
-      startSession();
     } else {
+      // Never linked — show login screen normally
+      entry('Link lost — returning to login screen', 'sys');
       document.getElementById('sessionOverlay').style.display = 'flex';
       document.getElementById('unitIdDisplay').style.display = 'none';
       prefillLogin();
@@ -4844,11 +4831,9 @@ function refreshScreen() {
   // Show full-screen RECONNECTING overlay immediately
   const ro = document.getElementById('reconnectingOverlay');
   if (ro) ro.classList.add('visible');
-  // Notify remote peer so they also restart
-  try { dcSend({ __control: 'refresh' }); } catch(e) {}
   peerRefreshing = true;  // suppress onDrop login redirect
   entry('Refreshing connection…', 'sys');
-  // Tear down current peer/call cleanly then restart after 1s delay
+  // Tear down current peer/call cleanly then restart
   clearTimeout(retryTimer);
   if (call)     { try { call.off('close', onDrop); call.close(); }  catch(e) {} call = null; }
   if (dataConn) { try { dataConn.close(); }                         catch(e) {} dataConn = null; }
