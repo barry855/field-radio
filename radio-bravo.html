@@ -3766,10 +3766,12 @@ function startPeer() {
     _unavailIdRetries = 0; // ID claimed — reset backoff
     entry('Radio online [' + id + ']', 'ok');
     setStatus('calling');
-    // Poll Firebase for Alpha's peerId, then dial.
-    // Also listen for inbound calls from Alpha in parallel — whichever arrives first wins.
+    // Alpha is always the primary caller. Give Alpha a 5 s head-start so its
+    // call arrives before Bravo tries to dial, avoiding a simultaneous-call
+    // collision. After the grace window, poll Firebase for Alpha's peerId and
+    // dial as a fallback in case Alpha's call never arrived.
     let _dialPollCount = 0;
-    const _dialPollMax = 20; // 20 × 1500ms = 30s max wait
+    const _dialPollMax = 17; // 17 × 1500 ms ≈ 25 s after the 5 s grace = 30 s total
     function _pollAndDial() {
       if (linked) return; // already connected — stop polling
       _refreshRemoteId().then(() => {
@@ -3785,7 +3787,9 @@ function startPeer() {
         }
       });
     }
-    _pollAndDial();
+    // 5 s grace period — Alpha should call us first; only start polling/dialling
+    // if we are still unlinked after that window.
+    setTimeout(() => { if (!linked) _pollAndDial(); }, 5000);
   });
 
   peer.on('connection', dc => {
