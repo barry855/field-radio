@@ -1,15 +1,7 @@
+
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<script>
-// Runs before first paint — hides login screen immediately on refresh reload
-// so the RECONNECTING overlay appears without a login flash.
-try {
-  if (sessionStorage.getItem('fieldRadioRefreshing') === '1') {
-    document.write('<style id="preReconnectStyle">#sessionOverlay{display:none!important;}.reconnect-overlay{display:flex!important;}</style>');
-  }
-} catch(e) {}
-</script>
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="google" content="notranslate">
@@ -215,11 +207,6 @@ try {
   .bubble.show-orig .orig-peek { display: block; }
   .bubble.peek-locked { outline: 2px solid rgba(255,200,0,0.55); outline-offset: 2px; }
   .bubble.peek-locked .orig-peek { opacity: 1; }
-  .trans-sub {
-    font-style: italic; opacity: 0.72; font-size: 0.85em; margin-top: 4px;
-    border-top: 1px dashed rgba(128,128,128,0.4); padding-top: 4px;
-    user-select: text; -webkit-user-select: text;
-  }
 
   /* connection quality */
   .quality-item {
@@ -1285,7 +1272,7 @@ try {
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js"></script></head>
 <body>
 
-<div class="session-overlay" id="sessionOverlay" style="display:none">
+<div class="session-overlay" id="sessionOverlay">
   <div class="session-box">
     <span class="session-title" style="color:#00ff9f;text-shadow:0 0 20px rgba(0,255,159,0.5);">ALPHA</span>
     <label>Unit ID</label>
@@ -1457,7 +1444,7 @@ try {
       </div>
       <div class="gain-row" style="flex-shrink:0;">
         <div class="gain-label"><span>MIC</span><span>GAIN</span></div>
-        <input type="range" id="micGainSliderChat" min="0" max="3" step="0.05" value="1" oninput="applyMicGain(this.value)">
+        <input type="range" id="micGainSliderChat" min="0" max="3" step="0.05" value="1" oninput="applyMicGain(this.value)" style="max-width:80px;">
         <span class="gain-val" id="micGainValChat">1.00×</span>
         <button class="speech-top-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input" style="margin-left:auto; flex-shrink:0; white-space:nowrap;">Talk/Type in Chat</button>
       </div>
@@ -1475,11 +1462,11 @@ try {
           <button class="speech-top-btn" id="findChatBtn" title="Find in chat">🔍 FIND</button>
         </div>
         <div id="translateBar">
-    <label>🌐 TRANSLATE</label>
+    <label>🗣 MY LANGUAGE</label>
     <button id="translateTrigger" onclick="toggleTranslateDrop(event)">SELECT LANGUAGE</button>
-    <button id="translateResetBtn" onclick="resetTranslate()">ORIGINAL</button>
+    <button id="translateResetBtn" onclick="resetTranslate()">CLEAR</button>
     <div id="translateDropdownWrap"><input id="translateSearch" type="text" placeholder="Search language…" oninput="filterLangs(this.value)" autocomplete="off"><ul id="translateDropdown">
-          <li data-lang="__orig__" tabindex="0" id="origLangItem" style="border-bottom:2px solid rgba(0,212,255,0.3);font-weight:bold;">🌐 Original (System Language)</li>
+          <li data-lang="__orig__" tabindex="0" id="origLangItem" style="border-bottom:2px solid rgba(0,212,255,0.3);font-weight:bold;">🌐 Auto-detect (no tag)</li>
           <li data-lang="af" tabindex="0">Afrikaans</li>
           <li data-lang="sq" tabindex="0">Albanian</li>
           <li data-lang="am" tabindex="0">Amharic</li>
@@ -1918,10 +1905,13 @@ function stopPresencePolling() {
 
 
 
-// ── Translate via MyMemory free API ──────────────────────────
-// Translates incoming chat bubbles in-place. No server, no reload.
-let _translateLang = null;
+// ── Language learning translation ────────────────────────────
+// _myLang = the language THIS user types in (their native language).
+// Outgoing messages are tagged with this code so the peer can translate.
+// Incoming messages tagged with a lang code are translated into _myLang.
+let _translateLang = null;  // kept for compat; mirrors _myLang
 let _translateName = null;
+let _myLang = null;   // BCP-47 code of THIS user's language
 
 function toggleTranslateDrop(e) {
   e.stopPropagation();
@@ -2011,27 +2001,15 @@ async function translateText(text, targetLang) {
 }
 
 async function translateBubblesSequentially(langCode) {
-  const bubbles = Array.from(document.querySelectorAll('#chat .bubble.theirs'));
-  if (bubbles.length === 0) { entry('No incoming messages to translate yet', 'sys'); return; }
-  entry('Translating ' + bubbles.length + ' message(s)…', 'sys');
-  let count = 0;
-  for (const b of bubbles) {
-    if (_translateLang !== langCode) return;  // user changed/reset — abort
-    const msgDiv = b.querySelector('.msg-text');
-    if (!msgDiv) continue;
-    if (!b.dataset.orig) b.dataset.orig = msgDiv.innerText;
-    if (!b.dataset.orig.trim()) continue;
-    const translated = await translateText(b.dataset.orig, langCode);
-    if (translated && _translateLang === langCode) { msgDiv.textContent = translated; count++; }
-    // Yield to event loop between each bubble to prevent UI freeze
-    await new Promise(r => setTimeout(r, 80));
-  }
-  entry('Translated ' + count + ' message(s) to ' + _translateName, 'ok');
+  // Language-learning mode: only new incoming messages are translated.
+  // Existing bubbles are not retroactively changed.
+  entry('My language set to ' + _translateName + ' — incoming messages will be translated for you', 'ok');
 }
 
 function applyTranslate(code, name) {
   _translateLang = code;
   _translateName = name;
+  _myLang = code;
   document.getElementById('translateTrigger').textContent = name.toUpperCase();
   document.getElementById('translateDropdownWrap').classList.remove('open');
   // Mark selected item in dropdown
@@ -2040,7 +2018,7 @@ function applyTranslate(code, name) {
   });
   try { localStorage.setItem('alpha_translate_lang', JSON.stringify({code, name})); } catch(e) {}
   resetLockTimer();  // prevent inactivity lock firing during selection
-  entry('Translate active: ' + name + ' — applies to new incoming messages', 'sys');
+  entry('My language: ' + name + ' — you type in ' + name + ', peer sees your messages translated', 'sys');
   // Translate existing bubbles one at a time with a gap to avoid blocking the event loop
   translateBubblesSequentially(code);
 }
@@ -2048,6 +2026,7 @@ function applyTranslate(code, name) {
 function resetTranslate() {
   _translateLang = null;
   _translateName = null;
+  _myLang = null;
   try { localStorage.removeItem('alpha_translate_lang'); } catch(e) {}
   // Show the browser's detected language in the dropdown trigger
   const browserLangCode = (navigator.language || 'en').split('-')[0].toLowerCase();
@@ -2062,9 +2041,9 @@ function resetTranslate() {
   if (!browserLangName) {
     try {
       browserLangName = new Intl.DisplayNames([navigator.language], { type: 'language' }).of(navigator.language) || navigator.language;
-    } catch(e) { browserLangName = navigator.language || 'ORIGINAL'; }
+    } catch(e) { browserLangName = navigator.language || 'SELECT LANGUAGE'; }
   }
-  document.getElementById('translateTrigger').textContent = browserLangName.toUpperCase();
+  document.getElementById('translateTrigger').textContent = 'SELECT LANGUAGE';
   // Update the orig item label in the dropdown to show system language
   const origItem = document.getElementById('origLangItem');
   if (origItem) origItem.textContent = '🌐 Original — ' + browserLangName;
@@ -2077,7 +2056,7 @@ function resetTranslate() {
       if (msgDiv) msgDiv.textContent = b.dataset.orig;
     }
   });
-  entry('Chat restored to original — system language: ' + (navigator.language || 'unknown'), 'sys');
+  entry('Language cleared — messages sent without language tag', 'sys');
 }
 document.querySelectorAll('#translateDropdown li').forEach(li => {
   li.addEventListener('click', () => {
@@ -2125,6 +2104,7 @@ function prefillLogin() {
       const { code, name } = JSON.parse(savedLang);
       _translateLang = code;
       _translateName = name;
+      _myLang = code;
       document.getElementById('translateTrigger').textContent = name.toUpperCase();
       document.querySelectorAll('#translateDropdown li').forEach(li => {
         li.classList.toggle('selected', li.dataset.lang === code);
@@ -2148,10 +2128,10 @@ prefillLogin();
     try { browserLangName = new Intl.DisplayNames([navigator.language], { type: 'language' }).of(navigator.language); } catch(e) { browserLangName = navigator.language || 'System Language'; }
   }
   const name = browserLangName || 'System Language';
-  if (origItem) origItem.textContent = '🌐 Original — ' + name;
-  // Show system language in trigger unless a saved lang overrides it
+  if (origItem) origItem.textContent = '🌐 Auto-detect — ' + name;
+  // Show SELECT LANGUAGE unless a saved lang overrides it
   const savedLang = (function() { try { return localStorage.getItem('alpha_translate_lang'); } catch(e) { return null; } })();
-  if (!savedLang && trigger) trigger.textContent = name.toUpperCase();
+  if (!savedLang && trigger) trigger.textContent = 'SELECT LANGUAGE';
 })();
 
 let _reconnectCountdownTimer = null;
@@ -2168,9 +2148,6 @@ function showReconnecting(secs) {
   slider.value = total;
   secsEl.textContent = total;
   el.classList.add('active');
-  // Remove the pre-paint blocking style (injected in <head> to prevent login flash)
-  // now that the overlay is properly active via CSS class.
-  try { const s = document.getElementById('preReconnectStyle'); if (s) s.remove(); } catch(e) {}
   let remaining = total;
   _reconnectCountdownTimer = setInterval(() => {
     remaining--;
@@ -2220,18 +2197,17 @@ let _loginTimeoutStarted = false;
   try {
     if (sessionStorage.getItem('fieldRadioRefreshing') === '1') {
       sessionStorage.removeItem('fieldRadioRefreshing');
-      // Refresh path — show reconnect overlay, keep login hidden
+      // Show reconnect countdown overlay instead of login box
       _loginTimeoutStarted = true;
+      // Wait for DOM to be ready, then show reconnect overlay
       showReconnecting(5);
-      return;
     }
   } catch(e) {}
-  // Normal startup — make the login overlay visible now
-  document.getElementById('sessionOverlay').style.display = 'flex';
 })();
 
-// Only start login timeout if the refresh path above hasn't already started it
-if (!_loginTimeoutStarted) {
+// Only start login timeout if the overlay wasn't already dismissed by auto-login
+// and the refresh path above hasn't already started it
+if (!_loginTimeoutStarted && document.getElementById('sessionOverlay').style.display !== 'none') {
   startLoginTimeout();
 }
 
@@ -2866,7 +2842,7 @@ function _toggleLock(wrap) {
   }
 }
 
-function addBubble(text, mine, ts, save = true, restoredStatus = null, orig = null, sub = null) {
+function addBubble(text, mine, ts, save = true, restoredStatus = null, orig = null) {
   if (save) saveMessage(text, mine);
   const now = ts || Date.now();
   const wrap = document.createElement('div');
@@ -2877,9 +2853,6 @@ function addBubble(text, mine, ts, save = true, restoredStatus = null, orig = nu
   const msg = document.createElement('div');
   msg.className = 'msg-text';
   msg.appendChild(linkify(text));
-  const transSub = document.createElement('div');
-  transSub.className = 'trans-sub';
-  if (sub) { transSub.textContent = sub; } else { transSub.style.display = 'none'; }
   const origPeek = document.createElement('div');
   origPeek.className = 'orig-peek';
   const time = document.createElement('div');
@@ -2953,7 +2926,6 @@ function addBubble(text, mine, ts, save = true, restoredStatus = null, orig = nu
   wrap.appendChild(copyBtn);
   wrap.appendChild(who);
   wrap.appendChild(msg);
-  wrap.appendChild(transSub);
   wrap.appendChild(origPeek);
   wrap.appendChild(time);
   // Show original text on hover (desktop) or tap (mobile); click to lock open for copying
@@ -2972,19 +2944,7 @@ function addBubble(text, mine, ts, save = true, restoredStatus = null, orig = nu
     void msgBadge.offsetWidth; // reflow to restart animation
     msgBadge.classList.add('visible');
   }
-  // Auto-translate incoming plain-text bubbles to own language if translate mode is active
-  if (_translateLang && !mine) {
-    const myLang = (navigator.language || 'en').split('-')[0].toLowerCase();
-    wrap.dataset.orig = text;
-    translateText(text, myLang).then(t => {
-      if (t && t !== text) {
-        const md = wrap.querySelector('.msg-text');
-        if (md) md.textContent = t;
-        const ts = wrap.querySelector('.trans-sub');
-        if (ts) { ts.textContent = text; ts.style.display = ''; }
-      }
-    });
-  }
+  // Auto-translate incoming bubbles: handled at receive time in dc.on('data') for __chat messages.
 }
 
 let _sendChatLast = 0;
@@ -3014,18 +2974,13 @@ async function sendChat(overrideText) {
   if (txt) {
     // Clear input immediately so UX feels instant
     chatInput.value = ''; chatInput.style.height = 'auto';
-    // Translate outgoing text if a language is selected
+    // Send as tagged chat object so peer can translate into their language
+    // The sender always sees their own text as-is; peer translates on receipt.
     let toSend = txt;
-    let translated = null;
-    if (_translateLang) {
-      entry('Translating outgoing message\u2026', 'sys');
-      const t = await translateText(txt, _translateLang);
-      if (t && t !== txt) { translated = t; toSend = t; }
-    }
     try {
-      // Send as __chat object so receiver knows both original and translated
-      if (translated) {
-        dcSend({ __chat: true, orig: txt, translated: translated });
+      if (_myLang) {
+        // Send structured message with language tag
+        dcSend({ __chat: true, text: txt, lang: _myLang });
       } else {
         dcSend(toSend);
       }
@@ -3033,8 +2988,8 @@ async function sendChat(overrideText) {
       entry('Send failed: ' + e.message, 'err');
       return;
     }
-    // Show translated text in bubble with original as always-visible sub-line
-    addBubble(toSend, true, null, true, null, toSend !== txt ? txt : null, translated ? txt : null);
+    // Sender always sees their own text (no translation on sender side)
+    addBubble(txt, true, null, true, null, null);
   }
   if (hasFiles) {
     sendPendingFiles();
@@ -3072,7 +3027,7 @@ function setupTooltips() {
     speakerBtnLocal: 'Toggle speaker / earphone output',
     speakerBtnRemote: 'Toggle speaker / earphone output',
     zoomSliderLocal: 'Zoom local camera',
-    translateResetBtn: 'Restore original — system language: ' + (navigator.language || 'unknown')
+    translateResetBtn: 'Clear language — send messages without language tag'
   };
   Object.entries(labels).forEach(([id, label]) => {
     const el = document.getElementById(id);
@@ -4006,11 +3961,24 @@ function attachDataConn(dc) {
       if (f.__control === 'refresh') { entry('Remote refreshed — reloading…', 'sys'); peerRefreshing = true; try { sessionStorage.setItem('fieldRadioRefreshing', '1'); } catch(e) {} setTimeout(() => window.location.reload(), 400); return; }
       if (f.__file  === true)      { addMediaBubble(f.name, f.type, f.data, false); return; }
       if (f.__chunk === true)      { receiveChunk(f); return; }
-      if (f.__chat  === true) {
-        // Show translated text (what was sent) + original as sub-line
-        const mainText = f.translated || f.orig;
-        const subText  = (f.translated && f.translated !== f.orig) ? f.orig : null;
-        addBubble(mainText, false, null, true, null, subText ? mainText : null, subText);
+      // Language-learning chat message: translate from sender's lang to our lang
+      if (f.__chat === true && f.text) {
+        const srcText = f.text;
+        const srcLang = f.lang || null;  // sender's language code
+        if (_myLang && srcLang && srcLang !== _myLang) {
+          // Translate sender's text into our language
+          translateText(srcText, _myLang).then(translated => {
+            if (translated && translated !== srcText) {
+              // Show translated text; original accessible via hover/tap
+              addBubble(translated, false, null, true, null, srcText);
+            } else {
+              addBubble(srcText, false);
+            }
+          });
+        } else {
+          // No translation needed (same lang or no lang set) — show as-is
+          addBubble(srcText, false);
+        }
         return;
       }
       addBubble(JSON.stringify(f), false);
@@ -5081,6 +5049,9 @@ function refreshScreen() {
   peerRefreshing = true;  // suppress onDrop login redirect
   // Flag survives the reload so the fresh page auto-reconnects via login countdown
   try { sessionStorage.setItem('fieldRadioRefreshing', '1'); } catch(e) {}
+  // Show login box immediately on the refreshing side too
+  document.getElementById('sessionOverlay').style.display = 'flex';
+  document.getElementById('unitIdDisplay').style.display = 'none';
   // Local side waits 500 ms; remote starts its 400 ms timer on message receipt.
   // With ~100 ms one-way latency both reloads fire at roughly the same instant.
   setTimeout(() => window.location.reload(), 500);
