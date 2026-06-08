@@ -876,6 +876,29 @@
   /* ── Reconnect overlay — hidden, login screen shown instead ── */
   .reconnect-overlay { display: none !important; }
 
+  /* ── RECONNECTING full-screen overlay ── */
+  #reconnectingOverlay {
+    display: none;
+    position: fixed; inset: 0; z-index: 9999;
+    background: rgba(0,0,0,0.92);
+    align-items: center; justify-content: center;
+    flex-direction: column;
+  }
+  #reconnectingOverlay.visible { display: flex; }
+  #reconnectingOverlay .reconn-label {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(28px, 8vw, 64px);
+    font-weight: 900;
+    color: var(--accent2, #00ffaa);
+    letter-spacing: 6px;
+    text-shadow: 0 0 40px rgba(0,255,170,0.7), 0 0 80px rgba(0,255,170,0.3);
+    animation: reconnPulse 1s ease-in-out infinite;
+  }
+  @keyframes reconnPulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.4; }
+  }
+
 
   /* login checkboxes */
   .session-checks {
@@ -1247,6 +1270,10 @@
 </style>
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js"></script></head>
 <body>
+
+<div id="reconnectingOverlay">
+  <span class="reconn-label">RECONNECTING…</span>
+</div>
 
 <div class="session-overlay" id="sessionOverlay">
   <div class="session-box">
@@ -3852,7 +3879,7 @@ function attachDataConn(dc) {
     if (f) {
       if (f.__control === 'video') { updateRemoteVideoState(f.enabled, f.hasTrack !== false); return; }
       if (f.__control === 'leave') { handleRemoteLeave(); return; }
-      if (f.__control === 'refresh') { entry('Remote refreshed — restarting…', 'sys'); setTimeout(() => refreshScreen(), 400); return; }
+      if (f.__control === 'refresh') { entry('Remote refreshed — restarting…', 'sys'); const _ro=document.getElementById('reconnectingOverlay'); if(_ro) _ro.classList.add('visible'); setTimeout(() => refreshScreen(), 400); return; }
       if (f.__file  === true)      { addMediaBubble(f.name, f.type, f.data, false); return; }
       if (f.__chunk === true)      { receiveChunk(f); return; }
       addBubble(JSON.stringify(f), false);
@@ -4789,11 +4816,14 @@ function toggleAudio() {
 
 // ── Refresh Screen — reloads page (Unit ID pre-fills from localStorage) ──
 function refreshScreen() {
+  // Show full-screen RECONNECTING overlay immediately
+  const ro = document.getElementById('reconnectingOverlay');
+  if (ro) ro.classList.add('visible');
   // Notify remote peer so they also restart
   try { dcSend({ __control: 'refresh' }); } catch(e) {}
   peerRefreshing = true;  // suppress onDrop login redirect
   entry('Refreshing connection…', 'sys');
-  // Tear down current peer/call cleanly then restart immediately
+  // Tear down current peer/call cleanly then restart after 1s delay
   clearTimeout(retryTimer);
   if (call)     { try { call.off('close', onDrop); call.close(); }  catch(e) {} call = null; }
   if (dataConn) { try { dataConn.close(); }                         catch(e) {} dataConn = null; }
@@ -4802,7 +4832,10 @@ function refreshScreen() {
   linked = false;
   pendingDC = false;
   peerRefreshing = false;
-  startSession();
+  setTimeout(() => {
+    if (ro) ro.classList.remove('visible');
+    startSession();
+  }, 1000);
 }
 
 // ── Camera flip (Android front/back) ─────────────────────────
