@@ -3892,7 +3892,7 @@ function attachDataConn(dc) {
     if (f) {
       if (f.__control === 'video') { updateRemoteVideoState(f.enabled, f.hasTrack !== false); return; }
       if (f.__control === 'leave') { handleRemoteLeave(); return; }
-      if (f.__control === 'refresh') { entry('Remote refreshed — restarting…', 'sys'); const _ro=document.getElementById('reconnectingOverlay'); if(_ro) _ro.classList.add('visible'); setTimeout(() => refreshScreen(), 400); return; }
+      if (f.__control === 'refresh') { entry('Remote refreshed — waiting for reconnect…', 'sys'); const _ro=document.getElementById('reconnectingOverlay'); if(_ro) _ro.classList.add('visible'); return; }
       if (f.__file  === true)      { addMediaBubble(f.name, f.type, f.data, false); return; }
       if (f.__chunk === true)      { receiveChunk(f); return; }
       addBubble(JSON.stringify(f), false);
@@ -4331,6 +4331,8 @@ function onDrop() {
   if (leftPermanently) return; // permanent leave handled by leaveSession()
   if (remotePeerLeft) return;  // remote sent leave signal — stay on leave screen
   if (peerRefreshing)  return;  // a refresh-reload is in progress — do not show login
+  const _reconn = document.getElementById('reconnectingOverlay');
+  if (_reconn && _reconn.classList.contains('visible')) return; // waiting for remote refresh — do not show login
   // Show reconnect screen after a short grace period.
   // handleRemoteLeave() will cancel this timer if a 'leave' signal arrives first,
   // ensuring a clean leave goes to the leave screen, not the reconnect screen.
@@ -4338,6 +4340,8 @@ function onDrop() {
   dropTimer = setTimeout(() => {
     if (remotePeerLeft) return; // leave message arrived — handled by handleRemoteLeave
     if (peerRefreshing)  return; // refresh in progress — do not show login
+    const _ro2 = document.getElementById('reconnectingOverlay');
+    if (_ro2 && _ro2.classList.contains('visible')) return; // remote refresh in progress
     entry('Link lost — returning to reconnect screen', 'sys');
     document.getElementById('sessionOverlay').style.display = 'flex';
     document.getElementById('unitIdDisplay').style.display = 'none';
