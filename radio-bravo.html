@@ -2,6 +2,15 @@
 <!DOCTYPE html>
 <!-- Field Radio v6 — BRAVO -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<script>
+// Runs before first paint — hides login screen immediately on refresh reload
+// so the RECONNECTING overlay appears without a login flash.
+try {
+  if (sessionStorage.getItem('fieldRadioRefreshing') === '1') {
+    document.write('<style id="preReconnectStyle">#sessionOverlay{display:none!important;}.reconnect-overlay{display:flex!important;}</style>');
+  }
+} catch(e) {}
+</script>
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="google" content="notranslate">
@@ -1182,47 +1191,6 @@
     font-family: 'Share Tech Mono', monospace; white-space: nowrap;
   }
   #translateResetBtn:hover { border-color: var(--danger); color: var(--danger); }
-  /* ── My Language picker ────────────────────────────────────── */
-  #myLangWrap {
-    position: relative; flex-shrink: 0;
-  }
-  #myLangTrigger {
-    background: var(--btn-bg); border: 1px solid var(--border);
-    color: var(--text-dim); border-radius: 4px; padding: 4px 8px;
-    font-family: 'Share Tech Mono', monospace; font-size: 10px;
-    cursor: pointer; letter-spacing: 1px; white-space: nowrap;
-    transition: border-color 0.15s;
-  }
-  #myLangTrigger:hover { border-color: var(--accent2); color: var(--accent2); }
-  #myLangDropdownWrap {
-    display: none; position: absolute;
-    top: 100%; left: 0;
-    background: #0d1b2a; border: 1px solid var(--accent2);
-    border-radius: 6px; z-index: 99999;
-    min-width: 200px; box-shadow: 0 8px 32px rgba(0,0,0,0.7);
-  }
-  #myLangDropdownWrap.open { display: block; }
-  #myLangSearch {
-    width: calc(100% - 16px); margin: 8px; padding: 5px 8px;
-    background: #9AC08F; border: 1px solid var(--border);
-    border-radius: 4px; color: var(--text);
-    font-family: 'Share Tech Mono', monospace; font-size: 12px;
-    outline: none; display: block; box-sizing: border-box;
-  }
-  #myLangSearch:focus { border-color: var(--accent2); }
-  #myLangDropdown {
-    display: block; max-height: 200px; overflow-y: auto;
-    margin: 0; padding: 0; list-style: none;
-  }
-  #myLangDropdown li {
-    padding: 7px 14px; font-size: 13px;
-    font-family: 'Share Tech Mono', monospace;
-    color: var(--text); cursor: pointer; letter-spacing: 0.5px;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
-  }
-  #myLangDropdown li:hover,
-  #myLangDropdown li:focus { background: rgba(0,255,159,0.12); color: var(--accent2); outline: none; }
-  #myLangDropdown li.selected { color: var(--accent2); background: rgba(0,255,159,0.08); border-left: 3px solid var(--accent2); padding-left: 5px; }
 
   /* ── Send button disabled state ────────────────────────────── */
   .btn:disabled, .btn[disabled] {
@@ -1538,10 +1506,6 @@
           <button class="speech-top-btn" id="findChatBtn" title="Find in chat">🔍 FIND</button>
         </div>
         <div id="translateBar">
-    <div id="myLangWrap">
-      <button id="myLangTrigger" onclick="toggleMyLangDrop(event)" title="Set your own language (for incoming translation)">MY LANG: AUTO</button>
-      <div id="myLangDropdownWrap"><input id="myLangSearch" type="text" placeholder="My language…" oninput="filterMyLangs(this.value)" autocomplete="off"><ul id="myLangDropdown"></ul></div>
-    </div>
     <label>🌐 TRANSLATE</label>
     <button id="translateTrigger" onclick="toggleTranslateDrop(event)">SELECT LANGUAGE</button>
     <button id="translateResetBtn" onclick="resetTranslate()">ORIGINAL</button>
@@ -2008,64 +1972,6 @@ function filterLangs(q) {
   });
 }
 
-// ── MY LANG picker ──────────────────────────────────────────────
-let _myLang = null;  // null = use navigator.language
-let _myLangName = null;
-
-function _getMyLang() {
-  return _myLang || (navigator.language || 'en').split('-')[0].toLowerCase();
-}
-
-function toggleMyLangDrop(e) {
-  e.stopPropagation();
-  const wrap = document.getElementById('myLangDropdownWrap');
-  const isOpen = wrap.classList.contains('open');
-  document.getElementById('translateDropdownWrap').classList.remove('open');
-  if (!isOpen) {
-    const ul = document.getElementById('myLangDropdown');
-    if (!ul.children.length) {
-      document.querySelectorAll('#translateDropdown li').forEach(src => {
-        if (src.dataset.lang === '__orig__') return;
-        const li = document.createElement('li');
-        li.dataset.lang = src.dataset.lang;
-        li.textContent = src.textContent;
-        li.tabIndex = 0;
-        if (_myLang && li.dataset.lang === _myLang) li.classList.add('selected');
-        li.addEventListener('click', () => applyMyLang(li.dataset.lang, li.textContent.trim()));
-        li.addEventListener('keydown', ev => { if (ev.key === 'Enter') applyMyLang(li.dataset.lang, li.textContent.trim()); });
-        ul.appendChild(li);
-      });
-    }
-    wrap.classList.add('open');
-    document.getElementById('myLangSearch').value = '';
-    filterMyLangs('');
-    setTimeout(() => document.getElementById('myLangSearch').focus(), 50);
-  } else {
-    wrap.classList.remove('open');
-  }
-}
-
-function filterMyLangs(q) {
-  const lq = q.toLowerCase();
-  document.querySelectorAll('#myLangDropdown li').forEach(li => {
-    li.style.display = li.textContent.toLowerCase().includes(lq) ? '' : 'none';
-  });
-}
-
-function applyMyLang(code, name) {
-  _myLang = code;
-  _myLangName = name;
-  document.getElementById('myLangTrigger').textContent = 'MY LANG: ' + name.toUpperCase().slice(0, 12);
-  document.getElementById('myLangDropdownWrap').classList.remove('open');
-  document.querySelectorAll('#myLangDropdown li').forEach(li => li.classList.toggle('selected', li.dataset.lang === code));
-  try { localStorage.setItem('bravo_my_lang', JSON.stringify({code, name})); } catch(e) {}
-  entry('My language set to ' + name + ' — incoming messages will translate to this', 'sys');
-}
-
-document.addEventListener('click', e => {
-  if (!e.target.closest('#myLangWrap')) document.getElementById('myLangDropdownWrap').classList.remove('open');
-});
-
 async function translateText(text, targetLang) {
   if (!text || !text.trim()) return null;
   // Primary: Google Translate unofficial free endpoint (no key, CORS-safe)
@@ -2252,13 +2158,6 @@ function prefillLogin() {
       });
       entry('Translate restored: ' + name, 'sys');
     }
-    // Restore saved my language
-    const savedMyLang = localStorage.getItem('bravo_my_lang');
-    if (savedMyLang) {
-      const { code, name } = JSON.parse(savedMyLang);
-      _myLang = code; _myLangName = name;
-      document.getElementById('myLangTrigger').textContent = 'MY LANG: ' + name.toUpperCase().slice(0, 12);
-    }
   } catch(e) {}
 }
 prefillLogin();
@@ -2293,6 +2192,9 @@ function showReconnecting(secs) {
   slider.value = total;
   secsEl.textContent = total;
   el.classList.add('active');
+  // Remove the pre-paint blocking style (injected in <head> to prevent login flash)
+  // now that the overlay is properly active via CSS class.
+  try { const s = document.getElementById('preReconnectStyle'); if (s) s.remove(); } catch(e) {}
   let remaining = total;
   _reconnectCountdownTimer = setInterval(() => {
     remaining--;
@@ -3073,7 +2975,7 @@ function addBubble(text, mine, ts, save = true, restoredStatus = null, orig = nu
   }
   // Auto-translate incoming plain-text bubbles to own language if translate mode is active
   if (_translateLang && !mine) {
-    const myLang = _getMyLang();
+    const myLang = (navigator.language || 'en').split('-')[0].toLowerCase();
     wrap.dataset.orig = text;
     translateText(text, myLang).then(t => {
       if (t && t !== text) {
