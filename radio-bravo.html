@@ -4072,6 +4072,9 @@ function markLinked() {
   startQualityPolling();
   // Alpha owns data channel initiation — Bravo only accepts inbound DCs.
   applyMuteToSenders();
+  // Hide RECONNECTING overlay now that link is established
+  const ro = document.getElementById('reconnectingOverlay');
+  if (ro) ro.classList.remove('visible');
 }
 
 function attachCall(c) {
@@ -4833,9 +4836,8 @@ function refreshScreen() {
   pendingDC = false;
   peerRefreshing = false;
   setTimeout(() => {
-    if (ro) ro.classList.remove('visible');
     startSession();
-  }, 1000);
+  }, 500);
 }
 
 // ── Camera flip (Android front/back) ─────────────────────────
