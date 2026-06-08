@@ -2190,17 +2190,19 @@ function startLoginTimeout() {
     }
   }, 1000);
 }
-// If this page load is the result of a refresh, show the reconnect overlay
-// over the login box until auto-login fires (sessionStorage survives reload)
+// If this page load is the result of a refresh, bypass login screen entirely
+// and auto-reconnect. sessionStorage survives reload; clear it immediately.
 let _loginTimeoutStarted = false;
 (function() {
   try {
     if (sessionStorage.getItem('fieldRadioRefreshing') === '1') {
       sessionStorage.removeItem('fieldRadioRefreshing');
-      // Show reconnect countdown overlay instead of login box
       _loginTimeoutStarted = true;
-      // Wait for DOM to be ready, then show reconnect overlay
-      showReconnecting(5);
+      // Hide login overlay — don't show it at all during a refresh reload
+      const overlay = document.getElementById('sessionOverlay');
+      if (overlay) overlay.style.display = 'none';
+      // Fire startSession as soon as the page is ready (prefillLogin runs before this)
+      setTimeout(() => startSession(), 50);
     }
   } catch(e) {}
 })();
@@ -5049,11 +5051,9 @@ function refreshScreen() {
   // the same delay so the reload is as simultaneous as possible.
   try { dcSend({ __control: 'refresh' }); } catch(e) {}
   peerRefreshing = true;  // suppress onDrop login redirect
-  // Flag survives the reload so the fresh page auto-reconnects via login countdown
+  // Flag survives the reload so the fresh page auto-reconnects silently
   try { sessionStorage.setItem('fieldRadioRefreshing', '1'); } catch(e) {}
-  // Show login box immediately on the refreshing side too
-  document.getElementById('sessionOverlay').style.display = 'flex';
-  document.getElementById('unitIdDisplay').style.display = 'none';
+  // Do NOT show login overlay — keep current UI visible until reload fires
   // Local side waits 500 ms; remote starts its 400 ms timer on message receipt.
   // With ~100 ms one-way latency both reloads fire at roughly the same instant.
   setTimeout(() => window.location.reload(), 500);
