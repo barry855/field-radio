@@ -1755,6 +1755,8 @@ let _speechVisible  = false;
 // sendBtn removed — sending is via speech panel only
 
 function startSession() {
+  // Dismiss RECONNECTING banner if shown during post-refresh wait
+  document.getElementById('reconnectingBanner').classList.remove('active');
   stopPresencePolling();
   const code = document.getElementById('sessionCode').value.trim().toUpperCase().replace(/\s+/g,'');
   if (!code) { document.getElementById('sessionCode').focus(); return; }
@@ -2141,6 +2143,8 @@ let _loginTimeoutStarted = false;
       sessionStorage.removeItem('fieldRadioRefreshing');
       // Show login box and start auto-reconnect countdown
       document.getElementById('sessionOverlay').style.display = 'flex';
+      // Keep RECONNECTING banner up through the countdown wait
+      document.getElementById('reconnectingBanner').classList.add('active');
       prefillLogin();
       startLoginTimeout();
       _loginTimeoutStarted = true;
