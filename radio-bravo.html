@@ -4936,9 +4936,6 @@ function refreshScreen() {
   peerRefreshing = true;  // suppress onDrop login redirect
   // Flag survives the reload so the fresh page auto-reconnects via login countdown
   try { sessionStorage.setItem('fieldRadioRefreshing', '1'); } catch(e) {}
-  // Show login box immediately on the refreshing side too
-  document.getElementById('sessionOverlay').style.display = 'flex';
-  document.getElementById('unitIdDisplay').style.display = 'none';
   // Local side waits 500 ms; remote starts its 400 ms timer on message receipt.
   // With ~100 ms one-way latency both reloads fire at roughly the same instant.
   setTimeout(() => window.location.reload(), 500);
