@@ -3778,17 +3778,20 @@ function startPeer() {
       incoming.close();
       return;
     }
-    // If already linked or a previous call exists, close it silently WITHOUT going
-    // through onDrop — Bravo is simply re-dialling (e.g. ICE restart or brief drop).
-    // Calling onDrop here would push Alpha to the reconnect screen and trigger a loop.
+    // If already fully linked, reject this redundant inbound call — we have a
+    // live connection and don't need to switch over to a new one from Bravo.
+    if (linked) {
+      entry('Already linked — ignoring redundant inbound call', 'sys');
+      incoming.close();
+      return;
+    }
+    // Not yet linked: close any stale outbound call silently WITHOUT going
+    // through onDrop — Bravo reached us first, so answer their call instead.
     if (call) {
       try { call.off('close'); call.off('error'); call.close(); } catch(e) {}
       call = null;
     }
-    // Keep linked=true if we were already linked so the UI stays live
-    const wasLinked = linked;
-    linked = false; // will be re-set by markLinked() once ICE connects on new call
-    if (wasLinked) entry('Re-answering call from Bravo (reconnect)…', 'sys');
+    linked = false;
     answerCall(incoming);
   });
 
