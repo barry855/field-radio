@@ -1752,7 +1752,7 @@ function startSession() {
   stopPresencePolling();
   const code = document.getElementById('sessionCode').value.trim().toUpperCase().replace(/\s+/g,'');
   if (!code) { document.getElementById('sessionCode').focus(); return; }
-  MY_ID     = 'alpha-' + code;
+  MY_ID     = 'alpha-' + code + '-' + Math.random().toString(16).slice(2, 6);
   REMOTE_ID = 'bravo-' + code;
   // Keep writing our heartbeat for the whole session so Firebase shows us as online
   const myKey = 'alpha-' + code;
@@ -1817,7 +1817,7 @@ async function presenceWrite(myKey) {
   try {
     await fetch(FB_URL + '/presence/' + myKey + '.json', {
       method: 'PUT',
-      body: JSON.stringify({ ts: Date.now() })
+      body: JSON.stringify({ ts: Date.now(), peerId: MY_ID })
     });
   } catch(e) {}
 }
@@ -3772,6 +3772,23 @@ function startPeer() {
 
   peer.on('call', incoming => {
     entry('Inbound call from Bravo', 'info');
+    clearTimeout(retryTimer); // cancel any pending dial/retry — Bravo reached us first
+    if (!localStream) {
+      entry('ERROR: no local stream — cannot answer', 'err');
+      incoming.close();
+      return;
+    }
+    // If already linked or a previous call exists, close it silently WITHOUT going
+    // through onDrop — Bravo is simply re-dialling (e.g. ICE restart or brief drop).
+    // Calling onDrop here would push Alpha to the reconnect screen and trigger a loop.
+    if (call) {
+      try { call.off('close'); call.off('error'); call.close(); } catch(e) {}
+      call = null;
+    }
+    // Keep linked=true if we were already linked so the UI stays live
+    const wasLinked = linked;
+    linked = false; // will be re-set by markLinked() once ICE connects on new call
+    if (wasLinked) entry('Re-answering call from Bravo (reconnect)…', 'sys');
     answerCall(incoming);
   });
 
@@ -3798,14 +3815,14 @@ function startPeer() {
       return;
     }
     if (e.type === 'unavailable-id') {
-      // Stale session holds the ID — wait for PeerJS server to release it, then retry
-      // with the SAME ID so REMOTE_ID on the other side stays valid. Do NOT change MY_ID.
-      // Exponential backoff: 10s, 20s, 40s, capped at 60s — hammering resets the server timer.
-      _unavailIdRetries = (_unavailIdRetries || 0) + 1;
-      const _unavailDelay = Math.min(10000 * Math.pow(2, _unavailIdRetries - 1), 60000);
-      entry('ID taken — retrying same ID in ' + Math.round(_unavailDelay/1000) + 's (attempt ' + _unavailIdRetries + ')…', 'sys');
-      peer.destroy();
-      setTimeout(startPeer, _unavailDelay);
+      // Ghost session holds this ID. Pick a new suffix and retry in 500ms.
+      // presenceWrite will publish the new peerId so BRAVO dials correctly.
+      const _code = MY_ID.replace(/^alpha-/, '').replace(/-[0-9a-f]{4}$/, '');
+      MY_ID = 'alpha-' + _code + '-' + Math.random().toString(16).slice(2, 6);
+      entry('ID taken — retrying with new ID: ' + MY_ID, 'sys');
+      const _stale = peer; peer = null;
+      try { _stale.off('disconnected'); _stale.destroy(); } catch(e2) {}
+      setTimeout(startPeer, 500);
       return;
     }
     // network / server-error / socket-error / socket-closed
