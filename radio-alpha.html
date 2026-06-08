@@ -841,29 +841,6 @@
   /* ── Reconnect overlay — hidden, login screen shown instead ── */
   .reconnect-overlay { display: none !important; }
 
-  /* ── RECONNECTING full-screen overlay ── */
-  #reconnectingOverlay {
-    display: none;
-    position: fixed; inset: 0; z-index: 9999;
-    background: rgba(0,0,0,0.92);
-    align-items: center; justify-content: center;
-    flex-direction: column;
-  }
-  #reconnectingOverlay.visible { display: flex; }
-  #reconnectingOverlay .reconn-label {
-    font-family: 'Orbitron', sans-serif;
-    font-size: clamp(28px, 8vw, 64px);
-    font-weight: 900;
-    color: var(--accent, #00d4ff);
-    letter-spacing: 6px;
-    text-shadow: 0 0 40px rgba(0,212,255,0.7), 0 0 80px rgba(0,212,255,0.3);
-    animation: reconnPulse 1s ease-in-out infinite;
-  }
-  @keyframes reconnPulse {
-    0%, 100% { opacity: 1; }
-    50%       { opacity: 0.4; }
-  }
-
 
   /* login checkboxes */
   .session-checks {
@@ -1185,10 +1162,6 @@
     color: var(--accent); font-family: 'Orbitron', sans-serif;
     font-size: 10px;
   }
-  /* On desktop (mouse pointer) let the chat-tab gain slider fill available space */
-  @media (pointer: fine) {
-    #micGainSliderChat { max-width: none !important; }
-  }
 
   /* ── Login presence indicator ──────────────────────────────── */
   .login-presence {
@@ -1239,10 +1212,6 @@
 </style>
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js"></script></head>
 <body>
-
-<div id="reconnectingOverlay">
-  <span class="reconn-label">RECONNECTING…</span>
-</div>
 
 <div class="session-overlay" id="sessionOverlay">
   <div class="session-box">
@@ -1407,7 +1376,7 @@
       </div>
       <div class="gain-row" style="flex-shrink:0;">
         <div class="gain-label"><span>MIC</span><span>GAIN</span></div>
-        <input type="range" id="micGainSliderChat" min="0" max="3" step="0.05" value="1" oninput="applyMicGain(this.value)" style="max-width:80px; flex:1;">
+        <input type="range" id="micGainSliderChat" min="0" max="3" step="0.05" value="1" oninput="applyMicGain(this.value)" style="max-width:80px;">
         <span class="gain-val" id="micGainValChat">1.00×</span>
         <button class="speech-top-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input" style="margin-left:auto; flex-shrink:0; white-space:nowrap;">Talk/Type in Chat</button>
       </div>
@@ -1752,7 +1721,7 @@ function startSession() {
   stopPresencePolling();
   const code = document.getElementById('sessionCode').value.trim().toUpperCase().replace(/\s+/g,'');
   if (!code) { document.getElementById('sessionCode').focus(); return; }
-  MY_ID     = 'alpha-' + code + '-' + Math.random().toString(16).slice(2, 6);
+  MY_ID     = 'alpha-' + code;
   REMOTE_ID = 'bravo-' + code;
   // Keep writing our heartbeat for the whole session so Firebase shows us as online
   const myKey = 'alpha-' + code;
@@ -1817,7 +1786,7 @@ async function presenceWrite(myKey) {
   try {
     await fetch(FB_URL + '/presence/' + myKey + '.json', {
       method: 'PUT',
-      body: JSON.stringify({ ts: Date.now(), peerId: MY_ID })
+      body: JSON.stringify({ ts: Date.now() })
     });
   } catch(e) {}
 }
@@ -3747,9 +3716,7 @@ function startPeer() {
     let _dialPollCount = 0;
     const _dialPollMax = 20; // 20 x 1500ms = 30s max wait
     function _pollAndDial() {
-      if (linked) return; // already connected — stop polling
       _refreshRemoteId().then(() => {
-        if (linked) return; // connected while fetch was in flight
         _dialPollCount++;
         const hasSuffix = REMOTE_ID && /-[0-9a-f]{4}$/.test(REMOTE_ID);
         if (hasSuffix || _dialPollCount >= _dialPollMax) {
@@ -3772,26 +3739,6 @@ function startPeer() {
 
   peer.on('call', incoming => {
     entry('Inbound call from Bravo', 'info');
-    clearTimeout(retryTimer); // cancel any pending dial/retry — Bravo reached us first
-    if (!localStream) {
-      entry('ERROR: no local stream — cannot answer', 'err');
-      incoming.close();
-      return;
-    }
-    // If already fully linked, reject this redundant inbound call — we have a
-    // live connection and don't need to switch over to a new one from Bravo.
-    if (linked) {
-      entry('Already linked — ignoring redundant inbound call', 'sys');
-      incoming.close();
-      return;
-    }
-    // Not yet linked: close any stale outbound call silently WITHOUT going
-    // through onDrop — Bravo reached us first, so answer their call instead.
-    if (call) {
-      try { call.off('close'); call.off('error'); call.close(); } catch(e) {}
-      call = null;
-    }
-    linked = false;
     answerCall(incoming);
   });
 
@@ -3818,14 +3765,14 @@ function startPeer() {
       return;
     }
     if (e.type === 'unavailable-id') {
-      // Ghost session holds this ID. Pick a new suffix and retry in 500ms.
-      // presenceWrite will publish the new peerId so BRAVO dials correctly.
-      const _code = MY_ID.replace(/^alpha-/, '').replace(/-[0-9a-f]{4}$/, '');
-      MY_ID = 'alpha-' + _code + '-' + Math.random().toString(16).slice(2, 6);
-      entry('ID taken — retrying with new ID: ' + MY_ID, 'sys');
-      const _stale = peer; peer = null;
-      try { _stale.off('disconnected'); _stale.destroy(); } catch(e2) {}
-      setTimeout(startPeer, 500);
+      // Stale session holds the ID — wait for PeerJS server to release it, then retry
+      // with the SAME ID so REMOTE_ID on the other side stays valid. Do NOT change MY_ID.
+      // Exponential backoff: 10s, 20s, 40s, capped at 60s — hammering resets the server timer.
+      _unavailIdRetries = (_unavailIdRetries || 0) + 1;
+      const _unavailDelay = Math.min(10000 * Math.pow(2, _unavailIdRetries - 1), 60000);
+      entry('ID taken — retrying same ID in ' + Math.round(_unavailDelay/1000) + 's (attempt ' + _unavailIdRetries + ')…', 'sys');
+      peer.destroy();
+      setTimeout(startPeer, _unavailDelay);
       return;
     }
     // network / server-error / socket-error / socket-closed
@@ -3914,6 +3861,7 @@ function attachDataConn(dc) {
     if (f) {
       if (f.__control === 'video') { updateRemoteVideoState(f.enabled, f.hasTrack !== false); return; }
       if (f.__control === 'leave') { handleRemoteLeave(); return; }
+      if (f.__control === 'refresh') { entry('Remote refreshed — reloading…', 'sys'); peerRefreshing = true; try { sessionStorage.setItem('fieldRadioRefreshing', '1'); } catch(e) {} setTimeout(() => window.location.reload(), 400); return; }
       if (f.__file  === true)      { addMediaBubble(f.name, f.type, f.data, false); return; }
       if (f.__chunk === true)      { receiveChunk(f); return; }
       addBubble(JSON.stringify(f), false);
@@ -4108,9 +4056,6 @@ function markLinked() {
   startQualityPolling();
   openDataConn();
   applyMuteToSenders();
-  // Hide RECONNECTING overlay now that link is established
-  const ro = document.getElementById('reconnectingOverlay');
-  if (ro) ro.classList.remove('visible');
 }
 
 function attachCall(c) {
@@ -4324,7 +4269,6 @@ function handleRemoteLeave() {
 function onDrop() {
   clearTimeout(retryTimer);
   saveRecordingIfActive();
-  const _wasLinked = linked; // capture before clearing — used below to decide overlay vs login
   linked = false;
   call = null;
   // Reset data channel state so it re-opens cleanly on next dial
@@ -4350,27 +4294,21 @@ function onDrop() {
     if (el) { el.classList.remove('no-video'); el.classList.add('stale'); }
   });
   setStatus('calling');
-  if (leftPermanently) return;
-  if (remotePeerLeft) return;
-  if (peerRefreshing)  return;
+  if (leftPermanently) return; // permanent leave handled by leaveSession()
+  if (remotePeerLeft) return;  // remote sent leave signal — stay on leave screen
+  if (peerRefreshing)  return;  // a refresh-reload is in progress — do not show login
+  // Show reconnect screen after a short grace period.
+  // handleRemoteLeave() will cancel this timer if a 'leave' signal arrives first,
+  // ensuring a clean leave goes to the leave screen, not the reconnect screen.
   clearTimeout(dropTimer);
   dropTimer = setTimeout(() => {
-    if (remotePeerLeft) return;
-    if (peerRefreshing)  return;
-    if (_wasLinked) {
-      // Drop from established session — remote is refreshing and will call back.
-      // Show RECONNECTING overlay and wait; do NOT restart (ALPHA will redial via startSession above).
-      entry('Link dropped — waiting to reconnect…', 'sys');
-      const _ro = document.getElementById('reconnectingOverlay');
-      if (_ro) _ro.classList.add('visible');
-      document.getElementById('sessionOverlay').style.display = 'none';
-    } else {
-      entry('Link lost — returning to reconnect screen', 'sys');
-      document.getElementById('sessionOverlay').style.display = 'flex';
-      document.getElementById('unitIdDisplay').style.display = 'none';
-      prefillLogin();
-      startLoginTimeout();
-    }
+    if (remotePeerLeft) return; // leave message arrived — handled by handleRemoteLeave
+    if (peerRefreshing)  return; // refresh in progress — do not show login
+    entry('Link lost — returning to reconnect screen', 'sys');
+    document.getElementById('sessionOverlay').style.display = 'flex';
+    document.getElementById('unitIdDisplay').style.display = 'none';
+    prefillLogin();
+    startLoginTimeout();
   }, 400);
 }
 
@@ -4988,27 +4926,20 @@ function toggleAudio() {
   }
 }
 
-// ── Refresh Screen — restarts session in-place (no page reload) ──
+// ── Refresh Screen — reloads page (Unit ID pre-fills from localStorage) ──
 function refreshScreen() {
-  // Auto-save syslog for diagnostics before teardown
-  autoSaveLog('refresh-initiated');
-  // Show full-screen RECONNECTING overlay immediately
-  const ro = document.getElementById('reconnectingOverlay');
-  if (ro) ro.classList.add('visible');
+  // Notify remote peer so they auto-refresh in sync — both sides reload after
+  // the same delay so the reload is as simultaneous as possible.
+  try { dcSend({ __control: 'refresh' }); } catch(e) {}
   peerRefreshing = true;  // suppress onDrop login redirect
-  entry('Refreshing connection…', 'sys');
-  // Tear down current peer/call cleanly then restart
-  clearTimeout(retryTimer);
-  if (call)     { try { call.off('close', onDrop); call.close(); }  catch(e) {} call = null; }
-  if (dataConn) { try { dataConn.close(); }                         catch(e) {} dataConn = null; }
-  if (peer && !peer.destroyed) { try { peer.destroy(); }            catch(e) {} }
-  peer = null;
-  linked = false;
-  pendingDC = false;
-  peerRefreshing = false;
-  setTimeout(() => {
-    startSession();
-  }, 500);
+  // Flag survives the reload so the fresh page auto-reconnects via login countdown
+  try { sessionStorage.setItem('fieldRadioRefreshing', '1'); } catch(e) {}
+  // Show login box immediately on the refreshing side too
+  document.getElementById('sessionOverlay').style.display = 'flex';
+  document.getElementById('unitIdDisplay').style.display = 'none';
+  // Local side waits 500 ms; remote starts its 400 ms timer on message receipt.
+  // With ~100 ms one-way latency both reloads fire at roughly the same instant.
+  setTimeout(() => window.location.reload(), 500);
 }
 
 // ── Camera flip (Android front/back) ─────────────────────────
@@ -5263,27 +5194,6 @@ window.addEventListener('beforeunload', () => {
 });
 
 // ── SYS LOG actions ──────────────────────────────────────────────────────────
-
-// Auto-save log silently (used during refresh cycle for diagnostics)
-function autoSaveLog(label) {
-  try {
-    const ts = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
-    const rows = Array.from(document.querySelectorAll('#log .log-entry'));
-    const bodyHtml = rows.map(el => {
-      const cls = el.className.replace('log-entry','').trim();
-      const colors = { sys:'#aabbcc', info:'#55bbee', ok:'#44cc88', err:'#ff5555', tx:'#ffcc44' };
-      const col = colors[cls] || '#aabbcc';
-      return `<div style="color:${col};font-family:monospace;font-size:13px;line-height:1.5;white-space:pre-wrap;">${el.textContent}</div>`;
-    }).join('');
-    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>ALPHA SYSLOG ${ts}</title>`
-      + `<style>body{background:#0a1520;padding:16px;margin:0;}</style></head><body>${bodyHtml}</body></html>`;
-    const blob = new Blob([html], { type: 'text/html' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `alpha-syslog-${label}-${ts}.html`;
-    a.click();
-  } catch(e) {}
-}
 
 
 function saveLog() {
