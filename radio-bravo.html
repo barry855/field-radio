@@ -874,45 +874,7 @@
 
   /* ── Reconnect overlay (hides login box on auto-disconnect) ── */
   /* ── Reconnect overlay — hidden, login screen shown instead ── */
-  /* ── Reconnect overlay — hidden, login screen shown instead ── */
   .reconnect-overlay { display: none !important; }
-
-  /* ── Refresh / RECONNECTING banner ──────────────────────────── */
-  .reconnecting-banner {
-    display: none;
-    position: fixed; inset: 0; z-index: 200;
-    background: rgba(0,0,0,0.82);
-    align-items: center; justify-content: center; flex-direction: column;
-    gap: 20px;
-  }
-  .reconnecting-banner.active { display: flex; }
-  .reconnecting-text {
-    font-family: 'Orbitron', sans-serif;
-    font-size: clamp(28px, 7vw, 56px);
-    font-weight: 900;
-    letter-spacing: 6px;
-    color: #00d4ff;
-    text-shadow: 0 0 24px rgba(0,212,255,0.8), 0 0 60px rgba(0,212,255,0.4);
-    text-align: center;
-    padding: 0 16px;
-  }
-  .reconnecting-bar-wrap {
-    width: clamp(200px, 50vw, 320px);
-    height: 6px;
-    background: rgba(0,212,255,0.15);
-    border-radius: 3px;
-    overflow: hidden;
-  }
-  .reconnecting-bar-fill {
-    height: 100%;
-    width: 100%;
-    background: #00d4ff;
-    box-shadow: 0 0 10px rgba(0,212,255,0.7);
-    border-radius: 3px;
-    transform-origin: left;
-    transform: scaleX(1);
-    transition: transform 1s linear;
-  }
 
 
   /* login checkboxes */
@@ -1281,11 +1243,6 @@
 </style>
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js"></script></head>
 <body>
-
-<div class="reconnecting-banner" id="reconnectingBanner">
-  <div class="reconnecting-text">RECONNECTING…</div>
-  <div class="reconnecting-bar-wrap"><div class="reconnecting-bar-fill" id="reconnectingBarFill"></div></div>
-</div>
 
 <div class="session-overlay" id="sessionOverlay">
   <div class="session-box">
@@ -1796,8 +1753,6 @@ let _speechVisible  = false;
 // sendBtn removed — sending is via speech panel only
 
 function startSession() {
-  // Dismiss RECONNECTING banner if shown during post-refresh wait
-  document.getElementById('reconnectingBanner').classList.remove('active');
   stopPresencePolling();
   const code = document.getElementById('sessionCode').value.trim().toUpperCase().replace(/\s+/g,'');
   if (!code) { document.getElementById('sessionCode').focus(); return; }
@@ -2154,15 +2109,6 @@ function showLoginBox() {
 // ── 10-second auto-login countdown ───────────────────────────
 let loginTimeoutInterval;
 let loginSecsLeft = 10;
-function _startReconnectBar(totalSecs) {
-  const fill = document.getElementById('reconnectingBarFill');
-  if (!fill) return;
-  fill.style.transition = 'none';
-  fill.style.transform = 'scaleX(1)';
-  fill.getBoundingClientRect();
-  fill.style.transition = 'transform ' + totalSecs + 's linear';
-  fill.style.transform = 'scaleX(0)';
-}
 function startLoginTimeout() {
   clearInterval(loginTimeoutInterval);  // prevent double-interval from stale saved HTML
   loginSecsLeft = 10;
@@ -2184,9 +2130,6 @@ let _loginTimeoutStarted = false;
       sessionStorage.removeItem('fieldRadioRefreshing');
       // Show login box and start auto-reconnect countdown
       document.getElementById('sessionOverlay').style.display = 'flex';
-      // Keep RECONNECTING banner up through the countdown wait
-      document.getElementById('reconnectingBanner').classList.add('active');
-      _startReconnectBar(10);
       prefillLogin();
       startLoginTimeout();
       _loginTimeoutStarted = true;
@@ -2924,11 +2867,11 @@ function addBubble(text, mine, ts, save = true, restoredStatus = null) {
 
 let _sendChatLast = 0;
 let _pendingChatMsg = null; // one queued message to send when channel recovers
-function sendChat() {
+function sendChat(overrideText) {
   const now = Date.now();
   if (now - _sendChatLast < 300) return;   // debounce — blocks multi-fire on older Android
   _sendChatLast = now;
-  const txt = chatInput.value.trim();
+  const txt = (overrideText !== undefined ? overrideText : chatInput.value).trim();
   const hasFiles = pendingFiles.length > 0;
   if (!txt && !hasFiles) return;
   if (!dataConn || !dataConn.open) {
@@ -3362,8 +3305,7 @@ function sendSpeechToChat() {
   if (!box) return;
   const txt = box.value.trim();
   if (!txt && pendingFiles.length === 0) return;
-  if (chatInput) chatInput.value = txt;
-  sendChat();
+  sendChat(txt);
   box.value = '';
   if (chatInput) chatInput.value = '';
   updateSpeechSendBtn();
@@ -3905,7 +3847,7 @@ function attachDataConn(dc) {
     if (f) {
       if (f.__control === 'video') { updateRemoteVideoState(f.enabled, f.hasTrack !== false); return; }
       if (f.__control === 'leave') { handleRemoteLeave(); return; }
-      if (f.__control === 'refresh') { entry('Remote refreshed — reloading…', 'sys'); peerRefreshing = true; try { sessionStorage.setItem('fieldRadioRefreshing', '1'); } catch(e) {} document.getElementById('sessionOverlay').style.display = 'flex'; document.getElementById('unitIdDisplay').style.display = 'none'; document.getElementById('reconnectingBanner').classList.add('active'); setTimeout(() => window.location.reload(), 400); return; }
+      if (f.__control === 'refresh') { entry('Remote refreshed — reloading…', 'sys'); peerRefreshing = true; try { sessionStorage.setItem('fieldRadioRefreshing', '1'); } catch(e) {} setTimeout(() => window.location.reload(), 400); return; }
       if (f.__file  === true)      { addMediaBubble(f.name, f.type, f.data, false); return; }
       if (f.__chunk === true)      { receiveChunk(f); return; }
       addBubble(JSON.stringify(f), false);
@@ -4848,10 +4790,9 @@ function refreshScreen() {
   peerRefreshing = true;  // suppress onDrop login redirect
   // Flag survives the reload so the fresh page auto-reconnects via login countdown
   try { sessionStorage.setItem('fieldRadioRefreshing', '1'); } catch(e) {}
-  // Show RECONNECTING banner over the login screen
+  // Show login box immediately on the refreshing side too
   document.getElementById('sessionOverlay').style.display = 'flex';
   document.getElementById('unitIdDisplay').style.display = 'none';
-  document.getElementById('reconnectingBanner').classList.add('active');
   // Local side waits 500 ms; remote starts its 400 ms timer on message receipt.
   // With ~100 ms one-way latency both reloads fire at roughly the same instant.
   setTimeout(() => window.location.reload(), 500);
