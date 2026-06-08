@@ -3803,6 +3803,20 @@ function dial() {
     try { call.off('close', onDrop); call.close(); } catch(e) {}
     call = null;
   }
+
+  // Rebuild the Peer immediately before every outbound call so the WebRTC
+  // offer is made with fresh ICE candidates. If the peer is already open and
+  // healthy we skip the rebuild to avoid unnecessary churn.
+  const peerReady = peer && !peer.destroyed && peer.open;
+  if (!peerReady) {
+    // startPeer() will call dial() again once the new peer fires 'open'
+    entry('Refreshing peer before dial…', 'sys');
+    if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e) {} }
+    peer = null;
+    startPeer();
+    return;
+  }
+
   entry('Calling Bravo…', 'info');
   const _cs = getCallStream();
   entry('DIAG: calling with ' + _cs.getTracks().length + ' tracks (audio=' + _cs.getAudioTracks().length + ' video=' + _cs.getVideoTracks().length + ')', 'sys');
