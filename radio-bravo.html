@@ -2853,7 +2853,7 @@ function _toggleLock(wrap) {
   }
 }
 
-function addBubble(text, mine, ts, save = true, restoredStatus = null) {
+function addBubble(text, mine, ts, save = true, restoredStatus = null, orig = null) {
   if (save) saveMessage(text, mine);
   const now = ts || Date.now();
   const wrap = document.createElement('div');
@@ -2903,7 +2903,7 @@ function addBubble(text, mine, ts, save = true, restoredStatus = null) {
   }
   const timeText = document.createTextNode(formatTs(now));
   time.appendChild(timeText);
-  wrap.dataset.orig = text;
+  wrap.dataset.orig = orig || text;  // orig = pre-translation text for sender bubbles
   // Copy (+) button
   const copyBtn = document.createElement('button');
   copyBtn.className = 'bubble-copy-btn';
@@ -2963,7 +2963,7 @@ function addBubble(text, mine, ts, save = true, restoredStatus = null) {
 
 let _sendChatLast = 0;
 let _pendingChatMsg = null; // one queued message to send when channel recovers
-function sendChat(overrideText) {
+async function sendChat(overrideText) {
   const now = Date.now();
   if (now - _sendChatLast < 300) return;   // debounce — blocks multi-fire on older Android
   _sendChatLast = now;
@@ -2976,25 +2976,34 @@ function sendChat(overrideText) {
       chatInput.value = ''; chatInput.style.height = 'auto';
     }
     if (dataConn && !dataConn.open) {
-      entry('Channel reopening — message queued…', 'sys');
+      entry('Channel reopening — message queued\u2026', 'sys');
       try { dataConn.close(); } catch(e) {}
       dataConn = null;
       openDataConn();
     } else if (!dataConn) {
-      entry('Channel not ready — message queued…', 'sys');
+      entry('Channel not ready — message queued\u2026', 'sys');
       openDataConn();
     }
     return;
   }
   if (txt) {
+    // Clear input immediately so UX feels instant
+    chatInput.value = ''; chatInput.style.height = 'auto';
+    // Translate outgoing text if a language is selected
+    let toSend = txt;
+    if (_translateLang) {
+      entry('Translating outgoing message\u2026', 'sys');
+      const translated = await translateText(txt, _translateLang);
+      if (translated && translated !== txt) toSend = translated;
+    }
     try {
-      dcSend(txt);
+      dcSend(toSend);
     } catch(e) {
       entry('Send failed: ' + e.message, 'err');
       return;
     }
-    addBubble(txt, true);
-    chatInput.value = ''; chatInput.style.height = 'auto';
+    // Show translated text in bubble; store original in data-orig for peek/copy
+    addBubble(toSend, true, null, true, null, toSend !== txt ? txt : null);
   }
   if (hasFiles) {
     sendPendingFiles();
