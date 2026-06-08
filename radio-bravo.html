@@ -3659,6 +3659,56 @@ function init() {
 }
 
 let _unavailIdRetries = 0;
+
+// ── Remote ID refresh (reads Alpha's published peerId from Firebase) ──────────
+async function _refreshRemoteId() {
+  try {
+    const _code = MY_ID ? MY_ID.replace(/^bravo-/, '').replace(/-[0-9a-f]{4}$/, '') : '';
+    if (!_code) return;
+    const _r = await fetch(FB_URL + '/presence/alpha-' + _code + '.json');
+    const _d = await _r.json();
+    if (_d && _d.peerId && _d.peerId !== REMOTE_ID) {
+      entry('ALPHA peer ID: ' + _d.peerId, 'sys');
+      REMOTE_ID = _d.peerId;
+    }
+  } catch(e) {}
+}
+
+// ── Dial Alpha (mirrors Alpha's dial logic) ───────────────────────────────────
+function dial() {
+  clearTimeout(retryTimer);
+  if (linked || !localStream) return;
+  if (call) {
+    try { call.off('close', onDrop); call.close(); } catch(e) {}
+    call = null;
+  }
+  // Rebuild peer before dialling if stale so ICE offer is always fresh
+  const peerReady = peer && !peer.destroyed && peer.open;
+  if (!peerReady) {
+    entry('Refreshing peer before dial…', 'sys');
+    if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e) {} }
+    peer = null;
+    startPeer();
+    return;
+  }
+  entry('Calling Alpha…', 'info');
+  const _cs = getCallStream();
+  const c = peer.call(REMOTE_ID, _cs);
+  attachCall(c);
+  openDataConn();
+  // Watchdog: if no stream in 90s, redial
+  clearTimeout(retryTimer);
+  retryTimer = setTimeout(() => {
+    if (!linked) {
+      entry('No answer after 90s — redialling…', 'sys');
+      if (call) { try { call.off('close', onDrop); call.close(); } catch(e){} call = null; }
+      if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
+      pendingDC = false;
+      dial();
+    }
+  }, 90000);
+}
+
 function startPeer() {
   // Guard: PeerJS CDN may still be loading on slow mobile connections
   if (typeof Peer === 'undefined') {
@@ -3681,18 +3731,28 @@ function startPeer() {
     config: { iceServers: ICE_SERVERS }
   });
 
-  let watchdog;
   peer.on('open', id => {
     _unavailIdRetries = 0; // ID claimed — reset backoff
-    entry('Radio online — waiting for Alpha [' + id + ']', 'ok');
-    setStatus('standby');
-    // Watchdog: if no call arrives in 30s, reconnect to signalling server to stay fresh
-    watchdog = setTimeout(() => {
-      if (!linked && !peer.destroyed) {
-        entry('Refreshing signalling connection…', 'sys');
-        if (peer.disconnected) peer.reconnect();
-      }
-    }, 30000);
+    entry('Radio online [' + id + ']', 'ok');
+    setStatus('calling');
+    // Poll Firebase for Alpha's peerId, then dial.
+    // Also listen for inbound calls from Alpha in parallel — whichever arrives first wins.
+    let _dialPollCount = 0;
+    const _dialPollMax = 20; // 20 × 1500ms = 30s max wait
+    function _pollAndDial() {
+      _refreshRemoteId().then(() => {
+        _dialPollCount++;
+        const hasSuffix = REMOTE_ID && /-[0-9a-f]{4}$/.test(REMOTE_ID);
+        if (hasSuffix || _dialPollCount >= _dialPollMax) {
+          if (!hasSuffix) entry('ALPHA peerId not found after 30s — dialling base ID', 'sys');
+          if (!linked) dial();
+        } else {
+          entry('Waiting for ALPHA peerId… (' + _dialPollCount + ')', 'sys');
+          setTimeout(_pollAndDial, 1500);
+        }
+      });
+    }
+    _pollAndDial();
   });
 
   peer.on('connection', dc => {
@@ -3703,6 +3763,7 @@ function startPeer() {
 
   peer.on('call', incoming => {
     entry('Inbound call from Alpha', 'info');
+    clearTimeout(retryTimer); // cancel any pending dial/retry — Alpha reached us first
     if (!localStream) {
       entry('ERROR: no local stream — cannot answer', 'err');
       incoming.close();
@@ -3748,8 +3809,12 @@ function startPeer() {
       return;
     }
     if (e.type === 'peer-unavailable') {
-      // Alpha not registered yet — ignore, we're waiting for Alpha to call us
-      entry('Alpha not yet visible — standing by…', 'sys');
+      // Alpha not registered yet — refresh its ID and retry in 5s
+      entry('Alpha not yet visible — retrying in 5s…', 'sys');
+      if (call) { try { call.close(); } catch(ex) {} call = null; }
+      if (dataConn) { try { dataConn.close(); } catch(ex) {} dataConn = null; }
+      pendingDC = false;
+      retryTimer = setTimeout(() => _refreshRemoteId().then(() => { if (!linked) dial(); }), 5000);
       return;
     }
     // network / server-error / socket-error / socket-closed
