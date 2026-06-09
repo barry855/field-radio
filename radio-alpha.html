@@ -2136,6 +2136,9 @@ function prefillLogin() {
         li.classList.toggle('selected', li.dataset.lang === code);
       });
       entry('Translate restored: ' + name, 'sys');
+    } else if (_systemTranslateCode) {
+      // No saved preference — apply system language as default
+      applyTranslate(_systemTranslateCode, _systemTranslateName);
     }
   } catch(e) {}
 }
@@ -2163,11 +2166,13 @@ prefillLogin();
   _systemTranslateCode = sysCode;
   _systemTranslateName = sysName;
   if (origItem) origItem.textContent = '\u{1F310} Auto-detect \u2014 ' + sysName;
-  // Prefill to system language unless a saved preference exists
+  // Set trigger display now (safe — no function calls needed)
   const savedLang = (function() { try { return localStorage.getItem('alpha_translate_lang'); } catch(e) { return null; } })();
-  if (!savedLang && sysCode) {
-    // Apply system language as default (sets trigger label + selected highlight)
-    applyTranslate(sysCode, sysName);
+  if (!savedLang && sysCode && trigger) {
+    trigger.textContent = sysName.toUpperCase();
+    document.querySelectorAll('#translateDropdown li').forEach(li => {
+      li.classList.toggle('selected', li.dataset.lang === sysCode);
+    });
   }
 })();
 
