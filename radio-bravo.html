@@ -3492,6 +3492,11 @@ function startListening() {
     if (lb) { lb.classList.add('listening'); lb.textContent = 'STOP'; }
     const ss = document.getElementById('speechStatus');
     if (ss) ss.classList.add('listening');
+    // Mute outgoing mic while listening so the remote doesn't hear our speech-rec audio
+    if (!audioMuted) {
+      if (_mixMicGain) { _preTalkMicGain = _mixMicGain.gain.value; _mixMicGain.gain.value = 0.0; }
+      else if (realAudioTrack) { realAudioTrack.enabled = false; }
+    }
   };
 
   _recognition.onresult = (e) => {
@@ -3554,6 +3559,11 @@ function stopListening() {
   if (lb) { lb.classList.remove('listening'); lb.textContent = 'TALK'; }
   const ss = document.getElementById('speechStatus');
   if (ss) ss.classList.remove('listening');
+  // Restore outgoing mic (unless the user has globally muted)
+  if (!audioMuted) {
+    if (_mixMicGain) { _mixMicGain.gain.value = _preTalkMicGain !== null ? _preTalkMicGain : 1.0; _preTalkMicGain = null; }
+    else if (realAudioTrack) { realAudioTrack.enabled = true; }
+  }
 }
 
 function setSpeechStatus(txt) {
@@ -3573,6 +3583,23 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   const box = document.getElementById('speechEditBox');
   if (box) box.addEventListener('input', updateSpeechSendBtn);
+
+  // ── Global keyboard shortcuts ──────────────────────────────
+  document.addEventListener('keydown', e => {
+    if (!e.ctrlKey && !e.metaKey) return;
+    if (e.key === 's' || e.key === 'S') {
+      // Ctrl+S — send from voice input box if panel is open and has content
+      if (_speechVisible) {
+        e.preventDefault();
+        const sb = document.getElementById('speechSendBtn');
+        if (sb && !sb.disabled) sendSpeechToChat();
+      }
+    } else if (e.key === 't' || e.key === 'T') {
+      // Ctrl+T — toggle Talk/Type in Chat panel
+      e.preventDefault();
+      toggleSpeechPanel();
+    }
+  });
   // Init speech lang select: saved choice > system language > en-US
   // Also resolves and stores the system-language option for the ORIGINAL button.
   (function() {
@@ -4135,23 +4162,23 @@ function attachDataConn(dc) {
             if (translated && translated !== srcText) {
               // Show translated text; original accessible via hover/tap
               addBubble(translated, false, null, true, null, srcText);
-              ttsSpeak(translated);
+              ttsSpeak(translated, targetLang);
             } else {
               addBubble(srcText, false);
-              ttsSpeak(srcText);
+              ttsSpeak(srcText, targetLang);
             }
           });
         } else {
           // Same language or no lang tag — show as-is
           addBubble(srcText, false);
-          ttsSpeak(srcText);
+          ttsSpeak(srcText, targetLang);
         }
         return;
       }
       addBubble(JSON.stringify(f), false);
     } else {
       addBubble(text, false);
-      ttsSpeak(text);
+      ttsSpeak(text, _myLang);
     }
   });
   dc.on('close', () => {
@@ -4941,6 +4968,7 @@ let _mixCtx  = null;
 let _mixDest = null;
 let _mixMicNode = null;
 let _mixMicGain = null;   // module-level so toggleAudio can zero it to mute mic in the mix graph
+let _preTalkMicGain = null; // saved gain value before Talk mutes the mic
 const _mixSourceNodes  = new WeakMap();
 const _mixPlayingSet   = new Set();
 let   _mixOutTrack     = null;
@@ -5436,7 +5464,7 @@ let _ttsResumeTimer = null;
 function _ttsClearResumeTimer() {
   if (_ttsResumeTimer) { clearInterval(_ttsResumeTimer); _ttsResumeTimer = null; }
 }
-function ttsSpeak(text) {
+function ttsSpeak(text, lang) {
   if (!_ttsEnabled || !text || !window.speechSynthesis) return;
   const ss = window.speechSynthesis;
   _ttsClearResumeTimer();
@@ -5445,8 +5473,9 @@ function ttsSpeak(text) {
   // be silently dropped in Chrome when cancel() resets the engine state.
   setTimeout(() => {
     const utter = new SpeechSynthesisUtterance(text);
-    const langSel = document.getElementById('speechLangSelect');
-    if (langSel) utter.lang = langSel.value;
+    // Use the explicitly passed lang, or our chosen language (_myLang), or browser default.
+    // Never use speechLangSelect — that's the speech recognition input language, not TTS output.
+    utter.lang = lang || _myLang || (navigator.language || 'en');
     utter.onend = utter.onerror = _ttsClearResumeTimer;
     ss.speak(utter);
     // Chrome pauses synthesis silently between utterances — keep pinging resume().
