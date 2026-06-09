@@ -3699,6 +3699,8 @@ function speechOriginalLang() {
   speechClearText();
 }
 
+let _miniChatWasVisible = null;  // null = not currently suppressed
+
 function _hideMiniChatForInput() {
   if (_miniChatWasVisible !== null) return; // already suppressed
   _miniChatWasVisible = miniChatVisible;
