@@ -1468,7 +1468,7 @@
         <button class="speech-top-btn leave-style" id="leaveChatBtn" onclick="leaveSession()" title="Leave session" style="flex-shrink:0;">✕ Leave</button>
         <button class="speech-top-btn" id="ttsChatBtn" onclick="toggleTts()" title="Toggle auto-speak for incoming messages" style="flex-shrink:0;">TTS Off</button><button class="speech-top-btn" id="flipChatBtn" onclick="flipCamera()" title="Flip camera" style="margin-left:auto; flex-shrink:0;">⟳ Flip Cam</button>
         <button class="speech-top-btn" id="fsChatBtn" onclick="toggleFullScreen()" title="Full Screen Toggle" style="flex-shrink:0;">FS OFF</button>
-        <button class="speech-top-btn active" id="miniChatBtn" onclick="toggleMiniChat()" title="Toggle mini video in chat" style="flex-shrink:0;">MINI ON</button>
+        <button class="speech-top-btn" id="miniChatBtn" onclick="toggleMiniChat()" title="Toggle mini video in chat" style="flex-shrink:0;">MINI OFF</button>
       </div>
       <div class="chat-btn-bar-row" style="flex-shrink:0;">
         <button class="speech-top-btn" id="chatVideoViewBtn" onclick="toggleChatVideoView()" title="Toggle chat video view">SEEING THEM</button>
@@ -1619,7 +1619,7 @@
       <div class="chat-panel" style="flex:1" id="chatPanel">
         <div class="panel-label">COMMS</div>
         <video id="chatUnderlay" autoplay playsinline muted></video>
-        <div class="mini-video-overlay" id="miniChatOverlay">
+        <div class="mini-video-overlay hidden" id="miniChatOverlay">
           <video id="miniChatVideo" autoplay playsinline muted></video>
           <span class="video-label">REMOTE</span>
           <button class="mini-toggle-btn" title="Hide mini" onclick="toggleMiniChat();event.stopPropagation()">✕</button>
@@ -2511,7 +2511,7 @@ function toggleMiniVideo() {
 }
 updateMiniVideoVisibility();
 
-let miniChatVisible = true;
+let miniChatVisible = false;
 function toggleMiniChat() {
   miniChatVisible = !miniChatVisible;
   const overlay = document.getElementById('miniChatOverlay');
