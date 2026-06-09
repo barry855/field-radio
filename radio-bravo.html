@@ -1020,7 +1020,7 @@
     background: rgba(0,0,0,0.88);
   }
   .mini-video-overlay {
-    position: absolute; top: 16px; left: 16px; z-index: 4;
+    position: absolute; bottom: 16px; right: 16px; z-index: 4;
     width: clamp(112px, 30%, 170px); aspect-ratio: 16/9;
     background: #000; border: 1px solid var(--accent2);
     border-radius: 4px; overflow: hidden;
@@ -4491,6 +4491,15 @@ function _doLeave() {
 }
 
 function handleRemoteLeave() {
+  // If a refresh-reload is in progress on either side, a 'leave' signal can arrive
+  // spuriously (e.g. beforeunload on a stale connection that hadn't yet seen peerRefreshing).
+  // Treat it as a refresh instead of a permanent leave.
+  let _ssRefreshing = false;
+  try { _ssRefreshing = sessionStorage.getItem('fieldRadioRefreshing') === '1'; } catch(e) {}
+  if (peerRefreshing || _ssRefreshing) {
+    entry('Leave signal received during refresh — ignoring (refresh in progress)', 'sys');
+    return;
+  }
   // Remote user left intentionally — cancel any pending reconnect and go to leave screen
   clearTimeout(dropTimer);  // prevent onDrop's grace-period timer from showing reconnect screen
   leftPermanently = false; // we haven't left yet, remote did
