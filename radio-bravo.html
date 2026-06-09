@@ -3433,6 +3433,8 @@ function toggleSpeechPanel() {
     if (panel) panel.classList.add('speech-open');
     if (btn)   { btn.classList.add('active'); btn.textContent = 'SHOW CHAT'; }
     updateSpeechSendBtn();
+    // Give focus to the input box so the keyboard appears immediately
+    setTimeout(() => { const box = document.getElementById('speechEditBox'); if (box) box.focus(); }, 50);
     setChatBtnsDisabled(true);
   } else {
     stopListening();
@@ -5424,12 +5426,18 @@ function toggleTts() {
 
 function ttsSpeak(text) {
   if (!_ttsEnabled || !text || !window.speechSynthesis) return;
-  window.speechSynthesis.cancel();
+  const ss = window.speechSynthesis;
+  // Chrome has a bug where synthesis gets stuck; cancel+resume+defer fixes it
+  ss.cancel();
   const utter = new SpeechSynthesisUtterance(text);
-  // Use our language preference so it sounds right
   const langSel = document.getElementById('speechLangSelect');
   if (langSel) utter.lang = langSel.value;
-  window.speechSynthesis.speak(utter);
+  // Small defer lets cancel() fully settle before speaking
+  setTimeout(() => {
+    if (ss.speaking) ss.cancel(); // extra safety if still stuck
+    ss.resume();
+    ss.speak(utter);
+  }, 120);
 }
 
 // Restore TTS toggle state on load
