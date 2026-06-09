@@ -5424,20 +5424,31 @@ function toggleTts() {
   try { localStorage.setItem('bravo_tts_enabled', _ttsEnabled ? '1' : '0'); } catch(e) {}
 }
 
+// Chrome SpeechSynthesis gets stuck paused after each utterance.
+// Fix: keep pinging resume() every 250ms while speaking, and always
+// cancel+defer before starting a new utterance.
+let _ttsResumeTimer = null;
+function _ttsClearResumeTimer() {
+  if (_ttsResumeTimer) { clearInterval(_ttsResumeTimer); _ttsResumeTimer = null; }
+}
 function ttsSpeak(text) {
   if (!_ttsEnabled || !text || !window.speechSynthesis) return;
   const ss = window.speechSynthesis;
-  // Chrome has a bug where synthesis gets stuck; cancel+resume+defer fixes it
+  _ttsClearResumeTimer();
   ss.cancel();
   const utter = new SpeechSynthesisUtterance(text);
   const langSel = document.getElementById('speechLangSelect');
   if (langSel) utter.lang = langSel.value;
-  // Small defer lets cancel() fully settle before speaking
+  utter.onend = utter.onerror = _ttsClearResumeTimer;
+  // Defer so cancel() fully settles, then start a resume-ping loop
   setTimeout(() => {
-    if (ss.speaking) ss.cancel(); // extra safety if still stuck
-    ss.resume();
     ss.speak(utter);
-  }, 120);
+    // Keep Chrome from pausing mid-utterance
+    _ttsResumeTimer = setInterval(() => {
+      if (!ss.speaking) { _ttsClearResumeTimer(); return; }
+      ss.resume();
+    }, 250);
+  }, 150);
 }
 
 // Restore TTS toggle state on load
