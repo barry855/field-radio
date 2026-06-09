@@ -4147,6 +4147,7 @@ function attachDataConn(dc) {
       addBubble(JSON.stringify(f), false);
     } else {
       addBubble(text, false);
+      ttsSpeak(text);
     }
   });
   dc.on('close', () => {
@@ -5440,12 +5441,14 @@ function ttsSpeak(text) {
   const langSel = document.getElementById('speechLangSelect');
   if (langSel) utter.lang = langSel.value;
   utter.onend = utter.onerror = _ttsClearResumeTimer;
-  // Defer so cancel() fully settles, then start a resume-ping loop
   setTimeout(() => {
     ss.speak(utter);
-    // Keep Chrome from pausing mid-utterance
+    // Chrome pauses synthesis silently; ping resume() on a fixed interval.
+    // Don't gate on ss.speaking — it may be false for the first tick.
+    let _ttsWatchdog = 0;
     _ttsResumeTimer = setInterval(() => {
-      if (!ss.speaking) { _ttsClearResumeTimer(); return; }
+      _ttsWatchdog++;
+      if (_ttsWatchdog > 120) { _ttsClearResumeTimer(); return; } // 30s hard cap
       ss.resume();
     }, 250);
   }, 150);
