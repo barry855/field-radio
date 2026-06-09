@@ -1494,7 +1494,7 @@
         <div id="translateBar">
     <label>🗣 MY LANGUAGE</label>
     <button id="translateTrigger" onclick="toggleTranslateDrop(event)">SELECT LANGUAGE</button>
-    <button id="translateResetBtn" onclick="resetTranslate()">CLEAR</button>
+    <button id="translateResetBtn" onclick="resetTranslate()">ORIGINAL</button>
     <div id="translateDropdownWrap"><input id="translateSearch" type="text" placeholder="Search language…" oninput="filterLangs(this.value)" autocomplete="off"><ul id="translateDropdown">
           <li data-lang="__orig__" tabindex="0" id="origLangItem" style="border-bottom:2px solid rgba(0,212,255,0.3);font-weight:bold;">🌐 Auto-detect (no tag)</li>
           <li data-lang="af" tabindex="0">Afrikaans</li>
@@ -1639,7 +1639,7 @@
             <input type="file" id="speechFileInput" multiple style="display:none" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx">
             <button id="speechLoadBtn" onclick="speechLoadText()" title="Load text file into input box">LOAD</button>
             <button id="speechSaveBtn" onclick="speechSaveText()" title="Save input box text to file">SAVE</button>
-            <button id="speechClearBtn" onclick="speechClearText()" title="Clear input box">CLEAR</button>
+            <button id="speechClearBtn" onclick="speechOriginalLang()" title="Revert to system language">ORIGINAL</button>
             <button id="speechCopyBtn" onclick="speechCopyText()" title="Copy input box text to clipboard">COPY</button>
             <input type="file" id="speechTextFileInput" style="display:none" accept=".txt,.md,.text">
           </div>
@@ -1974,6 +1974,8 @@ function stopPresencePolling() {
 let _translateLang = null;  // kept for compat; mirrors _myLang
 let _translateName = null;
 let _myLang = null;   // BCP-47 code of THIS user's language
+let _systemTranslateCode = null; // resolved at startup from navigator.language
+let _systemTranslateName = null; // display name for the system language
 
 function toggleTranslateDrop(e) {
   e.stopPropagation();
@@ -2086,39 +2088,26 @@ function applyTranslate(code, name) {
 }
 
 function resetTranslate() {
-  _translateLang = null;
-  _translateName = null;
-  _myLang = null;
-  try { localStorage.removeItem('bravo_translate_lang'); } catch(e) {}
-  // Show the browser's detected language in the dropdown trigger
-  const browserLangCode = (navigator.language || 'en').split('-')[0].toLowerCase();
-  const browserLangFull = (navigator.language || 'en').toLowerCase();
-  let browserLangName = null;
-  document.querySelectorAll('#translateDropdown li').forEach(li => {
-    const liCode = (li.dataset.lang || '').toLowerCase();
-    if (!browserLangName && (liCode === browserLangFull || liCode === browserLangCode)) {
-      browserLangName = li.textContent.trim();
-    }
-  });
-  if (!browserLangName) {
-    try {
-      browserLangName = new Intl.DisplayNames([navigator.language], { type: 'language' }).of(navigator.language) || navigator.language;
-    } catch(e) { browserLangName = navigator.language || 'SELECT LANGUAGE'; }
-  }
-  document.getElementById('translateTrigger').textContent = 'SELECT LANGUAGE';
-  // Update the orig item label in the dropdown to show system language
-  const origItem = document.getElementById('origLangItem');
-  if (origItem) origItem.textContent = '🌐 Auto-detect — ' + browserLangName;
-  // Clear selected state in dropdown
-  document.querySelectorAll('#translateDropdown li').forEach(li => li.classList.remove('selected'));
-  // Restore original text in all bubbles
+  // Restore original text in all bubbles first
   document.querySelectorAll('#chat .bubble').forEach(b => {
     if (b.dataset.orig) {
       const msgDiv = b.querySelector('.msg-text');
       if (msgDiv) msgDiv.textContent = b.dataset.orig;
     }
   });
-  entry('Language cleared — messages sent without language tag', 'sys');
+  // Revert to system language (same as startup default)
+  if (_systemTranslateCode) {
+    applyTranslate(_systemTranslateCode, _systemTranslateName);
+    entry('Language reset to system language: ' + _systemTranslateName, 'sys');
+  } else {
+    _translateLang = null;
+    _translateName = null;
+    _myLang = null;
+    try { localStorage.removeItem('bravo_translate_lang'); } catch(e) {}
+    document.getElementById('translateTrigger').textContent = 'SELECT LANGUAGE';
+    document.querySelectorAll('#translateDropdown li').forEach(li => li.classList.remove('selected'));
+    entry('Language cleared — messages sent without language tag', 'sys');
+  }
 }
 
 // Wire up list items
@@ -2185,18 +2174,29 @@ prefillLogin();
   const origItem = document.getElementById('origLangItem');
   const trigger  = document.getElementById('translateTrigger');
   const browserLangCode = (navigator.language || 'en').split('-')[0].toLowerCase();
-  let browserLangName = null;
+  const browserLangFull = (navigator.language || 'en').toLowerCase();
+  let sysCode = null, sysName = null;
   document.querySelectorAll('#translateDropdown li').forEach(li => {
     const liCode = (li.dataset.lang || '').toLowerCase();
-    if (!browserLangName && liCode === browserLangCode) browserLangName = li.textContent.trim();
+    if (!sysCode && liCode !== '__orig__' && (liCode === browserLangFull || liCode === browserLangCode)) {
+      sysCode = li.dataset.lang;
+      sysName = li.textContent.trim();
+    }
   });
-  if (!browserLangName) {
-    try { browserLangName = new Intl.DisplayNames([navigator.language], { type: 'language' }).of(navigator.language); } catch(e) { browserLangName = navigator.language || 'System Language'; }
+  if (!sysName) {
+    try { sysName = new Intl.DisplayNames([navigator.language], { type: 'language' }).of(navigator.language); } catch(e) {}
+    sysName = sysName || navigator.language || 'System Language';
+    sysCode = sysCode || browserLangCode;
   }
-  const name = browserLangName || 'System Language';
-  if (origItem) origItem.textContent = '🌐 Auto-detect — ' + name;
+  // Store for use by ORIGINAL button
+  _systemTranslateCode = sysCode;
+  _systemTranslateName = sysName;
+  if (origItem) origItem.textContent = '\u{1F310} Auto-detect \u2014 ' + sysName;
+  // Prefill to system language unless a saved preference exists
   const savedLang = (function() { try { return localStorage.getItem('bravo_translate_lang'); } catch(e) { return null; } })();
-  if (!savedLang && trigger) trigger.textContent = 'SELECT LANGUAGE';
+  if (!savedLang && sysCode) {
+    applyTranslate(sysCode, sysName);
+  }
 })();
 
 let _reconnectCountdownTimer = null;
@@ -3561,19 +3561,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const box = document.getElementById('speechEditBox');
   if (box) box.addEventListener('input', updateSpeechSendBtn);
   // Init speech lang select: saved choice > system language > en-US
+  // Also resolves and stores the system-language option for the ORIGINAL button.
   (function() {
     const sel = document.getElementById('speechLangSelect');
     if (!sel) return;
-    const saved = localStorage.getItem('alpha_speech_lang');
-    const sysLang = navigator.language || 'en-US';
-    const target = saved || sysLang;
-    // Try exact match first, then prefix match (e.g. 'fr' matches 'fr-FR')
     const opts = Array.from(sel.options);
-    const exact = opts.find(o => o.value.toLowerCase() === target.toLowerCase());
+    // Resolve system language to the best matching option value
+    const sysLang = navigator.language || 'en-US';
+    const sysExact  = opts.find(o => o.value.toLowerCase() === sysLang.toLowerCase());
+    const sysPrefix = !sysExact && opts.find(o => o.value.toLowerCase().startsWith(sysLang.split('-')[0].toLowerCase()));
+    _systemSpeechLang = (sysExact || sysPrefix || opts[0]).value;
+
+    // Select saved preference, or fall back to system language
+    const saved = localStorage.getItem('alpha_speech_lang');
+    const target = saved || _systemSpeechLang;
+    const exact  = opts.find(o => o.value.toLowerCase() === target.toLowerCase());
     const prefix = !exact && opts.find(o => o.value.toLowerCase().startsWith(target.split('-')[0].toLowerCase()));
-    if (exact) sel.value = exact.value;
-    else if (prefix) sel.value = prefix.value;
-    // else stays at en-US (first option)
+    sel.value = (exact || prefix || { value: _systemSpeechLang }).value;
   })();
 
   // ── Speech panel drag-and-drop for file attach ──
@@ -3670,6 +3674,8 @@ function speechCopyText() {
   });
 }
 
+let _systemSpeechLang = 'en-US'; // resolved at DOMContentLoaded to best match for navigator.language
+
 function speechClearText() {
   const box = document.getElementById('speechEditBox');
   if (!box) return;
@@ -3677,10 +3683,15 @@ function speechClearText() {
   updateSpeechSendBtn();
 }
 
-// ── Mini-chat hide while typing ───────────────────────────────────────────────
-// Remember the mini-video state when the user focuses the input box,
-// hide the mini while typing, and restore it when they blur or send.
-let _miniChatWasVisible = null;  // null = not currently suppressed
+function speechOriginalLang() {
+  // Revert dropdown to system language and persist
+  const sel = document.getElementById('speechLangSelect');
+  if (sel) {
+    sel.value = _systemSpeechLang;
+    setSpeechLang(_systemSpeechLang);
+  }
+  speechClearText();
+}
 
 function _hideMiniChatForInput() {
   if (_miniChatWasVisible !== null) return; // already suppressed
