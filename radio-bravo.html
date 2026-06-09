@@ -786,7 +786,7 @@
   }
   #speechLangSelect:focus { outline: none; border-color: var(--accent); }
   /* ── Shared speech button base ── */
-  #speechSendBtn, #speechListenBtn, #speechAttachBtn, #speechLoadBtn, #speechSaveBtn, #speechCopyBtn, #speechClearBtn {
+  #speechSendBtn, #speechListenBtn, #speechAttachBtn, #speechLoadBtn, #speechSaveBtn, #speechCopyBtn, #speechClearBtn, #speechTtsBtn {
     background: var(--btn-bg); border: 1px solid var(--border);
     color: var(--text); padding: 5px 9px; border-radius: 4px;
     font-family: 'Share Tech Mono', monospace; font-size: 11px;
@@ -804,6 +804,8 @@
   #speechLoadBtn:hover   { background: var(--btn-hover); border-color: var(--accent2); color: var(--accent2); }
   #speechSaveBtn:hover   { background: var(--btn-hover); border-color: var(--accent2); color: var(--accent2); }
   #speechCopyBtn:hover   { background: var(--btn-hover); border-color: var(--accent2); color: var(--accent2); }
+  #speechTtsBtn:hover    { background: var(--btn-hover); border-color: var(--accent2); color: var(--accent2); }
+  #speechTtsBtn.speaking { border-color: #f0a030; color: #f0a030; }
   #speechClearBtn:hover  { background: var(--btn-hover); border-color: var(--danger, #cc2222); color: var(--danger, #cc2222); }
   /* drag-over highlight on speech panel */
   .speech-top-bar {
@@ -1641,6 +1643,7 @@
             <button id="speechSaveBtn" onclick="speechSaveText()" title="Save input box text to file">SAVE</button>
             <button id="speechClearBtn" onclick="speechOriginalLang()" title="Revert to system language">ORIGINAL</button>
             <button id="speechCopyBtn" onclick="speechCopyText()" title="Copy input box text to clipboard">COPY</button>
+            <button id="speechTtsBtn" onclick="speechTtsSpeak()" title="Read input box text aloud (Text-to-Speech)">TTS</button>
             <input type="file" id="speechTextFileInput" style="display:none" accept=".txt,.md,.text">
           </div>
           <div class="sbr-right">
@@ -2143,7 +2146,8 @@ function prefillLogin() {
     // Pre-register peer immediately if saved code is exactly 6 chars
     if (last && last.length === 6) preRegister(last);
     // Prefill mic gain slider from saved value
-    const savedGain = parseFloat(localStorage.getItem('bravo_mic_gain') || '1');
+    const _rawGain = localStorage.getItem('bravo_mic_gain');
+    const savedGain = _rawGain !== null ? parseFloat(_rawGain) : 1;
     const gSlider = document.getElementById('micGainSlider');
     const gLabel  = document.getElementById('micGainVal');
     if (gSlider && isFinite(savedGain)) { gSlider.value = savedGain; }
@@ -3678,6 +3682,30 @@ function speechCopyText() {
     box.select();
     document.execCommand('copy');
   });
+}
+
+let _ttsSpeaking = false;
+function speechTtsSpeak() {
+  const btn = document.getElementById('speechTtsBtn');
+  if (_ttsSpeaking || window.speechSynthesis.speaking) {
+    window.speechSynthesis.cancel();
+    _ttsSpeaking = false;
+    if (btn) { btn.textContent = 'TTS'; btn.classList.remove('speaking'); }
+    return;
+  }
+  const box = document.getElementById('speechEditBox');
+  const text = box ? box.value.trim() : '';
+  if (!text) return;
+  const utter = new SpeechSynthesisUtterance(text);
+  const langSel = document.getElementById('speechLangSelect');
+  if (langSel) utter.lang = langSel.value;
+  _ttsSpeaking = true;
+  if (btn) { btn.textContent = '■ STOP'; btn.classList.add('speaking'); }
+  utter.onend = utter.onerror = () => {
+    _ttsSpeaking = false;
+    if (btn) { btn.textContent = 'TTS'; btn.classList.remove('speaking'); }
+  };
+  window.speechSynthesis.speak(utter);
 }
 
 let _systemSpeechLang = 'en-US'; // resolved at DOMContentLoaded to best match for navigator.language
@@ -5263,7 +5291,7 @@ function setupMicGainNode(stream) {
     const src = _micGainCtx.createMediaStreamSource(stream);
     _micGainNode = _micGainCtx.createGain();
     _micGainDest = _micGainCtx.createMediaStreamDestination();
-    const savedGain = parseFloat(localStorage.getItem('bravo_mic_gain') || '1');
+    const savedGain = (() => { const r = localStorage.getItem('bravo_mic_gain'); return r !== null ? parseFloat(r) : 1; })();
     _micGainNode.gain.value = isFinite(savedGain) ? savedGain : 1;
     src.connect(_micGainNode);
     _micGainNode.connect(_micGainDest);
