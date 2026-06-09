@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -5603,11 +5604,6 @@ function ttsSpeak(text, lang) {
     let _ttsWatchdog = 0;
     _ttsResumeTimer = setInterval(() => {
       _ttsWatchdog++;
-      if (_ttsWatchdog > 120) { _ttsClearResumeTimer(); return; } // 30s hard cap
-      ss.resume();
-    }, 250);
-  }, 150);
-}
       if (_ttsWatchdog > 120) { _ttsClearResumeTimer(); return; } // 30s hard cap
       ss.resume();
     }, 250);
