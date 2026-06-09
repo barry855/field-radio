@@ -3005,31 +3005,32 @@ async function sendChat(overrideText) {
   const txt = (overrideText !== undefined ? overrideText : chatInput.value).trim();
   const hasFiles = pendingFiles.length > 0;
   if (!txt && !hasFiles) return;
+  // Always show the sender's own bubble immediately — regardless of DC state.
+  // This means the sender sees their message even if the channel is momentarily closed.
+  if (txt) {
+    chatInput.value = ''; chatInput.style.height = 'auto';
+    addBubble(txt, true, null, true, null, null);
+  }
   if (!dataConn || !dataConn.open) {
     if (txt) {
       _pendingChatMsg = txt;
-      chatInput.value = ''; chatInput.style.height = 'auto';
+      const dcState = dataConn ? ('open=' + dataConn.open + ' type=' + (dataConn.type||'?')) : 'null';
+      entry('DC not ready (' + dcState + ') — message queued\u2026', 'sys');
     }
     if (dataConn && !dataConn.open) {
-      entry('Channel reopening — message queued\u2026', 'sys');
       try { dataConn.close(); } catch(e) {}
       dataConn = null;
       openDataConn();
     } else if (!dataConn) {
-      entry('Channel not ready — message queued\u2026', 'sys');
       openDataConn();
     }
     return;
   }
   if (txt) {
-    // Clear input immediately so UX feels instant
-    chatInput.value = ''; chatInput.style.height = 'auto';
     // Send as tagged chat object so peer can translate into their language
-    // The sender always sees their own text as-is; peer translates on receipt.
     let toSend = txt;
     try {
       if (_myLang) {
-        // Send structured message with language tag
         dcSend({ __chat: true, text: txt, lang: _myLang });
       } else {
         dcSend(toSend);
@@ -3038,8 +3039,6 @@ async function sendChat(overrideText) {
       entry('Send failed: ' + e.message, 'err');
       return;
     }
-    // Sender always sees their own text (no translation on sender side)
-    addBubble(txt, true, null, true, null, null);
   }
   if (hasFiles) {
     sendPendingFiles();
@@ -4114,7 +4113,7 @@ function attachDataConn(dc) {
     sendVideoState();
     if (_pendingChatMsg) {
       const queued = _pendingChatMsg; _pendingChatMsg = null;
-      try { dcSend(queued); addBubble(queued, true); entry('Queued message sent', 'sys'); } catch(e) {}
+      try { dcSend(queued); entry('Queued message sent', 'sys'); } catch(e) {}
     }
   }
   dc.on('open', onDcOpen);
