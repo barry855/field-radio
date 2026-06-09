@@ -5436,14 +5436,15 @@ function ttsSpeak(text) {
   const ss = window.speechSynthesis;
   _ttsClearResumeTimer();
   ss.cancel();
-  const utter = new SpeechSynthesisUtterance(text);
-  const langSel = document.getElementById('speechLangSelect');
-  if (langSel) utter.lang = langSel.value;
-  utter.onend = utter.onerror = _ttsClearResumeTimer;
+  // Create utterance AFTER cancel() settles — creating it before causes it to
+  // be silently dropped in Chrome when cancel() resets the engine state.
   setTimeout(() => {
+    const utter = new SpeechSynthesisUtterance(text);
+    const langSel = document.getElementById('speechLangSelect');
+    if (langSel) utter.lang = langSel.value;
+    utter.onend = utter.onerror = _ttsClearResumeTimer;
     ss.speak(utter);
-    // Chrome pauses synthesis silently; ping resume() on a fixed interval.
-    // Don't gate on ss.speaking — it may be false for the first tick.
+    // Chrome pauses synthesis silently between utterances — keep pinging resume().
     let _ttsWatchdog = 0;
     _ttsResumeTimer = setInterval(() => {
       _ttsWatchdog++;
