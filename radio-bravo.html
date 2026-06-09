@@ -3447,6 +3447,7 @@ function sendSpeechToChat() {
   if (!box) return;
   const txt = box.value.trim();
   if (!txt && pendingFiles.length === 0) return;
+  _restoreMiniChatAfterInput();  // restore mini before panel closes
   sendChat(txt);
   box.value = '';
   if (chatInput) chatInput.value = '';
@@ -3676,9 +3677,38 @@ function speechClearText() {
   updateSpeechSendBtn();
 }
 
-// ── Media-only init: used when peer is already pre-registered ────────────────
-// Acquires mic/camera and calls dial() on the already-open peer.
-// Mirrors the media-acquisition path in init() without rebuilding the peer.
+// ── Mini-chat hide while typing ───────────────────────────────────────────────
+// Remember the mini-video state when the user focuses the input box,
+// hide the mini while typing, and restore it when they blur or send.
+let _miniChatWasVisible = null;  // null = not currently suppressed
+
+function _hideMiniChatForInput() {
+  if (_miniChatWasVisible !== null) return; // already suppressed
+  _miniChatWasVisible = miniChatVisible;
+  if (miniChatVisible) {
+    const overlay = document.getElementById('miniChatOverlay');
+    if (overlay) overlay.classList.add('hidden');
+    // Don't flip the flag — we want toggleMiniChat() still in sync
+  }
+}
+
+function _restoreMiniChatAfterInput() {
+  if (_miniChatWasVisible === null) return; // nothing to restore
+  const wasOn = _miniChatWasVisible;
+  _miniChatWasVisible = null;
+  if (wasOn && miniChatVisible) {
+    // It was on and user hasn't toggled it off while typing — restore
+    const overlay = document.getElementById('miniChatOverlay');
+    if (overlay) overlay.classList.remove('hidden');
+  }
+}
+
+(function attachSpeechBoxFocusHandlers() {
+  const box = document.getElementById('speechEditBox');
+  if (!box) return;
+  box.addEventListener('focus', _hideMiniChatForInput);
+  box.addEventListener('blur',  _restoreMiniChatAfterInput);
+})();
 function initMediaOnly() {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     entry('Mic/camera API not available — data channel only', 'sys');
