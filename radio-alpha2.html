@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -1435,7 +1436,7 @@
       <div class="chat-btn-bar-row" style="flex-shrink:0; margin-bottom:4px; flex-wrap:nowrap; overflow:hidden;">
         <button class="speech-top-btn" onclick="refreshScreen()" title="Refresh / Reconnect" style="flex-shrink:0;">↺</button>
         <button class="speech-top-btn leave-style" id="leaveChatBtn" onclick="leaveSession()" title="Leave session" style="flex-shrink:0;">✕ Leave</button>
-        <button class="speech-top-btn" id="ttsChatBtn" onclick="toggleTts()" title="Toggle auto-speak for incoming messages" style="flex-shrink:0;">TTS Off</button><button class="speech-top-btn" id="flipChatBtn" onclick="flipCamera()" title="Flip camera" style="margin-left:auto; flex-shrink:0;">⟳ Flip Cam</button>
+        <button class="speech-top-btn" id="ttsChatBtn" onclick="toggleTts()" title="Toggle auto-speak for incoming messages" style="flex-shrink:0;">TTS Off</button><button class="speech-top-btn" id="flipChatBtn" onclick="flipCamera()" title="Flip camera" style="flex-shrink:0;">⟳ Flip Cam</button>
         <button class="speech-top-btn" id="fsChatBtn" onclick="toggleFullScreen()" title="Full Screen Toggle" style="flex-shrink:0;">FS OFF</button>
         <button class="speech-top-btn" id="miniChatBtn" onclick="toggleMiniChat()" title="Toggle mini video in chat" style="flex-shrink:0;">MINI OFF</button>
       </div>
@@ -3488,6 +3489,11 @@ function startListening() {
     const ss = document.getElementById('speechStatus');
     if (ss) ss.classList.add('listening');
     lb.textContent = 'STOP';
+    // Mute outgoing mic while listening so the remote doesn't hear our speech-rec audio
+    if (!audioMuted) {
+      if (_mixMicGain) { _preTalkMicGain = _mixMicGain.gain.value; _mixMicGain.gain.value = 0.0; }
+      else if (realAudioTrack) { realAudioTrack.enabled = false; }
+    }
   };
 
   _recognition.onresult = (e) => {
@@ -3550,6 +3556,11 @@ function stopListening() {
   if (lb) { lb.classList.remove('listening'); lb.textContent = 'TALK'; }
   const ss = document.getElementById('speechStatus');
   if (ss) ss.classList.remove('listening');
+  // Restore outgoing mic (unless the user has globally muted)
+  if (!audioMuted) {
+    if (_mixMicGain) { _mixMicGain.gain.value = _preTalkMicGain !== null ? _preTalkMicGain : 1.0; _preTalkMicGain = null; }
+    else if (realAudioTrack) { realAudioTrack.enabled = true; }
+  }
 }
 
 function setSpeechStatus(txt) {
@@ -3570,6 +3581,23 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   const box = document.getElementById('speechEditBox');
   if (box) box.addEventListener('input', updateSpeechSendBtn);
+
+  // ── Global keyboard shortcuts ──────────────────────────────
+  document.addEventListener('keydown', e => {
+    if (!e.ctrlKey && !e.metaKey) return;
+    if (e.key === 's' || e.key === 'S') {
+      // Ctrl+S — send from voice input box if panel is open and has content
+      if (_speechVisible) {
+        e.preventDefault();
+        const sb = document.getElementById('speechSendBtn');
+        if (sb && !sb.disabled) sendSpeechToChat();
+      }
+    } else if (e.key === 't' || e.key === 'T') {
+      // Ctrl+T — toggle Talk/Type in Chat panel
+      e.preventDefault();
+      toggleSpeechPanel();
+    }
+  });
   // Init speech lang select: saved choice > system language > en-US
   // Also resolves and stores the system-language option for the ORIGINAL button.
   (function() {
@@ -3784,13 +3812,13 @@ function initMediaOnly() {
   }
 
   navigator.mediaDevices.getUserMedia({
-    audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
     video: videoConstraint
   })
   .then(applyAndDial)
   .catch(e => {
     entry('Media error (' + e.name + ') — falling back to audio-only', 'sys');
-    navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } })
+    navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false } })
       .then(applyAndDial)
       .catch(e2 => {
         entry('Mic also failed (' + e2.name + ') — data channel only', 'err');
@@ -3911,7 +3939,7 @@ function init() {
   }
 
   navigator.mediaDevices.getUserMedia({
-    audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
     video: videoConstraint
   })
   .then(applyStreamFlags)
@@ -3920,7 +3948,7 @@ function init() {
     if (e.name !== 'NotAllowedError' && e.name !== 'PermissionDeniedError' && e.name !== 'SecurityError') {
       entry('Camera unavailable (' + e.name + ') — retrying audio-only', 'sys');
       navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
         video: false
       })
       .then(applyStreamFlags)
@@ -4146,23 +4174,23 @@ function attachDataConn(dc) {
             if (translated && translated !== srcText) {
               // Show translated text; original accessible via hover/tap
               addBubble(translated, false, null, true, null, srcText);
-              ttsSpeak(translated);
+              ttsSpeak(translated, targetLang);
             } else {
               addBubble(srcText, false);
-              ttsSpeak(srcText);
+              ttsSpeak(srcText, targetLang);
             }
           });
         } else {
           // Same language or no lang tag — show as-is
           addBubble(srcText, false);
-          ttsSpeak(srcText);
+          ttsSpeak(srcText, targetLang);
         }
         return;
       }
       addBubble(JSON.stringify(f), false);
     } else {
       addBubble(text, false);
-      ttsSpeak(text);
+      ttsSpeak(text, _myLang);
     }
   });
   dc.on('close', () => {
@@ -5036,6 +5064,7 @@ let _mixCtx  = null;   // single shared AudioContext, never closed
 let _mixDest = null;   // MediaStreamDestination — mixed output
 let _mixMicNode = null;
 let _mixMicGain = null;   // module-level so toggleAudio can zero it to mute mic within the mix graph
+let _preTalkMicGain = null; // saved gain value before Talk mutes the mic
 const _mixSourceNodes  = new WeakMap(); // mediaEl → AudioNode (created once)
 const _mixPlayingSet   = new Set();     // mediaEl currently playing
 let   _mixOutTrack     = null;          // track currently sent in call
@@ -5557,7 +5586,7 @@ let _ttsResumeTimer = null;
 function _ttsClearResumeTimer() {
   if (_ttsResumeTimer) { clearInterval(_ttsResumeTimer); _ttsResumeTimer = null; }
 }
-function ttsSpeak(text) {
+function ttsSpeak(text, lang) {
   if (!_ttsEnabled || !text || !window.speechSynthesis) return;
   const ss = window.speechSynthesis;
   _ttsClearResumeTimer();
@@ -5566,14 +5595,20 @@ function ttsSpeak(text) {
   // be silently dropped in Chrome when cancel() resets the engine state.
   setTimeout(() => {
     const utter = new SpeechSynthesisUtterance(text);
-    const langSel = document.getElementById('speechLangSelect');
-    if (langSel) utter.lang = langSel.value;
+    // Use the explicitly passed lang, or our chosen language (_myLang), or browser default.
+    // Never use speechLangSelect — that's the speech recognition input language, not TTS output.
+    utter.lang = lang || _myLang || (navigator.language || 'en');
     utter.onend = utter.onerror = _ttsClearResumeTimer;
     ss.speak(utter);
     // Chrome pauses synthesis silently between utterances — keep pinging resume().
     let _ttsWatchdog = 0;
     _ttsResumeTimer = setInterval(() => {
       _ttsWatchdog++;
+      if (_ttsWatchdog > 120) { _ttsClearResumeTimer(); return; } // 30s hard cap
+      ss.resume();
+    }, 250);
+  }, 150);
+}
       if (_ttsWatchdog > 120) { _ttsClearResumeTimer(); return; } // 30s hard cap
       ss.resume();
     }, 250);
