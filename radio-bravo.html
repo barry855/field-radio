@@ -4022,7 +4022,11 @@ function startPeer() {
   });
 
   peer.on('connection', dc => {
-    if (dataConn || pendingDC) { dc.close(); return; }
+    // Reject only if we already have a live open DC or an outbound DC in progress.
+    // If dataConn exists but is closed/dead, replace it with the fresh inbound one.
+    if (pendingDC) { dc.close(); return; }
+    if (dataConn && dataConn.open) { dc.close(); return; }
+    if (dataConn) { try { dataConn.close(); } catch(e) {} dataConn = null; }
     entry('Inbound data channel from Alpha', 'sys');
     attachDataConn(dc);
   });
@@ -4050,6 +4054,9 @@ function startPeer() {
     if (wasLinked) entry('Re-answering call from Alpha (reconnect)…', 'sys');
     const _as = getCallStream();
     entry('DIAG: answering with ' + _as.getTracks().length + ' tracks (audio=' + _as.getAudioTracks().length + ' video=' + _as.getVideoTracks().length + ')', 'sys');
+    // Alpha is winning the call — cancel any in-flight outbound DC attempt so
+    // Alpha's inbound DC connection can be accepted in peer.on('connection').
+    pendingDC = false;
     incoming.answer(_as);
     attachCall(incoming);
   });
