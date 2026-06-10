@@ -3511,13 +3511,10 @@ function startListening() {
   const _isAndroid = /android/i.test(navigator.userAgent);
 
   _recognition = new SpeechRecognition();
-  // Android: single-shot, no interim (interim mode suppresses onresult on many Android builds)
-  // Desktop: continuous with interim for real-time display
   _recognition.continuous      = !_isAndroid;
   _recognition.interimResults  = !_isAndroid;
   _recognition.maxAlternatives = 1;
 
-  // Set language
   const _sl = document.getElementById('speechLangSelect');
   const _savedLang = _sl ? (localStorage.getItem('alpha_speech_lang') || _sl.value) : 'en-US';
   _recognition.lang = _savedLang;
@@ -3526,7 +3523,7 @@ function startListening() {
   _recognition.onstart = () => {
     _listening = true;
     _interimText = '';
-    setSpeechStatus('● LISTENING');
+    setSpeechStatus('START android=' + _isAndroid + ' lang=' + _recognition.lang + ' interim=' + _recognition.interimResults);
     const lb = document.getElementById('speechListenBtn');
     if (lb) { lb.classList.add('listening'); lb.textContent = 'STOP'; }
     const ss = document.getElementById('speechStatus');
@@ -3540,12 +3537,14 @@ function startListening() {
   _recognition.onresult = (e) => {
     const box = document.getElementById('speechEditBox');
     if (!box) return;
+    setSpeechStatus('RESULT idx=' + e.resultIndex + ' len=' + e.results.length);
     let finalChunk = '';
     let interimChunk = '';
     for (let i = e.resultIndex; i < e.results.length; i++) {
       if (e.results[i].isFinal) { finalChunk   += e.results[i][0].transcript; }
       else                      { interimChunk += e.results[i][0].transcript; }
     }
+    setSpeechStatus('RESULT final=[' + finalChunk + '] interim=[' + interimChunk + ']');
     if (finalChunk) {
       const base = (_interimText && box.value.endsWith(_interimText))
         ? box.value.slice(0, box.value.length - _interimText.length) : box.value;
@@ -3561,13 +3560,13 @@ function startListening() {
   };
 
   _recognition.onerror = (e) => {
-    if (e.error === 'no-speech' || e.error === 'aborted') return;
     setSpeechStatus('ERR: ' + e.error.toUpperCase());
+    if (e.error === 'no-speech' || e.error === 'aborted') return;
     stopListening();
   };
 
   _recognition.onend = () => {
-    // Commit any pending interim text (Android often skips isFinal)
+    setSpeechStatus('END interim=[' + _interimText + '] listening=' + _listening);
     if (_interimText) {
       const box = document.getElementById('speechEditBox');
       if (box) {
@@ -3586,7 +3585,7 @@ function startListening() {
     }
   };
 
-  try { _recognition.start(); } catch(e) { setSpeechStatus('ERR: START FAILED'); }
+  try { _recognition.start(); } catch(e) { setSpeechStatus('ERR: START FAILED: ' + e.message); }
 }
 
 function setSpeechLang(code) {
