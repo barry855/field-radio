@@ -1,8 +1,10 @@
+
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<meta name="screen-orientation" content="any">
 <meta name="google" content="notranslate">
 <title>ALPHA — Field Radio v6</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌐</text></svg>">
@@ -338,23 +340,7 @@
   .underlay-flip-btn:hover, .underlay-flip-btn:active { opacity: 1; border-color: var(--accent); color: var(--accent); }
   .underlay-flip-btn.active { opacity: 1; border-color: var(--accent); color: var(--accent); }
 
-  /* ── Camera select dropdown (multi-camera laptops) ─────────── */
-  .camera-select {
-    font-size: 11px;
-    font-family: inherit;
-    background: var(--btn-bg);
-    color: var(--text);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 3px 4px;
-    cursor: pointer;
-    max-width: 130px;
-    height: 28px;
-    vertical-align: middle;
-  }
-  .camera-select:focus { outline: 1px solid var(--accent); }
-
-
+  .chat-find-bar {
     display: none; align-items: center; gap: 6px;
     background: #0c1520; border: 1px solid var(--accent);
     border-radius: 4px; padding: 4px 8px;
@@ -635,6 +621,21 @@
     box-shadow: 0 0 8px rgba(0,212,255,0.3);
   }
   .media-btn.active-on:hover { background: rgba(0,212,255,0.1); }
+  /* ── Flip Cam dropdown (desktop multi-camera) ─────────────── */
+  .flip-cam-select {
+    flex: 0 0 auto; height: 36px; padding: 0 8px;
+    background: var(--btn-bg); border: 1px solid var(--border);
+    color: var(--text); border-radius: 4px;
+    font-family: 'Share Tech Mono', monospace; font-size: 11px;
+    letter-spacing: 0.5px; cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    white-space: nowrap; max-width: 160px;
+  }
+  .flip-cam-select:hover { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
+  .flip-cam-select option { background: var(--bg, #0a0e17); color: var(--text); }
+  .flip-cam-select-chat {
+    height: auto; padding: 4px 8px;
+  }
   .leave-btn {
     flex: 0 0 auto; height: 36px; padding: 0 10px;
     background: rgba(0,212,255,0.15); border: 1px solid var(--accent);
@@ -734,13 +735,22 @@
     margin-left: auto; font-size: 9px; letter-spacing: 1px;
     color: var(--text-dim);
   }
+  #speechPanel > .speech-status {
+    font-size: 11px; letter-spacing: 1px; padding: 2px 4px;
+    color: #ffffff !important; font-family: monospace; word-break: break-all;
+    font-weight: bold !important; min-height: 1.4em;
+  }
   #speechPanel .speech-status.listening {
-    color: var(--danger, #cc2222);
-    animation: speech-blink 1s step-start infinite;
+    color: #ffffff !important;
   }
   @keyframes speech-blink { 50% { opacity: 0; } }
+  #speechEditWrap {
+    position: relative; flex: 1; min-height: 80px;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
   #speechEditBox {
-    flex: 1; min-height: 80px;
+    flex: 1; min-height: 80px; width: 100%; box-sizing: border-box;
     background: transparent; border: 1px solid var(--border);
     color: var(--text); padding: 7px 10px; border-radius: 4px;
     font-family: 'Share Tech Mono', monospace; font-size: 14px;
@@ -749,12 +759,36 @@
   }
   #speechEditBox:focus { border-color: var(--accent); }
   #speechEditBox::placeholder { color: rgba(200,220,240,0.75); }
+  #speechEditMirror {
+    position: absolute; top: 0; left: 0;
+    padding: 7px 10px; border: 1px solid transparent;
+    font-family: 'Share Tech Mono', monospace; font-size: 14px;
+    line-height: 1.4; white-space: pre-wrap; word-wrap: break-word;
+    visibility: hidden; pointer-events: none;
+    box-sizing: border-box;
+  }
+  #speechFloatSend {
+    position: absolute;
+    background: var(--accent, #00d4ff); border: 1px solid var(--accent, #00d4ff);
+    color: #000; font-weight: bold; font-size: 13px;
+    padding: 2px 7px; border-radius: 4px; cursor: pointer;
+    font-family: 'Share Tech Mono', monospace; letter-spacing: 0.5px;
+    line-height: 1.4; white-space: nowrap;
+    transition: background 0.15s, opacity 0.15s;
+    pointer-events: auto; z-index: 10;
+    display: none;
+  }
+  #speechFloatSend:hover:not(:disabled) { background: #fff; border-color: #fff; }
+  #speechFloatSend:disabled { opacity: 0.35; cursor: not-allowed; background: var(--btn-bg); border-color: var(--border); color: var(--text); font-weight: normal; }
   .speech-btn-row {
     display: flex; gap: 4px; align-items: center;
     flex-shrink: 0; flex-wrap: wrap;
   }
   #speechBtnRow2 { margin-top: 4px; }
-  #speechSendBtn { margin-left: auto; }
+  #speechBtnRow3 { margin-top: 2px; }
+  .sbr-spacer { flex: 1; min-width: 4px; }
+  #speechBtnRow2 #speechSendBtn { margin-left: auto; }
+  #speechListenBtn { min-width: 56px; }
   .speech-btn-row-spacer { height: 6px; min-height: 6px; }
   .sbr-label { font-size: 0.75rem; font-weight: bold; color: var(--accent, #00d4ff); letter-spacing: 0.05em; white-space: nowrap; padding: 0 4px; }
   #speechLangSelect {
@@ -765,8 +799,18 @@
     cursor: pointer; max-width: 80px;
   }
   #speechLangSelect:focus { outline: none; border-color: var(--accent); }
+  #ttsVoiceSelect {
+    background: var(--btn-bg); border: 1px solid var(--border);
+    color: var(--text-dim); font-family: 'Share Tech Mono', monospace;
+    font-size: 10px; letter-spacing: 0.5px;
+    height: 28px; padding: 0 4px; border-radius: 4px;
+    cursor: pointer; max-width: 120px; min-width: 60px; flex-shrink: 1;
+  }
+  #ttsVoiceSelect:focus { outline: none; border-color: var(--accent); }
+  #ttsVoiceSelect:hover { border-color: var(--accent); color: var(--accent); }
+  #ttsVoiceSelect option { background: #0d1b2a; color: var(--text); }
   /* ── Shared speech button base ── */
-  #speechSendBtn, #speechListenBtn, #speechAttachBtn, #speechLoadBtn, #speechSaveBtn, #speechCopyBtn, #speechClearBtn, #speechOriginalBtn {
+  #speechSendBtn, #speechListenBtn, #speechAttachBtn, #speechLoadBtn, #speechSaveBtn, #speechCopyBtn, #speechClearBtn, #speechOriginalBtn, #speechTtsBtn {
     background: var(--btn-bg); border: 1px solid var(--border);
     color: var(--text); padding: 5px 9px; border-radius: 4px;
     font-family: 'Share Tech Mono', monospace; font-size: 11px;
@@ -782,7 +826,13 @@
   }
   #speechSendBtn:disabled { opacity: 0.35; cursor: not-allowed; background: var(--btn-bg); border-color: var(--border); color: var(--text); font-weight: normal; }
   #speechOriginalBtn:hover { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
-  #speechListenBtn:hover { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
+  #speechListenBtn {
+    border-color: var(--accent); color: var(--accent);
+    background: rgba(0,212,255,0.12);
+    font-weight: bold; letter-spacing: 1.5px;
+    box-shadow: 0 0 6px rgba(0,212,255,0.25);
+  }
+  #speechListenBtn:hover { background: rgba(0,212,255,0.25); border-color: var(--accent); color: var(--accent); }
   #speechListenBtn.listening {
     border-color: var(--danger, #cc2222); color: var(--danger, #cc2222);
     background: rgba(204,34,34,0.08);
@@ -1451,7 +1501,7 @@
       <div class="chat-btn-bar-row" style="flex-shrink:0; margin-bottom:4px; flex-wrap:nowrap; overflow:hidden;">
         <button class="speech-top-btn" onclick="refreshScreen()" title="Refresh / Reconnect" style="flex-shrink:0;">↺</button>
         <button class="speech-top-btn leave-style" id="leaveChatBtn" onclick="leaveSession()" title="Leave session" style="flex-shrink:0;">✕ Leave</button>
-        <button class="speech-top-btn" id="ttsChatBtn" onclick="toggleTts()" title="Toggle auto-speak for incoming messages" style="flex-shrink:0;">TTS Off</button><button class="speech-top-btn" id="flipChatBtn" onclick="flipCamera()" title="Flip camera" style="flex-shrink:0;">⟳ Flip Cam</button>
+        <span id="flipWrapChat"><button class="speech-top-btn" id="flipChatBtn" onclick="flipCamera()" title="Flip camera" style="flex-shrink:0;">⟳ Flip Cam</button></span>
         <button class="speech-top-btn" id="fsChatBtn" onclick="toggleFullScreen()" title="Full Screen Toggle" style="flex-shrink:0;">FS OFF</button>
         <button class="speech-top-btn" id="miniChatBtn" onclick="toggleMiniChat()" title="Toggle mini video in chat" style="flex-shrink:0;">MINI OFF</button>
       </div>
@@ -1622,7 +1672,12 @@
       <div id="speechPanel">
         <div class="speech-top-bar" style="display:none"></div>
         <div class="file-preview-strip" id="speechFilePreviewStrip"></div>
-        <textarea id="speechEditBox" placeholder="Tap Talk… or type here." spellcheck="true"></textarea>
+        <div id="speechEditWrap">
+          <textarea id="speechEditBox" placeholder="Tap Talk… or type here." spellcheck="true"></textarea>
+          <div id="speechEditMirror" aria-hidden="true"></div>
+          <button id="speechFloatSend" onclick="sendSpeechToChat()" disabled title="Send">SEND</button>
+        </div>
+        <div id="speechStatus" class="speech-status">IDLE</div>
 
         <div class="speech-btn-row" id="speechBtnRow1">
           <button id="speechAttachBtn" onclick="speechAttachClick()" title="Attach file or drag &amp; drop">ATTACH</button>
@@ -1635,18 +1690,21 @@
         </div>
         <div class="speech-btn-row" id="speechBtnRow2">
           <select id="speechLangSelect" title="Speech recognition language" onchange="setSpeechLang(this.value)">
-            <option value="en-US">Eng</option>
-            <option value="en-GB">Eng UK</option>
-            <option value="es-ES">Spanish</option>
-            <option value="fr-FR">French</option>
-            <option value="de-DE">German</option>
-            <option value="ja-JP">Japan</option>
-            <option value="zh-CN">Chinese</option>
-            <option value="pt-BR">Portuguese (BR)</option>
+            <option value="en-US" title="Eng">English (US)</option>
+            <option value="en-GB" title="Eng UK">English (UK)</option>
+            <option value="es-ES" title="Spanish">Español</option>
+            <option value="fr-FR" title="French">Français</option>
+            <option value="de-DE" title="German">Deutsch</option>
+            <option value="ja-JP" title="Japan">日本語</option>
+            <option value="zh-CN" title="Chinese">中文 (普通话)</option>
+            <option value="pt-BR" title="Portuguese (BR)">Português (BR)</option>
           </select>
           <button id="speechOriginalBtn" onclick="speechOriginalLang()" title="Revert to system language">ORIGINAL</button>
+        </div>
+        <div class="speech-btn-row" id="speechBtnRow3">
+          <select id="ttsVoiceSelect" title="TTS voice for spoken output"></select>
+          <button id="speechTtsBtn" onclick="toggleTts()" title="Toggle auto-speak for incoming messages">TTS Off</button>
           <button id="speechListenBtn" onclick="toggleListening()">TALK</button>
-          <button id="speechSendBtn" onclick="sendSpeechToChat()" disabled>SEND</button>
         </div>
       </div>
       <div class="log-panel collapsed" id="logPanel">
@@ -1666,6 +1724,14 @@
 <div id="lightbox"><img id="lightboxImg" src="" alt=""></div>
 
 <script>
+// ── Screen orientation unlock (Android Chrome landscape fix) ─────────────────
+(function() {
+  try {
+    if (screen.orientation && screen.orientation.unlock) {
+      screen.orientation.unlock();
+    }
+  } catch(e) {}
+})();
 // ── localStorage shim (file:// safe) ─────────────────────────────────────────
 (function() {
   let _ok = false;
@@ -1751,9 +1817,17 @@ function unlockRemoteAudio() {
     entry('Remote audio unlocked by user tap', 'sys');
   }).catch(e => entry('Audio unlock failed: ' + e.message, 'err'));
 }
+let _ttsUnlocked = false;
 document.addEventListener('click', function() {
   if (_actx && _actx.state === 'suspended') _actx.resume();
   ensureRemoteAudioPlaying();
+  // Prime Android's TTS engine on first user gesture so later async calls work
+  if (!_ttsUnlocked && window.speechSynthesis) {
+    _ttsUnlocked = true;
+    const _primer = new SpeechSynthesisUtterance('');
+    _primer.volume = 0;
+    window.speechSynthesis.speak(_primer);
+  }
 }, true);
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
@@ -3431,6 +3505,10 @@ function toggleSysLogView() {
 let _recognition   = null;
 let _listening     = false;
 let _interimText   = '';
+let _sttStartCount  = 0;
+let _sttLastError   = null;
+let _sttSavedSender = null;
+let _sttSavedTrack  = null;
 
 function toggleSpeechPanel() {
   _speechVisible = !_speechVisible;
@@ -3449,7 +3527,7 @@ function toggleSpeechPanel() {
     if (btn)   { btn.classList.add('active'); btn.textContent = 'SHOW CHAT'; }
     updateSpeechSendBtn();
     // Give focus to the input box so the keyboard appears immediately
-    setTimeout(() => { const box = document.getElementById('speechEditBox'); if (box) box.focus(); }, 50);
+    setTimeout(() => { const box = document.getElementById('speechEditBox'); if (box) box.focus(); _positionFloatSend(); }, 80);
     setChatBtnsDisabled(true);
   } else {
     stopListening();
@@ -3462,8 +3540,64 @@ function toggleSpeechPanel() {
 
 function updateSpeechSendBtn() {
   const box = document.getElementById('speechEditBox');
+  const hasContent = box && (box.value.trim().length > 0);
   const btn = document.getElementById('speechSendBtn');
-  if (btn) btn.disabled = !box || !box.value.trim();
+  if (btn) btn.disabled = !hasContent;
+  _positionFloatSend();
+}
+
+function _positionFloatSend() {
+  const box    = document.getElementById('speechEditBox');
+  const mirror = document.getElementById('speechEditMirror');
+  const fsBtn  = document.getElementById('speechFloatSend');
+  if (!box || !mirror || !fsBtn) return;
+
+  const hasContent = box.value.trim().length > 0;
+  if (!hasContent) { fsBtn.style.display = 'none'; return; }
+
+  // Mirror must match textarea's exact inner width so word-wrap is identical
+  const cs = window.getComputedStyle(box);
+  const innerW = box.clientWidth
+    - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
+    - parseFloat(cs.borderLeftWidth) - parseFloat(cs.borderRightWidth);
+  mirror.style.width    = innerW + 'px';
+  mirror.style.fontSize = cs.fontSize;
+  mirror.style.lineHeight = cs.lineHeight;
+  mirror.style.fontFamily = cs.fontFamily;
+  mirror.style.padding  = cs.padding;
+
+  // Inject text + caret marker into mirror
+  const safe = box.value
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  mirror.innerHTML = safe + '<span id="_fsCaret">&#8203;</span>';
+
+  const caret = document.getElementById('_fsCaret');
+  if (!caret) { fsBtn.style.display = 'none'; return; }
+
+  // Positions relative to the wrap (parent of both mirror and button)
+  const wrapRect  = box.parentElement.getBoundingClientRect();
+  const caretRect = caret.getBoundingClientRect();
+
+  const btnH = 22;
+  const btnW = 36;
+  const pad  = 3;
+
+  // top: caret's y inside wrap, offset by textarea scroll
+  let top  = (caretRect.top - wrapRect.top) - box.scrollTop;
+  let left = (caretRect.left - wrapRect.left);
+
+  // Clamp inside textarea bounds
+  const taRight  = box.offsetLeft + box.clientWidth  - pad;
+  const taBottom = box.offsetTop  + box.clientHeight - pad;
+  left = Math.min(left, taRight  - btnW);
+  left = Math.max(left, box.offsetLeft + pad);
+  top  = Math.min(top,  taBottom - btnH);
+  top  = Math.max(top,  box.offsetTop  + pad);
+
+  fsBtn.style.left    = left + 'px';
+  fsBtn.style.top     = top  + 'px';
+  fsBtn.style.display = 'block';
+  fsBtn.disabled = false;
 }
 
 function sendSpeechToChat() {
@@ -3485,76 +3619,150 @@ function toggleListening() {
 
 function startListening() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) {
-    setSpeechStatus('NOT SUPPORTED');
-    return;
-  }
-  if (_recognition) { try { _recognition.abort(); } catch(e){} }
-  _recognition = new SpeechRecognition();
-  _recognition.continuous      = true;
-  _recognition.interimResults  = true;
-  _recognition.lang            = (document.getElementById('speechLangSelect') || {value:'en-US'}).value;
+  if (!SpeechRecognition) { setSpeechStatus('NOT SUPPORTED'); return; }
+  if (_recognition) { try { _recognition.abort(); } catch(e){} _recognition = null; }
 
-  _recognition.onstart = () => {
-    _listening = true;
-    _interimText = '';
-    setSpeechStatus('● LISTENING');
-    const lb = document.getElementById('speechListenBtn');
-    if (lb) lb.classList.add('listening');
-    const ss = document.getElementById('speechStatus');
-    if (ss) ss.classList.add('listening');
-    lb.textContent = 'STOP';
-    // Mute outgoing mic while listening so the remote doesn't hear our speech-rec audio
-    if (!audioMuted) {
-      if (_mixMicGain) { _preTalkMicGain = _mixMicGain.gain.value; _mixMicGain.gain.value = 0.0; }
-      else if (realAudioTrack) { realAudioTrack.enabled = false; }
-    }
-  };
+  const _isAndroid = /android/i.test(navigator.userAgent);
+  _sttStartCount = (_sttStartCount || 0) + 1;
 
-  _recognition.onresult = (e) => {
-    const box = document.getElementById('speechEditBox');
-    if (!box) return;
-    let finalChunk = '';
-    let interim    = '';
-    for (let i = e.resultIndex; i < e.results.length; i++) {
-      if (e.results[i].isFinal) { finalChunk += e.results[i][0].transcript; }
-      else                      { interim    += e.results[i][0].transcript; }
-    }
-    if (finalChunk) {
-      const cur = box.value;
-      box.value = cur + (cur && !cur.endsWith(' ') ? ' ' : '') + finalChunk.trim();
+  // On Android, WebRTC holds the hardware mic exclusively — the Speech API
+  // gets no audio (err=none, empty result). Fix: stop the mic track before
+  // starting recognition, swap WebRTC sender to silence, then restore after.
+  function _doStart() {
+    _recognition = new SpeechRecognition();
+    _recognition.continuous      = !_isAndroid;
+    _recognition.interimResults  = true;
+    _recognition.maxAlternatives = 1;
+
+    const _sl = document.getElementById('speechLangSelect');
+    const _savedLang = _sl ? (localStorage.getItem('alpha_speech_lang') || _sl.value) : 'en-US';
+    _recognition.lang = _savedLang;
+    if (_sl) _sl.value = _savedLang;
+
+    _recognition.onstart = () => {
+      _listening = true;
       _interimText = '';
-    } else {
-      _interimText = interim;
-    }
-    updateSpeechSendBtn();
-  };
+      setSpeechStatus('#' + _sttStartCount + ' START and=' + _isAndroid + ' lang=' + _recognition.lang);
+      const lb = document.getElementById('speechListenBtn');
+      if (lb) { lb.classList.add('listening'); lb.textContent = 'STOP'; }
+      const ss = document.getElementById('speechStatus');
+      if (ss) ss.classList.add('listening');
+      // Non-Android: mute via gain node or track as before
+      if (!_isAndroid && !audioMuted) {
+        if (_mixMicGain) { _preTalkMicGain = _mixMicGain.gain.value; _mixMicGain.gain.value = 0.0; }
+        else if (realAudioTrack) { realAudioTrack.enabled = false; }
+      }
+    };
 
-  _recognition.onerror = (e) => {
-    if (e.error === 'no-speech') return; // ignore silence
-    setSpeechStatus('ERR: ' + e.error.toUpperCase());
-    stopListening();
-  };
+    _recognition.onresult = (e) => {
+      const box = document.getElementById('speechEditBox');
+      if (!box) return;
+      let finalChunk = '';
+      let interimChunk = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) { finalChunk   += e.results[i][0].transcript; }
+        else                      { interimChunk += e.results[i][0].transcript; }
+      }
+      setSpeechStatus('RESULT f=[' + finalChunk + '] i=[' + interimChunk + ']');
+      if (finalChunk) {
+        const base = (_interimText && box.value.endsWith(_interimText))
+          ? box.value.slice(0, box.value.length - _interimText.length) : box.value;
+        box.value = base + (base && !base.endsWith(' ') ? ' ' : '') + finalChunk.trim();
+        _interimText = '';
+      } else if (interimChunk) {
+        const base = (_interimText && box.value.endsWith(_interimText))
+          ? box.value.slice(0, box.value.length - _interimText.length) : box.value;
+        _interimText = interimChunk;
+        box.value = base + (base && !base.endsWith(' ') ? ' ' : '') + interimChunk;
+      }
+      updateSpeechSendBtn();
+    };
 
-  _recognition.onend = () => {
-    if (_listening) {
-      // Auto-restart for continuous mode. Use a fresh instance with a short
-      // delay so Android fully tears down the mic before reopening it —
-      // prevents the OS from playing its mic-off tone mid-session.
-      setTimeout(() => {
-        if (!_listening) return;
-        try { startListening(); } catch(e) { stopListening(); }
-      }, 250);
-    }
-  };
+    _recognition.onspeechstart = () => { setSpeechStatus('SPEECH DETECTED'); };
+    _recognition.onspeechend   = () => { setSpeechStatus('SPEECH ENDED'); };
+    _recognition.onnomatch     = () => { setSpeechStatus('NO MATCH'); };
 
-  // Restore persisted language selection
-  const _sl = document.getElementById('speechLangSelect');
-  if (_sl) {
-    const saved = localStorage.getItem('alpha_speech_lang');
-    if (saved) { _sl.value = saved; _recognition.lang = saved; }
+    _recognition.onerror = (e) => {
+      _sttLastError = e.error;
+      setSpeechStatus('ERR: ' + e.error);
+      if (e.error === 'no-speech' || e.error === 'aborted') return;
+      stopListening();
+    };
+
+    _recognition.onend = () => {
+      setSpeechStatus('END #' + _sttStartCount + ' err=[' + (_sttLastError||'none') + '] i=[' + _interimText + ']');
+      _sttLastError = null;
+
+      // Commit any pending interim
+      if (_interimText) {
+        const box = document.getElementById('speechEditBox');
+        if (box) {
+          const base = box.value.endsWith(_interimText)
+            ? box.value.slice(0, box.value.length - _interimText.length) : box.value;
+          box.value = base + (base && !base.endsWith(' ') ? ' ' : '') + _interimText.trim();
+          _interimText = '';
+          updateSpeechSendBtn();
+        }
+      }
+
+      // Restore mic on Android
+      if (_isAndroid) {
+        _restoreAndroidMic().then(() => {
+          if (_listening) {
+            setTimeout(() => { if (_listening) try { startListening(); } catch(ex) { stopListening(); } }, 500);
+          }
+        });
+      } else {
+        // Non-Android: restore gain/track
+        if (!audioMuted) {
+          if (_mixMicGain) { _mixMicGain.gain.value = _preTalkMicGain !== null ? _preTalkMicGain : 1.0; _preTalkMicGain = null; }
+          else if (realAudioTrack) { realAudioTrack.enabled = true; }
+        }
+        if (_listening) {
+          setTimeout(() => { if (_listening) try { startListening(); } catch(ex) { stopListening(); } }, 250);
+        }
+      }
+    };
+
+    try { _recognition.start(); } catch(e) { setSpeechStatus('ERR: START FAILED: ' + e.message); }
   }
-  try { _recognition.start(); } catch(e) { setSpeechStatus('ERR: START FAILED'); }
+
+  // Swap WebRTC sender to silence (fire-and-forget), then start immediately
+  // _recognition.start() must be called synchronously in the gesture handler on Android
+  _releaseAndroidMic();
+  _doStart();
+}
+
+// Swap WebRTC sender to silence during Android STT (mic hardware stays alive for STT)
+async function _releaseAndroidMic() {
+  try {
+    const pc = call && (call.peerConnection || call._pc);
+    if (pc) {
+      const sender = pc.getSenders().find(s => s.track && s.track.kind === 'audio');
+      if (sender) {
+        _sttSavedSender = sender;
+        _sttSavedTrack  = sender.track;
+        await sender.replaceTrack(getSilentTrack()).catch(() => {});
+      }
+    }
+    // Do NOT stop realAudioTrack — STT needs the hardware mic to stay open
+  } catch(e) { setSpeechStatus('REL ERR: ' + e.message); }
+}
+
+// Restore the WebRTC sender after Android STT (mic was never stopped, just swap back)
+async function _restoreAndroidMic() {
+  try {
+    if (_sttSavedSender) {
+      // Restore the original track (or the gain-node output track if present)
+      const gainedTrack = _micGainDest && _micGainDest.stream.getAudioTracks()[0];
+      const restoreTrack = gainedTrack || realAudioTrack;
+      if (restoreTrack) {
+        await _sttSavedSender.replaceTrack(restoreTrack).catch(() => {});
+      }
+      _sttSavedSender = null;
+      _sttSavedTrack  = null;
+    }
+  } catch(e) { setSpeechStatus('RESTORE ERR: ' + e.message); }
 }
 
 function setSpeechLang(code) {
@@ -3564,23 +3772,33 @@ function setSpeechLang(code) {
 }
 
 function stopListening() {
+  const _wasListening = _listening;
   _listening = false;
   if (_recognition) { try { _recognition.stop(); } catch(e){} _recognition = null; }
-  setSpeechStatus('IDLE');
   const lb = document.getElementById('speechListenBtn');
   if (lb) { lb.classList.remove('listening'); lb.textContent = 'TALK'; }
   const ss = document.getElementById('speechStatus');
   if (ss) ss.classList.remove('listening');
-  // Restore outgoing mic (unless the user has globally muted)
-  if (!audioMuted) {
-    if (_mixMicGain) { _mixMicGain.gain.value = _preTalkMicGain !== null ? _preTalkMicGain : 1.0; _preTalkMicGain = null; }
-    else if (realAudioTrack) { realAudioTrack.enabled = true; }
+  const _isAndroid = /android/i.test(navigator.userAgent);
+  if (_isAndroid) {
+    // onend will fire and call _restoreAndroidMic — but if we stopped manually
+    // before onend, restore here too (guard: _restoreAndroidMic is idempotent)
+    if (_sttSavedSender) { _restoreAndroidMic().then(() => setSpeechStatus('IDLE')); }
+    else { setSpeechStatus('IDLE'); }
+  } else {
+    if (!audioMuted) {
+      if (_mixMicGain) { _mixMicGain.gain.value = _preTalkMicGain !== null ? _preTalkMicGain : 1.0; _preTalkMicGain = null; }
+      else if (realAudioTrack) { realAudioTrack.enabled = true; }
+    }
+    setSpeechStatus('IDLE');
   }
 }
 
 function setSpeechStatus(txt) {
   const ss = document.getElementById('speechStatus');
-  if (ss) ss.textContent = txt;
+  if (!ss) return;
+  const prev = ss.textContent === 'IDLE' ? '' : ss.textContent;
+  ss.textContent = txt + (prev ? ' | ' + prev.slice(0, 80) : '');
 }
 
 // Enable/disable send btn as user types in the speech edit box
@@ -3595,31 +3813,34 @@ document.addEventListener('DOMContentLoaded', () => {
     else wrap.classList.add('open');
   });
   const box = document.getElementById('speechEditBox');
-  if (box) box.addEventListener('input', updateSpeechSendBtn);
+  if (box) {
+    box.addEventListener('input',  updateSpeechSendBtn);
+    box.addEventListener('scroll', _positionFloatSend);
+    box.addEventListener('focus',  _positionFloatSend);
+  }
+  window.addEventListener('resize', _positionFloatSend);
 
   // ── Global keyboard shortcuts ──────────────────────────────
   document.addEventListener('keydown', e => {
-    if (e.altKey && (e.key === 't' || e.key === 'T')) {
-      // Alt+T — toggle Talk/Type in Chat panel
-      e.preventDefault();
-      toggleSpeechPanel();
-      return;
-    }
     if (!e.ctrlKey && !e.metaKey) return;
     if (e.key === 's' || e.key === 'S') {
       // Ctrl+S — send from voice input box if panel is open and has content
       if (_speechVisible) {
         e.preventDefault();
-        const sb = document.getElementById('speechSendBtn');
+        const sb = document.getElementById('speechFloatSend');
         if (sb && !sb.disabled) sendSpeechToChat();
       }
     } else if (e.key === 'Enter') {
       // Ctrl+Enter — send from voice input box if panel is open and has content
       if (_speechVisible) {
         e.preventDefault();
-        const sb = document.getElementById('speechSendBtn');
+        const sb = document.getElementById('speechFloatSend');
         if (sb && !sb.disabled) sendSpeechToChat();
       }
+    } else if (e.key === 't' || e.key === 'T') {
+      // Ctrl+T — toggle Talk/Type in Chat panel
+      e.preventDefault();
+      toggleSpeechPanel();
     }
   });
   // Init speech lang select: saved choice > system language > en-US
@@ -3815,8 +4036,8 @@ function initMediaOnly() {
     document.getElementById('localVideo').srcObject = stream;
     entry('Mic + camera ready', 'ok');
     syncMiniVideos();
+    initFlipCamUI();
     updateLocalVideoState();
-    initCameraControl(); // populate Flip Cam button or camera dropdown
     if (loginDisableVideoFlag) {
       const vt = stream.getVideoTracks()[0];
       if (vt) { vt.enabled = false; }
@@ -3905,8 +4126,8 @@ function init() {
     document.getElementById('localVideo').srcObject = stream;
     entry('Mic + camera ready', 'ok');
     syncMiniVideos();
+    initFlipCamUI();
     updateLocalVideoState();
-    initCameraControl(); // populate Flip Cam button or camera dropdown
     if (loginDisableVideoFlag) {
       const vt = stream.getVideoTracks()[0];
       if (vt) { vt.enabled = false; }
@@ -4466,9 +4687,26 @@ function attachCall(c) {
         entry('DIAG: ICE FAILED — attempting ICE restart', 'err');
         try { pc.restartIce(); } catch(e2) { entry('ICE restart unavailable: ' + e2.message, 'sys'); }
       }
+      if (pc.iceConnectionState === 'disconnected' && linked && call === c) {
+        entry('DIAG: ICE disconnected — starting drop watchdog', 'sys');
+        clearTimeout(c._iceDropTimer);
+        c._iceDropTimer = setTimeout(() => {
+          if (pc.iceConnectionState === 'disconnected' && call === c) {
+            entry('ICE disconnected watchdog fired — dropping call', 'err');
+            onDrop();
+          }
+        }, 5000);
+      }
+      if ((pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') && c._iceDropTimer) {
+        clearTimeout(c._iceDropTimer); c._iceDropTimer = null;
+      }
     });
     pc.addEventListener('connectionstatechange', () => {
       entry('DIAG: connection state → ' + pc.connectionState, 'sys');
+      if ((pc.connectionState === 'failed' || pc.connectionState === 'disconnected') && linked && call === c) {
+        entry('Connection state ' + pc.connectionState + ' — dropping call', 'err');
+        onDrop();
+      }
     });
     pc.addEventListener('signalingstatechange', () => {
       entry('DIAG: signaling → ' + pc.signalingState, 'sys');
@@ -4655,6 +4893,7 @@ function handleRemoteLeave() {
 
 function onDrop() {
   clearTimeout(retryTimer);
+  if (call && call._iceDropTimer) { clearTimeout(call._iceDropTimer); call._iceDropTimer = null; }
   saveRecordingIfActive();
   linked = false;
   call = null;
@@ -5326,19 +5565,23 @@ function refreshScreen() {
   setTimeout(() => window.location.reload(), 500);
 }
 
-// ── Camera flip / select ──────────────────────────────────────
+// ── Camera flip (Android front/back) ─────────────────────────
 let currentFacingMode = 'user';
 let flipping = false;
-let _cameraDevices = [];      // populated by initCameraControl
-let _currentDeviceId = null;  // deviceId of active camera
 
-// Switch to a specific camera by deviceId (or facingMode toggle if no deviceId given)
-async function flipCamera(deviceId) {
+async function flipCamera() {
   if (!localStream || flipping) return;
   flipping = true;
-  ['flipBtn','flipBtn2'].forEach(id => { const b = document.getElementById(id); if (b) b.disabled = true; });
-  ['camSelect','camSelect2'].forEach(id => { const s = document.getElementById(id); if (s) s.disabled = true; });
+  const flipBtn = document.getElementById('flipBtn');
+  if (flipBtn) flipBtn.disabled = true;
 
+  const targetMode = currentFacingMode === 'user' ? 'environment' : 'user';
+  const fallbackMode = currentFacingMode; // in case new camera fails, restore this
+
+  // On Android (especially Android 11), the camera hardware stays locked as long
+  // as ANY video element is actively rendering the track — even after track.stop().
+  // We must: (1) detach srcObject from all video elements, (2) stop & remove the
+  // track, (3) wait for hardware to fully release, then (4) re-acquire.
   const localVideoEl = document.getElementById('localVideo');
   const miniLocalEl  = document.getElementById('miniLocalVideo');
 
@@ -5347,47 +5590,181 @@ async function flipCamera(deviceId) {
   if (miniLocalEl)  miniLocalEl.srcObject  = null;
 
   const oldVideoTrack = localStream.getVideoTracks()[0] || null;
-  if (oldVideoTrack) { oldVideoTrack.stop(); localStream.removeTrack(oldVideoTrack); }
+  if (oldVideoTrack) {
+    oldVideoTrack.stop();
+    localStream.removeTrack(oldVideoTrack);
+  }
 
-  // Give Android 11 camera hardware time to fully release
+  // Give Android 11 camera hardware time to fully release (needs longer than newer versions)
   await new Promise(r => setTimeout(r, 800));
 
-  // Build video constraint — prefer deviceId, fall back to facingMode toggle
-  let videoConstraint;
-  if (deviceId) {
-    videoConstraint = { deviceId: { exact: deviceId } };
-    _currentDeviceId = deviceId;
-    // Update facingMode guess from device label
-    const dev = _cameraDevices.find(d => d.deviceId === deviceId);
-    if (dev) {
-      const lbl = (dev.label || '').toLowerCase();
-      currentFacingMode = lbl.includes('back') || lbl.includes('rear') || lbl.includes('environment') ? 'environment' : 'user';
-    }
-  } else {
-    // Toggle facingMode (button path — mobile only)
-    const targetMode = currentFacingMode === 'user' ? 'environment' : 'user';
-    videoConstraint = { facingMode: { exact: targetMode } };
-    currentFacingMode = targetMode;
-  }
-  const fallbackMode = currentFacingMode;
-
-  async function tryAcquire(constraint) {
-    try { return await navigator.mediaDevices.getUserMedia({ video: constraint, audio: false }); } catch(e) {}
-    // If exact facingMode failed, try without exact
-    if (constraint.facingMode && constraint.facingMode.exact) {
-      try { return await navigator.mediaDevices.getUserMedia({ video: { facingMode: constraint.facingMode.exact }, audio: false }); } catch(e) {}
-    }
+  async function tryAcquire(mode) {
+    // Try with exact facingMode first
+    try {
+      return await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { exact: mode } }, audio: false
+      });
+    } catch(e) {}
+    // Try without exact
+    try {
+      return await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: mode }, audio: false
+      });
+    } catch(e) {}
+    // Last resort — any camera
     await new Promise(r => setTimeout(r, 400));
     return await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
   }
 
   try {
-    const newStream = await tryAcquire(videoConstraint);
+    const newStream = await tryAcquire(targetMode);
     const newTrack  = newStream.getVideoTracks()[0];
     localStream.addTrack(newTrack);
-    _currentDeviceId = newTrack.getSettings().deviceId || _currentDeviceId;
+    currentFacingMode = targetMode;
 
+    // Hard re-attach — null first so the browser treats it as a fresh assignment
+    // even if srcObject reference hasn't changed. This clears any frozen/blurred frame.
     const _lv = document.getElementById('localVideo');
+    const _mlv = document.getElementById('miniLocalVideo');
+    if (_lv)  { _lv.srcObject  = null; _lv.srcObject  = localStream; }
+    if (_mlv) { _mlv.srcObject = null; _mlv.srcObject = localStream; }
+    syncMiniVideos();
+
+    // Replace track in active WebRTC call
+    const pc = call && (call.peerConnection || call._pc);
+    if (pc) {
+      const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+      if (sender) await sender.replaceTrack(newTrack).catch(() => {});
+    }
+
+    entry('Camera flipped to ' + (currentFacingMode === 'user' ? 'front' : 'rear'), 'ok');
+  } catch(e) {
+    // All attempts failed — try to recover the original camera so the user isn't left with no video
+    entry('Camera flip failed: ' + e.message + ' — attempting to restore original camera…', 'err');
+    try {
+      const recoveryStream = await tryAcquire(fallbackMode);
+      const recoveryTrack  = recoveryStream.getVideoTracks()[0];
+      localStream.addTrack(recoveryTrack);
+      const _lv2  = document.getElementById('localVideo');
+      const _mlv2 = document.getElementById('miniLocalVideo');
+      if (_lv2)  { _lv2.srcObject  = null; _lv2.srcObject  = localStream; }
+      if (_mlv2) { _mlv2.srcObject = null; _mlv2.srcObject = localStream; }
+      syncMiniVideos();
+      entry('Camera restored to original.', 'ok');
+    } catch(re) {
+      entry('Camera restore also failed: ' + re.message, 'err');
+    }
+  } finally {
+    flipping = false;
+    if (flipBtn) flipBtn.disabled = false;
+  }
+}
+
+
+// ── Flip Cam UI initialiser ───────────────────────────────────
+// Called once after getUserMedia succeeds.  Enumerates cameras and
+// decides whether to show a button (mobile/dual-cam), a select
+// dropdown (laptop/desktop with multiple cameras), or nothing (single cam).
+let _flipCamDevices = []; // [{deviceId, label}]
+
+async function initFlipCamUI() {
+  const isMobileDevice = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+
+  let devices = [];
+  try {
+    const all = await navigator.mediaDevices.enumerateDevices();
+    devices = all.filter(d => d.kind === 'videoinput');
+  } catch(e) {
+    // Can't enumerate — leave buttons as-is
+    return;
+  }
+
+  const wraps = [
+    { id: 'flipWrap',     btnClass: 'media-btn',       isChat: false },
+    { id: 'flipWrap2',    btnClass: 'media-btn',       isChat: false },
+    { id: 'flipWrapChat', btnClass: 'speech-top-btn',  isChat: true  }
+  ];
+
+  if (devices.length <= 1) {
+    // Single or no camera — hide all flip controls
+    wraps.forEach(w => {
+      const el = document.getElementById(w.id);
+      if (el) el.style.display = 'none';
+    });
+    return;
+  }
+
+  _flipCamDevices = devices;
+
+  if (isMobileDevice) {
+    // Mobile with multiple cameras → keep the toggle button, ensure visible
+    wraps.forEach(w => {
+      const el = document.getElementById(w.id);
+      if (el) el.style.display = '';
+    });
+    return;
+  }
+
+  // Desktop/laptop with multiple cameras → replace button with select
+  wraps.forEach(w => {
+    const wrap = document.getElementById(w.id);
+    if (!wrap) return;
+    wrap.style.display = '';
+
+    const sel = document.createElement('select');
+    sel.className = 'flip-cam-select ' + (w.isChat ? 'flip-cam-select-chat' : '');
+    sel.title = 'Choose camera';
+    if (w.isChat) sel.style.flexShrink = '0';
+
+    // Get the currently active video track's deviceId so we can pre-select it
+    const activeDeviceId = (localStream && localStream.getVideoTracks()[0])
+      ? (localStream.getVideoTracks()[0].getSettings().deviceId || '')
+      : '';
+
+    devices.forEach((dev, i) => {
+      const opt = document.createElement('option');
+      opt.value = dev.deviceId;
+      opt.textContent = dev.label || ('Camera ' + (i + 1));
+      if (dev.deviceId && dev.deviceId === activeDeviceId) opt.selected = true;
+      sel.appendChild(opt);
+    });
+
+    sel.addEventListener('change', () => selectCamera(sel.value));
+
+    // Replace existing button content with the select
+    wrap.innerHTML = '';
+    wrap.appendChild(sel);
+  });
+}
+
+async function selectCamera(deviceId) {
+  if (!localStream || flipping) return;
+  flipping = true;
+
+  // Keep all selects in sync
+  document.querySelectorAll('.flip-cam-select').forEach(s => {
+    s.value = deviceId;
+    s.disabled = true;
+  });
+
+  const localVideoEl = document.getElementById('localVideo');
+  const miniLocalEl  = document.getElementById('miniLocalVideo');
+  if (localVideoEl) localVideoEl.srcObject = null;
+  if (miniLocalEl)  miniLocalEl.srcObject  = null;
+
+  const oldTrack = localStream.getVideoTracks()[0] || null;
+  if (oldTrack) { oldTrack.stop(); localStream.removeTrack(oldTrack); }
+
+  await new Promise(r => setTimeout(r, 400));
+
+  try {
+    const newStream = await navigator.mediaDevices.getUserMedia({
+      video: { deviceId: { exact: deviceId } }, audio: false
+    });
+    const newTrack = newStream.getVideoTracks()[0];
+    localStream.addTrack(newTrack);
+
+    const _lv  = document.getElementById('localVideo');
     const _mlv = document.getElementById('miniLocalVideo');
     if (_lv)  { _lv.srcObject  = null; _lv.srcObject  = localStream; }
     if (_mlv) { _mlv.srcObject = null; _mlv.srcObject = localStream; }
@@ -5399,74 +5776,15 @@ async function flipCamera(deviceId) {
       if (sender) await sender.replaceTrack(newTrack).catch(() => {});
     }
 
-    // Sync dropdowns to selected deviceId
-    ['camSelect','camSelect2'].forEach(id => {
-      const s = document.getElementById(id);
-      if (s && _currentDeviceId) s.value = _currentDeviceId;
-    });
-
-    entry('Camera switched' + (_currentDeviceId ? ' (' + (_cameraDevices.find(d=>d.deviceId===_currentDeviceId)||{label:_currentDeviceId}).label + ')' : ' to ' + (currentFacingMode === 'user' ? 'front' : 'rear')), 'ok');
+    const label = newTrack.label || deviceId;
+    entry('Camera switched to: ' + label, 'ok');
   } catch(e) {
-    entry('Camera switch failed: ' + e.message + ' — attempting to restore…', 'err');
-    try {
-      const rec = await navigator.mediaDevices.getUserMedia({ video: { facingMode: fallbackMode }, audio: false });
-      const rt  = rec.getVideoTracks()[0];
-      localStream.addTrack(rt);
-      const _lv2 = document.getElementById('localVideo'); const _mlv2 = document.getElementById('miniLocalVideo');
-      if (_lv2)  { _lv2.srcObject  = null; _lv2.srcObject  = localStream; }
-      if (_mlv2) { _mlv2.srcObject = null; _mlv2.srcObject = localStream; }
-      syncMiniVideos();
-      entry('Camera restored.', 'ok');
-    } catch(re) { entry('Camera restore also failed: ' + re.message, 'err'); }
+    entry('Camera switch failed: ' + e.message, 'err');
   } finally {
     flipping = false;
-    ['flipBtn','flipBtn2'].forEach(id => { const b = document.getElementById(id); if (b) b.disabled = false; });
-    ['camSelect','camSelect2'].forEach(id => { const s = document.getElementById(id); if (s) s.disabled = false; });
+    document.querySelectorAll('.flip-cam-select').forEach(s => { s.disabled = false; });
   }
 }
-
-// Enumerate cameras and render either a button (≤2) or dropdown (>2) into both wrappers
-async function initCameraControl() {
-  if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
-  try {
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    _cameraDevices = devices.filter(d => d.kind === 'videoinput');
-    if (_cameraDevices.length <= 1) return; // single camera — keep button as-is, it won't flip anywhere useful
-
-    // Track current deviceId from active stream
-    const activeTrack = localStream && localStream.getVideoTracks()[0];
-    if (activeTrack) _currentDeviceId = activeTrack.getSettings().deviceId || null;
-
-    ['flipWrap','flipWrap2'].forEach((wrapId, i) => {
-      const wrap = document.getElementById(wrapId);
-      if (!wrap) return;
-      const selectId = i === 0 ? 'camSelect' : 'camSelect2';
-
-      if (_cameraDevices.length === 2) {
-        // Two cameras — keep button, it toggles between them
-        const btn = wrap.querySelector('button');
-        if (btn) btn.title = _cameraDevices.map(d => d.label || d.deviceId).join(' ↔ ');
-      } else {
-        // Three or more — replace button with dropdown
-        const sel = document.createElement('select');
-        sel.id = selectId;
-        sel.className = 'camera-select';
-        sel.title = 'Select camera';
-        _cameraDevices.forEach((d, idx) => {
-          const opt = document.createElement('option');
-          opt.value = d.deviceId;
-          opt.textContent = d.label || ('Camera ' + (idx + 1));
-          if (d.deviceId === _currentDeviceId) opt.selected = true;
-          sel.appendChild(opt);
-        });
-        sel.addEventListener('change', () => flipCamera(sel.value));
-        wrap.innerHTML = '';
-        wrap.appendChild(sel);
-      }
-    });
-  } catch(e) { entry('Camera enumeration failed: ' + e.message, 'sys'); }
-}
-
 
 // ── Full Screen toggle ────────────────────────────────────────
 function toggleFullScreen() {
@@ -5668,9 +5986,201 @@ function toggleLogStop() {
 // ── TTS (Text-to-Speech) for incoming messages ───────────────
 let _ttsEnabled = false;
 
+// ── TTS voice selector ────────────────────────────────────────────────────────
+let _ttsVoice = null; // selected SpeechSynthesisVoice, or null = browser default
+
+// ── Friendly display names for Chrome's built-in voices ──────────────────────
+// Maps the exact voice.name string Chrome exposes → {label, gender}
+// gender: M = male, F = female, ? = neutral/unknown
+const _VOICE_FRIENDLY = {
+  // ── Google voices (network, high quality) ────────────────────────────────
+  'Google UK English Female':          { label: 'Google F en-GB', gender: 'F' },
+  'Google UK English Male':            { label: 'Google M en-GB', gender: 'M' },
+  'Google US English':                 { label: 'Google F en-US', gender: 'F' },
+  'Google français':                   { label: 'Google F fr-FR', gender: 'F' },
+  'Google Deutsch':                    { label: 'Google F de-DE', gender: 'F' },
+  'Google español':                    { label: 'Google F es-ES', gender: 'F' },
+  'Google español de Estados Unidos':  { label: 'Google F es-US', gender: 'F' },
+  'Google italiano':                   { label: 'Google F it-IT', gender: 'F' },
+  'Google português do Brasil':        { label: 'Google F pt-BR', gender: 'F' },
+  'Google português':                  { label: 'Google F pt-PT', gender: 'F' },
+  'Google Nederlands':                 { label: 'Google F nl-NL', gender: 'F' },
+  'Google polski':                     { label: 'Google F pl-PL', gender: 'F' },
+  'Google русский':                    { label: 'Google F ru-RU', gender: 'F' },
+  'Google 日本語':                      { label: 'Google F ja-JP', gender: 'F' },
+  'Google 普通话（中国大陆）':            { label: 'Google F zh-CN', gender: 'F' },
+  'Google 粤語（香港）':                 { label: 'Google F zh-HK', gender: 'F' },
+  'Google 國語（臺灣）':                 { label: 'Google F zh-TW', gender: 'F' },
+  'Google 한국의':                      { label: 'Google F ko-KR', gender: 'F' },
+  'Google हिन्दी':                      { label: 'Google F hi-IN', gender: 'F' },
+  'Google العربية':                    { label: 'Google F ar',    gender: 'F' },
+  'Google čeština':                    { label: 'Google F cs-CZ', gender: 'F' },
+  'Google dansk':                      { label: 'Google F da-DK', gender: 'F' },
+  'Google suomi':                      { label: 'Google F fi-FI', gender: 'F' },
+  'Google Ελληνικά':                   { label: 'Google F el-GR', gender: 'F' },
+  'Google Magyar':                     { label: 'Google F hu-HU', gender: 'F' },
+  'Google Bahasa Indonesia':           { label: 'Google F id-ID', gender: 'F' },
+  'Google norsk':                      { label: 'Google F nb-NO', gender: 'F' },
+  'Google română':                     { label: 'Google F ro-RO', gender: 'F' },
+  'Google Slovak':                     { label: 'Google F sk-SK', gender: 'F' },
+  'Google svenska':                    { label: 'Google F sv-SE', gender: 'F' },
+  'Google Türkçe':                     { label: 'Google F tr-TR', gender: 'F' },
+  'Google українська':                 { label: 'Google F uk-UA', gender: 'F' },
+  'Google Vietnamese':                 { label: 'Google F vi-VN', gender: 'F' },
+  // ── Microsoft voices (Windows built-in) ──────────────────────────────────
+  'Microsoft David - English (United States)':          { label: 'David M en-US',  gender: 'M' },
+  'Microsoft Mark - English (United States)':           { label: 'Mark M en-US',   gender: 'M' },
+  'Microsoft Zira - English (United States)':           { label: 'Zira F en-US',   gender: 'F' },
+  'Microsoft Jenny - English (United States)':          { label: 'Jenny F en-US',  gender: 'F' },
+  'Microsoft Aria - English (United States)':           { label: 'Aria F en-US',   gender: 'F' },
+  'Microsoft Guy - English (United States)':            { label: 'Guy M en-US',    gender: 'M' },
+  'Microsoft Brian - English (United States)':          { label: 'Brian M en-US',  gender: 'M' },
+  'Microsoft Hazel - English (Great Britain)':          { label: 'Hazel F en-GB',  gender: 'F' },
+  'Microsoft Susan - English (Great Britain)':          { label: 'Susan F en-GB',  gender: 'F' },
+  'Microsoft George - English (Great Britain)':         { label: 'George M en-GB', gender: 'M' },
+  'Microsoft Ryan - English (United Kingdom)':          { label: 'Ryan M en-GB',   gender: 'M' },
+  'Microsoft Sonia - English (United Kingdom)':         { label: 'Sonia F en-GB',  gender: 'F' },
+  'Microsoft Libby - English (United Kingdom)':         { label: 'Libby F en-GB',  gender: 'F' },
+  'Microsoft Mia - English (Australia)':                { label: 'Mia F en-AU',    gender: 'F' },
+  'Microsoft Natasha - English (Australia)':            { label: 'Natasha F en-AU',gender: 'F' },
+  'Microsoft William - English (Australia)':            { label: 'William M en-AU',gender: 'M' },
+  'Microsoft James - English (Australia)':              { label: 'James M en-AU',  gender: 'M' },
+  'Microsoft Catherine - English (Canada)':             { label: 'Catherine F en-CA', gender: 'F' },
+  'Microsoft Neerja - English (India)':                 { label: 'Neerja F en-IN', gender: 'F' },
+  'Microsoft Ravi - English (India)':                   { label: 'Ravi M en-IN',   gender: 'M' },
+  'Microsoft Julie - French (France)':                  { label: 'Julie F fr-FR',  gender: 'F' },
+  'Microsoft Paul - French (France)':                   { label: 'Paul M fr-FR',   gender: 'M' },
+  'Microsoft Hortense - French (France)':               { label: 'Hortense F fr-FR', gender: 'F' },
+  'Microsoft Stefan - German (Germany)':                { label: 'Stefan M de-DE', gender: 'M' },
+  'Microsoft Katja - German (Germany)':                 { label: 'Katja F de-DE',  gender: 'F' },
+  'Microsoft Conrad - German (Germany)':                { label: 'Conrad M de-DE', gender: 'M' },
+  'Microsoft Pablo - Spanish (Spain)':                  { label: 'Pablo M es-ES',  gender: 'M' },
+  'Microsoft Laura - Spanish (Spain)':                  { label: 'Laura F es-ES',  gender: 'F' },
+  'Microsoft Helena - Spanish (Spain)':                 { label: 'Helena F es-ES', gender: 'F' },
+  'Microsoft Elvira - Spanish (Spain)':                 { label: 'Elvira F es-ES', gender: 'F' },
+  'Microsoft Sabina - Spanish (Mexico)':                { label: 'Sabina F es-MX', gender: 'F' },
+  'Microsoft Raul - Spanish (Mexico)':                  { label: 'Raul M es-MX',   gender: 'M' },
+  'Microsoft Dalia - Spanish (Mexico)':                 { label: 'Dalia F es-MX',  gender: 'F' },
+  'Microsoft Elsa - Italian (Italy)':                   { label: 'Elsa F it-IT',   gender: 'F' },
+  'Microsoft Diego - Italian (Italy)':                  { label: 'Diego M it-IT',  gender: 'M' },
+  'Microsoft Cosimo - Italian (Italy)':                 { label: 'Cosimo M it-IT', gender: 'M' },
+  'Microsoft Maria - Portuguese (Brazil)':              { label: 'Maria F pt-BR',  gender: 'F' },
+  'Microsoft Daniel - Portuguese (Brazil)':             { label: 'Daniel M pt-BR', gender: 'M' },
+  'Microsoft Francisca - Portuguese (Brazil)':          { label: 'Francisca F pt-BR', gender: 'F' },
+  'Microsoft Helia - Portuguese (Portugal)':            { label: 'Helia F pt-PT',  gender: 'F' },
+  'Microsoft Duarte - Portuguese (Portugal)':           { label: 'Duarte M pt-PT', gender: 'M' },
+  'Microsoft Frank - Dutch (Netherlands)':              { label: 'Frank M nl-NL',  gender: 'M' },
+  'Microsoft Fenna - Dutch (Netherlands)':              { label: 'Fenna F nl-NL',  gender: 'F' },
+  'Microsoft Marise - Dutch (Netherlands)':             { label: 'Marise F nl-NL', gender: 'F' },
+  'Microsoft Paulina - Polish (Poland)':                { label: 'Paulina F pl-PL', gender: 'F' },
+  'Microsoft Marek - Polish (Poland)':                  { label: 'Marek M pl-PL',  gender: 'M' },
+  'Microsoft Irina - Russian (Russia)':                 { label: 'Irina F ru-RU',  gender: 'F' },
+  'Microsoft Pavel - Russian (Russia)':                 { label: 'Pavel M ru-RU',  gender: 'M' },
+  'Microsoft Ichiro - Japanese (Japan)':                { label: 'Ichiro M ja-JP', gender: 'M' },
+  'Microsoft Haruka - Japanese (Japan)':                { label: 'Haruka F ja-JP', gender: 'F' },
+  'Microsoft Ayumi - Japanese (Japan)':                 { label: 'Ayumi F ja-JP',  gender: 'F' },
+  'Microsoft Huihui - Chinese (Simplified, PRC)':       { label: 'Huihui F zh-CN', gender: 'F' },
+  'Microsoft Kangkang - Chinese (Simplified, PRC)':     { label: 'Kangkang M zh-CN', gender: 'M' },
+  'Microsoft Yaoyao - Chinese (Simplified, PRC)':       { label: 'Yaoyao F zh-CN', gender: 'F' },
+  'Microsoft Zhiwei - Chinese (Traditional, Taiwan)':   { label: 'Zhiwei M zh-TW', gender: 'M' },
+  'Microsoft Yating - Chinese (Traditional, Taiwan)':   { label: 'Yating F zh-TW', gender: 'F' },
+  'Microsoft Hanhan - Chinese (Traditional, Taiwan)':   { label: 'Hanhan F zh-TW', gender: 'F' },
+  'Microsoft Danny - Chinese (Traditional, Hong Kong)': { label: 'Danny M zh-HK',  gender: 'M' },
+  'Microsoft Tracy - Chinese (Traditional, Hong Kong)': { label: 'Tracy F zh-HK',  gender: 'F' },
+  'Microsoft Naayf - Arabic (Saudi Arabia)':            { label: 'Naayf M ar-SA',  gender: 'M' },
+  'Microsoft Hoda - Arabic (Egypt)':                    { label: 'Hoda F ar-EG',   gender: 'F' },
+  'Microsoft Jakub - Czech (Czech Republic)':           { label: 'Jakub M cs-CZ',  gender: 'M' },
+  'Microsoft Vit - Czech (Czech Republic)':             { label: 'Vit M cs-CZ',    gender: 'M' },
+  'Microsoft Helle - Danish (Denmark)':                 { label: 'Helle F da-DK',  gender: 'F' },
+  'Microsoft Heidi - Finnish (Finland)':                { label: 'Heidi F fi-FI',  gender: 'F' },
+  'Microsoft Stefanos - Greek (Greece)':                { label: 'Stefanos M el-GR', gender: 'M' },
+  'Microsoft Szabolcs - Hungarian (Hungary)':           { label: 'Szabolcs M hu-HU', gender: 'M' },
+  'Microsoft Andika - Indonesian (Indonesia)':          { label: 'Andika M id-ID', gender: 'M' },
+  'Microsoft Heami - Korean (Korea)':                   { label: 'Heami F ko-KR',  gender: 'F' },
+  'Microsoft Jon - Norwegian, Bokmål (Norway)':         { label: 'Jon M nb-NO',    gender: 'M' },
+  'Microsoft Andrei - Romanian (Romania)':              { label: 'Andrei M ro-RO', gender: 'M' },
+  'Microsoft Filip - Slovak (Slovakia)':                { label: 'Filip M sk-SK',  gender: 'M' },
+  'Microsoft Hedvig - Swedish (Sweden)':                { label: 'Hedvig F sv-SE', gender: 'F' },
+  'Microsoft Tolga - Turkish (Turkey)':                 { label: 'Tolga M tr-TR',  gender: 'M' },
+  // ── macOS / iOS system voices (also appear in Chrome on Mac) ─────────────
+  'Samantha':  { label: 'Samantha F en-US', gender: 'F' },
+  'Alex':      { label: 'Alex M en-US',     gender: 'M' },
+  'Daniel':    { label: 'Daniel M en-GB',   gender: 'M' },
+  'Karen':     { label: 'Karen F en-AU',    gender: 'F' },
+  'Moira':     { label: 'Moira F en-IE',    gender: 'F' },
+  'Tessa':     { label: 'Tessa F en-ZA',    gender: 'F' },
+  'Fiona':     { label: 'Fiona F en-SCO',   gender: 'F' },
+  'Amelie':    { label: 'Amélie F fr-CA',   gender: 'F' },
+  'Thomas':    { label: 'Thomas M fr-FR',   gender: 'M' },
+  'Anna':      { label: 'Anna F de-DE',     gender: 'F' },
+  'Monica':    { label: 'Monica F es-ES',   gender: 'F' },
+  'Paulina':   { label: 'Paulina F es-MX',  gender: 'F' },
+  'Alice':     { label: 'Alice F it-IT',    gender: 'F' },
+  'Luciana':   { label: 'Luciana F pt-BR',  gender: 'F' },
+  'Joana':     { label: 'Joana F pt-PT',    gender: 'F' },
+  'Kyoko':     { label: 'Kyoko F ja-JP',    gender: 'F' },
+  'Meijia':    { label: 'Meijia F zh-TW',   gender: 'F' },
+  'Tingting':  { label: 'Tingting F zh-CN', gender: 'F' },
+  'Yuna':      { label: 'Yuna F ko-KR',     gender: 'F' },
+};
+
+// Fallback: derive a friendly label from voice.name + voice.lang when not in the map
+function _voiceFriendlyFallback(v) {
+  // Gender heuristic from name (common patterns)
+  const femaleNames = /\b(female|woman|girl|zira|hazel|susan|catherine|neerja|mia|natasha|jenny|aria|sonia|libby|julie|hortense|laura|helena|elvira|sabina|dalia|elsa|maria|francisca|helia|fenna|marise|paulina|irina|haruka|ayumi|huihui|yaoyao|yating|hanhan|tracy|hoda|helle|heidi|heami|hedvig|samantha|karen|moira|tessa|fiona|amelie|anna|monica|paulina|alice|luciana|joana|kyoko|meijia|tingting|yuna)\b/i;
+  const maleNames   = /\b(male|man|david|mark|george|ryan|william|james|ravi|stefan|conrad|pablo|diego|cosimo|daniel|duarte|frank|marek|pavel|ichiro|kangkang|zhiwei|danny|naayf|jakub|vit|stefanos|szabolcs|andika|jon|andrei|filip|tolga|alex|thomas|guy|brian|raul|paul|ichiro)\b/i;
+  const gender = femaleNames.test(v.name) ? 'F' : maleNames.test(v.name) ? 'M' : '';
+  // Shorten the name
+  let name = v.name
+    .replace(/^Google\s+/i, 'Google ')
+    .replace(/^Microsoft\s+/i, '')
+    .replace(/\s*Desktop\b/i, '')
+    .replace(/\s*-\s*English\s*\(United States\)/i, '')
+    .replace(/\s*-\s*English\s*\(Great Britain\)/i, '')
+    .replace(/\s*-\s*English\s*\(United Kingdom\)/i, '')
+    .replace(/\s*-\s*.+/, '')
+    .trim();
+  return (name + (gender ? ' ' + gender : '') + ' ' + v.lang).trim();
+}
+
+function _populateTtsVoices() {
+  const sel = document.getElementById('ttsVoiceSelect');
+  if (!sel || !window.speechSynthesis) return;
+  const voices = speechSynthesis.getVoices();
+  if (!voices.length) return;
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">— voice —</option>';
+  voices.forEach((v, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    const known = _VOICE_FRIENDLY[v.name];
+    opt.textContent = known ? known.label : _voiceFriendlyFallback(v);
+    opt.title = v.name + ' (' + v.lang + ')';
+    sel.appendChild(opt);
+  });
+  if (prev && sel.querySelector('option[value="'+prev+'"]')) sel.value = prev;
+  sel.onchange = function() {
+    const idx = parseInt(this.value);
+    _ttsVoice = isNaN(idx) ? null : speechSynthesis.getVoices()[idx] || null;
+    try { localStorage.setItem('alpha_tts_voice', this.value); } catch(e) {}
+  };
+  try {
+    const saved = localStorage.getItem('alpha_tts_voice');
+    if (saved && sel.querySelector('option[value="'+saved+'"]')) {
+      sel.value = saved;
+      const idx = parseInt(saved);
+      _ttsVoice = isNaN(idx) ? null : voices[idx] || null;
+    }
+  } catch(e) {}
+}
+if (window.speechSynthesis) {
+  speechSynthesis.onvoiceschanged = _populateTtsVoices;
+  document.addEventListener('DOMContentLoaded', _populateTtsVoices);
+}
+
 function toggleTts() {
   _ttsEnabled = !_ttsEnabled;
-  ['ttsBtn','ttsBtn2','ttsChatBtn'].forEach(id => {
+  ['ttsBtn','ttsBtn2','speechTtsBtn'].forEach(id => {
     const b = document.getElementById(id);
     if (!b) return;
     b.textContent = _ttsEnabled ? 'TTS On' : 'TTS Off';
@@ -5691,13 +6201,13 @@ function ttsSpeak(text, lang) {
   const ss = window.speechSynthesis;
   _ttsClearResumeTimer();
   ss.cancel();
-  // Create utterance AFTER cancel() settles — creating it before causes it to
-  // be silently dropped in Chrome when cancel() resets the engine state.
-  setTimeout(() => {
+
+  function _doSpeak() {
     const utter = new SpeechSynthesisUtterance(text);
     // Use the explicitly passed lang, or our chosen language (_myLang), or browser default.
     // Never use speechLangSelect — that's the speech recognition input language, not TTS output.
     utter.lang = lang || _myLang || (navigator.language || 'en');
+    if (_ttsVoice) utter.voice = _ttsVoice;
     utter.onend = utter.onerror = _ttsClearResumeTimer;
     ss.speak(utter);
     // Chrome pauses synthesis silently between utterances — keep pinging resume().
@@ -5707,7 +6217,10 @@ function ttsSpeak(text, lang) {
       if (_ttsWatchdog > 120) { _ttsClearResumeTimer(); return; } // 30s hard cap
       ss.resume();
     }, 250);
-  }, 150);
+  }
+
+  // Brief delay after cancel() so Chrome doesn't drop the utterance.
+  setTimeout(_doSpeak, 150);
 }
 
 // Restore TTS toggle state on load
@@ -5717,7 +6230,7 @@ function ttsSpeak(text, lang) {
   // Button labels set after DOM ready
   document.addEventListener('DOMContentLoaded', () => {
     if (_ttsEnabled) {
-      ['ttsBtn','ttsBtn2','ttsChatBtn'].forEach(id => {
+      ['ttsBtn','ttsBtn2','speechTtsBtn'].forEach(id => {
         const b = document.getElementById(id);
         if (b) { b.textContent = 'TTS On'; b.classList.add('active-on'); }
       });
