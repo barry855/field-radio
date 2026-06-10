@@ -3526,7 +3526,7 @@ function startListening() {
   function _doStart() {
     _recognition = new SpeechRecognition();
     _recognition.continuous      = !_isAndroid;
-    _recognition.interimResults  = !_isAndroid;
+    _recognition.interimResults  = true;
     _recognition.maxAlternatives = 1;
 
     const _sl = document.getElementById('speechLangSelect');
@@ -3572,6 +3572,10 @@ function startListening() {
       }
       updateSpeechSendBtn();
     };
+
+    _recognition.onspeechstart = () => { setSpeechStatus('SPEECH DETECTED'); };
+    _recognition.onspeechend   = () => { setSpeechStatus('SPEECH ENDED'); };
+    _recognition.onnomatch     = () => { setSpeechStatus('NO MATCH'); };
 
     _recognition.onerror = (e) => {
       _sttLastError = e.error;
