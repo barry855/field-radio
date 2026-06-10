@@ -4143,6 +4143,7 @@ function dial() {
 }
 
 function attachDataConn(dc) {
+  pendingDC = true; // mark in-flight so openDataConn() doesn't open a second DC
   function onDcOpen() {
     if (dataConn === dc) return; // already handled
     clearTimeout(_dcWatchdog);   // DC opened — cancel the retry watchdog
@@ -4393,8 +4394,12 @@ function sendVideoState() {
 function markLinked() {
   if (linked) return;
   linked = true;
-  clearTimeout(retryTimer); // cancel 90s watchdog and any pending redial
-  clearTimeout(dropTimer);  // cancel any pending reconnect-countdown from a concurrent onDrop
+  clearTimeout(retryTimer);  // cancel 90s watchdog and any pending redial
+  clearTimeout(dropTimer);   // cancel onDrop grace-period before reconnect screen shows
+  // If the reconnect countdown is already running, cancel it and hide the overlay
+  clearInterval(_reconnectCountdownTimer);
+  const _ro = document.getElementById('reconnectOverlay');
+  if (_ro) _ro.classList.remove('active');
   setStatus('linked');
   entry('Linked to Bravo — full duplex active', 'ok');
   duplexBar.textContent = '● LIVE';
@@ -4662,7 +4667,7 @@ function onDrop() {
     if (peerRefreshing)  return; // refresh in progress — do not show login
     entry('Link lost — showing reconnect countdown', 'sys');
     document.getElementById('unitIdDisplay').style.display = 'none';
-    showReconnecting(10);
+    showReconnecting(30);
   }, 400);
 }
 
