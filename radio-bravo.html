@@ -5765,7 +5765,7 @@ const _VOICE_FRIENDLY = {
 function _voiceFriendlyFallback(v) {
   const femaleNames = /\b(female|woman|girl|zira|hazel|susan|catherine|neerja|mia|natasha|jenny|aria|sonia|libby|julie|hortense|laura|helena|elvira|sabina|dalia|elsa|maria|francisca|helia|fenna|marise|paulina|irina|haruka|ayumi|huihui|yaoyao|yating|hanhan|tracy|hoda|helle|heidi|heami|hedvig|samantha|karen|moira|tessa|fiona|amelie|anna|monica|alice|luciana|joana|kyoko|meijia|tingting|yuna)\b/i;
   const maleNames   = /\b(male|man|david|mark|george|ryan|william|james|ravi|stefan|conrad|pablo|diego|cosimo|daniel|duarte|frank|marek|pavel|ichiro|kangkang|zhiwei|danny|naayf|jakub|vit|stefanos|szabolcs|andika|jon|andrei|filip|tolga|alex|thomas|guy|brian|raul|paul)\b/i;
-  const gender = femaleNames.test(v.name) ? 'F' : maleNames.test(v.name) ? 'M' : '?';
+  const gender = femaleNames.test(v.name) ? 'F' : maleNames.test(v.name) ? 'M' : '';
   let name = v.name
     .replace(/^Google\s+/i, 'Google ')
     .replace(/^Microsoft\s+/i, '')
@@ -5775,7 +5775,7 @@ function _voiceFriendlyFallback(v) {
     .replace(/\s*-\s*English\s*\(United Kingdom\)/i, '')
     .replace(/\s*-\s*.+/, '')
     .trim();
-  return name + ' ' + gender + ' ' + v.lang;
+  return (name + (gender ? ' ' + gender : '') + ' ' + v.lang).trim();
 }
 
 function _populateTtsVoices() {
