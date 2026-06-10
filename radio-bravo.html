@@ -778,8 +778,13 @@
     color: #ffffff !important;
   }
   @keyframes speech-blink { 50% { opacity: 0; } }
+  #speechEditWrap {
+    position: relative; flex: 1; min-height: 80px;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
   #speechEditBox {
-    flex: 1; min-height: 80px;
+    flex: 1; min-height: 80px; width: 100%; box-sizing: border-box;
     background: transparent; border: 1px solid var(--border);
     color: var(--text); padding: 7px 10px; border-radius: 4px;
     font-family: 'Share Tech Mono', monospace; font-size: 14px;
@@ -788,12 +793,36 @@
   }
   #speechEditBox:focus { border-color: var(--accent2); }
   #speechEditBox::placeholder { color: rgba(200,220,240,0.75); }
+  #speechEditMirror {
+    position: absolute; top: 0; left: 0;
+    padding: 7px 10px; border: 1px solid transparent;
+    font-family: 'Share Tech Mono', monospace; font-size: 14px;
+    line-height: 1.4; white-space: pre-wrap; word-wrap: break-word;
+    visibility: hidden; pointer-events: none;
+    box-sizing: border-box;
+  }
+  #speechFloatSend {
+    position: absolute;
+    background: var(--accent2, #00ff9f); border: 1px solid var(--accent2, #00ff9f);
+    color: #000; font-weight: bold; font-size: 13px;
+    padding: 2px 7px; border-radius: 4px; cursor: pointer;
+    font-family: 'Share Tech Mono', monospace; letter-spacing: 0.5px;
+    line-height: 1.4; white-space: nowrap;
+    transition: background 0.15s, opacity 0.15s;
+    pointer-events: auto; z-index: 10;
+    display: none;
+  }
+  #speechFloatSend:hover:not(:disabled) { background: #fff; border-color: #fff; }
+  #speechFloatSend:disabled { opacity: 0.35; cursor: not-allowed; background: var(--btn-bg); border-color: var(--border); color: var(--text); font-weight: normal; }
   .speech-btn-row {
     display: flex; gap: 4px; align-items: center;
     flex-shrink: 0; flex-wrap: wrap;
   }
   #speechBtnRow2 { margin-top: 4px; }
-  #speechSendBtn { margin-left: auto; }
+  #speechBtnRow3 { margin-top: 2px; }
+  .sbr-spacer { flex: 1; min-width: 4px; }
+  #speechBtnRow2 #speechSendBtn { margin-left: auto; }
+  #speechListenBtn { min-width: 56px; }
   .speech-btn-row-spacer { height: 6px; min-height: 6px; }
   .sbr-label { font-size: 0.75rem; font-weight: bold; color: var(--accent, #00d4ff); letter-spacing: 0.05em; white-space: nowrap; padding: 0 4px; }
   #speechLangSelect {
@@ -815,7 +844,7 @@
   #ttsVoiceSelect:hover { border-color: var(--accent); color: var(--accent); }
   #ttsVoiceSelect option { background: #0d1b2a; color: var(--text); }
   /* ── Shared speech button base ── */
-  #speechSendBtn, #speechListenBtn, #speechAttachBtn, #speechLoadBtn, #speechSaveBtn, #speechCopyBtn, #speechClearBtn, #speechOriginalBtn {
+  #speechSendBtn, #speechListenBtn, #speechAttachBtn, #speechLoadBtn, #speechSaveBtn, #speechCopyBtn, #speechClearBtn, #speechOriginalBtn, #speechTtsBtn {
     background: var(--btn-bg); border: 1px solid var(--border);
     color: var(--text); padding: 5px 9px; border-radius: 4px;
     font-family: 'Share Tech Mono', monospace; font-size: 11px;
@@ -1667,7 +1696,11 @@
       <div id="speechPanel">
         <div class="speech-top-bar" style="display:none"></div>
         <div class="file-preview-strip" id="speechFilePreviewStrip"></div>
-        <textarea id="speechEditBox" placeholder="Tap Talk… or type here." spellcheck="true"></textarea>
+        <div id="speechEditWrap">
+          <textarea id="speechEditBox" placeholder="Tap Talk… or type here." spellcheck="true"></textarea>
+          <div id="speechEditMirror" aria-hidden="true"></div>
+          <button id="speechFloatSend" onclick="sendSpeechToChat()" disabled title="Send">⏎</button>
+        </div>
         <div id="speechStatus" class="speech-status">IDLE</div>
 
         <div class="speech-btn-row" id="speechBtnRow1">
@@ -1691,9 +1724,12 @@
             <option value="pt-BR" title="Portuguese (BR)">Português (BR)</option>
           </select>
           <button id="speechOriginalBtn" onclick="speechOriginalLang()" title="Revert to system language">ORIGINAL</button>
+          <span class="sbr-spacer"></span>
           <select id="ttsVoiceSelect" title="TTS voice for spoken output"></select>
+          <button id="speechTtsBtn" onclick="toggleTts()" title="Toggle auto-speak for incoming messages">TTS Off</button>
+        </div>
+        <div class="speech-btn-row" id="speechBtnRow3">
           <button id="speechListenBtn" onclick="toggleListening()">TALK</button>
-          <button id="speechSendBtn" onclick="sendSpeechToChat()" disabled>SEND</button>
         </div>
       </div>
       <div class="log-panel collapsed" id="logPanel">
@@ -3490,7 +3526,7 @@ function toggleSpeechPanel() {
     if (btn)   { btn.classList.add('active'); btn.textContent = 'SHOW CHAT'; }
     updateSpeechSendBtn();
     // Give focus to the input box so the keyboard appears immediately
-    setTimeout(() => { const box = document.getElementById('speechEditBox'); if (box) box.focus(); }, 50);
+    setTimeout(() => { const box = document.getElementById('speechEditBox'); if (box) box.focus(); _positionFloatSend(); }, 80);
     setChatBtnsDisabled(true);
   } else {
     stopListening();
@@ -3503,8 +3539,64 @@ function toggleSpeechPanel() {
 
 function updateSpeechSendBtn() {
   const box = document.getElementById('speechEditBox');
+  const hasContent = box && (box.value.trim().length > 0);
   const btn = document.getElementById('speechSendBtn');
-  if (btn) btn.disabled = !box || !box.value.trim();
+  if (btn) btn.disabled = !hasContent;
+  _positionFloatSend();
+}
+
+function _positionFloatSend() {
+  const box    = document.getElementById('speechEditBox');
+  const mirror = document.getElementById('speechEditMirror');
+  const fsBtn  = document.getElementById('speechFloatSend');
+  if (!box || !mirror || !fsBtn) return;
+
+  const hasContent = box.value.trim().length > 0;
+  if (!hasContent) { fsBtn.style.display = 'none'; return; }
+
+  // Mirror must match textarea's exact inner width so word-wrap is identical
+  const cs = window.getComputedStyle(box);
+  const innerW = box.clientWidth
+    - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
+    - parseFloat(cs.borderLeftWidth) - parseFloat(cs.borderRightWidth);
+  mirror.style.width    = innerW + 'px';
+  mirror.style.fontSize = cs.fontSize;
+  mirror.style.lineHeight = cs.lineHeight;
+  mirror.style.fontFamily = cs.fontFamily;
+  mirror.style.padding  = cs.padding;
+
+  // Inject text + caret marker into mirror
+  const safe = box.value
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  mirror.innerHTML = safe + '<span id="_fsCaret">&#8203;</span>';
+
+  const caret = document.getElementById('_fsCaret');
+  if (!caret) { fsBtn.style.display = 'none'; return; }
+
+  // Positions relative to the wrap (parent of both mirror and button)
+  const wrapRect  = box.parentElement.getBoundingClientRect();
+  const caretRect = caret.getBoundingClientRect();
+
+  const btnH = 22;
+  const btnW = 36;
+  const pad  = 3;
+
+  // top: caret's y inside wrap, offset by textarea scroll
+  let top  = (caretRect.top - wrapRect.top) - box.scrollTop;
+  let left = (caretRect.left - wrapRect.left);
+
+  // Clamp inside textarea bounds
+  const taRight  = box.offsetLeft + box.clientWidth  - pad;
+  const taBottom = box.offsetTop  + box.clientHeight - pad;
+  left = Math.min(left, taRight  - btnW);
+  left = Math.max(left, box.offsetLeft + pad);
+  top  = Math.min(top,  taBottom - btnH);
+  top  = Math.max(top,  box.offsetTop  + pad);
+
+  fsBtn.style.left    = left + 'px';
+  fsBtn.style.top     = top  + 'px';
+  fsBtn.style.display = 'block';
+  fsBtn.disabled = false;
 }
 
 function sendSpeechToChat() {
@@ -3717,7 +3809,12 @@ document.addEventListener('DOMContentLoaded', () => {
     else wrap.classList.add('open');
   });
   const box = document.getElementById('speechEditBox');
-  if (box) box.addEventListener('input', updateSpeechSendBtn);
+  if (box) {
+    box.addEventListener('input',  updateSpeechSendBtn);
+    box.addEventListener('scroll', _positionFloatSend);
+    box.addEventListener('focus',  _positionFloatSend);
+  }
+  window.addEventListener('resize', _positionFloatSend);
 
   // ── Global keyboard shortcuts ──────────────────────────────
   document.addEventListener('keydown', e => {
@@ -3726,14 +3823,14 @@ document.addEventListener('DOMContentLoaded', () => {
       // Ctrl+S — send from voice input box if panel is open and has content
       if (_speechVisible) {
         e.preventDefault();
-        const sb = document.getElementById('speechSendBtn');
+        const sb = document.getElementById('speechFloatSend');
         if (sb && !sb.disabled) sendSpeechToChat();
       }
     } else if (e.key === 'Enter') {
       // Ctrl+Enter — send from voice input box if panel is open and has content
       if (_speechVisible) {
         e.preventDefault();
-        const sb = document.getElementById('speechSendBtn');
+        const sb = document.getElementById('speechFloatSend');
         if (sb && !sb.disabled) sendSpeechToChat();
       }
     } else if (e.key === 't' || e.key === 'T') {
@@ -5924,7 +6021,7 @@ if (window.speechSynthesis) {
 
 function toggleTts() {
   _ttsEnabled = !_ttsEnabled;
-  ['ttsBtn','ttsBtn2','ttsChatBtn'].forEach(id => {
+  ['ttsBtn','ttsBtn2','ttsChatBtn','speechTtsBtn'].forEach(id => {
     const b = document.getElementById(id);
     if (!b) return;
     b.textContent = _ttsEnabled ? 'TTS On' : 'TTS Off';
@@ -5974,7 +6071,7 @@ function ttsSpeak(text, lang) {
   // Button labels set after DOM ready
   document.addEventListener('DOMContentLoaded', () => {
     if (_ttsEnabled) {
-      ['ttsBtn','ttsBtn2','ttsChatBtn'].forEach(id => {
+      ['ttsBtn','ttsBtn2','ttsChatBtn','speechTtsBtn'].forEach(id => {
         const b = document.getElementById(id);
         if (b) { b.textContent = 'TTS On'; b.classList.add('active-on'); }
       });
