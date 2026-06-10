@@ -1805,9 +1805,17 @@ function unlockRemoteAudio() {
     entry('Remote audio unlocked by user tap', 'sys');
   }).catch(e => entry('Audio unlock failed: ' + e.message, 'err'));
 }
+let _ttsUnlocked = false;
 document.addEventListener('click', function() {
   if (_actx && _actx.state === 'suspended') _actx.resume();
   ensureRemoteAudioPlaying();
+  // Prime Android's TTS engine on first user gesture so later async calls work
+  if (!_ttsUnlocked && window.speechSynthesis) {
+    _ttsUnlocked = true;
+    const _primer = new SpeechSynthesisUtterance('');
+    _primer.volume = 0;
+    window.speechSynthesis.speak(_primer);
+  }
 }, true);
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
@@ -5937,9 +5945,8 @@ function ttsSpeak(text, lang) {
   const ss = window.speechSynthesis;
   _ttsClearResumeTimer();
   ss.cancel();
-  // Create utterance AFTER cancel() settles — creating it before causes it to
-  // be silently dropped in Chrome when cancel() resets the engine state.
-  setTimeout(() => {
+
+  function _doSpeak() {
     const utter = new SpeechSynthesisUtterance(text);
     // Use the explicitly passed lang, or our chosen language (_myLang), or browser default.
     // Never use speechLangSelect — that's the speech recognition input language, not TTS output.
@@ -5954,7 +5961,10 @@ function ttsSpeak(text, lang) {
       if (_ttsWatchdog > 120) { _ttsClearResumeTimer(); return; } // 30s hard cap
       ss.resume();
     }, 250);
-  }, 150);
+  }
+
+  // Brief delay after cancel() so Chrome doesn't drop the utterance.
+  setTimeout(_doSpeak, 150);
 }
 
 // Restore TTS toggle state on load
