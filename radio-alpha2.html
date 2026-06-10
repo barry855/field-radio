@@ -1178,15 +1178,6 @@
     font-family: 'Share Tech Mono', monospace; white-space: nowrap;
   }
   #translateResetBtn:hover { border-color: var(--danger); color: var(--danger); }
-  #ttsVoiceSelect {
-    flex-shrink: 0; background: var(--btn-bg); border: 1px solid var(--border);
-    color: var(--text-dim); border-radius: 4px; padding: 4px 6px;
-    font-size: 10px; letter-spacing: 1px; cursor: pointer;
-    font-family: 'Share Tech Mono', monospace; white-space: nowrap;
-    max-width: 140px; min-width: 60px;
-  }
-  #ttsVoiceSelect:hover { border-color: var(--accent); color: var(--accent); }
-  #ttsVoiceSelect option { background: #0d1b2a; color: var(--text); font-size: 12px; }
 
   /* ── Send button disabled state ────────────────────────────── */
   .btn:disabled, .btn[disabled] {
@@ -5768,29 +5759,181 @@ let _ttsEnabled = false;
 // ── TTS voice selector ────────────────────────────────────────────────────────
 let _ttsVoice = null; // selected SpeechSynthesisVoice, or null = browser default
 
+// ── Friendly display names for Chrome's built-in voices ──────────────────────
+// Maps the exact voice.name string Chrome exposes → {label, gender}
+// gender: M = male, F = female, ? = neutral/unknown
+const _VOICE_FRIENDLY = {
+  // ── Google voices (network, high quality) ────────────────────────────────
+  'Google UK English Female':          { label: 'Google ♀ en-GB', gender: 'F' },
+  'Google UK English Male':            { label: 'Google ♂ en-GB', gender: 'M' },
+  'Google US English':                 { label: 'Google ♀ en-US', gender: 'F' },
+  'Google français':                   { label: 'Google ♀ fr-FR', gender: 'F' },
+  'Google Deutsch':                    { label: 'Google ♀ de-DE', gender: 'F' },
+  'Google español':                    { label: 'Google ♀ es-ES', gender: 'F' },
+  'Google español de Estados Unidos':  { label: 'Google ♀ es-US', gender: 'F' },
+  'Google italiano':                   { label: 'Google ♀ it-IT', gender: 'F' },
+  'Google português do Brasil':        { label: 'Google ♀ pt-BR', gender: 'F' },
+  'Google português':                  { label: 'Google ♀ pt-PT', gender: 'F' },
+  'Google Nederlands':                 { label: 'Google ♀ nl-NL', gender: 'F' },
+  'Google polski':                     { label: 'Google ♀ pl-PL', gender: 'F' },
+  'Google русский':                    { label: 'Google ♀ ru-RU', gender: 'F' },
+  'Google 日本語':                      { label: 'Google ♀ ja-JP', gender: 'F' },
+  'Google 普通话（中国大陆）':            { label: 'Google ♀ zh-CN', gender: 'F' },
+  'Google 粤語（香港）':                 { label: 'Google ♀ zh-HK', gender: 'F' },
+  'Google 國語（臺灣）':                 { label: 'Google ♀ zh-TW', gender: 'F' },
+  'Google 한국의':                      { label: 'Google ♀ ko-KR', gender: 'F' },
+  'Google हिन्दी':                      { label: 'Google ♀ hi-IN', gender: 'F' },
+  'Google العربية':                    { label: 'Google ♀ ar',    gender: 'F' },
+  'Google čeština':                    { label: 'Google ♀ cs-CZ', gender: 'F' },
+  'Google dansk':                      { label: 'Google ♀ da-DK', gender: 'F' },
+  'Google suomi':                      { label: 'Google ♀ fi-FI', gender: 'F' },
+  'Google Ελληνικά':                   { label: 'Google ♀ el-GR', gender: 'F' },
+  'Google Magyar':                     { label: 'Google ♀ hu-HU', gender: 'F' },
+  'Google Bahasa Indonesia':           { label: 'Google ♀ id-ID', gender: 'F' },
+  'Google norsk':                      { label: 'Google ♀ nb-NO', gender: 'F' },
+  'Google română':                     { label: 'Google ♀ ro-RO', gender: 'F' },
+  'Google Slovak':                     { label: 'Google ♀ sk-SK', gender: 'F' },
+  'Google svenska':                    { label: 'Google ♀ sv-SE', gender: 'F' },
+  'Google Türkçe':                     { label: 'Google ♀ tr-TR', gender: 'F' },
+  'Google українська':                 { label: 'Google ♀ uk-UA', gender: 'F' },
+  'Google Vietnamese':                 { label: 'Google ♀ vi-VN', gender: 'F' },
+  // ── Microsoft voices (Windows built-in) ──────────────────────────────────
+  'Microsoft David - English (United States)':          { label: 'David ♂ en-US',  gender: 'M' },
+  'Microsoft Mark - English (United States)':           { label: 'Mark ♂ en-US',   gender: 'M' },
+  'Microsoft Zira - English (United States)':           { label: 'Zira ♀ en-US',   gender: 'F' },
+  'Microsoft Jenny - English (United States)':          { label: 'Jenny ♀ en-US',  gender: 'F' },
+  'Microsoft Aria - English (United States)':           { label: 'Aria ♀ en-US',   gender: 'F' },
+  'Microsoft Guy - English (United States)':            { label: 'Guy ♂ en-US',    gender: 'M' },
+  'Microsoft Brian - English (United States)':          { label: 'Brian ♂ en-US',  gender: 'M' },
+  'Microsoft Hazel - English (Great Britain)':          { label: 'Hazel ♀ en-GB',  gender: 'F' },
+  'Microsoft Susan - English (Great Britain)':          { label: 'Susan ♀ en-GB',  gender: 'F' },
+  'Microsoft George - English (Great Britain)':         { label: 'George ♂ en-GB', gender: 'M' },
+  'Microsoft Ryan - English (United Kingdom)':          { label: 'Ryan ♂ en-GB',   gender: 'M' },
+  'Microsoft Sonia - English (United Kingdom)':         { label: 'Sonia ♀ en-GB',  gender: 'F' },
+  'Microsoft Libby - English (United Kingdom)':         { label: 'Libby ♀ en-GB',  gender: 'F' },
+  'Microsoft Mia - English (Australia)':                { label: 'Mia ♀ en-AU',    gender: 'F' },
+  'Microsoft Natasha - English (Australia)':            { label: 'Natasha ♀ en-AU',gender: 'F' },
+  'Microsoft William - English (Australia)':            { label: 'William ♂ en-AU',gender: 'M' },
+  'Microsoft James - English (Australia)':              { label: 'James ♂ en-AU',  gender: 'M' },
+  'Microsoft Catherine - English (Canada)':             { label: 'Catherine ♀ en-CA', gender: 'F' },
+  'Microsoft Neerja - English (India)':                 { label: 'Neerja ♀ en-IN', gender: 'F' },
+  'Microsoft Ravi - English (India)':                   { label: 'Ravi ♂ en-IN',   gender: 'M' },
+  'Microsoft Julie - French (France)':                  { label: 'Julie ♀ fr-FR',  gender: 'F' },
+  'Microsoft Paul - French (France)':                   { label: 'Paul ♂ fr-FR',   gender: 'M' },
+  'Microsoft Hortense - French (France)':               { label: 'Hortense ♀ fr-FR', gender: 'F' },
+  'Microsoft Stefan - German (Germany)':                { label: 'Stefan ♂ de-DE', gender: 'M' },
+  'Microsoft Katja - German (Germany)':                 { label: 'Katja ♀ de-DE',  gender: 'F' },
+  'Microsoft Conrad - German (Germany)':                { label: 'Conrad ♂ de-DE', gender: 'M' },
+  'Microsoft Pablo - Spanish (Spain)':                  { label: 'Pablo ♂ es-ES',  gender: 'M' },
+  'Microsoft Laura - Spanish (Spain)':                  { label: 'Laura ♀ es-ES',  gender: 'F' },
+  'Microsoft Helena - Spanish (Spain)':                 { label: 'Helena ♀ es-ES', gender: 'F' },
+  'Microsoft Elvira - Spanish (Spain)':                 { label: 'Elvira ♀ es-ES', gender: 'F' },
+  'Microsoft Sabina - Spanish (Mexico)':                { label: 'Sabina ♀ es-MX', gender: 'F' },
+  'Microsoft Raul - Spanish (Mexico)':                  { label: 'Raul ♂ es-MX',   gender: 'M' },
+  'Microsoft Dalia - Spanish (Mexico)':                 { label: 'Dalia ♀ es-MX',  gender: 'F' },
+  'Microsoft Elsa - Italian (Italy)':                   { label: 'Elsa ♀ it-IT',   gender: 'F' },
+  'Microsoft Diego - Italian (Italy)':                  { label: 'Diego ♂ it-IT',  gender: 'M' },
+  'Microsoft Cosimo - Italian (Italy)':                 { label: 'Cosimo ♂ it-IT', gender: 'M' },
+  'Microsoft Maria - Portuguese (Brazil)':              { label: 'Maria ♀ pt-BR',  gender: 'F' },
+  'Microsoft Daniel - Portuguese (Brazil)':             { label: 'Daniel ♂ pt-BR', gender: 'M' },
+  'Microsoft Francisca - Portuguese (Brazil)':          { label: 'Francisca ♀ pt-BR', gender: 'F' },
+  'Microsoft Helia - Portuguese (Portugal)':            { label: 'Helia ♀ pt-PT',  gender: 'F' },
+  'Microsoft Duarte - Portuguese (Portugal)':           { label: 'Duarte ♂ pt-PT', gender: 'M' },
+  'Microsoft Frank - Dutch (Netherlands)':              { label: 'Frank ♂ nl-NL',  gender: 'M' },
+  'Microsoft Fenna - Dutch (Netherlands)':              { label: 'Fenna ♀ nl-NL',  gender: 'F' },
+  'Microsoft Marise - Dutch (Netherlands)':             { label: 'Marise ♀ nl-NL', gender: 'F' },
+  'Microsoft Paulina - Polish (Poland)':                { label: 'Paulina ♀ pl-PL', gender: 'F' },
+  'Microsoft Marek - Polish (Poland)':                  { label: 'Marek ♂ pl-PL',  gender: 'M' },
+  'Microsoft Irina - Russian (Russia)':                 { label: 'Irina ♀ ru-RU',  gender: 'F' },
+  'Microsoft Pavel - Russian (Russia)':                 { label: 'Pavel ♂ ru-RU',  gender: 'M' },
+  'Microsoft Ichiro - Japanese (Japan)':                { label: 'Ichiro ♂ ja-JP', gender: 'M' },
+  'Microsoft Haruka - Japanese (Japan)':                { label: 'Haruka ♀ ja-JP', gender: 'F' },
+  'Microsoft Ayumi - Japanese (Japan)':                 { label: 'Ayumi ♀ ja-JP',  gender: 'F' },
+  'Microsoft Huihui - Chinese (Simplified, PRC)':       { label: 'Huihui ♀ zh-CN', gender: 'F' },
+  'Microsoft Kangkang - Chinese (Simplified, PRC)':     { label: 'Kangkang ♂ zh-CN', gender: 'M' },
+  'Microsoft Yaoyao - Chinese (Simplified, PRC)':       { label: 'Yaoyao ♀ zh-CN', gender: 'F' },
+  'Microsoft Zhiwei - Chinese (Traditional, Taiwan)':   { label: 'Zhiwei ♂ zh-TW', gender: 'M' },
+  'Microsoft Yating - Chinese (Traditional, Taiwan)':   { label: 'Yating ♀ zh-TW', gender: 'F' },
+  'Microsoft Hanhan - Chinese (Traditional, Taiwan)':   { label: 'Hanhan ♀ zh-TW', gender: 'F' },
+  'Microsoft Danny - Chinese (Traditional, Hong Kong)': { label: 'Danny ♂ zh-HK',  gender: 'M' },
+  'Microsoft Tracy - Chinese (Traditional, Hong Kong)': { label: 'Tracy ♀ zh-HK',  gender: 'F' },
+  'Microsoft Naayf - Arabic (Saudi Arabia)':            { label: 'Naayf ♂ ar-SA',  gender: 'M' },
+  'Microsoft Hoda - Arabic (Egypt)':                    { label: 'Hoda ♀ ar-EG',   gender: 'F' },
+  'Microsoft Jakub - Czech (Czech Republic)':           { label: 'Jakub ♂ cs-CZ',  gender: 'M' },
+  'Microsoft Vit - Czech (Czech Republic)':             { label: 'Vit ♂ cs-CZ',    gender: 'M' },
+  'Microsoft Helle - Danish (Denmark)':                 { label: 'Helle ♀ da-DK',  gender: 'F' },
+  'Microsoft Heidi - Finnish (Finland)':                { label: 'Heidi ♀ fi-FI',  gender: 'F' },
+  'Microsoft Stefanos - Greek (Greece)':                { label: 'Stefanos ♂ el-GR', gender: 'M' },
+  'Microsoft Szabolcs - Hungarian (Hungary)':           { label: 'Szabolcs ♂ hu-HU', gender: 'M' },
+  'Microsoft Andika - Indonesian (Indonesia)':          { label: 'Andika ♂ id-ID', gender: 'M' },
+  'Microsoft Heami - Korean (Korea)':                   { label: 'Heami ♀ ko-KR',  gender: 'F' },
+  'Microsoft Jon - Norwegian, Bokmål (Norway)':         { label: 'Jon ♂ nb-NO',    gender: 'M' },
+  'Microsoft Andrei - Romanian (Romania)':              { label: 'Andrei ♂ ro-RO', gender: 'M' },
+  'Microsoft Filip - Slovak (Slovakia)':                { label: 'Filip ♂ sk-SK',  gender: 'M' },
+  'Microsoft Hedvig - Swedish (Sweden)':                { label: 'Hedvig ♀ sv-SE', gender: 'F' },
+  'Microsoft Tolga - Turkish (Turkey)':                 { label: 'Tolga ♂ tr-TR',  gender: 'M' },
+  // ── macOS / iOS system voices (also appear in Chrome on Mac) ─────────────
+  'Samantha':  { label: 'Samantha ♀ en-US', gender: 'F' },
+  'Alex':      { label: 'Alex ♂ en-US',     gender: 'M' },
+  'Daniel':    { label: 'Daniel ♂ en-GB',   gender: 'M' },
+  'Karen':     { label: 'Karen ♀ en-AU',    gender: 'F' },
+  'Moira':     { label: 'Moira ♀ en-IE',    gender: 'F' },
+  'Tessa':     { label: 'Tessa ♀ en-ZA',    gender: 'F' },
+  'Fiona':     { label: 'Fiona ♀ en-SCO',   gender: 'F' },
+  'Amelie':    { label: 'Amélie ♀ fr-CA',   gender: 'F' },
+  'Thomas':    { label: 'Thomas ♂ fr-FR',   gender: 'M' },
+  'Anna':      { label: 'Anna ♀ de-DE',     gender: 'F' },
+  'Monica':    { label: 'Monica ♀ es-ES',   gender: 'F' },
+  'Paulina':   { label: 'Paulina ♀ es-MX',  gender: 'F' },
+  'Alice':     { label: 'Alice ♀ it-IT',    gender: 'F' },
+  'Luciana':   { label: 'Luciana ♀ pt-BR',  gender: 'F' },
+  'Joana':     { label: 'Joana ♀ pt-PT',    gender: 'F' },
+  'Kyoko':     { label: 'Kyoko ♀ ja-JP',    gender: 'F' },
+  'Meijia':    { label: 'Meijia ♀ zh-TW',   gender: 'F' },
+  'Tingting':  { label: 'Tingting ♀ zh-CN', gender: 'F' },
+  'Yuna':      { label: 'Yuna ♀ ko-KR',     gender: 'F' },
+};
+
+// Fallback: derive a friendly label from voice.name + voice.lang when not in the map
+function _voiceFriendlyFallback(v) {
+  // Gender heuristic from name (common patterns)
+  const femaleNames = /\b(female|woman|girl|zira|hazel|susan|catherine|neerja|mia|natasha|jenny|aria|sonia|libby|julie|hortense|laura|helena|elvira|sabina|dalia|elsa|maria|francisca|helia|fenna|marise|paulina|irina|haruka|ayumi|huihui|yaoyao|yating|hanhan|tracy|hoda|helle|heidi|heami|hedvig|samantha|karen|moira|tessa|fiona|amelie|anna|monica|paulina|alice|luciana|joana|kyoko|meijia|tingting|yuna)\b/i;
+  const maleNames   = /\b(male|man|david|mark|george|ryan|william|james|ravi|stefan|conrad|pablo|diego|cosimo|daniel|duarte|frank|marek|pavel|ichiro|kangkang|zhiwei|danny|naayf|jakub|vit|stefanos|szabolcs|andika|jon|andrei|filip|tolga|alex|thomas|guy|brian|raul|paul|ichiro)\b/i;
+  const gender = femaleNames.test(v.name) ? '♀' : maleNames.test(v.name) ? '♂' : '?';
+  // Shorten the name
+  let name = v.name
+    .replace(/^Google\s+/i, 'Google ')
+    .replace(/^Microsoft\s+/i, '')
+    .replace(/\s*Desktop\b/i, '')
+    .replace(/\s*-\s*English\s*\(United States\)/i, '')
+    .replace(/\s*-\s*English\s*\(Great Britain\)/i, '')
+    .replace(/\s*-\s*English\s*\(United Kingdom\)/i, '')
+    .replace(/\s*-\s*.+/, '')
+    .trim();
+  return name + ' ' + gender + ' ' + v.lang;
+}
+
 function _populateTtsVoices() {
   const sel = document.getElementById('ttsVoiceSelect');
   if (!sel || !window.speechSynthesis) return;
   const voices = speechSynthesis.getVoices();
   if (!voices.length) return;
   const prev = sel.value;
-  sel.innerHTML = '<option value="">— default —</option>';
+  sel.innerHTML = '<option value="">— voice —</option>';
   voices.forEach((v, i) => {
     const opt = document.createElement('option');
     opt.value = i;
-    // Trim long platform prefixes (e.g. "Microsoft David Desktop - English (United States)")
-    opt.textContent = v.name.replace(/^Microsoft\s+/i,'').replace(/\s*Desktop\b/i,'').replace(/\s*-\s*.+/,'').trim();
+    const known = _VOICE_FRIENDLY[v.name];
+    opt.textContent = known ? known.label : _voiceFriendlyFallback(v);
     opt.title = v.name + ' (' + v.lang + ')';
     sel.appendChild(opt);
   });
-  // Restore previous selection if still valid
   if (prev && sel.querySelector('option[value="'+prev+'"]')) sel.value = prev;
   sel.onchange = function() {
     const idx = parseInt(this.value);
     _ttsVoice = isNaN(idx) ? null : speechSynthesis.getVoices()[idx] || null;
     try { localStorage.setItem('alpha_tts_voice', this.value); } catch(e) {}
   };
-  // Restore saved voice
   try {
     const saved = localStorage.getItem('alpha_tts_voice');
     if (saved && sel.querySelector('option[value="'+saved+'"]')) {
