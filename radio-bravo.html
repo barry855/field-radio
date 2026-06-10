@@ -4365,6 +4365,7 @@ function markLinked() {
   if (linked) return;
   linked = true;
   clearTimeout(retryTimer); // cancel any pending retry/watchdog
+  clearTimeout(dropTimer);  // cancel any pending reconnect-countdown from a concurrent onDrop
   setStatus('linked');
   entry('Linked to Alpha — full duplex active', 'ok');
   duplexBar.textContent = '● LIVE';
