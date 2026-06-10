@@ -799,6 +799,16 @@
     cursor: pointer; max-width: 80px;
   }
   #speechLangSelect:focus { outline: none; border-color: var(--accent); }
+  #ttsVoiceSelect {
+    background: var(--btn-bg); border: 1px solid var(--border);
+    color: var(--text-dim); font-family: 'Share Tech Mono', monospace;
+    font-size: 10px; letter-spacing: 0.5px;
+    height: 28px; padding: 0 4px; border-radius: 4px;
+    cursor: pointer; max-width: 120px; min-width: 60px; flex-shrink: 1;
+  }
+  #ttsVoiceSelect:focus { outline: none; border-color: var(--accent); }
+  #ttsVoiceSelect:hover { border-color: var(--accent); color: var(--accent); }
+  #ttsVoiceSelect option { background: #0d1b2a; color: var(--text); }
   /* ── Shared speech button base ── */
   #speechSendBtn, #speechListenBtn, #speechAttachBtn, #speechLoadBtn, #speechSaveBtn, #speechCopyBtn, #speechClearBtn, #speechOriginalBtn {
     background: var(--btn-bg); border: 1px solid var(--border);
@@ -1675,6 +1685,7 @@
             <option value="pt-BR">Portuguese (BR)</option>
           </select>
           <button id="speechOriginalBtn" onclick="speechOriginalLang()" title="Revert to system language">ORIGINAL</button>
+          <select id="ttsVoiceSelect" title="TTS voice for spoken output"></select>
           <button id="speechListenBtn" onclick="toggleListening()">TALK</button>
           <button id="speechSendBtn" onclick="sendSpeechToChat()" disabled>SEND</button>
         </div>
@@ -5619,6 +5630,43 @@ function toggleLogStop() {
 // ── TTS (Text-to-Speech) for incoming messages ───────────────
 let _ttsEnabled = false;
 
+// ── TTS voice selector ────────────────────────────────────────────────────────
+let _ttsVoice = null; // selected SpeechSynthesisVoice, or null = browser default
+
+function _populateTtsVoices() {
+  const sel = document.getElementById('ttsVoiceSelect');
+  if (!sel || !window.speechSynthesis) return;
+  const voices = speechSynthesis.getVoices();
+  if (!voices.length) return;
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">— default —</option>';
+  voices.forEach((v, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = v.name.replace(/^Microsoft\s+/i,'').replace(/\s*Desktop\b/i,'').replace(/\s*-\s*.+/,'').trim();
+    opt.title = v.name + ' (' + v.lang + ')';
+    sel.appendChild(opt);
+  });
+  if (prev && sel.querySelector('option[value="'+prev+'"]')) sel.value = prev;
+  sel.onchange = function() {
+    const idx = parseInt(this.value);
+    _ttsVoice = isNaN(idx) ? null : speechSynthesis.getVoices()[idx] || null;
+    try { localStorage.setItem('bravo_tts_voice', this.value); } catch(e) {}
+  };
+  try {
+    const saved = localStorage.getItem('bravo_tts_voice');
+    if (saved && sel.querySelector('option[value="'+saved+'"]')) {
+      sel.value = saved;
+      const idx = parseInt(saved);
+      _ttsVoice = isNaN(idx) ? null : voices[idx] || null;
+    }
+  } catch(e) {}
+}
+if (window.speechSynthesis) {
+  speechSynthesis.onvoiceschanged = _populateTtsVoices;
+  document.addEventListener('DOMContentLoaded', _populateTtsVoices);
+}
+
 function toggleTts() {
   _ttsEnabled = !_ttsEnabled;
   ['ttsBtn','ttsBtn2','ttsChatBtn'].forEach(id => {
@@ -5649,6 +5697,7 @@ function ttsSpeak(text, lang) {
     // Use the explicitly passed lang, or our chosen language (_myLang), or browser default.
     // Never use speechLangSelect — that's the speech recognition input language, not TTS output.
     utter.lang = lang || _myLang || (navigator.language || 'en');
+    if (_ttsVoice) utter.voice = _ttsVoice;
     utter.onend = utter.onerror = _ttsClearResumeTimer;
     ss.speak(utter);
     // Chrome pauses synthesis silently between utterances — keep pinging resume().
