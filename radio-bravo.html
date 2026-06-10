@@ -3629,14 +3629,14 @@ function startListening() {
   }
 
   if (_isAndroid) {
-    // Stop the hardware mic track so Android releases it for the Speech API
+    // Swap WebRTC sender to silence (mic hardware stays open for STT)
     _releaseAndroidMic().then(_doStart);
   } else {
     _doStart();
   }
 }
 
-// Release the hardware mic track for Android STT and swap WebRTC to silence
+// Swap WebRTC sender to silence during Android STT (mic hardware stays alive for STT)
 async function _releaseAndroidMic() {
   try {
     const pc = call && (call.peerConnection || call._pc);
@@ -3648,43 +3648,23 @@ async function _releaseAndroidMic() {
         await sender.replaceTrack(getSilentTrack()).catch(() => {});
       }
     }
-    // Stop the raw mic track to fully release hardware
-    if (realAudioTrack && realAudioTrack.readyState !== 'ended') {
-      realAudioTrack.stop();
-    }
-    // Brief pause for Android to release the mic resource
-    await new Promise(r => setTimeout(r, 600));
+    // Do NOT stop realAudioTrack — STT needs the hardware mic to stay open
   } catch(e) { setSpeechStatus('REL ERR: ' + e.message); }
 }
 
-// Re-acquire the mic and restore the WebRTC sender after Android STT
+// Restore the WebRTC sender after Android STT (mic was never stopped, just swap back)
 async function _restoreAndroidMic() {
   try {
-    const constraints = { audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false } };
-    const newStream = await navigator.mediaDevices.getUserMedia(constraints);
-    const newTrack  = newStream.getAudioTracks()[0];
-    realAudioTrack  = newTrack;
-
-    // Re-wire through the gain node if it exists
-    if (_micGainNode && _micGainCtx) {
-      const src = _micGainCtx.createMediaStreamSource(newStream);
-      src.connect(_micGainNode);
+    if (_sttSavedSender) {
+      // Restore the original track (or the gain-node output track if present)
       const gainedTrack = _micGainDest && _micGainDest.stream.getAudioTracks()[0];
-      if (_sttSavedSender && gainedTrack) {
-        await _sttSavedSender.replaceTrack(gainedTrack).catch(() => {});
-        localStream.getAudioTracks().forEach(t => { if (t !== gainedTrack) { t.stop(); localStream.removeTrack(t); }});
-        localStream.addTrack(gainedTrack);
-      } else if (_sttSavedSender) {
-        await _sttSavedSender.replaceTrack(newTrack).catch(() => {});
+      const restoreTrack = gainedTrack || realAudioTrack;
+      if (restoreTrack) {
+        await _sttSavedSender.replaceTrack(restoreTrack).catch(() => {});
       }
-    } else {
-      // No gain node — restore raw track directly
-      if (_sttSavedSender) await _sttSavedSender.replaceTrack(newTrack).catch(() => {});
-      localStream.getAudioTracks().forEach(t => { t.stop(); localStream.removeTrack(t); });
-      localStream.addTrack(newTrack);
+      _sttSavedSender = null;
+      _sttSavedTrack  = null;
     }
-    _sttSavedSender = null;
-    _sttSavedTrack  = null;
   } catch(e) { setSpeechStatus('RESTORE ERR: ' + e.message); }
 }
 
