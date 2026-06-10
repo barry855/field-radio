@@ -860,7 +860,13 @@
   }
   #speechSendBtn:disabled { opacity: 0.35; cursor: not-allowed; background: var(--btn-bg); border-color: var(--border); color: var(--text); font-weight: normal; }
   #speechOriginalBtn:hover { background: var(--btn-hover); border-color: var(--accent2); color: var(--accent2); }
-  #speechListenBtn:hover { background: var(--btn-hover); border-color: var(--accent2); color: var(--accent2); }
+  #speechListenBtn {
+    border-color: var(--accent2); color: var(--accent2);
+    background: rgba(0,255,159,0.12);
+    font-weight: bold; letter-spacing: 1.5px;
+    box-shadow: 0 0 6px rgba(0,255,159,0.25);
+  }
+  #speechListenBtn:hover { background: rgba(0,255,159,0.25); border-color: var(--accent2); color: var(--accent2); }
   #speechListenBtn.listening {
     border-color: var(--danger, #cc2222); color: var(--danger, #cc2222);
     background: rgba(204,34,34,0.08);
@@ -1525,7 +1531,7 @@
       <div class="chat-btn-bar-row" style="flex-shrink:0; margin-bottom:4px; flex-wrap:nowrap; overflow:hidden;">
         <button class="speech-top-btn" onclick="refreshScreen()" title="Refresh / Reconnect" style="flex-shrink:0;">↺</button>
         <button class="speech-top-btn leave-style" id="leaveChatBtn" onclick="leaveSession()" title="Leave session" style="flex-shrink:0;">✕ Leave</button>
-        <button class="speech-top-btn" id="ttsChatBtn" onclick="toggleTts()" title="Toggle auto-speak for incoming messages" style="flex-shrink:0;">TTS Off</button><span id="flipWrapChat"><button class="speech-top-btn" id="flipChatBtn" onclick="flipCamera()" title="Flip camera" style="flex-shrink:0;">⟳ Flip Cam</button></span>
+        <span id="flipWrapChat"><button class="speech-top-btn" id="flipChatBtn" onclick="flipCamera()" title="Flip camera" style="flex-shrink:0;">⟳ Flip Cam</button></span>
         <button class="speech-top-btn" id="fsChatBtn" onclick="toggleFullScreen()" title="Full Screen Toggle" style="flex-shrink:0;">FS OFF</button>
         <button class="speech-top-btn" id="miniChatBtn" onclick="toggleMiniChat()" title="Toggle mini video in chat" style="flex-shrink:0;">MINI OFF</button>
       </div>
@@ -1724,11 +1730,10 @@
             <option value="pt-BR" title="Portuguese (BR)">Português (BR)</option>
           </select>
           <button id="speechOriginalBtn" onclick="speechOriginalLang()" title="Revert to system language">ORIGINAL</button>
-          <span class="sbr-spacer"></span>
-          <select id="ttsVoiceSelect" title="TTS voice for spoken output"></select>
-          <button id="speechTtsBtn" onclick="toggleTts()" title="Toggle auto-speak for incoming messages">TTS Off</button>
         </div>
         <div class="speech-btn-row" id="speechBtnRow3">
+          <select id="ttsVoiceSelect" title="TTS voice for spoken output"></select>
+          <button id="speechTtsBtn" onclick="toggleTts()" title="Toggle auto-speak for incoming messages">TTS Off</button>
           <button id="speechListenBtn" onclick="toggleListening()">TALK</button>
         </div>
       </div>
@@ -6021,7 +6026,7 @@ if (window.speechSynthesis) {
 
 function toggleTts() {
   _ttsEnabled = !_ttsEnabled;
-  ['ttsBtn','ttsBtn2','ttsChatBtn','speechTtsBtn'].forEach(id => {
+  ['ttsBtn','ttsBtn2','speechTtsBtn'].forEach(id => {
     const b = document.getElementById(id);
     if (!b) return;
     b.textContent = _ttsEnabled ? 'TTS On' : 'TTS Off';
@@ -6071,7 +6076,7 @@ function ttsSpeak(text, lang) {
   // Button labels set after DOM ready
   document.addEventListener('DOMContentLoaded', () => {
     if (_ttsEnabled) {
-      ['ttsBtn','ttsBtn2','ttsChatBtn','speechTtsBtn'].forEach(id => {
+      ['ttsBtn','ttsBtn2','speechTtsBtn'].forEach(id => {
         const b = document.getElementById(id);
         if (b) { b.textContent = 'TTS On'; b.classList.add('active-on'); }
       });
