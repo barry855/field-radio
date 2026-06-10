@@ -3505,30 +3505,23 @@ function toggleListening() {
 
 function startListening() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) {
-    setSpeechStatus('NOT SUPPORTED');
-    return;
-  }
-  if (_recognition) { try { _recognition.abort(); } catch(e){} }
+  if (!SpeechRecognition) { setSpeechStatus('NOT SUPPORTED'); return; }
+  if (_recognition) { try { _recognition.abort(); } catch(e){} _recognition = null; }
 
-  // Android Chrome does not reliably fire isFinal=true and struggles with
-  // continuous=true (fires onend immediately, causing beep loops).
-  // Use single-shot mode on Android and treat any interim text as committed
-  // when the session ends without a final result.
   const _isAndroid = /android/i.test(navigator.userAgent);
 
   _recognition = new SpeechRecognition();
-  _recognition.continuous      = !_isAndroid;   // Android: single-shot
-  _recognition.interimResults  = true;
+  // Android: single-shot, no interim (interim mode suppresses onresult on many Android builds)
+  // Desktop: continuous with interim for real-time display
+  _recognition.continuous      = !_isAndroid;
+  _recognition.interimResults  = !_isAndroid;
   _recognition.maxAlternatives = 1;
-  _recognition.lang            = (document.getElementById('speechLangSelect') || {value:'en-US'}).value;
 
-  // Restore persisted language selection
+  // Set language
   const _sl = document.getElementById('speechLangSelect');
-  if (_sl) {
-    const saved = localStorage.getItem('alpha_speech_lang');
-    if (saved) { _sl.value = saved; _recognition.lang = saved; }
-  }
+  const _savedLang = _sl ? (localStorage.getItem('alpha_speech_lang') || _sl.value) : 'en-US';
+  _recognition.lang = _savedLang;
+  if (_sl) _sl.value = _savedLang;
 
   _recognition.onstart = () => {
     _listening = true;
@@ -3538,9 +3531,6 @@ function startListening() {
     if (lb) { lb.classList.add('listening'); lb.textContent = 'STOP'; }
     const ss = document.getElementById('speechStatus');
     if (ss) ss.classList.add('listening');
-    // Mute outgoing mic so remote doesn't hear speech-rec audio.
-    // On Android, realAudioTrack is shared with the Web Speech API — disabling
-    // it kills recognition. So on Android only use the Web Audio gain node.
     if (!audioMuted) {
       if (_mixMicGain) { _preTalkMicGain = _mixMicGain.gain.value; _mixMicGain.gain.value = 0.0; }
       else if (realAudioTrack && !_isAndroid) { realAudioTrack.enabled = false; }
@@ -3553,64 +3543,46 @@ function startListening() {
     let finalChunk = '';
     let interimChunk = '';
     for (let i = e.resultIndex; i < e.results.length; i++) {
-      if (e.results[i].isFinal) { finalChunk    += e.results[i][0].transcript; }
-      else                      { interimChunk  += e.results[i][0].transcript; }
+      if (e.results[i].isFinal) { finalChunk   += e.results[i][0].transcript; }
+      else                      { interimChunk += e.results[i][0].transcript; }
     }
     if (finalChunk) {
-      // Commit final text — replace any pending interim placeholder
-      const base = box.value.endsWith(_interimText) && _interimText
-        ? box.value.slice(0, box.value.length - _interimText.length)
-        : box.value;
-      const sep = base && !base.endsWith(' ') ? ' ' : '';
-      box.value = base + sep + finalChunk.trim();
+      const base = (_interimText && box.value.endsWith(_interimText))
+        ? box.value.slice(0, box.value.length - _interimText.length) : box.value;
+      box.value = base + (base && !base.endsWith(' ') ? ' ' : '') + finalChunk.trim();
       _interimText = '';
     } else if (interimChunk) {
-      // Show interim in real-time: replace previous interim tail with new one
-      const base = box.value.endsWith(_interimText) && _interimText
-        ? box.value.slice(0, box.value.length - _interimText.length)
-        : box.value;
-      const sep = base && !base.endsWith(' ') ? ' ' : '';
+      const base = (_interimText && box.value.endsWith(_interimText))
+        ? box.value.slice(0, box.value.length - _interimText.length) : box.value;
       _interimText = interimChunk;
-      box.value = base + sep + interimChunk;
+      box.value = base + (base && !base.endsWith(' ') ? ' ' : '') + interimChunk;
     }
     updateSpeechSendBtn();
   };
 
   _recognition.onerror = (e) => {
-    if (e.error === 'no-speech') {
-      // On Android, no-speech is common — just restart quietly if still listening
-      if (_isAndroid && _listening) {
-        setTimeout(() => { if (_listening) try { startListening(); } catch(ex) { stopListening(); } }, 300);
-      }
-      return;
-    }
-    if (e.error === 'aborted') return; // user-initiated stop
+    if (e.error === 'no-speech' || e.error === 'aborted') return;
     setSpeechStatus('ERR: ' + e.error.toUpperCase());
     stopListening();
   };
 
   _recognition.onend = () => {
-    // If interim text arrived but no final result (common on Android),
-    // commit whatever interim text we have as the real result.
+    // Commit any pending interim text (Android often skips isFinal)
     if (_interimText) {
       const box = document.getElementById('speechEditBox');
       if (box) {
         const base = box.value.endsWith(_interimText)
-          ? box.value.slice(0, box.value.length - _interimText.length)
-          : box.value;
-        const sep = base && !base.endsWith(' ') ? ' ' : '';
-        box.value = base + sep + _interimText.trim();
+          ? box.value.slice(0, box.value.length - _interimText.length) : box.value;
+        box.value = base + (base && !base.endsWith(' ') ? ' ' : '') + _interimText.trim();
         _interimText = '';
         updateSpeechSendBtn();
       }
     }
     if (_listening) {
-      // Auto-restart. On Android use a longer delay to let the mic fully close.
-      const delay = _isAndroid ? 400 : 250;
       setTimeout(() => {
         if (!_listening) return;
-        try { startListening(); } catch(e) { stopListening(); }
-      }, delay);
+        try { startListening(); } catch(ex) { stopListening(); }
+      }, _isAndroid ? 500 : 250);
     }
   };
 
