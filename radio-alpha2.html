@@ -3619,17 +3619,13 @@ function startListening() {
       }
     };
 
-    setTimeout(() => {
-      try { _recognition.start(); } catch(e) { setSpeechStatus('ERR: START FAILED: ' + e.message); }
-    }, 200);
+    try { _recognition.start(); } catch(e) { setSpeechStatus('ERR: START FAILED: ' + e.message); }
   }
 
-  if (_isAndroid) {
-    // Swap WebRTC sender to silence (mic hardware stays open for STT)
-    _releaseAndroidMic().then(_doStart);
-  } else {
-    _doStart();
-  }
+  // Swap WebRTC sender to silence (fire-and-forget), then start immediately
+  // _recognition.start() must be called synchronously in the gesture handler on Android
+  _releaseAndroidMic();
+  _doStart();
 }
 
 // Swap WebRTC sender to silence during Android STT (mic hardware stays alive for STT)
