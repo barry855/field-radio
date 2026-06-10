@@ -769,6 +769,10 @@
     margin-left: auto; font-size: 9px; letter-spacing: 1px;
     color: var(--text-dim);
   }
+  #speechPanel > .speech-status {
+    font-size: 10px; letter-spacing: 1px; padding: 2px 4px;
+    color: var(--text-dim); font-family: monospace; word-break: break-all;
+  }
   #speechPanel .speech-status.listening {
     color: var(--danger, #cc2222);
     animation: speech-blink 1s step-start infinite;
@@ -1664,6 +1668,7 @@
         <div class="speech-top-bar" style="display:none"></div>
         <div class="file-preview-strip" id="speechFilePreviewStrip"></div>
         <textarea id="speechEditBox" placeholder="Tap Talk… or type here." spellcheck="true"></textarea>
+        <div id="speechStatus" class="speech-status">IDLE</div>
 
         <div class="speech-btn-row" id="speechBtnRow1">
           <button id="speechAttachBtn" onclick="speechAttachClick()" title="Attach file or drag &amp; drop">ATTACH</button>
