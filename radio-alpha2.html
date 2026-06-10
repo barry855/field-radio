@@ -736,8 +736,8 @@
     color: var(--text-dim);
   }
   #speechPanel > .speech-status {
-    font-size: 10px; letter-spacing: 1px; padding: 2px 4px;
-    color: var(--text-dim); font-family: monospace; word-break: break-all;
+    font-size: 11px; letter-spacing: 1px; padding: 2px 4px;
+    color: #ffffff; font-family: monospace; word-break: break-all; font-weight: bold;
   }
   #speechPanel .speech-status.listening {
     color: var(--danger, #cc2222);
@@ -3456,6 +3456,8 @@ function toggleSysLogView() {
 let _recognition   = null;
 let _listening     = false;
 let _interimText   = '';
+let _sttStartCount = 0;
+let _sttLastError  = null;
 
 function toggleSpeechPanel() {
   _speechVisible = !_speechVisible;
@@ -3514,6 +3516,7 @@ function startListening() {
   if (_recognition) { try { _recognition.abort(); } catch(e){} _recognition = null; }
 
   const _isAndroid = /android/i.test(navigator.userAgent);
+  _sttStartCount = (_sttStartCount || 0) + 1;
 
   _recognition = new SpeechRecognition();
   _recognition.continuous      = !_isAndroid;
@@ -3528,7 +3531,7 @@ function startListening() {
   _recognition.onstart = () => {
     _listening = true;
     _interimText = '';
-    setSpeechStatus('START android=' + _isAndroid + ' lang=' + _recognition.lang + ' interim=' + _recognition.interimResults);
+    setSpeechStatus('#' + _sttStartCount + ' START and=' + _isAndroid + ' lang=' + _recognition.lang);
     const lb = document.getElementById('speechListenBtn');
     if (lb) { lb.classList.add('listening'); lb.textContent = 'STOP'; }
     const ss = document.getElementById('speechStatus');
@@ -3542,14 +3545,12 @@ function startListening() {
   _recognition.onresult = (e) => {
     const box = document.getElementById('speechEditBox');
     if (!box) return;
-    setSpeechStatus('RESULT idx=' + e.resultIndex + ' len=' + e.results.length);
     let finalChunk = '';
     let interimChunk = '';
     for (let i = e.resultIndex; i < e.results.length; i++) {
       if (e.results[i].isFinal) { finalChunk   += e.results[i][0].transcript; }
-      else                      { interimChunk += e.results[i][0].transcript; }
-    }
-    setSpeechStatus('RESULT final=[' + finalChunk + '] interim=[' + interimChunk + ']');
+      else                      { interimChunk += e.results[i][0].transcript; }    }
+    setSpeechStatus('RESULT f=[' + finalChunk + '] i=[' + interimChunk + ']');
     if (finalChunk) {
       const base = (_interimText && box.value.endsWith(_interimText))
         ? box.value.slice(0, box.value.length - _interimText.length) : box.value;
@@ -3565,13 +3566,15 @@ function startListening() {
   };
 
   _recognition.onerror = (e) => {
-    setSpeechStatus('ERR: ' + e.error.toUpperCase());
+    _sttLastError = e.error;
+    setSpeechStatus('ERR: ' + e.error);
     if (e.error === 'no-speech' || e.error === 'aborted') return;
     stopListening();
   };
 
   _recognition.onend = () => {
-    setSpeechStatus('END interim=[' + _interimText + '] listening=' + _listening);
+    setSpeechStatus('END #' + _sttStartCount + ' err=[' + (_sttLastError||'none') + '] interim=[' + _interimText + ']');
+    _sttLastError = null;
     if (_interimText) {
       const box = document.getElementById('speechEditBox');
       if (box) {
