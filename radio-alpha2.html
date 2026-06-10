@@ -4145,6 +4145,7 @@ function dial() {
 function attachDataConn(dc) {
   function onDcOpen() {
     if (dataConn === dc) return; // already handled
+    clearTimeout(_dcWatchdog);   // DC opened — cancel the retry watchdog
     pendingDC = false;
     dataConn = dc;
     entry('Chat channel open', 'ok');
@@ -4257,6 +4258,7 @@ function dcDecode(raw) {
   return { text: s };
 }
 
+let _dcWatchdog = null;
 function openDataConn() {
   if (dataConn || pendingDC) return;
   pendingDC = true;
@@ -4265,6 +4267,18 @@ function openDataConn() {
   // between desktop Chrome and Android Chrome/WebView. We JSON-encode manually.
   const dc = peer.connect(REMOTE_ID, { reliable: true, serialization: 'raw' });
   attachDataConn(dc);
+  // Watchdog: if the DC hasn't opened within 8s, clear pendingDC and retry.
+  // PeerJS peer.connect() can silently hang if the remote peer isn't ready
+  // at the exact moment of the signalling message.
+  clearTimeout(_dcWatchdog);
+  _dcWatchdog = setTimeout(() => {
+    if (!dataConn && pendingDC) {
+      entry('DC open timed out — retrying…', 'sys');
+      try { dc.close(); } catch(e) {}
+      pendingDC = false;
+      if (linked) openDataConn();
+    }
+  }, 8000);
 }
 
 function answerCall(c) {
