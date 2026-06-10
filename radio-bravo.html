@@ -3,7 +3,8 @@
 <!-- Field Radio v6 — BRAVO -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<meta name="screen-orientation" content="any">
 <meta name="google" content="notranslate">
 <title>BRAVO — Field Radio v6</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌐</text></svg>">
@@ -1706,6 +1707,14 @@
 <div id="lightbox"><img id="lightboxImg" src="" alt=""></div>
 
 <script>
+// ── Screen orientation unlock (Android Chrome landscape fix) ─────────────────
+(function() {
+  try {
+    if (screen.orientation && screen.orientation.unlock) {
+      screen.orientation.unlock();
+    }
+  } catch(e) {}
+})();
 // ── localStorage shim (file:// safe) ─────────────────────────────────────────
 // On file:// Chrome may block localStorage entirely. This shim falls back to
 // an in-memory store so prefillLogin and all other storage calls still work.
@@ -3533,10 +3542,12 @@ function startListening() {
     if (lb) { lb.classList.add('listening'); lb.textContent = 'STOP'; }
     const ss = document.getElementById('speechStatus');
     if (ss) ss.classList.add('listening');
-    // Mute outgoing mic while listening so the remote doesn't hear our speech-rec audio
+    // Mute outgoing mic so remote doesn't hear speech-rec audio.
+    // On Android, realAudioTrack is shared with the Web Speech API — disabling
+    // it kills recognition. So on Android only use the Web Audio gain node.
     if (!audioMuted) {
       if (_mixMicGain) { _preTalkMicGain = _mixMicGain.gain.value; _mixMicGain.gain.value = 0.0; }
-      else if (realAudioTrack) { realAudioTrack.enabled = false; }
+      else if (realAudioTrack && !_isAndroid) { realAudioTrack.enabled = false; }
     }
   };
 
@@ -3624,10 +3635,11 @@ function stopListening() {
   if (lb) { lb.classList.remove('listening'); lb.textContent = 'TALK'; }
   const ss = document.getElementById('speechStatus');
   if (ss) ss.classList.remove('listening');
-  // Restore outgoing mic (unless the user has globally muted)
+  // Restore outgoing mic
+  const _isAndroid = /android/i.test(navigator.userAgent);
   if (!audioMuted) {
     if (_mixMicGain) { _mixMicGain.gain.value = _preTalkMicGain !== null ? _preTalkMicGain : 1.0; _preTalkMicGain = null; }
-    else if (realAudioTrack) { realAudioTrack.enabled = true; }
+    else if (realAudioTrack && !_isAndroid) { realAudioTrack.enabled = true; }
   }
 }
 
