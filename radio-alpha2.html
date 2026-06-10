@@ -4030,8 +4030,16 @@ function startPeer() {
   });
 
   peer.on('connection', dc => {
-    if (dataConn || pendingDC) { dc.close(); return; }
-    entry('Inbound data channel from Bravo', 'sys');
+    if (dataConn) { dc.close(); return; }
+    // Collision: Bravo dialled us while we were dialling Bravo (pendingDC=true).
+    // Accept Bravo's inbound DC and discard our stale outgoing one — it will
+    // never open anyway because Bravo rebuilt its peer before answering us.
+    if (pendingDC) {
+      entry('DC collision — accepting inbound DC from Bravo (discarding outgoing)', 'sys');
+      pendingDC = false;
+    } else {
+      entry('Inbound data channel from Bravo', 'sys');
+    }
     attachDataConn(dc);
   });
 
