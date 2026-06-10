@@ -1345,29 +1345,58 @@
   .login-presence .ptxt.p-reachable { color: #ffaa00; }
   .login-presence .ptxt.p-offline   { color: #ff4444; }
 
+  /* ── APP FULLSCREEN: full-viewport chat video, CSS-driven (no Fullscreen API needed) ── */
+  body.app-fullscreen {
+    overflow: hidden;
+  }
+  body.app-fullscreen .shell {
+    position: fixed; inset: 0; max-width: none; padding: 0; gap: 0; z-index: 1000;
+  }
+  body.app-fullscreen header,
+  body.app-fullscreen .tab-bar {
+    position: relative; z-index: 1002;
+  }
+  body.app-fullscreen .tab-content {
+    padding: 0; gap: 0; border: none; border-radius: 0; background: #000;
+    flex: 1; min-height: 0;
+  }
+  body.app-fullscreen #paneChat { gap: 0; min-height: 0; }
+  body.app-fullscreen #paneChat .chat-find-bar,
+  body.app-fullscreen #paneChat .chat-btn-bar-row,
+  body.app-fullscreen #paneChat .gain-row,
+  body.app-fullscreen #paneChat .zoom-row,
+  body.app-fullscreen #paneChat #speechPanel,
+  body.app-fullscreen #paneChat #chatToolsWrap {
+    position: relative; z-index: 1002;
+  }
+  body.app-fullscreen #chatPanel {
+    flex: 1; min-height: 0;
+    border-radius: 0; border: none;
+  }
+
   /* ── FULLSCREEN: auto-hide controls after inactivity ─── */
-  body.fs-controls-hidden header,
-  body.fs-controls-hidden .tab-bar,
-  body.fs-controls-hidden .chat-btn-bar-row,
-  body.fs-controls-hidden .gain-row,
-  body.fs-controls-hidden .zoom-row,
-  body.fs-controls-hidden #chatFindBar,
-  body.fs-controls-hidden #speechPanel,
-  body.fs-controls-hidden #translateBar,
-  body.fs-controls-hidden .chat-panel > .panel-label {
+  body.app-fullscreen.fs-controls-hidden header,
+  body.app-fullscreen.fs-controls-hidden .tab-bar,
+  body.app-fullscreen.fs-controls-hidden #paneChat .chat-find-bar,
+  body.app-fullscreen.fs-controls-hidden #paneChat .chat-btn-bar-row,
+  body.app-fullscreen.fs-controls-hidden #paneChat .gain-row,
+  body.app-fullscreen.fs-controls-hidden #paneChat .zoom-row,
+  body.app-fullscreen.fs-controls-hidden #paneChat #speechPanel,
+  body.app-fullscreen.fs-controls-hidden #paneChat #chatToolsWrap,
+  body.app-fullscreen.fs-controls-hidden .chat-panel > .panel-label {
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.4s ease;
   }
-  body.fs-controls-visible header,
-  body.fs-controls-visible .tab-bar,
-  body.fs-controls-visible .chat-btn-bar-row,
-  body.fs-controls-visible .gain-row,
-  body.fs-controls-visible .zoom-row,
-  body.fs-controls-visible #chatFindBar,
-  body.fs-controls-visible #speechPanel,
-  body.fs-controls-visible #translateBar,
-  body.fs-controls-visible .chat-panel > .panel-label {
+  body.app-fullscreen.fs-controls-visible header,
+  body.app-fullscreen.fs-controls-visible .tab-bar,
+  body.app-fullscreen.fs-controls-visible #paneChat .chat-find-bar,
+  body.app-fullscreen.fs-controls-visible #paneChat .chat-btn-bar-row,
+  body.app-fullscreen.fs-controls-visible #paneChat .gain-row,
+  body.app-fullscreen.fs-controls-visible #paneChat .zoom-row,
+  body.app-fullscreen.fs-controls-visible #paneChat #speechPanel,
+  body.app-fullscreen.fs-controls-visible #paneChat #chatToolsWrap,
+  body.app-fullscreen.fs-controls-visible .chat-panel > .panel-label {
     opacity: 1;
     pointer-events: auto;
     transition: opacity 0.3s ease;
@@ -1378,11 +1407,11 @@
     position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
     background: rgba(0,0,0,0.55); color: rgba(255,255,255,0.65);
     font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
-    padding: 5px 14px; border-radius: 20px; z-index: 9999;
+    padding: 5px 14px; border-radius: 20px; z-index: 1003;
     pointer-events: none; white-space: nowrap;
     transition: opacity 0.4s ease;
   }
-  body.fs-controls-hidden #fsHint { display: block; }
+  body.app-fullscreen.fs-controls-hidden #fsHint { display: block; }
 
   /* ── LANDSCAPE: full-screen video only (mobile/touch only) ─── */
   @media (orientation: landscape) and (pointer: coarse) {
@@ -1593,7 +1622,7 @@
         <input type="range" id="zoomSliderChat" min="1" max="4" step="0.1" value="1" oninput="applyZoom(this.value,'local')">
         <span class="zoom-val" id="zoomValChat">1.0×</span>
       </div>
-      <div style="flex-shrink:0; border:1px solid rgba(255,255,255,0.25); border-radius:5px; padding:4px 6px; margin-top:2px; display:flex; flex-direction:column; gap:4px;">
+      <div id="chatToolsWrap" style="flex-shrink:0; border:1px solid rgba(255,255,255,0.25); border-radius:5px; padding:4px 6px; margin-top:2px; display:flex; flex-direction:column; gap:4px;">
         <div style="display:flex; flex-wrap:wrap; align-items:center; gap:4px;">
           <span class="sbr-label">CHAT:</span>
           <button class="speech-top-btn" onclick="saveChatToFile()" id="saveChatBtn" title="Save chat as HTML">💾 SAVE</button>
@@ -5687,10 +5716,14 @@ async function selectCamera(deviceId) {
 }
 
 // ── Full Screen toggle + auto-hide controls ────────────────────────────────
+// Uses a CSS-driven "app fullscreen" mode (body.app-fullscreen) that does not
+// depend on the browser Fullscreen API, since many Android WebView/Chrome
+// configurations silently reject or no-op requestFullscreen(). The real
+// Fullscreen API is still requested as a bonus when available.
 let _fsHideTimer = null;
 
 function _fsIsActive() {
-  return !!(document.fullscreenElement || document.webkitFullscreenElement);
+  return document.body.classList.contains('app-fullscreen');
 }
 
 function _fsShowControls() {
@@ -5711,43 +5744,50 @@ function _fsOnActivity() {
   if (_fsIsActive()) _fsShowControls();
 }
 
-// Tap/click anywhere while fullscreen → reveal controls
+// Tap/click anywhere while in app-fullscreen → reveal controls
 document.addEventListener('touchstart', _fsOnActivity, { passive: true });
 document.addEventListener('click',      _fsOnActivity);
 document.addEventListener('mousemove',  _fsOnActivity, { passive: true });
 
 function toggleFullScreen() {
   const btn = document.getElementById('fsChatBtn');
-  const isFs = _fsIsActive();
-  if (!isFs) {
-    const el = document.documentElement;
-    if (el.requestFullscreen)            el.requestFullscreen();
-    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+  const goingFs = !_fsIsActive();
+
+  if (goingFs) {
+    document.body.classList.add('app-fullscreen');
     if (btn) { btn.textContent = 'FS ON'; btn.classList.add('active'); }
-  } else {
-    if (document.exitFullscreen)            document.exitFullscreen();
-    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-    if (btn) { btn.textContent = 'FS OFF'; btn.classList.remove('active'); }
-  }
-}
-document.addEventListener('fullscreenchange',       _syncFsBtn);
-document.addEventListener('webkitfullscreenchange', _syncFsBtn);
-function _syncFsBtn() {
-  const btn = document.getElementById('fsChatBtn');
-  if (!btn) return;
-  const isFs = _fsIsActive();
-  btn.textContent = isFs ? 'FS ON' : 'FS OFF';
-  isFs ? btn.classList.add('active') : btn.classList.remove('active');
-  if (isFs) {
-    // Start auto-hide sequence when entering fullscreen
+    // Best-effort real Fullscreen API request (ignored if unsupported/denied)
+    try {
+      const el = document.documentElement;
+      if (el.requestFullscreen)            el.requestFullscreen().catch(()=>{});
+      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    } catch(e) {}
     _fsShowControls();
   } else {
-    // Leaving fullscreen — restore normal state
+    document.body.classList.remove('app-fullscreen', 'fs-controls-hidden', 'fs-controls-visible');
     clearTimeout(_fsHideTimer);
-    document.body.classList.remove('fs-controls-hidden', 'fs-controls-visible');
+    if (btn) { btn.textContent = 'FS OFF'; btn.classList.remove('active'); }
+    try {
+      if (document.exitFullscreen)            document.exitFullscreen().catch(()=>{});
+      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    } catch(e) {}
   }
 }
 
+// Keep button/state in sync if the real Fullscreen API exits on its own
+// (e.g. user presses Android back button while real-FS is also active).
+document.addEventListener('fullscreenchange',       _syncRealFsExit);
+document.addEventListener('webkitfullscreenchange', _syncRealFsExit);
+function _syncRealFsExit() {
+  const realFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+  if (!realFs && _fsIsActive()) {
+    // Real fullscreen dropped out from under us — also exit app-fullscreen
+    const btn = document.getElementById('fsChatBtn');
+    document.body.classList.remove('app-fullscreen', 'fs-controls-hidden', 'fs-controls-visible');
+    clearTimeout(_fsHideTimer);
+    if (btn) { btn.textContent = 'FS OFF'; btn.classList.remove('active'); }
+  }
+}
 
 let speakerMode = true;
 
