@@ -1705,7 +1705,7 @@
         <div id="speechEditWrap">
           <textarea id="speechEditBox" placeholder="Tap Talk… or type here." spellcheck="true"></textarea>
           <div id="speechEditMirror" aria-hidden="true"></div>
-          <button id="speechFloatSend" onclick="sendSpeechToChat()" disabled title="Send">⏎</button>
+          <button id="speechFloatSend" onclick="sendSpeechToChat()" disabled title="Send">SEND</button>
         </div>
         <div id="speechStatus" class="speech-status">IDLE</div>
 
@@ -4667,9 +4667,26 @@ function attachCall(c) {
         entry('DIAG: ICE FAILED — attempting ICE restart', 'err');
         try { pc.restartIce(); } catch(e2) { entry('ICE restart unavailable: ' + e2.message, 'sys'); }
       }
+      if (pc.iceConnectionState === 'disconnected' && linked && call === c) {
+        entry('DIAG: ICE disconnected — starting drop watchdog', 'sys');
+        clearTimeout(c._iceDropTimer);
+        c._iceDropTimer = setTimeout(() => {
+          if (pc.iceConnectionState === 'disconnected' && call === c) {
+            entry('ICE disconnected watchdog fired — dropping call', 'err');
+            onDrop();
+          }
+        }, 5000);
+      }
+      if ((pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') && c._iceDropTimer) {
+        clearTimeout(c._iceDropTimer); c._iceDropTimer = null;
+      }
     });
     pc.addEventListener('connectionstatechange', () => {
       entry('DIAG: connection state → ' + pc.connectionState, 'sys');
+      if ((pc.connectionState === 'failed' || pc.connectionState === 'disconnected') && linked && call === c) {
+        entry('Connection state ' + pc.connectionState + ' — dropping call', 'err');
+        onDrop();
+      }
     });
     pc.addEventListener('signalingstatechange', () => {
       entry('DIAG: signaling → ' + pc.signalingState, 'sys');
@@ -4831,6 +4848,7 @@ function handleRemoteLeave() {
 
 function onDrop() {
   clearTimeout(retryTimer);
+  if (call && call._iceDropTimer) { clearTimeout(call._iceDropTimer); call._iceDropTimer = null; }
   saveRecordingIfActive();
   _pendingChatMsg = null;  // discard any queued message — it belongs to the dropped session
   linked = false;
