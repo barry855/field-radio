@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -338,7 +339,23 @@
   .underlay-flip-btn:hover, .underlay-flip-btn:active { opacity: 1; border-color: var(--accent); color: var(--accent); }
   .underlay-flip-btn.active { opacity: 1; border-color: var(--accent); color: var(--accent); }
 
-  .chat-find-bar {
+  /* ── Camera select dropdown (multi-camera laptops) ─────────── */
+  .camera-select {
+    font-size: 11px;
+    font-family: inherit;
+    background: var(--btn-bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 3px 4px;
+    cursor: pointer;
+    max-width: 130px;
+    height: 28px;
+    vertical-align: middle;
+  }
+  .camera-select:focus { outline: 1px solid var(--accent); }
+
+
     display: none; align-items: center; gap: 6px;
     background: #0c1520; border: 1px solid var(--accent);
     border-radius: 4px; padding: 4px 8px;
@@ -1351,7 +1368,7 @@
           <button class="media-btn" id="recBtn" onclick="toggleRecordLocal()">➤ RECORD</button>
           <button class="media-btn video-off-state" id="videoBtn_row2" onclick="toggleVideo()">Video Off</button>
           <button class="media-btn" id="audioBtn" onclick="toggleAudio()">Audio On</button>
-          <button class="media-btn" id="ttsBtn" onclick="toggleTts()" title="Toggle auto-speak for incoming messages">TTS Off</button><button class="media-btn" id="flipBtn" onclick="flipCamera()">⟳ Flip Cam</button>
+          <button class="media-btn" id="ttsBtn" onclick="toggleTts()" title="Toggle auto-speak for incoming messages">TTS Off</button><span id="flipWrap"><button class="media-btn" id="flipBtn" onclick="flipCamera()">⟳ Flip Cam</button></span>
           <button class="media-btn" id="screenBtn" onclick="toggleScreenShare()">Share Off</button>
           <button class="speaker-btn speaker-on" id="speakerBtnLocal" onclick="toggleSpeaker()">🔊 Speaker</button>
           <button class="leave-btn" id="leaveBtn" onclick="leaveSession()">✕ Leave</button>
@@ -1393,7 +1410,7 @@
           <button class="media-btn" id="recBtn2" onclick="toggleRecordRemote()">➤ RECORD</button>
           <button class="media-btn video-off-state" id="videoBtn2_row2" onclick="toggleVideo()">Video Off</button>
           <button class="media-btn" id="audioBtn2" onclick="toggleAudio()">Audio On</button>
-          <button class="media-btn" id="ttsBtn2" onclick="toggleTts()" title="Toggle auto-speak for incoming messages">TTS Off</button><button class="media-btn" id="flipBtn2" onclick="flipCamera()">⟳ Flip Cam</button>
+          <button class="media-btn" id="ttsBtn2" onclick="toggleTts()" title="Toggle auto-speak for incoming messages">TTS Off</button><span id="flipWrap2"><button class="media-btn" id="flipBtn2" onclick="flipCamera()">⟳ Flip Cam</button></span>
           <button class="media-btn" id="screenBtn2" onclick="toggleScreenShare()">Share Off</button>
           <button class="speaker-btn speaker-on" id="speakerBtnRemote" onclick="toggleSpeaker()">🔊 Speaker</button>
           <button class="leave-btn" id="leaveBtn2" onclick="leaveSession()">✕ Leave</button>
@@ -3800,6 +3817,7 @@ function initMediaOnly() {
     entry('Mic + camera ready', 'ok');
     syncMiniVideos();
     updateLocalVideoState();
+    initCameraControl(); // populate Flip Cam button or camera dropdown
     if (loginDisableVideoFlag) {
       const vt = stream.getVideoTracks()[0];
       if (vt) { vt.enabled = false; }
@@ -3889,6 +3907,7 @@ function init() {
     entry('Mic + camera ready', 'ok');
     syncMiniVideos();
     updateLocalVideoState();
+    initCameraControl(); // populate Flip Cam button or camera dropdown
     if (loginDisableVideoFlag) {
       const vt = stream.getVideoTracks()[0];
       if (vt) { vt.enabled = false; }
@@ -5308,23 +5327,19 @@ function refreshScreen() {
   setTimeout(() => window.location.reload(), 500);
 }
 
-// ── Camera flip (Android front/back) ─────────────────────────
+// ── Camera flip / select ──────────────────────────────────────
 let currentFacingMode = 'user';
 let flipping = false;
+let _cameraDevices = [];      // populated by initCameraControl
+let _currentDeviceId = null;  // deviceId of active camera
 
-async function flipCamera() {
+// Switch to a specific camera by deviceId (or facingMode toggle if no deviceId given)
+async function flipCamera(deviceId) {
   if (!localStream || flipping) return;
   flipping = true;
-  const flipBtn = document.getElementById('flipBtn');
-  if (flipBtn) flipBtn.disabled = true;
+  ['flipBtn','flipBtn2'].forEach(id => { const b = document.getElementById(id); if (b) b.disabled = true; });
+  ['camSelect','camSelect2'].forEach(id => { const s = document.getElementById(id); if (s) s.disabled = true; });
 
-  const targetMode = currentFacingMode === 'user' ? 'environment' : 'user';
-  const fallbackMode = currentFacingMode; // in case new camera fails, restore this
-
-  // On Android (especially Android 11), the camera hardware stays locked as long
-  // as ANY video element is actively rendering the track — even after track.stop().
-  // We must: (1) detach srcObject from all video elements, (2) stop & remove the
-  // track, (3) wait for hardware to fully release, then (4) re-acquire.
   const localVideoEl = document.getElementById('localVideo');
   const miniLocalEl  = document.getElementById('miniLocalVideo');
 
@@ -5333,74 +5348,124 @@ async function flipCamera() {
   if (miniLocalEl)  miniLocalEl.srcObject  = null;
 
   const oldVideoTrack = localStream.getVideoTracks()[0] || null;
-  if (oldVideoTrack) {
-    oldVideoTrack.stop();
-    localStream.removeTrack(oldVideoTrack);
-  }
+  if (oldVideoTrack) { oldVideoTrack.stop(); localStream.removeTrack(oldVideoTrack); }
 
-  // Give Android 11 camera hardware time to fully release (needs longer than newer versions)
+  // Give Android 11 camera hardware time to fully release
   await new Promise(r => setTimeout(r, 800));
 
-  async function tryAcquire(mode) {
-    // Try with exact facingMode first
-    try {
-      return await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { exact: mode } }, audio: false
-      });
-    } catch(e) {}
-    // Try without exact
-    try {
-      return await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: mode }, audio: false
-      });
-    } catch(e) {}
-    // Last resort — any camera
+  // Build video constraint — prefer deviceId, fall back to facingMode toggle
+  let videoConstraint;
+  if (deviceId) {
+    videoConstraint = { deviceId: { exact: deviceId } };
+    _currentDeviceId = deviceId;
+    // Update facingMode guess from device label
+    const dev = _cameraDevices.find(d => d.deviceId === deviceId);
+    if (dev) {
+      const lbl = (dev.label || '').toLowerCase();
+      currentFacingMode = lbl.includes('back') || lbl.includes('rear') || lbl.includes('environment') ? 'environment' : 'user';
+    }
+  } else {
+    // Toggle facingMode (button path — mobile only)
+    const targetMode = currentFacingMode === 'user' ? 'environment' : 'user';
+    videoConstraint = { facingMode: { exact: targetMode } };
+    currentFacingMode = targetMode;
+  }
+  const fallbackMode = currentFacingMode;
+
+  async function tryAcquire(constraint) {
+    try { return await navigator.mediaDevices.getUserMedia({ video: constraint, audio: false }); } catch(e) {}
+    // If exact facingMode failed, try without exact
+    if (constraint.facingMode && constraint.facingMode.exact) {
+      try { return await navigator.mediaDevices.getUserMedia({ video: { facingMode: constraint.facingMode.exact }, audio: false }); } catch(e) {}
+    }
     await new Promise(r => setTimeout(r, 400));
     return await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
   }
 
   try {
-    const newStream = await tryAcquire(targetMode);
+    const newStream = await tryAcquire(videoConstraint);
     const newTrack  = newStream.getVideoTracks()[0];
     localStream.addTrack(newTrack);
-    currentFacingMode = targetMode;
+    _currentDeviceId = newTrack.getSettings().deviceId || _currentDeviceId;
 
-    // Hard re-attach — null first so the browser treats it as a fresh assignment
-    // even if srcObject reference hasn't changed. This clears any frozen/blurred frame.
     const _lv = document.getElementById('localVideo');
     const _mlv = document.getElementById('miniLocalVideo');
     if (_lv)  { _lv.srcObject  = null; _lv.srcObject  = localStream; }
     if (_mlv) { _mlv.srcObject = null; _mlv.srcObject = localStream; }
     syncMiniVideos();
 
-    // Replace track in active WebRTC call
     const pc = call && (call.peerConnection || call._pc);
     if (pc) {
       const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
       if (sender) await sender.replaceTrack(newTrack).catch(() => {});
     }
 
-    entry('Camera flipped to ' + (currentFacingMode === 'user' ? 'front' : 'rear'), 'ok');
+    // Sync dropdowns to selected deviceId
+    ['camSelect','camSelect2'].forEach(id => {
+      const s = document.getElementById(id);
+      if (s && _currentDeviceId) s.value = _currentDeviceId;
+    });
+
+    entry('Camera switched' + (_currentDeviceId ? ' (' + (_cameraDevices.find(d=>d.deviceId===_currentDeviceId)||{label:_currentDeviceId}).label + ')' : ' to ' + (currentFacingMode === 'user' ? 'front' : 'rear')), 'ok');
   } catch(e) {
-    // All attempts failed — try to recover the original camera so the user isn't left with no video
-    entry('Camera flip failed: ' + e.message + ' — attempting to restore original camera…', 'err');
+    entry('Camera switch failed: ' + e.message + ' — attempting to restore…', 'err');
     try {
-      const recoveryStream = await tryAcquire(fallbackMode);
-      const recoveryTrack  = recoveryStream.getVideoTracks()[0];
-      localStream.addTrack(recoveryTrack);
-      const _lv2  = document.getElementById('localVideo');
-      const _mlv2 = document.getElementById('miniLocalVideo');
+      const rec = await navigator.mediaDevices.getUserMedia({ video: { facingMode: fallbackMode }, audio: false });
+      const rt  = rec.getVideoTracks()[0];
+      localStream.addTrack(rt);
+      const _lv2 = document.getElementById('localVideo'); const _mlv2 = document.getElementById('miniLocalVideo');
       if (_lv2)  { _lv2.srcObject  = null; _lv2.srcObject  = localStream; }
       if (_mlv2) { _mlv2.srcObject = null; _mlv2.srcObject = localStream; }
       syncMiniVideos();
-      entry('Camera restored to original.', 'ok');
-    } catch(re) {
-      entry('Camera restore also failed: ' + re.message, 'err');
-    }
+      entry('Camera restored.', 'ok');
+    } catch(re) { entry('Camera restore also failed: ' + re.message, 'err'); }
   } finally {
     flipping = false;
-    if (flipBtn) flipBtn.disabled = false;
+    ['flipBtn','flipBtn2'].forEach(id => { const b = document.getElementById(id); if (b) b.disabled = false; });
+    ['camSelect','camSelect2'].forEach(id => { const s = document.getElementById(id); if (s) s.disabled = false; });
   }
+}
+
+// Enumerate cameras and render either a button (≤2) or dropdown (>2) into both wrappers
+async function initCameraControl() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    _cameraDevices = devices.filter(d => d.kind === 'videoinput');
+    if (_cameraDevices.length <= 1) return; // single camera — keep button as-is, it won't flip anywhere useful
+
+    // Track current deviceId from active stream
+    const activeTrack = localStream && localStream.getVideoTracks()[0];
+    if (activeTrack) _currentDeviceId = activeTrack.getSettings().deviceId || null;
+
+    ['flipWrap','flipWrap2'].forEach((wrapId, i) => {
+      const wrap = document.getElementById(wrapId);
+      if (!wrap) return;
+      const selectId = i === 0 ? 'camSelect' : 'camSelect2';
+
+      if (_cameraDevices.length === 2) {
+        // Two cameras — keep button, it toggles between them
+        const btn = wrap.querySelector('button');
+        if (btn) btn.title = _cameraDevices.map(d => d.label || d.deviceId).join(' ↔ ');
+      } else {
+        // Three or more — replace button with dropdown
+        const sel = document.createElement('select');
+        sel.id = selectId;
+        sel.className = 'camera-select';
+        sel.title = 'Select camera';
+        _cameraDevices.forEach((d, idx) => {
+          const opt = document.createElement('option');
+          opt.value = d.deviceId;
+          opt.textContent = d.label || ('Camera ' + (idx + 1));
+          if (d.deviceId === _currentDeviceId) opt.selected = true;
+          sel.appendChild(opt);
+        });
+        sel.addEventListener('change', () => flipCamera(sel.value));
+        wrap.innerHTML = '';
+        wrap.appendChild(sel);
+      }
+    });
+  } catch(e) { entry('Camera enumeration failed: ' + e.message, 'sys'); }
 }
 
 
