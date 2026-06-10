@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <!-- Field Radio v6 — BRAVO -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -1344,8 +1345,47 @@
   .login-presence .ptxt.p-reachable { color: #ffaa00; }
   .login-presence .ptxt.p-offline   { color: #ff4444; }
 
+  /* ── FULLSCREEN: auto-hide controls after inactivity ─── */
+  body.fs-controls-hidden header,
+  body.fs-controls-hidden .tab-bar,
+  body.fs-controls-hidden .chat-btn-bar-row,
+  body.fs-controls-hidden .gain-row,
+  body.fs-controls-hidden .zoom-row,
+  body.fs-controls-hidden #chatFindBar,
+  body.fs-controls-hidden #speechPanel,
+  body.fs-controls-hidden #translateBar,
+  body.fs-controls-hidden .chat-panel > .panel-label {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+  }
+  body.fs-controls-visible header,
+  body.fs-controls-visible .tab-bar,
+  body.fs-controls-visible .chat-btn-bar-row,
+  body.fs-controls-visible .gain-row,
+  body.fs-controls-visible .zoom-row,
+  body.fs-controls-visible #chatFindBar,
+  body.fs-controls-visible #speechPanel,
+  body.fs-controls-visible #translateBar,
+  body.fs-controls-visible .chat-panel > .panel-label {
+    opacity: 1;
+    pointer-events: auto;
+    transition: opacity 0.3s ease;
+  }
+  /* tap-hint overlay shown when controls are hidden in fullscreen */
+  #fsHint {
+    display: none;
+    position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.55); color: rgba(255,255,255,0.65);
+    font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+    padding: 5px 14px; border-radius: 20px; z-index: 9999;
+    pointer-events: none; white-space: nowrap;
+    transition: opacity 0.4s ease;
+  }
+  body.fs-controls-hidden #fsHint { display: block; }
+
   /* ── LANDSCAPE: full-screen video only (mobile/touch only) ─── */
-  @media (orientation: landscape) and (max-height: 500px) and (pointer: coarse) {
+  @media (orientation: landscape) and (pointer: coarse) {
     header, .tab-bar { display: none !important; }
     .shell { padding: 0; gap: 0; }
     .tab-content { padding: 0; gap: 0; border: none; border-radius: 0; background: #000; }
@@ -1749,16 +1789,30 @@
   </div>
 
 <audio id="remoteAudio" autoplay="" playsinline=""></audio>
+<div id="fsHint">TAP TO SHOW CONTROLS</div>
 <div id="lightbox"><img id="lightboxImg" src="" alt=""></div>
 
 <script>
-// ── Screen orientation unlock (Android Chrome landscape fix) ─────────────────
+// ── Screen orientation unlock (Android Chrome fix) ────────────────────────────
 (function() {
   try {
     if (screen.orientation && screen.orientation.unlock) {
       screen.orientation.unlock();
     }
   } catch(e) {}
+  // On Android, some browsers need orientation lock/unlock triggered from a
+  // user-gesture context. We defer a second attempt until first interaction.
+  function _tryOrientationUnlock() {
+    try {
+      if (screen.orientation && screen.orientation.unlock) {
+        screen.orientation.unlock();
+      }
+    } catch(e) {}
+    document.removeEventListener('touchstart', _tryOrientationUnlock);
+    document.removeEventListener('click',      _tryOrientationUnlock);
+  }
+  document.addEventListener('touchstart', _tryOrientationUnlock, { once: true, passive: true });
+  document.addEventListener('click',      _tryOrientationUnlock, { once: true });
 })();
 // ── localStorage shim (file:// safe) ─────────────────────────────────────────
 // On file:// Chrome may block localStorage entirely. This shim falls back to
@@ -5632,17 +5686,46 @@ async function selectCamera(deviceId) {
   }
 }
 
-// ── Full Screen toggle ────────────────────────────────────────
+// ── Full Screen toggle + auto-hide controls ────────────────────────────────
+let _fsHideTimer = null;
+
+function _fsIsActive() {
+  return !!(document.fullscreenElement || document.webkitFullscreenElement);
+}
+
+function _fsShowControls() {
+  if (!_fsIsActive()) return;
+  document.body.classList.remove('fs-controls-hidden');
+  document.body.classList.add('fs-controls-visible');
+  clearTimeout(_fsHideTimer);
+  _fsHideTimer = setTimeout(_fsHideControls, 3500);
+}
+
+function _fsHideControls() {
+  if (!_fsIsActive()) return;
+  document.body.classList.remove('fs-controls-visible');
+  document.body.classList.add('fs-controls-hidden');
+}
+
+function _fsOnActivity() {
+  if (_fsIsActive()) _fsShowControls();
+}
+
+// Tap/click anywhere while fullscreen → reveal controls
+document.addEventListener('touchstart', _fsOnActivity, { passive: true });
+document.addEventListener('click',      _fsOnActivity);
+document.addEventListener('mousemove',  _fsOnActivity, { passive: true });
+
 function toggleFullScreen() {
   const btn = document.getElementById('fsChatBtn');
-  const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+  const isFs = _fsIsActive();
   if (!isFs) {
     const el = document.documentElement;
-    if (el.requestFullscreen)       el.requestFullscreen();
+    if (el.requestFullscreen)            el.requestFullscreen();
     else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
     if (btn) { btn.textContent = 'FS ON'; btn.classList.add('active'); }
   } else {
-    if (document.exitFullscreen)       document.exitFullscreen();
+    if (document.exitFullscreen)            document.exitFullscreen();
     else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
     if (btn) { btn.textContent = 'FS OFF'; btn.classList.remove('active'); }
   }
@@ -5652,12 +5735,20 @@ document.addEventListener('webkitfullscreenchange', _syncFsBtn);
 function _syncFsBtn() {
   const btn = document.getElementById('fsChatBtn');
   if (!btn) return;
-  const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+  const isFs = _fsIsActive();
   btn.textContent = isFs ? 'FS ON' : 'FS OFF';
   isFs ? btn.classList.add('active') : btn.classList.remove('active');
+  if (isFs) {
+    // Start auto-hide sequence when entering fullscreen
+    _fsShowControls();
+  } else {
+    // Leaving fullscreen — restore normal state
+    clearTimeout(_fsHideTimer);
+    document.body.classList.remove('fs-controls-hidden', 'fs-controls-visible');
+  }
 }
 
-// ── Speaker / Earphone toggle ─────────────────────────────────
+
 let speakerMode = true;
 
 async function toggleSpeaker() {
