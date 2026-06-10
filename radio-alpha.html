@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -4379,6 +4380,7 @@ function markLinked() {
   if (linked) return;
   linked = true;
   clearTimeout(retryTimer); // cancel 90s watchdog and any pending redial
+  clearTimeout(dropTimer);  // cancel any pending reconnect-countdown from a concurrent onDrop
   setStatus('linked');
   entry('Linked to Bravo — full duplex active', 'ok');
   duplexBar.textContent = '● LIVE';
