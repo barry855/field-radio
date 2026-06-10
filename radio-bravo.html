@@ -4054,8 +4054,15 @@ function startPeer() {
   });
 
   peer.on('connection', dc => {
-    if (dataConn || pendingDC) { dc.close(); return; }
-    entry('Inbound data channel from Alpha', 'sys');
+    if (dataConn) { dc.close(); return; }
+    // Collision: Alpha dialled us while we were dialling Alpha (pendingDC=true).
+    // Accept Alpha's inbound DC and discard our stale outgoing one.
+    if (pendingDC) {
+      entry('DC collision — accepting inbound DC from Alpha (discarding outgoing)', 'sys');
+      pendingDC = false;
+    } else {
+      entry('Inbound data channel from Alpha', 'sys');
+    }
     attachDataConn(dc);
   });
 
