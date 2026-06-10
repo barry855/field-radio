@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <!-- Field Radio v6 — BRAVO -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -3585,6 +3586,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ── Global keyboard shortcuts ──────────────────────────────
   document.addEventListener('keydown', e => {
+    if (e.altKey && (e.key === 't' || e.key === 'T')) {
+      // Alt+T — toggle Talk/Type in Chat panel
+      e.preventDefault();
+      toggleSpeechPanel();
+      return;
+    }
     if (!e.ctrlKey && !e.metaKey) return;
     if (e.key === 's' || e.key === 'S') {
       // Ctrl+S — send from voice input box if panel is open and has content
@@ -3593,10 +3600,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const sb = document.getElementById('speechSendBtn');
         if (sb && !sb.disabled) sendSpeechToChat();
       }
-    } else if (e.key === 't' || e.key === 'T') {
-      // Ctrl+T — toggle Talk/Type in Chat panel
-      e.preventDefault();
-      toggleSpeechPanel();
+    } else if (e.key === 'Enter') {
+      // Ctrl+Enter — send from voice input box if panel is open and has content
+      if (_speechVisible) {
+        e.preventDefault();
+        const sb = document.getElementById('speechSendBtn');
+        if (sb && !sb.disabled) sendSpeechToChat();
+      }
     }
   });
   // Init speech lang select: saved choice > system language > en-US
