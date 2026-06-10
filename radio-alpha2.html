@@ -3501,20 +3501,34 @@ function startListening() {
     return;
   }
   if (_recognition) { try { _recognition.abort(); } catch(e){} }
+
+  // Android Chrome does not reliably fire isFinal=true and struggles with
+  // continuous=true (fires onend immediately, causing beep loops).
+  // Use single-shot mode on Android and treat any interim text as committed
+  // when the session ends without a final result.
+  const _isAndroid = /android/i.test(navigator.userAgent);
+
   _recognition = new SpeechRecognition();
-  _recognition.continuous      = true;
+  _recognition.continuous      = !_isAndroid;   // Android: single-shot
   _recognition.interimResults  = true;
+  _recognition.maxAlternatives = 1;
   _recognition.lang            = (document.getElementById('speechLangSelect') || {value:'en-US'}).value;
+
+  // Restore persisted language selection
+  const _sl = document.getElementById('speechLangSelect');
+  if (_sl) {
+    const saved = localStorage.getItem('alpha_speech_lang');
+    if (saved) { _sl.value = saved; _recognition.lang = saved; }
+  }
 
   _recognition.onstart = () => {
     _listening = true;
     _interimText = '';
     setSpeechStatus('● LISTENING');
     const lb = document.getElementById('speechListenBtn');
-    if (lb) lb.classList.add('listening');
+    if (lb) { lb.classList.add('listening'); lb.textContent = 'STOP'; }
     const ss = document.getElementById('speechStatus');
     if (ss) ss.classList.add('listening');
-    lb.textContent = 'STOP';
     // Mute outgoing mic while listening so the remote doesn't hear our speech-rec audio
     if (!audioMuted) {
       if (_mixMicGain) { _preTalkMicGain = _mixMicGain.gain.value; _mixMicGain.gain.value = 0.0; }
@@ -3526,45 +3540,69 @@ function startListening() {
     const box = document.getElementById('speechEditBox');
     if (!box) return;
     let finalChunk = '';
-    let interim    = '';
+    let interimChunk = '';
     for (let i = e.resultIndex; i < e.results.length; i++) {
-      if (e.results[i].isFinal) { finalChunk += e.results[i][0].transcript; }
-      else                      { interim    += e.results[i][0].transcript; }
+      if (e.results[i].isFinal) { finalChunk    += e.results[i][0].transcript; }
+      else                      { interimChunk  += e.results[i][0].transcript; }
     }
     if (finalChunk) {
-      const cur = box.value;
-      box.value = cur + (cur && !cur.endsWith(' ') ? ' ' : '') + finalChunk.trim();
+      // Commit final text — replace any pending interim placeholder
+      const base = box.value.endsWith(_interimText) && _interimText
+        ? box.value.slice(0, box.value.length - _interimText.length)
+        : box.value;
+      const sep = base && !base.endsWith(' ') ? ' ' : '';
+      box.value = base + sep + finalChunk.trim();
       _interimText = '';
-    } else {
-      _interimText = interim;
+    } else if (interimChunk) {
+      // Show interim in real-time: replace previous interim tail with new one
+      const base = box.value.endsWith(_interimText) && _interimText
+        ? box.value.slice(0, box.value.length - _interimText.length)
+        : box.value;
+      const sep = base && !base.endsWith(' ') ? ' ' : '';
+      _interimText = interimChunk;
+      box.value = base + sep + interimChunk;
     }
     updateSpeechSendBtn();
   };
 
   _recognition.onerror = (e) => {
-    if (e.error === 'no-speech') return; // ignore silence
+    if (e.error === 'no-speech') {
+      // On Android, no-speech is common — just restart quietly if still listening
+      if (_isAndroid && _listening) {
+        setTimeout(() => { if (_listening) try { startListening(); } catch(ex) { stopListening(); } }, 300);
+      }
+      return;
+    }
+    if (e.error === 'aborted') return; // user-initiated stop
     setSpeechStatus('ERR: ' + e.error.toUpperCase());
     stopListening();
   };
 
   _recognition.onend = () => {
+    // If interim text arrived but no final result (common on Android),
+    // commit whatever interim text we have as the real result.
+    if (_interimText) {
+      const box = document.getElementById('speechEditBox');
+      if (box) {
+        const base = box.value.endsWith(_interimText)
+          ? box.value.slice(0, box.value.length - _interimText.length)
+          : box.value;
+        const sep = base && !base.endsWith(' ') ? ' ' : '';
+        box.value = base + sep + _interimText.trim();
+        _interimText = '';
+        updateSpeechSendBtn();
+      }
+    }
     if (_listening) {
-      // Auto-restart for continuous mode. Use a fresh instance with a short
-      // delay so Android fully tears down the mic before reopening it —
-      // prevents the OS from playing its mic-off tone mid-session.
+      // Auto-restart. On Android use a longer delay to let the mic fully close.
+      const delay = _isAndroid ? 400 : 250;
       setTimeout(() => {
         if (!_listening) return;
         try { startListening(); } catch(e) { stopListening(); }
-      }, 250);
+      }, delay);
     }
   };
 
-  // Restore persisted language selection
-  const _sl = document.getElementById('speechLangSelect');
-  if (_sl) {
-    const saved = localStorage.getItem('alpha_speech_lang');
-    if (saved) { _sl.value = saved; _recognition.lang = saved; }
-  }
   try { _recognition.start(); } catch(e) { setSpeechStatus('ERR: START FAILED'); }
 }
 
