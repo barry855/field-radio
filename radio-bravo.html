@@ -4132,6 +4132,7 @@ function startPeer() {
 function attachDataConn(dc) {
   function onDcOpen() {
     if (dataConn === dc) return; // already handled
+    clearTimeout(_dcWatchdog);   // DC opened — cancel the retry watchdog
     pendingDC = false;
     dataConn = dc;
     entry('Chat channel open', 'ok');
@@ -4238,12 +4239,22 @@ function dcDecode(raw) {
   return { text: s };
 }
 
+let _dcWatchdog = null;
 function openDataConn() {
   if (dataConn || pendingDC) return;
   pendingDC = true;
   entry('Opening data channel to Alpha…', 'sys');
   const dc = peer.connect(REMOTE_ID, { reliable: true, serialization: 'raw' });
   attachDataConn(dc);
+  clearTimeout(_dcWatchdog);
+  _dcWatchdog = setTimeout(() => {
+    if (!dataConn && pendingDC) {
+      entry('DC open timed out — retrying…', 'sys');
+      try { dc.close(); } catch(e) {}
+      pendingDC = false;
+      if (linked) openDataConn();
+    }
+  }, 8000);
 }
 
 function getCallStream() {
