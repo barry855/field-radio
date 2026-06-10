@@ -737,11 +737,11 @@
   }
   #speechPanel > .speech-status {
     font-size: 11px; letter-spacing: 1px; padding: 2px 4px;
-    color: #ffffff; font-family: monospace; word-break: break-all; font-weight: bold;
+    color: #ffffff !important; font-family: monospace; word-break: break-all;
+    font-weight: bold !important; min-height: 1.4em;
   }
   #speechPanel .speech-status.listening {
-    color: var(--danger, #cc2222);
-    animation: speech-blink 1s step-start infinite;
+    color: #ffffff !important;
   }
   @keyframes speech-blink { 50% { opacity: 0; } }
   #speechEditBox {
@@ -3456,8 +3456,10 @@ function toggleSysLogView() {
 let _recognition   = null;
 let _listening     = false;
 let _interimText   = '';
-let _sttStartCount = 0;
-let _sttLastError  = null;
+let _sttStartCount  = 0;
+let _sttLastError   = null;
+let _sttSavedSender = null;
+let _sttSavedTrack  = null;
 
 function toggleSpeechPanel() {
   _speechVisible = !_speechVisible;
@@ -3518,82 +3520,162 @@ function startListening() {
   const _isAndroid = /android/i.test(navigator.userAgent);
   _sttStartCount = (_sttStartCount || 0) + 1;
 
-  _recognition = new SpeechRecognition();
-  _recognition.continuous      = !_isAndroid;
-  _recognition.interimResults  = !_isAndroid;
-  _recognition.maxAlternatives = 1;
+  // On Android, WebRTC holds the hardware mic exclusively — the Speech API
+  // gets no audio (err=none, empty result). Fix: stop the mic track before
+  // starting recognition, swap WebRTC sender to silence, then restore after.
+  function _doStart() {
+    _recognition = new SpeechRecognition();
+    _recognition.continuous      = !_isAndroid;
+    _recognition.interimResults  = !_isAndroid;
+    _recognition.maxAlternatives = 1;
 
-  const _sl = document.getElementById('speechLangSelect');
-  const _savedLang = _sl ? (localStorage.getItem('alpha_speech_lang') || _sl.value) : 'en-US';
-  _recognition.lang = _savedLang;
-  if (_sl) _sl.value = _savedLang;
+    const _sl = document.getElementById('speechLangSelect');
+    const _savedLang = _sl ? (localStorage.getItem('alpha_speech_lang') || _sl.value) : 'en-US';
+    _recognition.lang = _savedLang;
+    if (_sl) _sl.value = _savedLang;
 
-  _recognition.onstart = () => {
-    _listening = true;
-    _interimText = '';
-    setSpeechStatus('#' + _sttStartCount + ' START and=' + _isAndroid + ' lang=' + _recognition.lang);
-    const lb = document.getElementById('speechListenBtn');
-    if (lb) { lb.classList.add('listening'); lb.textContent = 'STOP'; }
-    const ss = document.getElementById('speechStatus');
-    if (ss) ss.classList.add('listening');
-    if (!audioMuted) {
-      if (_mixMicGain) { _preTalkMicGain = _mixMicGain.gain.value; _mixMicGain.gain.value = 0.0; }
-      else if (realAudioTrack && !_isAndroid) { realAudioTrack.enabled = false; }
-    }
-  };
-
-  _recognition.onresult = (e) => {
-    const box = document.getElementById('speechEditBox');
-    if (!box) return;
-    let finalChunk = '';
-    let interimChunk = '';
-    for (let i = e.resultIndex; i < e.results.length; i++) {
-      if (e.results[i].isFinal) { finalChunk   += e.results[i][0].transcript; }
-      else                      { interimChunk += e.results[i][0].transcript; }    }
-    setSpeechStatus('RESULT f=[' + finalChunk + '] i=[' + interimChunk + ']');
-    if (finalChunk) {
-      const base = (_interimText && box.value.endsWith(_interimText))
-        ? box.value.slice(0, box.value.length - _interimText.length) : box.value;
-      box.value = base + (base && !base.endsWith(' ') ? ' ' : '') + finalChunk.trim();
+    _recognition.onstart = () => {
+      _listening = true;
       _interimText = '';
-    } else if (interimChunk) {
-      const base = (_interimText && box.value.endsWith(_interimText))
-        ? box.value.slice(0, box.value.length - _interimText.length) : box.value;
-      _interimText = interimChunk;
-      box.value = base + (base && !base.endsWith(' ') ? ' ' : '') + interimChunk;
-    }
-    updateSpeechSendBtn();
-  };
+      setSpeechStatus('#' + _sttStartCount + ' START and=' + _isAndroid + ' lang=' + _recognition.lang);
+      const lb = document.getElementById('speechListenBtn');
+      if (lb) { lb.classList.add('listening'); lb.textContent = 'STOP'; }
+      const ss = document.getElementById('speechStatus');
+      if (ss) ss.classList.add('listening');
+      // Non-Android: mute via gain node or track as before
+      if (!_isAndroid && !audioMuted) {
+        if (_mixMicGain) { _preTalkMicGain = _mixMicGain.gain.value; _mixMicGain.gain.value = 0.0; }
+        else if (realAudioTrack) { realAudioTrack.enabled = false; }
+      }
+    };
 
-  _recognition.onerror = (e) => {
-    _sttLastError = e.error;
-    setSpeechStatus('ERR: ' + e.error);
-    if (e.error === 'no-speech' || e.error === 'aborted') return;
-    stopListening();
-  };
-
-  _recognition.onend = () => {
-    setSpeechStatus('END #' + _sttStartCount + ' err=[' + (_sttLastError||'none') + '] interim=[' + _interimText + ']');
-    _sttLastError = null;
-    if (_interimText) {
+    _recognition.onresult = (e) => {
       const box = document.getElementById('speechEditBox');
-      if (box) {
-        const base = box.value.endsWith(_interimText)
+      if (!box) return;
+      let finalChunk = '';
+      let interimChunk = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) { finalChunk   += e.results[i][0].transcript; }
+        else                      { interimChunk += e.results[i][0].transcript; }
+      }
+      setSpeechStatus('RESULT f=[' + finalChunk + '] i=[' + interimChunk + ']');
+      if (finalChunk) {
+        const base = (_interimText && box.value.endsWith(_interimText))
           ? box.value.slice(0, box.value.length - _interimText.length) : box.value;
-        box.value = base + (base && !base.endsWith(' ') ? ' ' : '') + _interimText.trim();
+        box.value = base + (base && !base.endsWith(' ') ? ' ' : '') + finalChunk.trim();
         _interimText = '';
-        updateSpeechSendBtn();
+      } else if (interimChunk) {
+        const base = (_interimText && box.value.endsWith(_interimText))
+          ? box.value.slice(0, box.value.length - _interimText.length) : box.value;
+        _interimText = interimChunk;
+        box.value = base + (base && !base.endsWith(' ') ? ' ' : '') + interimChunk;
+      }
+      updateSpeechSendBtn();
+    };
+
+    _recognition.onerror = (e) => {
+      _sttLastError = e.error;
+      setSpeechStatus('ERR: ' + e.error);
+      if (e.error === 'no-speech' || e.error === 'aborted') return;
+      stopListening();
+    };
+
+    _recognition.onend = () => {
+      setSpeechStatus('END #' + _sttStartCount + ' err=[' + (_sttLastError||'none') + '] i=[' + _interimText + ']');
+      _sttLastError = null;
+
+      // Commit any pending interim
+      if (_interimText) {
+        const box = document.getElementById('speechEditBox');
+        if (box) {
+          const base = box.value.endsWith(_interimText)
+            ? box.value.slice(0, box.value.length - _interimText.length) : box.value;
+          box.value = base + (base && !base.endsWith(' ') ? ' ' : '') + _interimText.trim();
+          _interimText = '';
+          updateSpeechSendBtn();
+        }
+      }
+
+      // Restore mic on Android
+      if (_isAndroid) {
+        _restoreAndroidMic().then(() => {
+          if (_listening) {
+            setTimeout(() => { if (_listening) try { startListening(); } catch(ex) { stopListening(); } }, 500);
+          }
+        });
+      } else {
+        // Non-Android: restore gain/track
+        if (!audioMuted) {
+          if (_mixMicGain) { _mixMicGain.gain.value = _preTalkMicGain !== null ? _preTalkMicGain : 1.0; _preTalkMicGain = null; }
+          else if (realAudioTrack) { realAudioTrack.enabled = true; }
+        }
+        if (_listening) {
+          setTimeout(() => { if (_listening) try { startListening(); } catch(ex) { stopListening(); } }, 250);
+        }
+      }
+    };
+
+    try { _recognition.start(); } catch(e) { setSpeechStatus('ERR: START FAILED: ' + e.message); }
+  }
+
+  if (_isAndroid) {
+    // Stop the hardware mic track so Android releases it for the Speech API
+    _releaseAndroidMic().then(_doStart);
+  } else {
+    _doStart();
+  }
+}
+
+// Release the hardware mic track for Android STT and swap WebRTC to silence
+async function _releaseAndroidMic() {
+  try {
+    const pc = call && (call.peerConnection || call._pc);
+    if (pc) {
+      const sender = pc.getSenders().find(s => s.track && s.track.kind === 'audio');
+      if (sender) {
+        _sttSavedSender = sender;
+        _sttSavedTrack  = sender.track;
+        await sender.replaceTrack(getSilentTrack()).catch(() => {});
       }
     }
-    if (_listening) {
-      setTimeout(() => {
-        if (!_listening) return;
-        try { startListening(); } catch(ex) { stopListening(); }
-      }, _isAndroid ? 500 : 250);
+    // Stop the raw mic track to fully release hardware
+    if (realAudioTrack && realAudioTrack.readyState !== 'ended') {
+      realAudioTrack.stop();
     }
-  };
+    // Brief pause for Android to release the mic resource
+    await new Promise(r => setTimeout(r, 300));
+  } catch(e) { setSpeechStatus('REL ERR: ' + e.message); }
+}
 
-  try { _recognition.start(); } catch(e) { setSpeechStatus('ERR: START FAILED: ' + e.message); }
+// Re-acquire the mic and restore the WebRTC sender after Android STT
+async function _restoreAndroidMic() {
+  try {
+    const constraints = { audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false } };
+    const newStream = await navigator.mediaDevices.getUserMedia(constraints);
+    const newTrack  = newStream.getAudioTracks()[0];
+    realAudioTrack  = newTrack;
+
+    // Re-wire through the gain node if it exists
+    if (_micGainNode && _micGainCtx) {
+      const src = _micGainCtx.createMediaStreamSource(newStream);
+      src.connect(_micGainNode);
+      const gainedTrack = _micGainDest && _micGainDest.stream.getAudioTracks()[0];
+      if (_sttSavedSender && gainedTrack) {
+        await _sttSavedSender.replaceTrack(gainedTrack).catch(() => {});
+        localStream.getAudioTracks().forEach(t => { if (t !== gainedTrack) { t.stop(); localStream.removeTrack(t); }});
+        localStream.addTrack(gainedTrack);
+      } else if (_sttSavedSender) {
+        await _sttSavedSender.replaceTrack(newTrack).catch(() => {});
+      }
+    } else {
+      // No gain node — restore raw track directly
+      if (_sttSavedSender) await _sttSavedSender.replaceTrack(newTrack).catch(() => {});
+      localStream.getAudioTracks().forEach(t => { t.stop(); localStream.removeTrack(t); });
+      localStream.addTrack(newTrack);
+    }
+    _sttSavedSender = null;
+    _sttSavedTrack  = null;
+  } catch(e) { setSpeechStatus('RESTORE ERR: ' + e.message); }
 }
 
 function setSpeechLang(code) {
@@ -3603,24 +3685,33 @@ function setSpeechLang(code) {
 }
 
 function stopListening() {
+  const _wasListening = _listening;
   _listening = false;
   if (_recognition) { try { _recognition.stop(); } catch(e){} _recognition = null; }
-  setSpeechStatus('IDLE');
   const lb = document.getElementById('speechListenBtn');
   if (lb) { lb.classList.remove('listening'); lb.textContent = 'TALK'; }
   const ss = document.getElementById('speechStatus');
   if (ss) ss.classList.remove('listening');
-  // Restore outgoing mic
   const _isAndroid = /android/i.test(navigator.userAgent);
-  if (!audioMuted) {
-    if (_mixMicGain) { _mixMicGain.gain.value = _preTalkMicGain !== null ? _preTalkMicGain : 1.0; _preTalkMicGain = null; }
-    else if (realAudioTrack && !_isAndroid) { realAudioTrack.enabled = true; }
+  if (_isAndroid) {
+    // onend will fire and call _restoreAndroidMic — but if we stopped manually
+    // before onend, restore here too (guard: _restoreAndroidMic is idempotent)
+    if (_sttSavedSender) { _restoreAndroidMic().then(() => setSpeechStatus('IDLE')); }
+    else { setSpeechStatus('IDLE'); }
+  } else {
+    if (!audioMuted) {
+      if (_mixMicGain) { _mixMicGain.gain.value = _preTalkMicGain !== null ? _preTalkMicGain : 1.0; _preTalkMicGain = null; }
+      else if (realAudioTrack) { realAudioTrack.enabled = true; }
+    }
+    setSpeechStatus('IDLE');
   }
 }
 
 function setSpeechStatus(txt) {
   const ss = document.getElementById('speechStatus');
-  if (ss) ss.textContent = txt;
+  if (!ss) return;
+  const prev = ss.textContent === 'IDLE' ? '' : ss.textContent;
+  ss.textContent = txt + (prev ? ' | ' + prev.slice(0, 80) : '');
 }
 
 // Enable/disable send btn as user types in the speech edit box
