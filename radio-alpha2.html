@@ -2396,10 +2396,10 @@ function showLoginBox() {
 
 // ── 3-second auto-login countdown ────────────────────────────
 let loginTimeoutInterval;
-let loginSecsLeft = 3;
+let loginSecsLeft = 60;
 function startLoginTimeout() {
   clearInterval(loginTimeoutInterval);  // prevent double-interval from stale saved HTML
-  loginSecsLeft = 3;
+  loginSecsLeft = 60;
   loginTimeoutInterval = setInterval(() => {
     loginSecsLeft--;
     if (loginSecsLeft <= 0) {
