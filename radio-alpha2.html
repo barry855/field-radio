@@ -735,6 +735,8 @@
     margin-left: auto; font-size: 9px; letter-spacing: 1px;
     color: var(--text-dim);
   }
+  #speechPanel > .speech-status { display: none; }
+  body.is-android #speechPanel > .speech-status { display: block; }
   #speechPanel > .speech-status {
     font-size: 11px; letter-spacing: 1px; padding: 2px 4px;
     color: #ffffff !important; font-family: monospace; word-break: break-all;
@@ -751,6 +753,7 @@
   }
   #speechEditBox {
     flex: 1; min-height: 80px; width: 100%; box-sizing: border-box;
+    overflow-y: auto;
     background: transparent; border: 1px solid var(--border);
     color: var(--text); padding: 7px 10px; border-radius: 4px;
     font-family: 'Share Tech Mono', monospace; font-size: 14px;
@@ -1315,29 +1318,97 @@
   .login-presence .ptxt.p-reachable { color: #ffaa00; }
   .login-presence .ptxt.p-offline   { color: #ff4444; }
 
-  /* ── LANDSCAPE: full-screen video only (mobile/touch only) ─── */
-  @media (orientation: landscape) and (max-height: 500px) and (pointer: coarse) {
-    header, .tab-bar { display: none !important; }
-    .shell { padding: 0; gap: 0; }
-    .tab-content { padding: 0; gap: 0; border: none; border-radius: 0; background: #000; }
-    #paneChat { gap: 0; }
-    .chat-btn-bar-row,
-    .gain-row,
-    .zoom-row,
-    #chatFindBar,
-    #logPanel,
-    #speechPanel,
-    #chat,
-    #translateBar,
-    .chat-panel > .panel-label { display: none !important; }
-    #chatPanel {
+  /* ── APP FULLSCREEN: full-viewport chat video, CSS-driven (no Fullscreen API needed) ── */
+  body.app-fullscreen {
+    overflow: hidden;
+  }
+  body.app-fullscreen .shell {
+    position: fixed; inset: 0; max-width: none; padding: 0; gap: 0; z-index: 1000;
+  }
+  body.app-fullscreen header,
+  body.app-fullscreen .tab-bar {
+    position: relative; z-index: 1002;
+  }
+  body.app-fullscreen .tab-content {
+    padding: 0; gap: 0; border: none; border-radius: 0; background: #000;
+    flex: 1; min-height: 0;
+  }
+  body.app-fullscreen #paneChat { gap: 0; min-height: 0; }
+  body.app-fullscreen #paneChat .chat-find-bar,
+  body.app-fullscreen #paneChat .chat-btn-bar-row,
+  body.app-fullscreen #paneChat .gain-row,
+  body.app-fullscreen #paneChat .zoom-row,
+  body.app-fullscreen #paneChat #speechPanel,
+  body.app-fullscreen #paneChat #chatToolsWrap {
+    position: relative; z-index: 1002;
+  }
+  body.app-fullscreen #chatPanel {
+    flex: 1; min-height: 0;
+    border-radius: 0; border: none;
+  }
+
+  /* ── FULLSCREEN: auto-hide controls after inactivity ─── */
+  body.app-fullscreen.fs-controls-hidden header,
+  body.app-fullscreen.fs-controls-hidden .tab-bar,
+  body.app-fullscreen.fs-controls-hidden #paneChat .chat-find-bar,
+  body.app-fullscreen.fs-controls-hidden #paneChat .chat-btn-bar-row,
+  body.app-fullscreen.fs-controls-hidden #paneChat .gain-row,
+  body.app-fullscreen.fs-controls-hidden #paneChat .zoom-row,
+  body.app-fullscreen.fs-controls-hidden #paneChat #speechPanel,
+  body.app-fullscreen.fs-controls-hidden #paneChat #chatToolsWrap,
+  body.app-fullscreen.fs-controls-hidden .chat-panel > .panel-label {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+  }
+  body.app-fullscreen.fs-controls-visible header,
+  body.app-fullscreen.fs-controls-visible .tab-bar,
+  body.app-fullscreen.fs-controls-visible #paneChat .chat-find-bar,
+  body.app-fullscreen.fs-controls-visible #paneChat .chat-btn-bar-row,
+  body.app-fullscreen.fs-controls-visible #paneChat .gain-row,
+  body.app-fullscreen.fs-controls-visible #paneChat .zoom-row,
+  body.app-fullscreen.fs-controls-visible #paneChat #speechPanel,
+  body.app-fullscreen.fs-controls-visible #paneChat #chatToolsWrap,
+  body.app-fullscreen.fs-controls-visible .chat-panel > .panel-label {
+    opacity: 1;
+    pointer-events: auto;
+    transition: opacity 0.3s ease;
+  }
+  /* tap-hint overlay shown when controls are hidden in fullscreen */
+  #fsHint {
+    display: none;
+    position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.55); color: rgba(255,255,255,0.65);
+    font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+    padding: 5px 14px; border-radius: 20px; z-index: 1003;
+    pointer-events: none; white-space: nowrap;
+    transition: opacity 0.4s ease;
+  }
+  body.app-fullscreen.fs-controls-hidden #fsHint { display: block; }
+
+  /* ── LANDSCAPE: full-screen video only (mobile/touch only, ACTIVE CALL ONLY) ─── */
+  @media (orientation: landscape) and (pointer: coarse) {
+    body.app-fullscreen header, body.app-fullscreen .tab-bar { display: none !important; }
+    body.app-fullscreen .shell { padding: 0; gap: 0; }
+    body.app-fullscreen .tab-content { padding: 0; gap: 0; border: none; border-radius: 0; background: #000; }
+    body.app-fullscreen #paneChat { gap: 0; }
+    body.app-fullscreen .chat-btn-bar-row,
+    body.app-fullscreen .gain-row,
+    body.app-fullscreen .zoom-row,
+    body.app-fullscreen #chatFindBar,
+    body.app-fullscreen #logPanel,
+    body.app-fullscreen #speechPanel,
+    body.app-fullscreen #chat,
+    body.app-fullscreen #translateBar,
+    body.app-fullscreen .chat-panel > .panel-label { display: none !important; }
+    body.app-fullscreen #chatPanel {
       position: fixed; inset: 0; z-index: 50;
       border-radius: 0; border: none;
       padding: 0; background: #000;
     }
-    #chatUnderlay { border-radius: 0; }
+    body.app-fullscreen #chatUnderlay { border-radius: 0; }
     /* keep mini overlay and its close button accessible */
-    #miniChatOverlay { z-index: 55; }
+    body.app-fullscreen #miniChatOverlay { z-index: 55; }
   }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js"></script></head>
@@ -1417,6 +1488,7 @@
           <button class="media-btn" id="recBtn" onclick="toggleRecordLocal()">➤ RECORD</button>
           <button class="media-btn video-off-state" id="videoBtn_row2" onclick="toggleVideo()">Video Off</button>
           <button class="media-btn" id="audioBtn" onclick="toggleAudio()">Audio On</button>
+          <button class="media-btn" id="sysAudioBtn" onclick="toggleSysAudio()" title="Capture computer output and mix into transmitted audio (use headphones!)">Sys Audio Off</button>
           <button class="media-btn" id="ttsBtn" onclick="toggleTts()" title="Toggle auto-speak for incoming messages">TTS Off</button><span id="flipWrap"><button class="media-btn" id="flipBtn" onclick="flipCamera()">⟳ Flip Cam</button></span>
           <button class="media-btn" id="screenBtn" onclick="toggleScreenShare()">Share Off</button>
           <button class="speaker-btn speaker-on" id="speakerBtnLocal" onclick="toggleSpeaker()">🔊 Speaker</button>
@@ -1459,6 +1531,7 @@
           <button class="media-btn" id="recBtn2" onclick="toggleRecordRemote()">➤ RECORD</button>
           <button class="media-btn video-off-state" id="videoBtn2_row2" onclick="toggleVideo()">Video Off</button>
           <button class="media-btn" id="audioBtn2" onclick="toggleAudio()">Audio On</button>
+          <button class="media-btn" id="sysAudioBtn2" onclick="toggleSysAudio()" title="Capture computer output and mix into transmitted audio (use headphones!)">Sys Audio Off</button>
           <button class="media-btn" id="ttsBtn2" onclick="toggleTts()" title="Toggle auto-speak for incoming messages">TTS Off</button><span id="flipWrap2"><button class="media-btn" id="flipBtn2" onclick="flipCamera()">⟳ Flip Cam</button></span>
           <button class="media-btn" id="screenBtn2" onclick="toggleScreenShare()">Share Off</button>
           <button class="speaker-btn speaker-on" id="speakerBtnRemote" onclick="toggleSpeaker()">🔊 Speaker</button>
@@ -1510,6 +1583,7 @@
         <button class="speech-top-btn rec-chat-btn" id="recChatBtn" onclick="toggleRecordChat()" title="Record current main feed + mini if visible">➤ RECORD</button>
         <button class="speech-top-btn video-off-state" id="videoOffChatBtn" onclick="toggleVideo()" title="Video on/off">Video Off</button>
         <button class="speech-top-btn" id="audioChatBtn" onclick="toggleAudio()" title="Mute/unmute mic">Audio On</button>
+        <button class="speech-top-btn" id="sysAudioChatBtn" onclick="toggleSysAudio()" title="Capture computer output and mix into transmitted audio (use headphones!)">Sys Audio Off</button>
         <button class="speech-top-btn" id="screenChatBtn" onclick="toggleScreenShare()" title="Share screen">Share Off</button>
         <button class="syslog-chat-btn" id="syslogToggleBtn" onclick="toggleSysLogView()" title="Toggle SYS LOG" style="margin-left:auto;"><span class="syslog-led"></span></button>
       </div>
@@ -1524,7 +1598,7 @@
         <input type="range" id="zoomSliderChat" min="1" max="4" step="0.1" value="1" oninput="applyZoom(this.value,'local')">
         <span class="zoom-val" id="zoomValChat">1.0×</span>
       </div>
-      <div style="flex-shrink:0; border:1px solid rgba(255,255,255,0.25); border-radius:5px; padding:4px 6px; margin-top:2px; display:flex; flex-direction:column; gap:4px;">
+      <div id="chatToolsWrap" style="flex-shrink:0; border:1px solid rgba(255,255,255,0.25); border-radius:5px; padding:4px 6px; margin-top:2px; display:flex; flex-direction:column; gap:4px;">
         <div style="display:flex; flex-wrap:wrap; align-items:center; gap:4px;">
           <span class="sbr-label">CHAT:</span>
           <button class="speech-top-btn" onclick="saveChatToFile()" id="saveChatBtn" title="Save chat as HTML">💾 SAVE</button>
@@ -1653,7 +1727,7 @@
       </div>
       <div class="chat-panel" style="flex:1" id="chatPanel">
         <div class="panel-label">COMMS</div>
-        <video id="chatUnderlay" autoplay playsinline muted></video>
+        <video id="chatUnderlay" class="no-stream" autoplay playsinline muted></video>
         <div class="mini-video-overlay hidden" id="miniChatOverlay">
           <video id="miniChatVideo" autoplay playsinline muted></video>
           <span class="video-label">REMOTE</span>
@@ -1721,16 +1795,30 @@
   </div>
 
 <audio id="remoteAudio" autoplay="" playsinline=""></audio>
+<div id="fsHint">TAP TO SHOW CONTROLS</div>
 <div id="lightbox"><img id="lightboxImg" src="" alt=""></div>
 
 <script>
-// ── Screen orientation unlock (Android Chrome landscape fix) ─────────────────
+// ── Screen orientation unlock (Android Chrome fix) ────────────────────────────
 (function() {
   try {
     if (screen.orientation && screen.orientation.unlock) {
       screen.orientation.unlock();
     }
   } catch(e) {}
+  // On Android, some browsers need orientation lock/unlock triggered from a
+  // user-gesture context. We defer a second attempt until first interaction.
+  function _tryOrientationUnlock() {
+    try {
+      if (screen.orientation && screen.orientation.unlock) {
+        screen.orientation.unlock();
+      }
+    } catch(e) {}
+    document.removeEventListener('touchstart', _tryOrientationUnlock);
+    document.removeEventListener('click',      _tryOrientationUnlock);
+  }
+  document.addEventListener('touchstart', _tryOrientationUnlock, { once: true, passive: true });
+  document.addEventListener('click',      _tryOrientationUnlock, { once: true });
 })();
 // ── localStorage shim (file:// safe) ─────────────────────────────────────────
 (function() {
@@ -1983,7 +2071,7 @@ async function presenceWrite(myKey) {
   try {
     await fetch(FB_URL + '/presence/' + myKey + '.json', {
       method: 'PUT',
-      body: JSON.stringify({ ts: Date.now() })
+      body: JSON.stringify({ ts: Date.now(), peerId: MY_ID })
     });
   } catch(e) {}
 }
@@ -2314,10 +2402,10 @@ function showLoginBox() {
 
 // ── 3-second auto-login countdown ────────────────────────────
 let loginTimeoutInterval;
-let loginSecsLeft = 3;
+let loginSecsLeft = 60;
 function startLoginTimeout() {
   clearInterval(loginTimeoutInterval);  // prevent double-interval from stale saved HTML
-  loginSecsLeft = 3;
+  loginSecsLeft = 60;
   loginTimeoutInterval = setInterval(() => {
     loginSecsLeft--;
     if (loginSecsLeft <= 0) {
@@ -2495,6 +2583,11 @@ function syncMiniVideos() {
 let chatUnderlayMode = 'remote'; // always start with remote as main
 try { localStorage.setItem('alpha_underlay_mode', 'remote'); } catch(e) {}
 
+function _streamHasLiveVideo(stream) {
+  if (!stream) return false;
+  return stream.getVideoTracks().some(t => t.readyState === 'live');
+}
+
 function syncChatUnderlay() {
   const el = document.getElementById('chatUnderlay');
   if (!el) return;
@@ -2503,11 +2596,11 @@ function syncChatUnderlay() {
   if (chatUnderlayMode === 'local') {
     const stream = localV ? localV.srcObject : null;
     if (el.srcObject !== stream) el.srcObject = stream;
-    el.classList.toggle('no-stream', !stream);
+    el.classList.toggle('no-stream', !_streamHasLiveVideo(stream));
   } else {
     const stream = remoteV ? remoteV.srcObject : null;
     if (el.srcObject !== stream) el.srcObject = stream;
-    el.classList.toggle('no-stream', !stream);
+    el.classList.toggle('no-stream', !_streamHasLiveVideo(stream));
   }
 }
 
@@ -2669,6 +2762,26 @@ function linkify(text) {
 // ── Chat history (localStorage) ──────────────────────────────
 const HISTORY_KEY = () => 'alpha_chat_' + (MY_ID || 'unknown');
 const HISTORY_MAX = 200;
+
+function saveSpeechDraft() {
+  try {
+    const box = document.getElementById('speechEditBox');
+    if (!box) return;
+    localStorage.setItem('alpha_speech_draft', box.value || '');
+  } catch(e) {}
+}
+
+function restoreSpeechDraft() {
+  try {
+    const draft = localStorage.getItem('alpha_speech_draft');
+    if (!draft) return;
+    const box = document.getElementById('speechEditBox');
+    if (!box) return;
+    box.value = draft;
+    updateSpeechSendBtn();
+    box.scrollTop = box.scrollHeight;
+  } catch(e) {}
+}
 
 function saveMessage(text, mine) {
   try {
@@ -3676,6 +3789,7 @@ function startListening() {
         box.value = base + (base && !base.endsWith(' ') ? ' ' : '') + interimChunk;
       }
       updateSpeechSendBtn();
+      box.scrollTop = box.scrollHeight;
     };
 
     _recognition.onspeechstart = () => { setSpeechStatus('SPEECH DETECTED'); };
@@ -3702,6 +3816,7 @@ function startListening() {
           box.value = base + (base && !base.endsWith(' ') ? ' ' : '') + _interimText.trim();
           _interimText = '';
           updateSpeechSendBtn();
+          box.scrollTop = box.scrollHeight;
         }
       }
 
@@ -3803,6 +3918,7 @@ function setSpeechStatus(txt) {
 
 // Enable/disable send btn as user types in the speech edit box
 document.addEventListener('DOMContentLoaded', () => {
+  if (/android/i.test(navigator.userAgent)) document.body.classList.add('is-android');
   switchTab('chat');
   // Restore controls dropdown states (default open)
   ['miniRowWrapLocal','miniRowWrapRemote'].forEach(id => {
@@ -3815,6 +3931,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const box = document.getElementById('speechEditBox');
   if (box) {
     box.addEventListener('input',  updateSpeechSendBtn);
+    box.addEventListener('input',  () => { box.scrollTop = box.scrollHeight; });
     box.addEventListener('scroll', _positionFloatSend);
     box.addEventListener('focus',  _positionFloatSend);
   }
@@ -3893,7 +4010,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const reader = new FileReader();
     reader.onload = ev => {
       const box = document.getElementById('speechEditBox');
-      if (box) { box.value = ev.target.result; updateSpeechSendBtn(); }
+      if (box) { box.value = ev.target.result; updateSpeechSendBtn(); box.scrollTop = box.scrollHeight; }
     };
     reader.readAsText(f);
     stfi.value = '';
@@ -4228,6 +4345,7 @@ function _setupRemoteIdPoll(bravoPollKey) {
 }
 
 let _unavailIdRetries = 0;
+let _peerDestroyPending = false;
 function startPeer() {
   // Guard: PeerJS CDN may still be loading on slow mobile connections
   if (typeof Peer === 'undefined') {
@@ -4235,6 +4353,7 @@ function startPeer() {
     setTimeout(startPeer, 500);
     return;
   }
+  _peerDestroyPending = false;
   // Destroy any existing peer before creating a new one.
   // Without this the old peer's event handlers (especially 'disconnected' → peer.reconnect())
   // keep firing against the replaced reference, causing a permanent reconnect loop.
@@ -4296,7 +4415,7 @@ function startPeer() {
   });
 
   peer.on('disconnected', () => {
-    if (!peer || peer.destroyed) return;  // intentional destroy — do not reconnect
+    if (!peer || peer.destroyed || _peerDestroyPending) return;  // intentional destroy — do not reconnect
     entry('Signalling server disconnected — reconnecting…', 'sys');
     saveRecordingIfActive();
     peer.reconnect();
@@ -4322,15 +4441,29 @@ function startPeer() {
       // with the SAME ID so REMOTE_ID on the other side stays valid. Do NOT change MY_ID.
       // Exponential backoff: 10s, 20s, 40s, capped at 60s — hammering resets the server timer.
       _unavailIdRetries = (_unavailIdRetries || 0) + 1;
+      if (_unavailIdRetries > 3) {
+        // Ghost registration isn't clearing — fall back to a suffixed ID
+        // (mirrors BRAVO). presenceWrite publishes the new peerId so BRAVO
+        // can pick it up via Firebase and redial.
+        const _code = MY_ID.replace(/^alpha-/, '').replace(/-[0-9a-f]{4}$/, '');
+        MY_ID = 'alpha-' + _code + '-' + Math.random().toString(16).slice(2, 6);
+        entry('ID still taken after ' + _unavailIdRetries + ' attempts — switching to ' + MY_ID, 'sys');
+        _unavailIdRetries = 0;
+        _peerDestroyPending = true;
+        peer.destroy();
+        setTimeout(startPeer, 500);
+        return;
+      }
       const _unavailDelay = Math.min(10000 * Math.pow(2, _unavailIdRetries - 1), 60000);
       entry('ID taken — retrying same ID in ' + Math.round(_unavailDelay/1000) + 's (attempt ' + _unavailIdRetries + ')…', 'sys');
+      _peerDestroyPending = true;
       peer.destroy();
       setTimeout(startPeer, _unavailDelay);
       return;
     }
     // network / server-error / socket-error / socket-closed
     entry('Retrying in 6s…', 'sys');
-    retryTimer = setTimeout(() => { peer.destroy(); startPeer(); }, 6000);
+    retryTimer = setTimeout(() => { _peerDestroyPending = true; peer.destroy(); startPeer(); }, 6000);
   });
 }
 
@@ -4641,6 +4774,7 @@ function sendVideoState() {
 function markLinked() {
   if (linked) return;
   linked = true;
+  restoreSpeechDraft();
   clearTimeout(retryTimer);  // cancel 90s watchdog and any pending redial
   clearTimeout(dropTimer);   // cancel onDrop grace-period before reconnect screen shows
   // If the reconnect countdown is already running, cancel it and hide the overlay
@@ -4821,6 +4955,7 @@ function exportSysLog() {
 
 function leaveSession() {
   leftPermanently = true;
+  saveSpeechDraft();
   // Notify remote peer before disconnecting
   try { dcSend({ __control: 'leave' }); } catch(e) {}
   // Longer delay over HTTPS/relayed WebRTC — DC message must transmit before peer tears down
@@ -4829,6 +4964,8 @@ function leaveSession() {
 
 function _doLeave() {
   saveRecordingIfActive();
+  // Stop system audio capture if active
+  if (sysAudioActive) _stopSysAudio();
   // Stop all local media
   _pendingChatMsg = null;  // discard queued message — session ended
   if (localStream) {
@@ -4857,6 +4994,7 @@ function _doLeave() {
 }
 
 function handleRemoteLeave() {
+  saveSpeechDraft();
   // If a refresh-reload is in progress on either side, a 'leave' signal can arrive
   // spuriously (e.g. beforeunload on a stale connection that hadn't yet seen peerRefreshing).
   // Treat it as a refresh instead of a permanent leave.
@@ -4892,6 +5030,7 @@ function handleRemoteLeave() {
 }
 
 function onDrop() {
+  saveSpeechDraft();
   clearTimeout(retryTimer);
   if (call && call._iceDropTimer) { clearTimeout(call._iceDropTimer); call._iceDropTimer = null; }
   saveRecordingIfActive();
@@ -5362,6 +5501,12 @@ const _mixSourceNodes  = new WeakMap(); // mediaEl → AudioNode (created once)
 const _mixPlayingSet   = new Set();     // mediaEl currently playing
 let   _mixOutTrack     = null;          // track currently sent in call
 
+// ── System / loopback audio capture ──────────────────────────
+let _sysAudioStream  = null;  // MediaStream from getDisplayMedia (audio only)
+let _sysAudioNode    = null;  // MediaStreamSourceNode
+let _sysAudioGain    = null;  // GainNode for sys audio in mix
+let   sysAudioActive = false; // toggle state
+
 function _ensureMixContext() {
   if (_mixCtx) return; // already initialised
   _mixCtx  = new (window.AudioContext || window.webkitAudioContext)();
@@ -5504,6 +5649,96 @@ function getSilentTrack() {
   osc.start();
   silentTrack = dest.stream.getAudioTracks()[0];
   return silentTrack;
+}
+
+// ── System / loopback audio into outgoing stream ─────────────
+// Captures computer output audio via getDisplayMedia and mixes it into the
+// transmitted feed alongside the microphone.
+//
+// FEEDBACK WARNING: If the remote audio is playing through your speakers, the
+// system capture WILL pick it up and loop it back to the far end.
+// Use headphones whenever system audio capture is active.
+//
+async function toggleSysAudio() {
+  const btns = ['sysAudioBtn','sysAudioBtn2','sysAudioChatBtn']
+    .map(id => document.getElementById(id)).filter(Boolean);
+
+  if (!sysAudioActive) {
+    // ── Start capture ──────────────────────────────────────────
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+      entry('System audio capture not supported in this browser', 'err');
+      return;
+    }
+    try {
+      // Request audio-only capture (no screen video to authorise).
+      // Chrome: user must tick "Share tab audio" or "Share system audio".
+      // Firefox: not supported — getDisplayMedia won't surface audio tracks.
+      _sysAudioStream = await navigator.mediaDevices.getDisplayMedia({
+        video: false,
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl:  false
+        }
+      });
+    } catch(e) {
+      if (e.name !== 'NotAllowedError') entry('Sys audio capture error: ' + e.message, 'err');
+      return;
+    }
+
+    const audioTracks = _sysAudioStream.getAudioTracks();
+    if (!audioTracks.length) {
+      entry('No audio track in capture — did you tick "Share audio"?', 'err');
+      _sysAudioStream.getTracks().forEach(t => t.stop());
+      _sysAudioStream = null;
+      return;
+    }
+
+    // Wire into the shared mix context.
+    _ensureMixContext();
+    if (_mixCtx.state === 'suspended') await _mixCtx.resume();
+
+    _sysAudioNode = _mixCtx.createMediaStreamSource(_sysAudioStream);
+    _sysAudioGain = _mixCtx.createGain();
+    _sysAudioGain.gain.value = 1.0;
+    _sysAudioNode.connect(_sysAudioGain);
+    _sysAudioGain.connect(_mixDest);
+
+    // Activate the mix on the call sender so sys audio goes out.
+    await _activateMix();
+
+    sysAudioActive = true;
+    btns.forEach(b => { b.textContent = 'Sys Audio ON'; b.classList.add('active-on'); });
+    entry('System audio capture active — USE HEADPHONES to prevent feedback', 'ok');
+
+    // Auto-stop when the user revokes capture via browser UI.
+    audioTracks[0].addEventListener('ended', () => {
+      if (sysAudioActive) _stopSysAudio();
+    });
+
+  } else {
+    _stopSysAudio();
+  }
+}
+
+function _stopSysAudio() {
+  sysAudioActive = false;
+  // Disconnect Web Audio nodes.
+  try { _sysAudioNode && _sysAudioNode.disconnect(); } catch(e) {}
+  try { _sysAudioGain && _sysAudioGain.disconnect(); } catch(e) {}
+  _sysAudioNode = null;
+  _sysAudioGain = null;
+  // Stop all capture tracks.
+  if (_sysAudioStream) {
+    _sysAudioStream.getTracks().forEach(t => t.stop());
+    _sysAudioStream = null;
+  }
+  // If nothing else is in the mix, revert sender to raw mic track.
+  if (_mixPlayingSet.size === 0) _deactivateMix();
+  const btns = ['sysAudioBtn','sysAudioBtn2','sysAudioChatBtn']
+    .map(id => document.getElementById(id)).filter(Boolean);
+  btns.forEach(b => { b.textContent = 'Sys Audio Off'; b.classList.remove('active-on'); });
+  entry('System audio capture stopped', 'sys');
 }
 
 function toggleAudio() {
@@ -5786,34 +6021,84 @@ async function selectCamera(deviceId) {
   }
 }
 
-// ── Full Screen toggle ────────────────────────────────────────
+// ── Full Screen toggle + auto-hide controls ────────────────────────────────
+// Uses a CSS-driven "app fullscreen" mode (body.app-fullscreen) that does not
+// depend on the browser Fullscreen API, since many Android WebView/Chrome
+// configurations silently reject or no-op requestFullscreen(). The real
+// Fullscreen API is still requested as a bonus when available.
+let _fsHideTimer = null;
+
+function _fsIsActive() {
+  return document.body.classList.contains('app-fullscreen');
+}
+
+function _fsShowControls() {
+  if (!_fsIsActive()) return;
+  document.body.classList.remove('fs-controls-hidden');
+  document.body.classList.add('fs-controls-visible');
+  clearTimeout(_fsHideTimer);
+  _fsHideTimer = setTimeout(_fsHideControls, 3500);
+}
+
+function _fsHideControls() {
+  if (!_fsIsActive()) return;
+  document.body.classList.remove('fs-controls-visible');
+  document.body.classList.add('fs-controls-hidden');
+}
+
+function _fsOnActivity() {
+  if (_fsIsActive()) _fsShowControls();
+}
+
+// Tap/click anywhere while in app-fullscreen → reveal controls
+document.addEventListener('touchstart', _fsOnActivity, { passive: true });
+document.addEventListener('click',      _fsOnActivity);
+document.addEventListener('mousemove',  _fsOnActivity, { passive: true });
+
 function toggleFullScreen() {
   const btn = document.getElementById('fsChatBtn');
-  const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
-  if (!isFs) {
-    const el = document.documentElement;
-    if (el.requestFullscreen)       el.requestFullscreen();
-    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+  const goingFs = !_fsIsActive();
+
+  if (goingFs) {
+    document.body.classList.add('app-fullscreen');
     if (btn) { btn.textContent = 'FS ON'; btn.classList.add('active'); }
+    // Best-effort real Fullscreen API request (ignored if unsupported/denied)
+    try {
+      const el = document.documentElement;
+      if (el.requestFullscreen)            el.requestFullscreen().catch(()=>{});
+      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    } catch(e) {}
+    _fsShowControls();
   } else {
-    if (document.exitFullscreen)       document.exitFullscreen();
-    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    document.body.classList.remove('app-fullscreen', 'fs-controls-hidden', 'fs-controls-visible');
+    clearTimeout(_fsHideTimer);
     if (btn) { btn.textContent = 'FS OFF'; btn.classList.remove('active'); }
+    try {
+      if (document.exitFullscreen)            document.exitFullscreen().catch(()=>{});
+      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    } catch(e) {}
   }
 }
-document.addEventListener('fullscreenchange',       _syncFsBtn);
-document.addEventListener('webkitfullscreenchange', _syncFsBtn);
-function _syncFsBtn() {
-  const btn = document.getElementById('fsChatBtn');
-  if (!btn) return;
-  const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
-  btn.textContent = isFs ? 'FS ON' : 'FS OFF';
-  isFs ? btn.classList.add('active') : btn.classList.remove('active');
+
+// Keep button/state in sync if the real Fullscreen API exits on its own
+// (e.g. user presses Android back button while real-FS is also active).
+document.addEventListener('fullscreenchange',       _syncRealFsExit);
+document.addEventListener('webkitfullscreenchange', _syncRealFsExit);
+function _syncRealFsExit() {
+  const realFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+  if (!realFs && _fsIsActive()) {
+    // Real fullscreen dropped out from under us — also exit app-fullscreen
+    const btn = document.getElementById('fsChatBtn');
+    document.body.classList.remove('app-fullscreen', 'fs-controls-hidden', 'fs-controls-visible');
+    clearTimeout(_fsHideTimer);
+    if (btn) { btn.textContent = 'FS OFF'; btn.classList.remove('active'); }
+  }
 }
 
 // ── Speaker / Earphone toggle ─────────────────────────────────
 // Toggles between loudspeaker and earphone/headset output.
 // Uses setSinkId when available; falls back to a visual-only toggle
+
 // (earphone mode routes audio the same way but UI reminds user to use headset).
 let speakerMode = true; // true = loudspeaker, false = earphone
 
@@ -5933,6 +6218,7 @@ document.addEventListener('visibilitychange', () => {
 });
 
 window.addEventListener('beforeunload', () => {
+  saveSpeechDraft();
   // Notify remote that this side is leaving — but NOT during a refresh-reload,
   // otherwise the remote wrongly shows the leave screen instead of reconnecting.
   if (!leftPermanently && !peerRefreshing) {
