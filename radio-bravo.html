@@ -5531,7 +5531,9 @@ async function toggleSysAudio() {
         video: true,
         audio: true   // constraints object throws NotSupportedError on some Chrome builds
       });
-      _sysAudioStream.getVideoTracks().forEach(t => { t.stop(); _sysAudioStream.removeTrack(t); });
+      // Video tracks are stopped AFTER the audio 'ended' listener is registered
+      // (further below) — on ChromeOS stopping a video track immediately ends the
+      // whole stream, so the listener must already be in place.
     } catch(e) {
       entry('Sys audio capture ' + (e.name === 'NotAllowedError' ? 'cancelled/denied' : e.name === 'NotSupportedError' ? 'not supported on this OS/browser (macOS Chrome and Firefox do not expose system audio)' : 'error: ' + e.message), 'err');
       sysAudioActive = false;
@@ -5569,6 +5571,9 @@ async function toggleSysAudio() {
       return;
     }
 
+    // Register 'ended' listener before stopping video tracks — ChromeOS fires
+    // 'ended' on the audio track the moment the video track is stopped, so
+    // sysAudioActive must be true and the handler in place first.
     sysAudioActive = true;
     btns.forEach(b => { b.textContent = 'Sys Audio ON'; b.classList.add('active-on'); });
     entry('System audio capture active — USE HEADPHONES to prevent feedback', 'ok');
@@ -5576,6 +5581,9 @@ async function toggleSysAudio() {
     audioTracks[0].addEventListener('ended', () => {
       if (sysAudioActive) _stopSysAudio();
     });
+
+    // Now safe to stop the video tracks — listener is already registered above.
+    _sysAudioStream.getVideoTracks().forEach(t => { t.stop(); _sysAudioStream.removeTrack(t); });
 
   } else {
     _stopSysAudio();
