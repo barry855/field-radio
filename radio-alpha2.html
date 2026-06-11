@@ -4854,6 +4854,9 @@ function attachCall(c) {
     });
     pc.addEventListener('track', ev => {
       entry('DIAG: track received kind=' + ev.track.kind, 'sys');
+      // Always attempt audio play on any incoming track — Android often delivers
+      // tracks without ev.streams populated, so we can't gate on that.
+      scheduleRemoteAudioPlay();
       if (!ev.streams || !ev.streams[0]) return;
       const stream = ev.streams[0];
       const _ra = document.getElementById('remoteAudio');
@@ -4892,9 +4895,9 @@ function attachCall(c) {
       track.addEventListener('unmute', () => updateRemoteVideoState(true, true));
       track.addEventListener('ended', () => updateRemoteVideoState(false, false));
     });
+    scheduleRemoteAudioPlay();  // always call — not just on first link
     if (linked) return;
     markLinked();
-    scheduleRemoteAudioPlay();
   });
   // Only trigger onDrop if this is still the active call (guards against stale calls
   // from a previous dial attempt closing and racing with the current one)
