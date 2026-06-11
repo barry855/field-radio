@@ -1578,7 +1578,6 @@
         <div class="video-grid">
           <div class="video-wrap waiting" id="remoteWrap">
             <video id="remoteVideo" autoplay="" playsinline=""></video>
-            <button id="audioUnlockBtn" onclick="unlockRemoteAudio()" style="display:none;position:absolute;bottom:28px;left:50%;transform:translateX(-50%);z-index:30;background:rgba(0,200,120,0.92);color:#000;border:none;border-radius:6px;padding:8px 18px;font-size:13px;font-family:monospace;font-weight:bold;letter-spacing:1px;cursor:pointer;">▶ TAP TO HEAR</button>
             <span class="video-label">ALPHA</span>
             <span class="duplex-overlay" id="duplexBar2">OFFLINE</span>
           </div>
@@ -1822,6 +1821,7 @@
     </div>
   </div>
 
+<button id="audioUnlockBtn" onclick="unlockRemoteAudio()" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(0,200,120,0.92);color:#000;border:none;border-radius:8px;padding:12px 28px;font-size:15px;font-family:monospace;font-weight:bold;letter-spacing:1px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,0.5);">▶ TAP TO HEAR AUDIO</button>
 <audio id="remoteAudio" autoplay="" playsinline=""></audio>
 <div id="fsHint">TAP TO SHOW CONTROLS</div>
 <div id="lightbox"><img id="lightboxImg" src="" alt=""></div>
@@ -1914,8 +1914,11 @@ function scheduleRemoteAudioPlay() {
     // paused=false even though no audio is output, so the paused guard silently
     // swallows the failure. play() on an already-playing element is harmless.
     if (ra && ra.srcObject) {
-      ra.play().catch(e => {
-        entry('remoteAudio play: ' + e.message, 'sys');
+      ra.play().then(() => {
+        const btn = document.getElementById('audioUnlockBtn');
+        if (btn) btn.style.display = 'none';
+      }).catch(e => {
+        entry('⚠ Remote audio blocked (' + e.name + ': ' + e.message + ') — tap the green button to hear audio', 'err');
         showAudioUnlockBtn();
       });
     }
