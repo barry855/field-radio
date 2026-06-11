@@ -1910,7 +1910,10 @@ function scheduleRemoteAudioPlay() {
   clearTimeout(_raPlayTimer);
   _raPlayTimer = setTimeout(() => {
     const ra = document.getElementById('remoteAudio');
-    if (ra && ra.srcObject && ra.paused) {
+    // Always call play() — on Android Chrome, autoplay-blocked elements report
+    // paused=false even though no audio is output, so the paused guard silently
+    // swallows the failure. play() on an already-playing element is harmless.
+    if (ra && ra.srcObject) {
       ra.play().catch(e => {
         entry('remoteAudio play: ' + e.message, 'sys');
         showAudioUnlockBtn();
