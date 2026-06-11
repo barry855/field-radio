@@ -4312,6 +4312,7 @@ function init() {
 }
 
 let _unavailIdRetries = 0;
+let _peerDestroyPending = false;
 
 // ── Remote ID refresh (reads Alpha's published peerId from Firebase) ──────────
 async function _refreshRemoteId() {
@@ -4369,6 +4370,7 @@ function startPeer() {
     setTimeout(startPeer, 500);
     return;
   }
+  _peerDestroyPending = false;
   // Destroy any existing peer before creating a new one.
   // Without this the old peer's event handlers (especially 'disconnected' → peer.reconnect())
   // keep firing against the replaced reference, causing a permanent reconnect loop.
@@ -4454,7 +4456,7 @@ function startPeer() {
   });
 
   peer.on('disconnected', () => {
-    if (!peer || peer.destroyed) return;  // intentional destroy — do not reconnect
+    if (!peer || peer.destroyed || _peerDestroyPending) return;  // intentional destroy — do not reconnect
     entry('Signalling server disconnected — reconnecting…', 'sys');
     saveRecordingIfActive();
     peer.reconnect();
@@ -4480,6 +4482,7 @@ function startPeer() {
       const _code = MY_ID.replace(/^bravo-/, '').replace(/-[0-9a-f]{4}$/, '');
       MY_ID = 'bravo-' + _code + '-' + Math.random().toString(16).slice(2, 6);
       entry('ID taken — retrying with new ID: ' + MY_ID, 'sys');
+      _peerDestroyPending = true;
       const _stale = peer; peer = null;
       try { _stale.off('disconnected'); _stale.destroy(); } catch(e2) {}
       setTimeout(startPeer, 500);
@@ -4496,7 +4499,7 @@ function startPeer() {
     }
     // network / server-error / socket-error / socket-closed
     entry('Retrying in 6s…', 'sys');
-    setTimeout(() => { peer.destroy(); startPeer(); }, 6000);
+    setTimeout(() => { _peerDestroyPending = true; peer.destroy(); startPeer(); }, 6000);
   });
 }
 
