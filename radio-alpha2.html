@@ -1386,29 +1386,29 @@
   }
   body.app-fullscreen.fs-controls-hidden #fsHint { display: block; }
 
-  /* ── LANDSCAPE: full-screen video only (mobile/touch only) ─── */
+  /* ── LANDSCAPE: full-screen video only (mobile/touch only, ACTIVE CALL ONLY) ─── */
   @media (orientation: landscape) and (pointer: coarse) {
-    header, .tab-bar { display: none !important; }
-    .shell { padding: 0; gap: 0; }
-    .tab-content { padding: 0; gap: 0; border: none; border-radius: 0; background: #000; }
-    #paneChat { gap: 0; }
-    .chat-btn-bar-row,
-    .gain-row,
-    .zoom-row,
-    #chatFindBar,
-    #logPanel,
-    #speechPanel,
-    #chat,
-    #translateBar,
-    .chat-panel > .panel-label { display: none !important; }
-    #chatPanel {
+    body.app-fullscreen header, body.app-fullscreen .tab-bar { display: none !important; }
+    body.app-fullscreen .shell { padding: 0; gap: 0; }
+    body.app-fullscreen .tab-content { padding: 0; gap: 0; border: none; border-radius: 0; background: #000; }
+    body.app-fullscreen #paneChat { gap: 0; }
+    body.app-fullscreen .chat-btn-bar-row,
+    body.app-fullscreen .gain-row,
+    body.app-fullscreen .zoom-row,
+    body.app-fullscreen #chatFindBar,
+    body.app-fullscreen #logPanel,
+    body.app-fullscreen #speechPanel,
+    body.app-fullscreen #chat,
+    body.app-fullscreen #translateBar,
+    body.app-fullscreen .chat-panel > .panel-label { display: none !important; }
+    body.app-fullscreen #chatPanel {
       position: fixed; inset: 0; z-index: 50;
       border-radius: 0; border: none;
       padding: 0; background: #000;
     }
-    #chatUnderlay { border-radius: 0; }
+    body.app-fullscreen #chatUnderlay { border-radius: 0; }
     /* keep mini overlay and its close button accessible */
-    #miniChatOverlay { z-index: 55; }
+    body.app-fullscreen #miniChatOverlay { z-index: 55; }
   }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js"></script></head>
