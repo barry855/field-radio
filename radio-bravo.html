@@ -5307,6 +5307,12 @@ document.addEventListener('DOMContentLoaded', function initScreenShareSupport() 
       if (btn) btn.style.display = 'none';
     });
   }
+  // Firefox does not expose system audio tracks via getDisplayMedia — hide sys audio buttons.
+  if (isFirefox) {
+    document.querySelectorAll('#sysAudioBtn, #sysAudioBtn2, #sysAudioChatBtn').forEach(btn => {
+      if (btn) btn.style.display = 'none';
+    });
+  }
 });
 
 async function toggleScreenShare() {
@@ -5522,15 +5528,11 @@ async function toggleSysAudio() {
       // track — we only want the audio.
       _sysAudioStream = await navigator.mediaDevices.getDisplayMedia({
         video: true,
-        audio: {
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl:  false
-        }
+        audio: true   // constraints object throws NotSupportedError on some Chrome builds
       });
       _sysAudioStream.getVideoTracks().forEach(t => { t.stop(); _sysAudioStream.removeTrack(t); });
     } catch(e) {
-      entry('Sys audio capture ' + (e.name === 'NotAllowedError' ? 'cancelled/denied' : 'error: ' + e.message), 'err');
+      entry('Sys audio capture ' + (e.name === 'NotAllowedError' ? 'cancelled/denied' : e.name === 'NotSupportedError' ? 'not supported on this OS/browser (macOS Chrome and Firefox do not expose system audio)' : 'error: ' + e.message), 'err');
       sysAudioActive = false;
       btns.forEach(b => { b.textContent = 'Sys Audio Off'; b.classList.remove('active-on'); });
       return;
