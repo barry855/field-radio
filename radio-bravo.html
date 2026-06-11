@@ -769,6 +769,8 @@
     margin-left: auto; font-size: 9px; letter-spacing: 1px;
     color: var(--text-dim);
   }
+  #speechPanel > .speech-status { display: none; }
+  body.is-android #speechPanel > .speech-status { display: block; }
   #speechPanel > .speech-status {
     font-size: 11px; letter-spacing: 1px; padding: 2px 4px;
     color: #ffffff !important; font-family: monospace; word-break: break-all;
@@ -3909,6 +3911,7 @@ function setSpeechStatus(txt) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  if (/android/i.test(navigator.userAgent)) document.body.classList.add('is-android');
   switchTab('chat');
   // Restore controls dropdown states (default open)
   ['miniRowWrapLocal','miniRowWrapRemote'].forEach(id => {
