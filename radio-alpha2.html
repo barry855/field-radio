@@ -5685,11 +5685,13 @@ async function toggleSysAudio() {
       // screen options with "share audio"), then immediately stop the video
       // track — we only want the audio.
       // Firefox: not supported — getDisplayMedia won't surface audio tracks.
+      // NOTE: video tracks are stopped AFTER the audio 'ended' listener is
+      // registered (further below) because on ChromeOS stopping a video track
+      // immediately ends the whole stream, including the audio track.
       _sysAudioStream = await navigator.mediaDevices.getDisplayMedia({
         video: true,
         audio: true   // constraints object throws NotSupportedError on some Chrome builds
       });
-      _sysAudioStream.getVideoTracks().forEach(t => { t.stop(); _sysAudioStream.removeTrack(t); });
     } catch(e) {
       entry('Sys audio capture ' + (e.name === 'NotAllowedError' ? 'cancelled/denied' : e.name === 'NotSupportedError' ? 'not supported on this OS/browser (macOS Chrome and Firefox do not expose system audio)' : 'error: ' + e.message), 'err');
       sysAudioActive = false;
@@ -5729,14 +5731,20 @@ async function toggleSysAudio() {
       return;
     }
 
+    // Set active and register 'ended' listener BEFORE stopping video tracks.
+    // On ChromeOS, stopping a video track immediately fires 'ended' on the audio
+    // track too (the whole stream is treated as a unit), so sysAudioActive must
+    // be true and the handler in place first, or pressing OFF re-opens the picker.
     sysAudioActive = true;
     btns.forEach(b => { b.textContent = 'Sys Audio ON'; b.classList.add('active-on'); });
     entry('System audio capture active — USE HEADPHONES to prevent feedback', 'ok');
 
-    // Auto-stop when the user revokes capture via browser UI.
     audioTracks[0].addEventListener('ended', () => {
       if (sysAudioActive) _stopSysAudio();
     });
+
+    // Safe to stop video tracks now — listener and state are already set above.
+    _sysAudioStream.getVideoTracks().forEach(t => { t.stop(); _sysAudioStream.removeTrack(t); });
 
   } else {
     _stopSysAudio();
