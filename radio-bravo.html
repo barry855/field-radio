@@ -5517,14 +5517,18 @@ async function toggleSysAudio() {
       return;
     }
     try {
+      // video:false-only audio capture throws NotSupportedError on Chrome for
+      // Windows/ChromeOS. Request video too, then immediately stop the video
+      // track — we only want the audio.
       _sysAudioStream = await navigator.mediaDevices.getDisplayMedia({
-        video: false,
+        video: true,
         audio: {
           echoCancellation: false,
           noiseSuppression: false,
           autoGainControl:  false
         }
       });
+      _sysAudioStream.getVideoTracks().forEach(t => { t.stop(); _sysAudioStream.removeTrack(t); });
     } catch(e) {
       entry('Sys audio capture ' + (e.name === 'NotAllowedError' ? 'cancelled/denied' : 'error: ' + e.message), 'err');
       sysAudioActive = false;
