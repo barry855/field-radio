@@ -1488,6 +1488,7 @@
           <button class="media-btn" id="recBtn" onclick="toggleRecordLocal()">➤ RECORD</button>
           <button class="media-btn video-off-state" id="videoBtn_row2" onclick="toggleVideo()">Video Off</button>
           <button class="media-btn" id="audioBtn" onclick="toggleAudio()">Audio On</button>
+          <button class="media-btn" id="sysAudioBtn" onclick="toggleSysAudio()" title="Capture computer output and mix into transmitted audio (use headphones!)">Sys Audio Off</button>
           <button class="media-btn" id="ttsBtn" onclick="toggleTts()" title="Toggle auto-speak for incoming messages">TTS Off</button><span id="flipWrap"><button class="media-btn" id="flipBtn" onclick="flipCamera()">⟳ Flip Cam</button></span>
           <button class="media-btn" id="screenBtn" onclick="toggleScreenShare()">Share Off</button>
           <button class="speaker-btn speaker-on" id="speakerBtnLocal" onclick="toggleSpeaker()">🔊 Speaker</button>
@@ -1530,6 +1531,7 @@
           <button class="media-btn" id="recBtn2" onclick="toggleRecordRemote()">➤ RECORD</button>
           <button class="media-btn video-off-state" id="videoBtn2_row2" onclick="toggleVideo()">Video Off</button>
           <button class="media-btn" id="audioBtn2" onclick="toggleAudio()">Audio On</button>
+          <button class="media-btn" id="sysAudioBtn2" onclick="toggleSysAudio()" title="Capture computer output and mix into transmitted audio (use headphones!)">Sys Audio Off</button>
           <button class="media-btn" id="ttsBtn2" onclick="toggleTts()" title="Toggle auto-speak for incoming messages">TTS Off</button><span id="flipWrap2"><button class="media-btn" id="flipBtn2" onclick="flipCamera()">⟳ Flip Cam</button></span>
           <button class="media-btn" id="screenBtn2" onclick="toggleScreenShare()">Share Off</button>
           <button class="speaker-btn speaker-on" id="speakerBtnRemote" onclick="toggleSpeaker()">🔊 Speaker</button>
@@ -1581,6 +1583,7 @@
         <button class="speech-top-btn rec-chat-btn" id="recChatBtn" onclick="toggleRecordChat()" title="Record current main feed + mini if visible">➤ RECORD</button>
         <button class="speech-top-btn video-off-state" id="videoOffChatBtn" onclick="toggleVideo()" title="Video on/off">Video Off</button>
         <button class="speech-top-btn" id="audioChatBtn" onclick="toggleAudio()" title="Mute/unmute mic">Audio On</button>
+        <button class="speech-top-btn" id="sysAudioChatBtn" onclick="toggleSysAudio()" title="Capture computer output and mix into transmitted audio (use headphones!)">Sys Audio Off</button>
         <button class="speech-top-btn" id="screenChatBtn" onclick="toggleScreenShare()" title="Share screen">Share Off</button>
         <button class="syslog-chat-btn" id="syslogToggleBtn" onclick="toggleSysLogView()" title="Toggle SYS LOG" style="margin-left:auto;"><span class="syslog-led"></span></button>
       </div>
@@ -4961,6 +4964,8 @@ function leaveSession() {
 
 function _doLeave() {
   saveRecordingIfActive();
+  // Stop system audio capture if active
+  if (sysAudioActive) _stopSysAudio();
   // Stop all local media
   _pendingChatMsg = null;  // discard queued message — session ended
   if (localStream) {
@@ -5496,6 +5501,12 @@ const _mixSourceNodes  = new WeakMap(); // mediaEl → AudioNode (created once)
 const _mixPlayingSet   = new Set();     // mediaEl currently playing
 let   _mixOutTrack     = null;          // track currently sent in call
 
+// ── System / loopback audio capture ──────────────────────────
+let _sysAudioStream  = null;  // MediaStream from getDisplayMedia (audio only)
+let _sysAudioNode    = null;  // MediaStreamSourceNode
+let _sysAudioGain    = null;  // GainNode for sys audio in mix
+let   sysAudioActive = false; // toggle state
+
 function _ensureMixContext() {
   if (_mixCtx) return; // already initialised
   _mixCtx  = new (window.AudioContext || window.webkitAudioContext)();
@@ -5638,6 +5649,96 @@ function getSilentTrack() {
   osc.start();
   silentTrack = dest.stream.getAudioTracks()[0];
   return silentTrack;
+}
+
+// ── System / loopback audio into outgoing stream ─────────────
+// Captures computer output audio via getDisplayMedia and mixes it into the
+// transmitted feed alongside the microphone.
+//
+// FEEDBACK WARNING: If the remote audio is playing through your speakers, the
+// system capture WILL pick it up and loop it back to the far end.
+// Use headphones whenever system audio capture is active.
+//
+async function toggleSysAudio() {
+  const btns = ['sysAudioBtn','sysAudioBtn2','sysAudioChatBtn']
+    .map(id => document.getElementById(id)).filter(Boolean);
+
+  if (!sysAudioActive) {
+    // ── Start capture ──────────────────────────────────────────
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+      entry('System audio capture not supported in this browser', 'err');
+      return;
+    }
+    try {
+      // Request audio-only capture (no screen video to authorise).
+      // Chrome: user must tick "Share tab audio" or "Share system audio".
+      // Firefox: not supported — getDisplayMedia won't surface audio tracks.
+      _sysAudioStream = await navigator.mediaDevices.getDisplayMedia({
+        video: false,
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl:  false
+        }
+      });
+    } catch(e) {
+      if (e.name !== 'NotAllowedError') entry('Sys audio capture error: ' + e.message, 'err');
+      return;
+    }
+
+    const audioTracks = _sysAudioStream.getAudioTracks();
+    if (!audioTracks.length) {
+      entry('No audio track in capture — did you tick "Share audio"?', 'err');
+      _sysAudioStream.getTracks().forEach(t => t.stop());
+      _sysAudioStream = null;
+      return;
+    }
+
+    // Wire into the shared mix context.
+    _ensureMixContext();
+    if (_mixCtx.state === 'suspended') await _mixCtx.resume();
+
+    _sysAudioNode = _mixCtx.createMediaStreamSource(_sysAudioStream);
+    _sysAudioGain = _mixCtx.createGain();
+    _sysAudioGain.gain.value = 1.0;
+    _sysAudioNode.connect(_sysAudioGain);
+    _sysAudioGain.connect(_mixDest);
+
+    // Activate the mix on the call sender so sys audio goes out.
+    await _activateMix();
+
+    sysAudioActive = true;
+    btns.forEach(b => { b.textContent = 'Sys Audio ON'; b.classList.add('active-on'); });
+    entry('System audio capture active — USE HEADPHONES to prevent feedback', 'ok');
+
+    // Auto-stop when the user revokes capture via browser UI.
+    audioTracks[0].addEventListener('ended', () => {
+      if (sysAudioActive) _stopSysAudio();
+    });
+
+  } else {
+    _stopSysAudio();
+  }
+}
+
+function _stopSysAudio() {
+  sysAudioActive = false;
+  // Disconnect Web Audio nodes.
+  try { _sysAudioNode && _sysAudioNode.disconnect(); } catch(e) {}
+  try { _sysAudioGain && _sysAudioGain.disconnect(); } catch(e) {}
+  _sysAudioNode = null;
+  _sysAudioGain = null;
+  // Stop all capture tracks.
+  if (_sysAudioStream) {
+    _sysAudioStream.getTracks().forEach(t => t.stop());
+    _sysAudioStream = null;
+  }
+  // If nothing else is in the mix, revert sender to raw mic track.
+  if (_mixPlayingSet.size === 0) _deactivateMix();
+  const btns = ['sysAudioBtn','sysAudioBtn2','sysAudioChatBtn']
+    .map(id => document.getElementById(id)).filter(Boolean);
+  btns.forEach(b => { b.textContent = 'Sys Audio Off'; b.classList.remove('active-on'); });
+  entry('System audio capture stopped', 'sys');
 }
 
 function toggleAudio() {
