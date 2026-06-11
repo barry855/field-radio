@@ -5420,16 +5420,19 @@ function _ensureMixContext() {
 
 async function _setCallAudioTrack(track) {
   try {
-    // Disable all WebRTC-level audio processing on the track before sending.
-    // Without this, Chrome's internal AudioProcessingModule re-adapts its AGC
-    // to the mixed track over ~10-30s and gradually pulls the level down.
-    try {
-      await track.applyConstraints({
-        echoCancellation: false,
-        noiseSuppression: false,
-        autoGainControl:  false
-      });
-    } catch(ce) { /* applyConstraints not supported on this track type — ignore */ }
+    // Only strip WebRTC-level audio processing when system-audio capture is
+    // mixed in — that's the case where Chrome's AGC re-adaptation causes
+    // gradual level drift. For plain mic (+ chat media) mixing, leave
+    // echoCancellation/etc. enabled so the far end doesn't get an echo loop.
+    if (sysAudioActive) {
+      try {
+        await track.applyConstraints({
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl:  false
+        });
+      } catch(ce) { /* applyConstraints not supported on this track type — ignore */ }
+    }
     const pc     = call && (call.peerConnection || call._pc);
     const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
     if (sender) await sender.replaceTrack(track);
@@ -5523,7 +5526,9 @@ async function toggleSysAudio() {
         }
       });
     } catch(e) {
-      if (e.name !== 'NotAllowedError') entry('Sys audio capture error: ' + e.message, 'err');
+      entry('Sys audio capture ' + (e.name === 'NotAllowedError' ? 'cancelled/denied' : 'error: ' + e.message), 'err');
+      sysAudioActive = false;
+      btns.forEach(b => { b.textContent = 'Sys Audio Off'; b.classList.remove('active-on'); });
       return;
     }
 
@@ -5532,19 +5537,30 @@ async function toggleSysAudio() {
       entry('No audio track in capture — did you tick "Share audio"?', 'err');
       _sysAudioStream.getTracks().forEach(t => t.stop());
       _sysAudioStream = null;
+      sysAudioActive = false;
+      btns.forEach(b => { b.textContent = 'Sys Audio Off'; b.classList.remove('active-on'); });
       return;
     }
 
-    _ensureMixContext();
-    if (_mixCtx.state === 'suspended') await _mixCtx.resume();
+    try {
+      _ensureMixContext();
+      if (_mixCtx.state === 'suspended') await _mixCtx.resume();
 
-    _sysAudioNode = _mixCtx.createMediaStreamSource(_sysAudioStream);
-    _sysAudioGain = _mixCtx.createGain();
-    _sysAudioGain.gain.value = 1.0;
-    _sysAudioNode.connect(_sysAudioGain);
-    _sysAudioGain.connect(_mixDest);
+      _sysAudioNode = _mixCtx.createMediaStreamSource(_sysAudioStream);
+      _sysAudioGain = _mixCtx.createGain();
+      _sysAudioGain.gain.value = 1.0;
+      _sysAudioNode.connect(_sysAudioGain);
+      _sysAudioGain.connect(_mixDest);
 
-    await _activateMix();
+      await _activateMix();
+    } catch(e) {
+      entry('Sys audio mix wiring error: ' + e.message, 'err');
+      _sysAudioStream.getTracks().forEach(t => t.stop());
+      _sysAudioStream = null;
+      sysAudioActive = false;
+      btns.forEach(b => { b.textContent = 'Sys Audio Off'; b.classList.remove('active-on'); });
+      return;
+    }
 
     sysAudioActive = true;
     btns.forEach(b => { b.textContent = 'Sys Audio ON'; b.classList.add('active-on'); });
