@@ -3831,10 +3831,11 @@ function startListening() {
           }
         });
       } else {
-        // Non-Android: restore gain/track
+        // Non-Android: restore gain/track — restore both to guard against the case
+        // where _mixMicGain was created after onstart muted via realAudioTrack.enabled.
         if (!audioMuted) {
           if (_mixMicGain) { _mixMicGain.gain.value = _preTalkMicGain !== null ? _preTalkMicGain : 1.0; _preTalkMicGain = null; }
-          else if (realAudioTrack) { realAudioTrack.enabled = true; }
+          if (realAudioTrack) { realAudioTrack.enabled = true; }
         }
         if (_listening) {
           setTimeout(() => { if (_listening) try { startListening(); } catch(ex) { stopListening(); } }, 250);
@@ -3904,7 +3905,7 @@ function stopListening() {
   } else {
     if (!audioMuted) {
       if (_mixMicGain) { _mixMicGain.gain.value = _preTalkMicGain !== null ? _preTalkMicGain : 1.0; _preTalkMicGain = null; }
-      else if (realAudioTrack) { realAudioTrack.enabled = true; }
+      if (realAudioTrack) { realAudioTrack.enabled = true; }
     }
     setSpeechStatus('IDLE');
   }
