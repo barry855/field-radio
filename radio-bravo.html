@@ -1754,7 +1754,7 @@
       </div>
       <div class="chat-panel" style="flex:1" id="chatPanel">
         <div class="panel-label">COMMS</div>
-        <video id="chatUnderlay" autoplay playsinline muted></video>
+        <video id="chatUnderlay" class="no-stream" autoplay playsinline muted></video>
         <div class="mini-video-overlay hidden" id="miniChatOverlay">
           <video id="miniChatVideo" autoplay playsinline muted></video>
           <span class="video-label">REMOTE</span>
@@ -2599,6 +2599,11 @@ function syncMiniVideos() {
 let chatUnderlayMode = 'remote'; // always start with remote as main
 try { localStorage.setItem('bravo_underlay_mode', 'remote'); } catch(e) {}
 
+function _streamHasLiveVideo(stream) {
+  if (!stream) return false;
+  return stream.getVideoTracks().some(t => t.readyState === 'live');
+}
+
 function syncChatUnderlay() {
   const el = document.getElementById('chatUnderlay');
   if (!el) return;
@@ -2607,11 +2612,11 @@ function syncChatUnderlay() {
   if (chatUnderlayMode === 'local') {
     const stream = localV ? localV.srcObject : null;
     if (el.srcObject !== stream) el.srcObject = stream;
-    el.classList.toggle('no-stream', !stream);
+    el.classList.toggle('no-stream', !_streamHasLiveVideo(stream));
   } else {
     const stream = remoteV ? remoteV.srcObject : null;
     if (el.srcObject !== stream) el.srcObject = stream;
-    el.classList.toggle('no-stream', !stream);
+    el.classList.toggle('no-stream', !_streamHasLiveVideo(stream));
   }
 }
 
