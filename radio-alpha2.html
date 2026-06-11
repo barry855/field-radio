@@ -3759,6 +3759,7 @@ function startListening() {
         box.value = base + (base && !base.endsWith(' ') ? ' ' : '') + interimChunk;
       }
       updateSpeechSendBtn();
+      box.scrollTop = box.scrollHeight;
     };
 
     _recognition.onspeechstart = () => { setSpeechStatus('SPEECH DETECTED'); };
@@ -3785,6 +3786,7 @@ function startListening() {
           box.value = base + (base && !base.endsWith(' ') ? ' ' : '') + _interimText.trim();
           _interimText = '';
           updateSpeechSendBtn();
+          box.scrollTop = box.scrollHeight;
         }
       }
 
@@ -3977,7 +3979,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const reader = new FileReader();
     reader.onload = ev => {
       const box = document.getElementById('speechEditBox');
-      if (box) { box.value = ev.target.result; updateSpeechSendBtn(); }
+      if (box) { box.value = ev.target.result; updateSpeechSendBtn(); box.scrollTop = box.scrollHeight; }
     };
     reader.readAsText(f);
     stfi.value = '';
