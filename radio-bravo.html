@@ -4464,7 +4464,18 @@ function startPeer() {
     entry('Peer error [' + e.type + ']: ' + e.message, 'err');
     if (e.type === 'browser-incompatible') return;
     if (e.type === 'unavailable-id') {
-      // Ghost session holds this ID. Pick a new suffix and retry in 500ms.
+      // This error can refer to OUR id (genuine collision — pick a new suffix)
+      // OR to REMOTE_ID (a stale/ghost peer registration on the signalling
+      // server for the other side — changing our own ID won't help here).
+      if (e.message && e.message.indexOf(REMOTE_ID) !== -1 && e.message.indexOf(MY_ID) === -1) {
+        entry('Remote peer ID stale — refreshing and retrying…', 'sys');
+        if (call) { try { call.close(); } catch(ex) {} call = null; }
+        if (dataConn) { try { dataConn.close(); } catch(ex) {} dataConn = null; }
+        pendingDC = false;
+        retryTimer = setTimeout(() => _refreshRemoteId().then(() => { if (!linked) dial(); }), 5000);
+        return;
+      }
+      // Ghost session holds OUR id. Pick a new suffix and retry in 500ms.
       // presenceWrite will publish the new peerId so ALPHA dials correctly.
       const _code = MY_ID.replace(/^bravo-/, '').replace(/-[0-9a-f]{4}$/, '');
       MY_ID = 'bravo-' + _code + '-' + Math.random().toString(16).slice(2, 6);
