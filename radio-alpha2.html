@@ -2068,7 +2068,7 @@ async function presenceWrite(myKey) {
   try {
     await fetch(FB_URL + '/presence/' + myKey + '.json', {
       method: 'PUT',
-      body: JSON.stringify({ ts: Date.now() })
+      body: JSON.stringify({ ts: Date.now(), peerId: MY_ID })
     });
   } catch(e) {}
 }
@@ -4342,6 +4342,7 @@ function _setupRemoteIdPoll(bravoPollKey) {
 }
 
 let _unavailIdRetries = 0;
+let _peerDestroyPending = false;
 function startPeer() {
   // Guard: PeerJS CDN may still be loading on slow mobile connections
   if (typeof Peer === 'undefined') {
@@ -4349,6 +4350,7 @@ function startPeer() {
     setTimeout(startPeer, 500);
     return;
   }
+  _peerDestroyPending = false;
   // Destroy any existing peer before creating a new one.
   // Without this the old peer's event handlers (especially 'disconnected' → peer.reconnect())
   // keep firing against the replaced reference, causing a permanent reconnect loop.
@@ -4410,7 +4412,7 @@ function startPeer() {
   });
 
   peer.on('disconnected', () => {
-    if (!peer || peer.destroyed) return;  // intentional destroy — do not reconnect
+    if (!peer || peer.destroyed || _peerDestroyPending) return;  // intentional destroy — do not reconnect
     entry('Signalling server disconnected — reconnecting…', 'sys');
     saveRecordingIfActive();
     peer.reconnect();
@@ -4436,15 +4438,29 @@ function startPeer() {
       // with the SAME ID so REMOTE_ID on the other side stays valid. Do NOT change MY_ID.
       // Exponential backoff: 10s, 20s, 40s, capped at 60s — hammering resets the server timer.
       _unavailIdRetries = (_unavailIdRetries || 0) + 1;
+      if (_unavailIdRetries > 3) {
+        // Ghost registration isn't clearing — fall back to a suffixed ID
+        // (mirrors BRAVO). presenceWrite publishes the new peerId so BRAVO
+        // can pick it up via Firebase and redial.
+        const _code = MY_ID.replace(/^alpha-/, '').replace(/-[0-9a-f]{4}$/, '');
+        MY_ID = 'alpha-' + _code + '-' + Math.random().toString(16).slice(2, 6);
+        entry('ID still taken after ' + _unavailIdRetries + ' attempts — switching to ' + MY_ID, 'sys');
+        _unavailIdRetries = 0;
+        _peerDestroyPending = true;
+        peer.destroy();
+        setTimeout(startPeer, 500);
+        return;
+      }
       const _unavailDelay = Math.min(10000 * Math.pow(2, _unavailIdRetries - 1), 60000);
       entry('ID taken — retrying same ID in ' + Math.round(_unavailDelay/1000) + 's (attempt ' + _unavailIdRetries + ')…', 'sys');
+      _peerDestroyPending = true;
       peer.destroy();
       setTimeout(startPeer, _unavailDelay);
       return;
     }
     // network / server-error / socket-error / socket-closed
     entry('Retrying in 6s…', 'sys');
-    retryTimer = setTimeout(() => { peer.destroy(); startPeer(); }, 6000);
+    retryTimer = setTimeout(() => { _peerDestroyPending = true; peer.destroy(); startPeer(); }, 6000);
   });
 }
 
