@@ -2771,6 +2771,26 @@ function linkify(text) {
 const HISTORY_KEY = () => 'bravo_chat_' + (MY_ID ? MY_ID.replace(/-[0-9a-f]{4}$/, '') : 'unknown');
 const HISTORY_MAX = 200;
 
+function saveSpeechDraft() {
+  try {
+    const box = document.getElementById('speechEditBox');
+    if (!box) return;
+    localStorage.setItem('bravo_speech_draft', box.value || '');
+  } catch(e) {}
+}
+
+function restoreSpeechDraft() {
+  try {
+    const draft = localStorage.getItem('bravo_speech_draft');
+    if (!draft) return;
+    const box = document.getElementById('speechEditBox');
+    if (!box) return;
+    box.value = draft;
+    updateSpeechSendBtn();
+    box.scrollTop = box.scrollHeight;
+  } catch(e) {}
+}
+
 function saveMessage(text, mine) {
   try {
     const key = HISTORY_KEY();
@@ -4708,6 +4728,7 @@ function sendVideoState() {
 function markLinked() {
   if (linked) return;
   linked = true;
+  restoreSpeechDraft();
   clearTimeout(retryTimer);  // cancel any pending retry/watchdog
   clearTimeout(dropTimer);   // cancel onDrop grace-period before reconnect screen shows
   // If the reconnect countdown is already running, cancel it and hide the overlay
@@ -4867,6 +4888,7 @@ function exportSysLog() {
 
 function leaveSession() {
   leftPermanently = true;
+  saveSpeechDraft();
   // Notify remote peer before disconnecting
   try { dcSend({ __control: 'leave' }); } catch(e) {}
   // Longer delay over HTTPS/relayed WebRTC — DC message must transmit before peer tears down
@@ -4902,6 +4924,7 @@ function _doLeave() {
 }
 
 function handleRemoteLeave() {
+  saveSpeechDraft();
   // If a refresh-reload is in progress on either side, a 'leave' signal can arrive
   // spuriously (e.g. beforeunload on a stale connection that hadn't yet seen peerRefreshing).
   // Treat it as a refresh instead of a permanent leave.
@@ -4933,6 +4956,7 @@ function handleRemoteLeave() {
 }
 
 function onDrop() {
+  saveSpeechDraft();
   clearTimeout(retryTimer);
   if (call && call._iceDropTimer) { clearTimeout(call._iceDropTimer); call._iceDropTimer = null; }
   saveRecordingIfActive();
@@ -5940,6 +5964,7 @@ document.addEventListener('visibilitychange', () => {
 });
 
 window.addEventListener('beforeunload', () => {
+  saveSpeechDraft();
   // Notify remote that this side is leaving — but NOT during a refresh-reload,
   // otherwise the remote wrongly shows the leave screen instead of reconnecting.
   if (!leftPermanently && !peerRefreshing) {
