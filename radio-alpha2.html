@@ -5673,17 +5673,20 @@ async function toggleSysAudio() {
       return;
     }
     try {
-      // Request audio-only capture (no screen video to authorise).
-      // Chrome: user must tick "Share tab audio" or "Share system audio".
+      // video:false-only audio capture throws NotSupportedError on Chrome for
+      // Windows/ChromeOS. Request video too (so the picker shows tab/window/
+      // screen options with "share audio"), then immediately stop the video
+      // track — we only want the audio.
       // Firefox: not supported — getDisplayMedia won't surface audio tracks.
       _sysAudioStream = await navigator.mediaDevices.getDisplayMedia({
-        video: false,
+        video: true,
         audio: {
           echoCancellation: false,
           noiseSuppression: false,
           autoGainControl:  false
         }
       });
+      _sysAudioStream.getVideoTracks().forEach(t => { t.stop(); _sysAudioStream.removeTrack(t); });
     } catch(e) {
       entry('Sys audio capture ' + (e.name === 'NotAllowedError' ? 'cancelled/denied' : 'error: ' + e.message), 'err');
       sysAudioActive = false;
