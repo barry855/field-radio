@@ -785,6 +785,7 @@
   }
   #speechEditBox {
     flex: 1; min-height: 80px; width: 100%; box-sizing: border-box;
+    overflow-y: auto;
     background: transparent; border: 1px solid var(--border);
     color: var(--text); padding: 7px 10px; border-radius: 4px;
     font-family: 'Share Tech Mono', monospace; font-size: 14px;
@@ -3898,6 +3899,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const box = document.getElementById('speechEditBox');
   if (box) {
     box.addEventListener('input',  updateSpeechSendBtn);
+    box.addEventListener('input',  () => { box.scrollTop = box.scrollHeight; });
     box.addEventListener('scroll', _positionFloatSend);
     box.addEventListener('focus',  _positionFloatSend);
   }
