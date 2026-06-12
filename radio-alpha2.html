@@ -4156,6 +4156,17 @@ function _restoreMiniChatAfterInput() {
   box.addEventListener('blur',  _restoreMiniChatAfterInput);
 })();
 
+// Force the camera track to crop to 16:9, regardless of native sensor AR
+// (e.g. Windows webcams often default to 5:4/4:3). applyConstraints often
+// succeeds in triggering a hardware/driver crop even when getUserMedia's
+// initial "ideal" aspectRatio hint was ignored. Best-effort; ignore failures.
+async function _forceAspectRatio169(track) {
+  if (!track || track.kind !== 'video') return;
+  try {
+    await track.applyConstraints({ aspectRatio: { ideal: 16/9 } });
+  } catch(e) {}
+}
+
 // ── Media-only init: used when peer is already pre-registered ────────────────
 function initMediaOnly() {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -4172,10 +4183,11 @@ function initMediaOnly() {
     return;
   }
   const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
-  const videoConstraint = isMobile ? { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } : { width: { ideal: 1920 }, height: { ideal: 1080 } };
+  const videoConstraint = isMobile ? { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16/9 } } : { width: { ideal: 1920 }, height: { ideal: 1080 }, aspectRatio: { ideal: 16/9 } };
 
   function applyAndDial(stream) {
     localStream = stream;
+    _forceAspectRatio169(stream.getVideoTracks()[0]);
     setupMicGainNode(stream);
     document.getElementById('localVideo').srcObject = stream;
     entry('Mic + camera ready', 'ok');
@@ -4262,10 +4274,11 @@ function init() {
   // Acquire mic + camera — facingMode only used as a soft hint on mobile,
   // omitted on desktop to avoid OverconstrainedError on macOS.
   const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
-  const videoConstraint = isMobile ? { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } : { width: { ideal: 1920 }, height: { ideal: 1080 } };
+  const videoConstraint = isMobile ? { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16/9 } } : { width: { ideal: 1920 }, height: { ideal: 1080 }, aspectRatio: { ideal: 16/9 } };
 
   function applyStreamFlags(stream) {
     localStream = stream;
+    _forceAspectRatio169(stream.getVideoTracks()[0]);
     setupMicGainNode(stream);
     document.getElementById('localVideo').srcObject = stream;
     entry('Mic + camera ready', 'ok');
@@ -5487,8 +5500,9 @@ async function stopScreenShare() {
   let restoreTrack = cameraTrack && cameraTrack.readyState !== 'ended' ? cameraTrack : null;
   if (!restoreTrack) {
     try {
-      const cam = await navigator.mediaDevices.getUserMedia({ video: { facingMode: currentFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+      const cam = await navigator.mediaDevices.getUserMedia({ video: { facingMode: currentFacingMode, width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16/9 } }, audio: false });
       restoreTrack = cam.getVideoTracks()[0];
+      await _forceAspectRatio169(restoreTrack);
     } catch(e) { entry('Could not restore camera: ' + e.message, 'err'); }
   }
 
@@ -5897,23 +5911,24 @@ async function flipCamera() {
     // Try with exact facingMode first
     try {
       return await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { exact: mode }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false
+        video: { facingMode: { exact: mode }, width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16/9 } }, audio: false
       });
     } catch(e) {}
     // Try without exact
     try {
       return await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: mode, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false
+        video: { facingMode: mode, width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16/9 } }, audio: false
       });
     } catch(e) {}
     // Last resort — any camera
     await new Promise(r => setTimeout(r, 400));
-    return await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+    return await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16/9 } }, audio: false });
   }
 
   try {
     const newStream = await tryAcquire(targetMode);
     const newTrack  = newStream.getVideoTracks()[0];
+    await _forceAspectRatio169(newTrack);
     localStream.addTrack(newTrack);
     currentFacingMode = targetMode;
 
@@ -6054,9 +6069,10 @@ async function selectCamera(deviceId) {
 
   try {
     const newStream = await navigator.mediaDevices.getUserMedia({
-      video: { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false
+      video: { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16/9 } }, audio: false
     });
     const newTrack = newStream.getVideoTracks()[0];
+    await _forceAspectRatio169(newTrack);
     localStream.addTrack(newTrack);
 
     const _lv  = document.getElementById('localVideo');
