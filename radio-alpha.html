@@ -543,8 +543,8 @@
     letter-spacing: 2px;
   }
   #recChatBtn:not(.recording) {
-    color: #ff8c00; border-color: #ff8c00;
-    letter-spacing: 2px;
+    background: #000; color: #fff; border-color: #000;
+    font-weight: 700; letter-spacing: 2px;
   }
   .duplex-bar {
     flex: 0 0 auto; height: 42px; padding: 0 16px;
@@ -648,9 +648,9 @@
   .leave-btn:hover { background: rgba(0,212,255,0.3); }
   .speech-top-btn.leave-style { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.15); }
   .speech-top-btn.leave-style:hover { background: rgba(0,212,255,0.3); }
-  .speech-top-btn.rec-chat-btn { border-color: #3a8fff; color: #3a8fff; }
-  .speech-top-btn.rec-chat-btn:hover { border-color: #6aafff; color: #6aafff; background: rgba(58,143,255,0.15); }
-  .speech-top-btn.rec-chat-btn.recording { border-color: #ff4444; color: #ff4444; background: rgba(255,68,68,0.15); }
+  .speech-top-btn.rec-chat-btn { border-color: #000; color: #fff; background: #000; }
+  .speech-top-btn.rec-chat-btn:hover { border-color: #333; background: #222; color: #fff; }
+  .speech-top-btn.rec-chat-btn.recording { border-color: #ff8c00; color: #ff8c00; background: rgba(255,140,0,0.15); animation: rec-blink 1.2s ease-in-out infinite; }
   .user-left-notice {
     display: none; align-items: center; gap: 8px;
     font-family: 'Share Tech Mono', monospace; font-size: 11px;
@@ -3666,7 +3666,8 @@ function toggleSpeechPanel() {
     if (btn)   { btn.classList.add('active'); btn.textContent = 'SHOW CHAT'; }
     updateSpeechSendBtn();
     // Give focus to the input box so the keyboard appears immediately
-    setTimeout(() => { const box = document.getElementById('speechEditBox'); if (box) box.focus(); _positionFloatSend(); }, 80);
+    setTimeout(() => { const box = document.getElementById('speechEditBox'); if (box) { box.focus(); } _positionFloatSend(); }, 80);
+    setTimeout(() => { const box = document.getElementById('speechEditBox'); if (box && document.activeElement !== box) box.focus(); }, 300);
     setChatBtnsDisabled(true);
   } else {
     stopListening();
@@ -4156,8 +4157,39 @@ function _restoreMiniChatAfterInput() {
   box.addEventListener('blur',  _restoreMiniChatAfterInput);
 })();
 
+// Force the camera track to crop to 16:9, regardless of native sensor AR
+// (e.g. Windows webcams often default to 5:4/4:3). applyConstraints often
+// succeeds in triggering a hardware/driver crop even when getUserMedia's
+// initial "ideal" aspectRatio hint was ignored. Best-effort; ignore failures.
+async function _forceAspectRatio169(track) {
+  if (!track || track.kind !== 'video') return;
+  try {
+    await track.applyConstraints({ aspectRatio: { ideal: 16/9 } });
+  } catch(e) {}
+}
+
 // ── Media-only init: used when peer is already pre-registered ────────────────
-function initMediaOnly() {
+// ── Saved camera preference (persists across sessions, by device label) ───
+// deviceIds can change between browser sessions but labels are stable for the
+// same physical camera. If the saved camera (e.g. a USB cam) is unplugged,
+// the label won't be found and we silently fall back to the default camera.
+async function _getSavedCameraDeviceId() {
+  let savedLabel = '';
+  try { savedLabel = localStorage.getItem('alpha_camera_label') || ''; } catch(e) {}
+  if (!savedLabel) return null;
+  try {
+    const all = await navigator.mediaDevices.enumerateDevices();
+    const match = all.find(d => d.kind === 'videoinput' && d.label === savedLabel);
+    return match ? match.deviceId : null;
+  } catch(e) { return null; }
+}
+
+function _saveCameraLabel(label) {
+  if (!label) return;
+  try { localStorage.setItem('alpha_camera_label', label); } catch(e) {}
+}
+
+async function initMediaOnly() {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     entry('Mic/camera API not available — data channel only', 'sys');
     try {
@@ -4173,9 +4205,12 @@ function initMediaOnly() {
   }
   const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
   const videoConstraint = isMobile ? { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16/9 } } : { width: { ideal: 1920 }, height: { ideal: 1080 }, aspectRatio: { ideal: 16/9 } };
+  const _savedCamId = await _getSavedCameraDeviceId();
+  if (_savedCamId) videoConstraint.deviceId = { exact: _savedCamId };
 
   function applyAndDial(stream) {
     localStream = stream;
+    _forceAspectRatio169(stream.getVideoTracks()[0]);
     setupMicGainNode(stream);
     document.getElementById('localVideo').srcObject = stream;
     entry('Mic + camera ready', 'ok');
@@ -4207,6 +4242,32 @@ function initMediaOnly() {
   })
   .then(applyAndDial)
   .catch(e => {
+    if (_savedCamId && (e.name === 'OverconstrainedError' || e.name === 'NotFoundError')) {
+      entry('Saved camera unavailable — using default camera', 'sys');
+      const fallbackConstraint = Object.assign({}, videoConstraint);
+      delete fallbackConstraint.deviceId;
+      navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
+        video: fallbackConstraint
+      }).then(applyAndDial).catch(e2 => {
+        entry('Media error (' + e2.name + ') — falling back to audio-only', 'sys');
+        navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false } })
+          .then(applyAndDial)
+          .catch(e3 => {
+            entry('Mic also failed (' + e3.name + ') — data channel only', 'err');
+            try {
+              const sCtx = new (window.AudioContext || window.webkitAudioContext)();
+              const sDest = sCtx.createMediaStreamDestination();
+              const sOsc = sCtx.createOscillator();
+              const sGain = sCtx.createGain(); sGain.gain.value = 0;
+              sOsc.connect(sGain); sGain.connect(sDest); sOsc.start();
+              localStream = sDest.stream;
+            } catch(ex) { localStream = new MediaStream(); }
+            if (!linked) dial();
+          });
+      });
+      return;
+    }
     entry('Media error (' + e.name + ') — falling back to audio-only', 'sys');
     navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false } })
       .then(applyAndDial)
@@ -4225,7 +4286,7 @@ function initMediaOnly() {
   });
 }
 
-function init() {
+async function init() {
   if (location.protocol !== 'https:' && location.protocol !== 'file:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
     entry('ERROR: HTTPS required for mic access', 'err');
     entry('Please open this page over HTTPS', 'err');
@@ -4263,9 +4324,12 @@ function init() {
   // omitted on desktop to avoid OverconstrainedError on macOS.
   const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
   const videoConstraint = isMobile ? { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16/9 } } : { width: { ideal: 1920 }, height: { ideal: 1080 }, aspectRatio: { ideal: 16/9 } };
+  const _savedCamId = await _getSavedCameraDeviceId();
+  if (_savedCamId) videoConstraint.deviceId = { exact: _savedCamId };
 
   function applyStreamFlags(stream) {
     localStream = stream;
+    _forceAspectRatio169(stream.getVideoTracks()[0]);
     setupMicGainNode(stream);
     document.getElementById('localVideo').srcObject = stream;
     entry('Mic + camera ready', 'ok');
@@ -4335,6 +4399,16 @@ function init() {
   })
   .then(applyStreamFlags)
   .catch(e => {
+    if (_savedCamId && (e.name === 'OverconstrainedError' || e.name === 'NotFoundError')) {
+      entry('Saved camera unavailable — using default camera', 'sys');
+      const fallbackConstraint = Object.assign({}, videoConstraint);
+      delete fallbackConstraint.deviceId;
+      navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
+        video: fallbackConstraint
+      }).then(applyStreamFlags).catch(handleMediaError);
+      return;
+    }
     // Camera failed (OverconstrainedError, NotFoundError, NotReadableError etc.) — retry audio-only
     if (e.name !== 'NotAllowedError' && e.name !== 'PermissionDeniedError' && e.name !== 'SecurityError') {
       entry('Camera unavailable (' + e.name + ') — retrying audio-only', 'sys');
@@ -4393,7 +4467,7 @@ function startPeer() {
 
   peer = new Peer(MY_ID, {
     host: '0.peerjs.com', port: 443, path: '/', secure: true, pingInterval: 5000,
-    config: { iceServers: ICE_SERVERS }
+    config: { iceServers: ICE_SERVERS, iceCandidatePoolSize: 10 }
   });
 
   peer.on('open', () => {
@@ -4845,6 +4919,21 @@ function attachCall(c) {
         entry('ICE connected — marking linked', 'sys');
         markLinked();
       }
+      // Relay fallback: if ICE stays in 'checking' for >8s, force TURN-only
+      if (pc.iceConnectionState === 'checking') {
+        clearTimeout(c._iceRelayTimer);
+        c._iceRelayTimer = setTimeout(() => {
+          if (pc.iceConnectionState === 'checking' && call === c) {
+            entry('ICE checking timeout — forcing relay-only (TURN) fallback', 'sys');
+            try {
+              pc.setConfiguration({ iceServers: ICE_SERVERS, iceTransportPolicy: 'relay', iceCandidatePoolSize: 10 });
+              pc.restartIce();
+            } catch(e2) { entry('Relay fallback failed: ' + e2.message, 'sys'); }
+          }
+        }, 8000);
+      } else {
+        clearTimeout(c._iceRelayTimer);
+      }
       if (pc.iceConnectionState === 'failed') {
         entry('DIAG: ICE FAILED — attempting ICE restart', 'err');
         try { pc.restartIce(); } catch(e2) { entry('ICE restart unavailable: ' + e2.message, 'sys'); }
@@ -4866,8 +4955,25 @@ function attachCall(c) {
     pc.addEventListener('connectionstatechange', () => {
       entry('DIAG: connection state → ' + pc.connectionState, 'sys');
       if ((pc.connectionState === 'failed' || pc.connectionState === 'disconnected') && linked && call === c) {
-        entry('Connection state ' + pc.connectionState + ' — dropping call', 'err');
-        onDrop();
+        // Attempt ICE restart before giving up — give it 7s to recover
+        if (!c._connFailRestartPending) {
+          c._connFailRestartPending = true;
+          entry('Connection state ' + pc.connectionState + ' — attempting ICE restart before drop', 'sys');
+          try { pc.restartIce(); } catch(e2) { entry('ICE restart unavailable: ' + e2.message, 'sys'); }
+          c._connFailDropTimer = setTimeout(() => {
+            if (call === c && pc.connectionState !== 'connected' && pc.connectionState !== 'completed') {
+              entry('Connection did not recover after ICE restart — dropping call', 'err');
+              onDrop();
+            } else {
+              c._connFailRestartPending = false;
+            }
+          }, 7000);
+        }
+      }
+      if ((pc.connectionState === 'connected' || pc.connectionState === 'completed') && c._connFailRestartPending) {
+        clearTimeout(c._connFailDropTimer);
+        c._connFailRestartPending = false;
+        entry('Connection recovered after ICE restart', 'ok');
       }
     });
     pc.addEventListener('signalingstatechange', () => {
@@ -4875,6 +4981,15 @@ function attachCall(c) {
     });
     pc.addEventListener('track', ev => {
       entry('DIAG: track received kind=' + ev.track.kind, 'sys');
+      // Diagnostic: detect if the incoming track is actually one of our own
+      // outgoing tracks (would indicate a media loopback).
+      if (localStream) {
+        const ownIds = localStream.getTracks().map(t => t.id);
+        if (ownIds.includes(ev.track.id)) {
+          entry('DIAG: !!! INCOMING TRACK ID MATCHES LOCAL TRACK — LOOPBACK DETECTED (kind=' + ev.track.kind + ')', 'err');
+          return;
+        }
+      }
       // Always attempt audio play on any incoming track — Android often delivers
       // tracks without ev.streams populated, so we can't gate on that.
       scheduleRemoteAudioPlay();
@@ -5489,6 +5604,7 @@ async function stopScreenShare() {
     try {
       const cam = await navigator.mediaDevices.getUserMedia({ video: { facingMode: currentFacingMode, width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16/9 } }, audio: false });
       restoreTrack = cam.getVideoTracks()[0];
+      await _forceAspectRatio169(restoreTrack);
     } catch(e) { entry('Could not restore camera: ' + e.message, 'err'); }
   }
 
@@ -5914,6 +6030,7 @@ async function flipCamera() {
   try {
     const newStream = await tryAcquire(targetMode);
     const newTrack  = newStream.getVideoTracks()[0];
+    await _forceAspectRatio169(newTrack);
     localStream.addTrack(newTrack);
     currentFacingMode = targetMode;
 
@@ -6057,6 +6174,7 @@ async function selectCamera(deviceId) {
       video: { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16/9 } }, audio: false
     });
     const newTrack = newStream.getVideoTracks()[0];
+    await _forceAspectRatio169(newTrack);
     localStream.addTrack(newTrack);
 
     const _lv  = document.getElementById('localVideo');
@@ -6072,6 +6190,7 @@ async function selectCamera(deviceId) {
     }
 
     const label = newTrack.label || deviceId;
+    _saveCameraLabel(label);
     entry('Camera switched to: ' + label, 'ok');
   } catch(e) {
     entry('Camera switch failed: ' + e.message, 'err');
@@ -6209,36 +6328,60 @@ function applyMicGain(val) {
   });
   if (_micGainNode) {
     _micGainNode.gain.setTargetAtTime(v, _micGainCtx.currentTime, 0.01);
+  } else if (v !== 1 && localStream) {
+    // Lazily engage the WebAudio gain graph only when a non-unity gain is
+    // actually requested — keeps native echo cancellation intact for the
+    // default (1x) case.
+    _engageMicGainGraph(localStream, v);
   }
   try { localStorage.setItem('alpha_mic_gain', String(v)); } catch(e) {}
 }
 
-function setupMicGainNode(stream) {
+// Wire the mic through a WebAudio gain node and swap the resulting track
+// onto localStream (and the live call sender, if any). Only called when a
+// non-default gain value is in effect.
+function _engageMicGainGraph(stream, gainValue) {
   try {
     if (!_micGainCtx) _micGainCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const src = _micGainCtx.createMediaStreamSource(stream);
+    const rawTrack = realAudioTrack || stream.getAudioTracks()[0];
+    if (!rawTrack) return;
+    const src = _micGainCtx.createMediaStreamSource(new MediaStream([rawTrack]));
     _micGainNode = _micGainCtx.createGain();
     _micGainDest = _micGainCtx.createMediaStreamDestination();
-    const savedGain = (() => { const r = localStorage.getItem('alpha_mic_gain'); return r !== null ? parseFloat(r) : 1; })();
-    _micGainNode.gain.value = isFinite(savedGain) ? savedGain : 1;
+    _micGainNode.gain.value = isFinite(gainValue) ? gainValue : 1;
     src.connect(_micGainNode);
     _micGainNode.connect(_micGainDest);
-    // Replace audio track in localStream with the gained version
     const gainedAudio = _micGainDest.stream.getAudioTracks()[0];
     if (gainedAudio) {
       const oldAudio = stream.getAudioTracks()[0];
       if (oldAudio) stream.removeTrack(oldAudio);
       stream.addTrack(gainedAudio);
+      try {
+        const pc = call && (call.peerConnection || call._pc);
+        const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
+        if (sender) sender.replaceTrack(gainedAudio).catch(() => {});
+      } catch(e) {}
     }
+  } catch(e) { console.warn('Mic gain engage failed:', e); }
+}
+
+function setupMicGainNode(stream) {
+  try {
+    const savedGain = (() => { const r = localStorage.getItem('alpha_mic_gain'); return r !== null ? parseFloat(r) : 1; })();
     // Update slider & label to saved value (primary + chat-tab copy)
     const slider = document.getElementById('micGainSlider');
     const lbl    = document.getElementById('micGainVal');
-    if (slider) slider.value = _micGainNode.gain.value;
-    if (lbl)    lbl.textContent = _micGainNode.gain.value.toFixed(2) + '×';
+    if (slider && isFinite(savedGain)) { slider.value = savedGain; }
+    if (lbl    && isFinite(savedGain)) { lbl.textContent = savedGain.toFixed(2) + '×'; }
     const sliderChat = document.getElementById('micGainSliderChat');
     const lblChat    = document.getElementById('micGainValChat');
-    if (sliderChat) sliderChat.value = _micGainNode.gain.value;
-    if (lblChat)    lblChat.textContent = _micGainNode.gain.value.toFixed(2) + '×';
+    if (sliderChat && isFinite(savedGain)) { sliderChat.value = savedGain; }
+    if (lblChat    && isFinite(savedGain)) { lblChat.textContent = savedGain.toFixed(2) + '×'; }
+    // Only route the mic through WebAudio (and thereby bypass/alter native
+    // echo cancellation on some browsers) if a non-default gain is saved.
+    if (isFinite(savedGain) && savedGain !== 1) {
+      _engageMicGainGraph(stream, savedGain);
+    }
   } catch(e) { console.warn('Mic gain setup failed:', e); }
 }
 
