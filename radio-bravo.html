@@ -576,8 +576,8 @@
     letter-spacing: 2px;
   }
   #recChatBtn:not(.recording) {
-    color: #ff8c00; border-color: #ff8c00;
-    letter-spacing: 2px;
+    background: #000; color: #fff; border-color: #000;
+    font-weight: 700; letter-spacing: 2px;
   }
     flex: 0 0 auto; height: 42px; padding: 0 16px;
     border-radius: 6px; border: 2px solid #1a2a1a;
@@ -682,9 +682,9 @@
   .leave-btn:hover { background: rgba(0,212,255,0.3); }
   .speech-top-btn.leave-style { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.15); }
   .speech-top-btn.leave-style:hover { background: rgba(0,212,255,0.3); }
-  .speech-top-btn.rec-chat-btn { border-color: #3a8fff; color: #3a8fff; }
-  .speech-top-btn.rec-chat-btn:hover { border-color: #6aafff; color: #6aafff; background: rgba(58,143,255,0.15); }
-  .speech-top-btn.rec-chat-btn.recording { border-color: #ff4444; color: #ff4444; background: rgba(255,68,68,0.15); }
+  .speech-top-btn.rec-chat-btn { border-color: #000; color: #fff; background: #000; }
+  .speech-top-btn.rec-chat-btn:hover { border-color: #333; background: #222; color: #fff; }
+  .speech-top-btn.rec-chat-btn.recording { border-color: #ff8c00; color: #ff8c00; background: rgba(255,140,0,0.15); animation: rec-blink 1.2s ease-in-out infinite; }
   .user-left-notice {
     display: none; align-items: center; gap: 8px;
     font-family: 'Share Tech Mono', monospace; font-size: 11px;
@@ -3669,7 +3669,8 @@ function toggleSpeechPanel() {
     if (btn)   { btn.classList.add('active'); btn.textContent = 'SHOW CHAT'; }
     updateSpeechSendBtn();
     // Give focus to the input box so the keyboard appears immediately
-    setTimeout(() => { const box = document.getElementById('speechEditBox'); if (box) box.focus(); _positionFloatSend(); }, 80);
+    setTimeout(() => { const box = document.getElementById('speechEditBox'); if (box) { box.focus(); } _positionFloatSend(); }, 80);
+    setTimeout(() => { const box = document.getElementById('speechEditBox'); if (box && document.activeElement !== box) box.focus(); }, 300);
     setChatBtnsDisabled(true);
   } else {
     stopListening();
