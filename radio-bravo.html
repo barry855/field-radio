@@ -4164,7 +4164,7 @@ function initMediaOnly() {
     return;
   }
   const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
-  const videoConstraint = isMobile ? { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } : { width: { ideal: 1920 }, height: { ideal: 1080 } };
+  const videoConstraint = isMobile ? { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16/9 } } : { width: { ideal: 1920 }, height: { ideal: 1080 }, aspectRatio: { ideal: 16/9 } };
 
   function applyAndDial(stream) {
     localStream = stream;
@@ -4253,7 +4253,7 @@ function init() {
   // Acquire mic + camera — facingMode only used as a soft hint on mobile,
   // omitted on desktop to avoid OverconstrainedError on macOS.
   const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
-  const videoConstraint = isMobile ? { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } : { width: { ideal: 1920 }, height: { ideal: 1080 } };
+  const videoConstraint = isMobile ? { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16/9 } } : { width: { ideal: 1920 }, height: { ideal: 1080 }, aspectRatio: { ideal: 16/9 } };
 
   function applyStreamFlags(stream) {
     localStream = stream;
@@ -5398,7 +5398,7 @@ async function stopScreenShare() {
   let restoreTrack = cameraTrack && cameraTrack.readyState !== 'ended' ? cameraTrack : null;
   if (!restoreTrack) {
     try {
-      const cam = await navigator.mediaDevices.getUserMedia({ video: { facingMode: currentFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+      const cam = await navigator.mediaDevices.getUserMedia({ video: { facingMode: currentFacingMode, width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16/9 } }, audio: false });
       restoreTrack = cam.getVideoTracks()[0];
     } catch(e) { entry('Could not restore camera: ' + e.message, 'err'); }
   }
@@ -5729,18 +5729,18 @@ async function flipCamera() {
     // Try with exact facingMode first
     try {
       return await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { exact: mode }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false
+        video: { facingMode: { exact: mode }, width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16/9 } }, audio: false
       });
     } catch(e) {}
     // Try without exact
     try {
       return await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: mode, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false
+        video: { facingMode: mode, width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16/9 } }, audio: false
       });
     } catch(e) {}
     // Last resort — any camera
     await new Promise(r => setTimeout(r, 400));
-    return await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+    return await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16/9 } }, audio: false });
   }
 
   try {
@@ -5882,7 +5882,7 @@ async function selectCamera(deviceId) {
 
   try {
     const newStream = await navigator.mediaDevices.getUserMedia({
-      video: { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false
+      video: { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16/9 } }, audio: false
     });
     const newTrack = newStream.getVideoTracks()[0];
     localStream.addTrack(newTrack);
