@@ -6542,30 +6542,71 @@ let _ttsResumeTimer = null;
 function _ttsClearResumeTimer() {
   if (_ttsResumeTimer) { clearInterval(_ttsResumeTimer); _ttsResumeTimer = null; }
 }
+// Split long text into TTS-safe chunks. Android/Chrome WebView SpeechSynthesis
+// silently fails or truncates utterances much beyond ~200 chars, so we split
+// on sentence boundaries (falling back to hard word-wrap) at ~180 chars.
+function _ttsChunkText(text, maxLen) {
+  maxLen = maxLen || 180;
+  const chunks = [];
+  const sentences = text.match(/[^.!?\n]+[.!?\n]*\s*/g) || [text];
+  let cur = '';
+  for (let sent of sentences) {
+    if (sent.length > maxLen) {
+      if (cur) { chunks.push(cur); cur = ''; }
+      const words = sent.split(/\s+/);
+      let line = '';
+      for (const w of words) {
+        if ((line + ' ' + w).trim().length > maxLen) {
+          if (line) chunks.push(line.trim());
+          line = w;
+        } else {
+          line = (line + ' ' + w).trim();
+        }
+      }
+      if (line) chunks.push(line);
+      continue;
+    }
+    if ((cur + sent).length > maxLen) {
+      if (cur) chunks.push(cur);
+      cur = sent;
+    } else {
+      cur += sent;
+    }
+  }
+  if (cur.trim()) chunks.push(cur.trim());
+  return chunks.length ? chunks : [text];
+}
+
 function ttsSpeak(text, lang) {
   if (!_ttsEnabled || !text || !window.speechSynthesis) return;
   const ss = window.speechSynthesis;
   _ttsClearResumeTimer();
   ss.cancel();
 
-  function _doSpeak() {
-    const utter = new SpeechSynthesisUtterance(text);
-    // Use the explicitly passed lang, or our chosen language (_myLang), or browser default.
-    // Never use speechLangSelect — that's the speech recognition input language, not TTS output.
-    utter.lang = lang || _myLang || (navigator.language || 'en');
+  const _ttsLang = lang || _myLang || (navigator.language || 'en');
+  const _chunks = _ttsChunkText(text);
+  let _idx = 0;
+
+  function _speakNext() {
+    if (_idx >= _chunks.length) { _ttsClearResumeTimer(); return; }
+    const utter = new SpeechSynthesisUtterance(_chunks[_idx]);
+    utter.lang = _ttsLang;
     if (_ttsVoice) utter.voice = _ttsVoice;
-    utter.onend = utter.onerror = _ttsClearResumeTimer;
+    _idx++;
+    utter.onend = utter.onerror = () => _speakNext();
     ss.speak(utter);
-    // Chrome pauses synthesis silently between utterances — keep pinging resume().
+  }
+
+  function _doSpeak() {
+    _speakNext();
     let _ttsWatchdog = 0;
     _ttsResumeTimer = setInterval(() => {
       _ttsWatchdog++;
-      if (_ttsWatchdog > 120) { _ttsClearResumeTimer(); return; } // 30s hard cap
+      if (_ttsWatchdog > 480) { _ttsClearResumeTimer(); return; } // 2min hard cap
       ss.resume();
     }, 250);
   }
 
-  // Brief delay after cancel() so Chrome doesn't drop the utterance.
   setTimeout(_doSpeak, 150);
 }
 
