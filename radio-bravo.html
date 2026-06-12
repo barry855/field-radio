@@ -1631,7 +1631,7 @@
           <span class="sbr-label">CHAT:</span>
           <button class="speech-top-btn" onclick="saveChatToFile()" id="saveChatBtn" title="Save chat as HTML">💾 SAVE</button>
           <button class="speech-top-btn" onclick="restoreChat()" id="restoreChatBtn" title="Restore previous session chat">↩ RESTORE</button>
-          <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR</button>
+          <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';if(window.speechSynthesis)speechSynthesis.cancel();_ttsClearResumeTimer();dcSend({__control:'clearChat'});entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR</button>
           <button class="speech-top-btn" id="findChatBtn" title="Find in chat">🔍 FIND</button>
         </div>
         <div id="translateBar">
@@ -1905,24 +1905,44 @@ function playTone(name) {
 }
 let _raPlayTimer = null;
 function scheduleRemoteAudioPlay() {
-  // Debounce: wait for srcObject assignments to settle before calling play(),
-  // so rapid track events don't cause "interrupted by new load" errors.
+  // Debounce: wait for srcObject assignments to settle before calling play().
+  // 600ms on Android — the stream event arrives after track events, so srcObject
+  // may not be set until after the track handler fires.
+  entry('DIAG: scheduleRemoteAudioPlay called', 'sys');
   clearTimeout(_raPlayTimer);
   _raPlayTimer = setTimeout(() => {
     const ra = document.getElementById('remoteAudio');
-    // Always call play() — on Android Chrome, autoplay-blocked elements report
-    // paused=false even though no audio is output, so the paused guard silently
-    // swallows the failure. play() on an already-playing element is harmless.
+    entry('DIAG: remoteAudio play attempt — srcObject=' + (ra && ra.srcObject ? 'set' : 'null') + ' paused=' + (ra ? ra.paused : 'n/a'), 'sys');
     if (ra && ra.srcObject) {
       ra.play().then(() => {
+        entry('DIAG: remoteAudio playing ok', 'sys');
         const btn = document.getElementById('audioUnlockBtn');
         if (btn) btn.style.display = 'none';
       }).catch(e => {
         entry('⚠ Remote audio blocked (' + e.name + ': ' + e.message + ') — tap the green button to hear audio', 'err');
         showAudioUnlockBtn();
       });
+    } else {
+      // srcObject not yet set — stream event hasn't fired yet. Retry once.
+      entry('DIAG: remoteAudio srcObject null at play time — retrying in 1s', 'sys');
+      _raPlayTimer = setTimeout(() => {
+        const ra2 = document.getElementById('remoteAudio');
+        entry('DIAG: remoteAudio retry — srcObject=' + (ra2 && ra2.srcObject ? 'set' : 'null'), 'sys');
+        if (ra2 && ra2.srcObject) {
+          ra2.play().then(() => {
+            entry('DIAG: remoteAudio playing ok (retry)', 'sys');
+            const btn = document.getElementById('audioUnlockBtn');
+            if (btn) btn.style.display = 'none';
+          }).catch(e => {
+            entry('⚠ Remote audio blocked (' + e.name + ': ' + e.message + ') — tap the green button to hear audio', 'err');
+            showAudioUnlockBtn();
+          });
+        } else {
+          entry('⚠ Remote audio: srcObject still null after retry — stream may not have arrived', 'err');
+        }
+      }, 1000);
     }
-  }, 100);
+  }, 600);
 }
 function ensureRemoteAudioPlaying() {
   scheduleRemoteAudioPlay();
@@ -4539,6 +4559,7 @@ function attachDataConn(dc) {
     if (f) {
       if (f.__control === 'video') { updateRemoteVideoState(f.enabled, f.hasTrack !== false); return; }
       if (f.__control === 'leave') { handleRemoteLeave(); return; }
+      if (f.__control === 'clearChat') { if (window.speechSynthesis) speechSynthesis.cancel(); _ttsClearResumeTimer(); clearHistory(); const ce=document.getElementById('chat'); if(ce) ce.innerHTML=''; entry('Remote cleared chat history','sys'); return; }
       if (f.__control === 'refresh') { entry('Remote refreshed — reloading…', 'sys'); peerRefreshing = true; try { sessionStorage.setItem('fieldRadioRefreshing', '1'); } catch(e) {} setTimeout(() => window.location.reload(), 400); return; }
       if (f.__file  === true)      { addMediaBubble(f.name, f.type, f.data, false); return; }
       if (f.__chunk === true)      { receiveChunk(f); return; }
@@ -5377,7 +5398,7 @@ async function stopScreenShare() {
   let restoreTrack = cameraTrack && cameraTrack.readyState !== 'ended' ? cameraTrack : null;
   if (!restoreTrack) {
     try {
-      const cam = await navigator.mediaDevices.getUserMedia({ video: { facingMode: currentFacingMode }, audio: false });
+      const cam = await navigator.mediaDevices.getUserMedia({ video: { facingMode: currentFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
       restoreTrack = cam.getVideoTracks()[0];
     } catch(e) { entry('Could not restore camera: ' + e.message, 'err'); }
   }
@@ -5708,18 +5729,18 @@ async function flipCamera() {
     // Try with exact facingMode first
     try {
       return await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { exact: mode } }, audio: false
+        video: { facingMode: { exact: mode }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false
       });
     } catch(e) {}
     // Try without exact
     try {
       return await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: mode }, audio: false
+        video: { facingMode: mode, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false
       });
     } catch(e) {}
     // Last resort — any camera
     await new Promise(r => setTimeout(r, 400));
-    return await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    return await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
   }
 
   try {
@@ -5861,7 +5882,7 @@ async function selectCamera(deviceId) {
 
   try {
     const newStream = await navigator.mediaDevices.getUserMedia({
-      video: { deviceId: { exact: deviceId } }, audio: false
+      video: { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false
     });
     const newTrack = newStream.getVideoTracks()[0];
     localStream.addTrack(newTrack);
