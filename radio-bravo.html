@@ -4424,7 +4424,7 @@ async function _refreshRemoteId() {
     if (!_code) return;
     const _r = await fetch(FB_URL + '/presence/alpha-' + _code + '.json');
     const _d = await _r.json();
-    if (_d && _d.peerId && _d.peerId !== REMOTE_ID) {
+    if (_d && _d.peerId && _d.peerId !== REMOTE_ID && _d.peerId !== MY_ID) {
       entry('ALPHA peer ID: ' + _d.peerId, 'sys');
       REMOTE_ID = _d.peerId;
     }
@@ -4435,6 +4435,11 @@ async function _refreshRemoteId() {
 function dial() {
   clearTimeout(retryTimer);
   if (linked || !localStream) return;
+  if (REMOTE_ID === MY_ID) {
+    entry('REMOTE_ID == MY_ID — refusing self-dial, refreshing…', 'err');
+    retryTimer = setTimeout(() => _refreshRemoteId().then(dial), 2000);
+    return;
+  }
   if (call) {
     try { call.off('close', onDrop); call.close(); } catch(e) {}
     call = null;
