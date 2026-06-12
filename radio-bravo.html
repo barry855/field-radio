@@ -4160,7 +4160,27 @@ async function _forceAspectRatio169(track) {
   } catch(e) {}
 }
 
-function initMediaOnly() {
+// ── Saved camera preference (persists across sessions, by device label) ───
+// deviceIds can change between browser sessions but labels are stable for the
+// same physical camera. If the saved camera (e.g. a USB cam) is unplugged,
+// the label won't be found and we silently fall back to the default camera.
+async function _getSavedCameraDeviceId() {
+  let savedLabel = '';
+  try { savedLabel = localStorage.getItem('bravo_camera_label') || ''; } catch(e) {}
+  if (!savedLabel) return null;
+  try {
+    const all = await navigator.mediaDevices.enumerateDevices();
+    const match = all.find(d => d.kind === 'videoinput' && d.label === savedLabel);
+    return match ? match.deviceId : null;
+  } catch(e) { return null; }
+}
+
+function _saveCameraLabel(label) {
+  if (!label) return;
+  try { localStorage.setItem('bravo_camera_label', label); } catch(e) {}
+}
+
+async function initMediaOnly() {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     entry('Mic/camera API not available — data channel only', 'sys');
     try {
@@ -4176,6 +4196,8 @@ function initMediaOnly() {
   }
   const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
   const videoConstraint = isMobile ? { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16/9 } } : { width: { ideal: 1920 }, height: { ideal: 1080 }, aspectRatio: { ideal: 16/9 } };
+  const _savedCamId = await _getSavedCameraDeviceId();
+  if (_savedCamId) videoConstraint.deviceId = { exact: _savedCamId };
 
   function applyAndDial(stream) {
     localStream = stream;
@@ -4210,6 +4232,32 @@ function initMediaOnly() {
   })
   .then(applyAndDial)
   .catch(e => {
+    if (_savedCamId && (e.name === 'OverconstrainedError' || e.name === 'NotFoundError')) {
+      entry('Saved camera unavailable — using default camera', 'sys');
+      const fallbackConstraint = Object.assign({}, videoConstraint);
+      delete fallbackConstraint.deviceId;
+      navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+        video: fallbackConstraint
+      }).then(applyAndDial).catch(e2 => {
+        entry('Media error (' + e2.name + ') — falling back to audio-only', 'sys');
+        navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } })
+          .then(applyAndDial)
+          .catch(e3 => {
+            entry('Mic also failed (' + e3.name + ') — data channel only', 'err');
+            try {
+              const sCtx = new (window.AudioContext || window.webkitAudioContext)();
+              const sDest = sCtx.createMediaStreamDestination();
+              const sOsc = sCtx.createOscillator();
+              const sGain = sCtx.createGain(); sGain.gain.value = 0;
+              sOsc.connect(sGain); sGain.connect(sDest); sOsc.start();
+              localStream = sDest.stream;
+            } catch(ex) { localStream = new MediaStream(); }
+            if (!linked) dial();
+          });
+      });
+      return;
+    }
     entry('Media error (' + e.name + ') — falling back to audio-only', 'sys');
     navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } })
       .then(applyAndDial)
@@ -4228,7 +4276,7 @@ function initMediaOnly() {
   });
 }
 
-function init() {
+async function init() {
   if (location.protocol !== 'https:' && location.protocol !== 'file:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
     entry('ERROR: HTTPS required for mic access', 'err');
     entry('Please open this page over HTTPS', 'err');
@@ -4266,6 +4314,8 @@ function init() {
   // omitted on desktop to avoid OverconstrainedError on macOS.
   const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
   const videoConstraint = isMobile ? { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16/9 } } : { width: { ideal: 1920 }, height: { ideal: 1080 }, aspectRatio: { ideal: 16/9 } };
+  const _savedCamId = await _getSavedCameraDeviceId();
+  if (_savedCamId) videoConstraint.deviceId = { exact: _savedCamId };
 
   function applyStreamFlags(stream) {
     localStream = stream;
@@ -4338,6 +4388,16 @@ function init() {
   })
   .then(applyStreamFlags)
   .catch(e => {
+    if (_savedCamId && (e.name === 'OverconstrainedError' || e.name === 'NotFoundError')) {
+      entry('Saved camera unavailable — using default camera', 'sys');
+      const fallbackConstraint = Object.assign({}, videoConstraint);
+      delete fallbackConstraint.deviceId;
+      navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+        video: fallbackConstraint
+      }).then(applyStreamFlags).catch(handleMediaError);
+      return;
+    }
     // Camera failed (OverconstrainedError, NotFoundError, NotReadableError etc.) — retry audio-only
     if (e.name !== 'NotAllowedError' && e.name !== 'PermissionDeniedError' && e.name !== 'SecurityError') {
       entry('Camera unavailable (' + e.name + ') — retrying audio-only', 'sys');
@@ -5916,6 +5976,7 @@ async function selectCamera(deviceId) {
     }
 
     const label = newTrack.label || deviceId;
+    _saveCameraLabel(label);
     entry('Camera switched to: ' + label, 'ok');
   } catch(e) {
     entry('Camera switch failed: ' + e.message, 'err');
