@@ -4485,7 +4485,7 @@ function startPeer() {
 
   peer = new Peer(MY_ID, {
     host: '0.peerjs.com', port: 443, path: '/', secure: true, pingInterval: 5000,
-    config: { iceServers: ICE_SERVERS }
+    config: { iceServers: ICE_SERVERS, iceCandidatePoolSize: 10 }
   });
 
   let _pollCancelled = false; // reset each time startPeer() builds a fresh peer
@@ -4895,6 +4895,21 @@ function attachCall(c) {
         entry('ICE connected — marking linked', 'sys');
         markLinked();
       }
+      // Relay fallback: if ICE stays in 'checking' for >8s, force TURN-only
+      if (pc.iceConnectionState === 'checking') {
+        clearTimeout(c._iceRelayTimer);
+        c._iceRelayTimer = setTimeout(() => {
+          if (pc.iceConnectionState === 'checking' && call === c) {
+            entry('ICE checking timeout — forcing relay-only (TURN) fallback', 'sys');
+            try {
+              pc.setConfiguration({ iceServers: ICE_SERVERS, iceTransportPolicy: 'relay', iceCandidatePoolSize: 10 });
+              pc.restartIce();
+            } catch(e2) { entry('Relay fallback failed: ' + e2.message, 'sys'); }
+          }
+        }, 8000);
+      } else {
+        clearTimeout(c._iceRelayTimer);
+      }
       if (pc.iceConnectionState === 'failed') {
         entry('DIAG: ICE FAILED — attempting ICE restart', 'err');
         try { pc.restartIce(); } catch(e2) { entry('ICE restart unavailable: ' + e2.message, 'sys'); }
@@ -4916,8 +4931,25 @@ function attachCall(c) {
     pc.addEventListener('connectionstatechange', () => {
       entry('DIAG: connection state → ' + pc.connectionState, 'sys');
       if ((pc.connectionState === 'failed' || pc.connectionState === 'disconnected') && linked && call === c) {
-        entry('Connection state ' + pc.connectionState + ' — dropping call', 'err');
-        onDrop();
+        // Attempt ICE restart before giving up — give it 7s to recover
+        if (!c._connFailRestartPending) {
+          c._connFailRestartPending = true;
+          entry('Connection state ' + pc.connectionState + ' — attempting ICE restart before drop', 'sys');
+          try { pc.restartIce(); } catch(e2) { entry('ICE restart unavailable: ' + e2.message, 'sys'); }
+          c._connFailDropTimer = setTimeout(() => {
+            if (call === c && pc.connectionState !== 'connected' && pc.connectionState !== 'completed') {
+              entry('Connection did not recover after ICE restart — dropping call', 'err');
+              onDrop();
+            } else {
+              c._connFailRestartPending = false;
+            }
+          }, 7000);
+        }
+      }
+      if ((pc.connectionState === 'connected' || pc.connectionState === 'completed') && c._connFailRestartPending) {
+        clearTimeout(c._connFailDropTimer);
+        c._connFailRestartPending = false;
+        entry('Connection recovered after ICE restart', 'ok');
       }
     });
     pc.addEventListener('signalingstatechange', () => {
