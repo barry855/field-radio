@@ -4424,7 +4424,7 @@ async function _refreshRemoteId() {
     if (!_code) return;
     const _r = await fetch(FB_URL + '/presence/alpha-' + _code + '.json');
     const _d = await _r.json();
-    if (_d && _d.peerId && _d.peerId !== REMOTE_ID && _d.peerId !== MY_ID) {
+    if (_d && _d.peerId && _d.peerId !== REMOTE_ID) {
       entry('ALPHA peer ID: ' + _d.peerId, 'sys');
       REMOTE_ID = _d.peerId;
     }
@@ -4435,11 +4435,6 @@ async function _refreshRemoteId() {
 function dial() {
   clearTimeout(retryTimer);
   if (linked || !localStream) return;
-  if (REMOTE_ID === MY_ID) {
-    entry('REMOTE_ID == MY_ID — refusing self-dial, refreshing…', 'err');
-    retryTimer = setTimeout(() => _refreshRemoteId().then(dial), 2000);
-    return;
-  }
   if (call) {
     try { call.off('close', onDrop); call.close(); } catch(e) {}
     call = null;
@@ -4963,6 +4958,15 @@ function attachCall(c) {
     });
     pc.addEventListener('track', ev => {
       entry('DIAG: track received kind=' + ev.track.kind, 'sys');
+      // Diagnostic: detect if the incoming track is actually one of our own
+      // outgoing tracks (would indicate a media loopback).
+      if (localStream) {
+        const ownIds = localStream.getTracks().map(t => t.id);
+        if (ownIds.includes(ev.track.id)) {
+          entry('DIAG: !!! INCOMING TRACK ID MATCHES LOCAL TRACK — LOOPBACK DETECTED (kind=' + ev.track.kind + ')', 'err');
+          return;
+        }
+      }
       // Always attempt audio play on any incoming track — Android often delivers
       // tracks without ev.streams populated, so we can't gate on that.
       scheduleRemoteAudioPlay();
@@ -6144,27 +6148,46 @@ function applyMicGain(val) {
   });
   if (_micGainNode) {
     _micGainNode.gain.setTargetAtTime(v, _micGainCtx.currentTime, 0.01);
+  } else if (v !== 1 && localStream) {
+    // Lazily engage the WebAudio gain graph only when a non-unity gain is
+    // actually requested — keeps native echo cancellation intact for the
+    // default (1x) case.
+    _engageMicGainGraph(localStream, v);
   }
   try { localStorage.setItem('bravo_mic_gain', String(v)); } catch(e) {}
 }
 
-function setupMicGainNode(stream) {
+// Wire the mic through a WebAudio gain node and swap the resulting track
+// onto localStream (and the live call sender, if any). Only called when a
+// non-default gain value is in effect.
+function _engageMicGainGraph(stream, gainValue) {
   try {
     if (!_micGainCtx) _micGainCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const src = _micGainCtx.createMediaStreamSource(stream);
+    const rawTrack = realAudioTrack || stream.getAudioTracks()[0];
+    if (!rawTrack) return;
+    const src = _micGainCtx.createMediaStreamSource(new MediaStream([rawTrack]));
     _micGainNode = _micGainCtx.createGain();
     _micGainDest = _micGainCtx.createMediaStreamDestination();
-    const savedGain = (() => { const r = localStorage.getItem('bravo_mic_gain'); return r !== null ? parseFloat(r) : 1; })();
-    _micGainNode.gain.value = isFinite(savedGain) ? savedGain : 1;
+    _micGainNode.gain.value = isFinite(gainValue) ? gainValue : 1;
     src.connect(_micGainNode);
     _micGainNode.connect(_micGainDest);
-    // Replace audio track in localStream with the gained version
     const gainedAudio = _micGainDest.stream.getAudioTracks()[0];
     if (gainedAudio) {
       const oldAudio = stream.getAudioTracks()[0];
       if (oldAudio) stream.removeTrack(oldAudio);
       stream.addTrack(gainedAudio);
+      try {
+        const pc = call && (call.peerConnection || call._pc);
+        const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
+        if (sender) sender.replaceTrack(gainedAudio).catch(() => {});
+      } catch(e) {}
     }
+  } catch(e) { console.warn('Mic gain engage failed:', e); }
+}
+
+function setupMicGainNode(stream) {
+  try {
+    const savedGain = (() => { const r = localStorage.getItem('bravo_mic_gain'); return r !== null ? parseFloat(r) : 1; })();
     // Update slider & label to saved value (primary + chat-tab copy)
     const slider = document.getElementById('micGainSlider');
     const lbl    = document.getElementById('micGainVal');
@@ -6174,6 +6197,11 @@ function setupMicGainNode(stream) {
     const lblChat    = document.getElementById('micGainValChat');
     if (sliderChat && isFinite(savedGain)) { sliderChat.value = savedGain; }
     if (lblChat    && isFinite(savedGain)) { lblChat.textContent = savedGain.toFixed(2) + '×'; }
+    // Only route the mic through WebAudio (and thereby bypass/alter native
+    // echo cancellation on some browsers) if a non-default gain is saved.
+    if (isFinite(savedGain) && savedGain !== 1) {
+      _engageMicGainGraph(stream, savedGain);
+    }
   } catch(e) { console.warn('Mic gain setup failed:', e); }
 }
 
