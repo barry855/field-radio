@@ -4149,6 +4149,17 @@ function _restoreMiniChatAfterInput() {
   box.addEventListener('focus', _hideMiniChatForInput);
   box.addEventListener('blur',  _restoreMiniChatAfterInput);
 })();
+// Force the camera track to crop to 16:9, regardless of native sensor AR
+// (e.g. Windows webcams often default to 5:4/4:3). applyConstraints often
+// succeeds in triggering a hardware/driver crop even when getUserMedia's
+// initial "ideal" aspectRatio hint was ignored. Best-effort; ignore failures.
+async function _forceAspectRatio169(track) {
+  if (!track || track.kind !== 'video') return;
+  try {
+    await track.applyConstraints({ aspectRatio: { ideal: 16/9 } });
+  } catch(e) {}
+}
+
 function initMediaOnly() {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     entry('Mic/camera API not available — data channel only', 'sys');
@@ -4168,6 +4179,7 @@ function initMediaOnly() {
 
   function applyAndDial(stream) {
     localStream = stream;
+    _forceAspectRatio169(stream.getVideoTracks()[0]);
     setupMicGainNode(stream);
     document.getElementById('localVideo').srcObject = stream;
     entry('Mic + camera ready', 'ok');
@@ -4257,6 +4269,7 @@ function init() {
 
   function applyStreamFlags(stream) {
     localStream = stream;
+    _forceAspectRatio169(stream.getVideoTracks()[0]);
     setupMicGainNode(stream);
     document.getElementById('localVideo').srcObject = stream;
     entry('Mic + camera ready', 'ok');
@@ -5400,6 +5413,7 @@ async function stopScreenShare() {
     try {
       const cam = await navigator.mediaDevices.getUserMedia({ video: { facingMode: currentFacingMode, width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16/9 } }, audio: false });
       restoreTrack = cam.getVideoTracks()[0];
+      await _forceAspectRatio169(restoreTrack);
     } catch(e) { entry('Could not restore camera: ' + e.message, 'err'); }
   }
 
@@ -5746,6 +5760,7 @@ async function flipCamera() {
   try {
     const newStream = await tryAcquire(targetMode);
     const newTrack  = newStream.getVideoTracks()[0];
+    await _forceAspectRatio169(newTrack);
     localStream.addTrack(newTrack);
     currentFacingMode = targetMode;
 
@@ -5885,6 +5900,7 @@ async function selectCamera(deviceId) {
       video: { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16/9 } }, audio: false
     });
     const newTrack = newStream.getVideoTracks()[0];
+    await _forceAspectRatio169(newTrack);
     localStream.addTrack(newTrack);
 
     const _lv  = document.getElementById('localVideo');
