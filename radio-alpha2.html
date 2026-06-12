@@ -2108,7 +2108,7 @@ async function presencePoll(partnerKey, myKey) {
     const data = await res.json();
     if (data && data.ts && (Date.now() - data.ts) < PRESENCE_STALE_MS) {
       // BRAVO publishes its suffixed peer ID — update REMOTE_ID so we dial correctly
-      if (data.peerId && data.peerId !== REMOTE_ID) {
+      if (data.peerId && data.peerId !== REMOTE_ID && data.peerId !== MY_ID) {
         entry('BRAVO peer ID: ' + data.peerId, 'sys');
         REMOTE_ID = data.peerId;
       }
@@ -4432,7 +4432,7 @@ async function _refreshRemoteId() {
     if (!_bravoPollKey || _bravoPollKey === 'bravo-') return;
     const _r = await fetch(FB_URL + '/presence/' + _bravoPollKey + '.json');
     const _d = await _r.json();
-    if (_d && _d.peerId && _d.peerId !== REMOTE_ID) {
+    if (_d && _d.peerId && _d.peerId !== REMOTE_ID && _d.peerId !== MY_ID) {
       entry('BRAVO peer ID: ' + _d.peerId, 'sys');
       REMOTE_ID = _d.peerId;
     }
@@ -4584,6 +4584,11 @@ function getCallStream() {
 function dial() {
   clearTimeout(retryTimer);
   if (linked || !localStream) return;
+  if (REMOTE_ID === MY_ID) {
+    entry('REMOTE_ID == MY_ID — refusing self-dial, refreshing…', 'err');
+    retryTimer = setTimeout(() => _refreshRemoteId().then(dial), 2000);
+    return;
+  }
   // Close stale outgoing call before redialling — prevents its 'close' event
   // from triggering a competing onDrop → retryTimer race
   if (call) {
