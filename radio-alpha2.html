@@ -1602,7 +1602,7 @@
           <span class="sbr-label">CHAT:</span>
           <button class="speech-top-btn" onclick="saveChatToFile()" id="saveChatBtn" title="Save chat as HTML">💾 SAVE</button>
           <button class="speech-top-btn" onclick="restoreChat()" id="restoreChatBtn" title="Restore previous session chat">↩ RESTORE</button>
-          <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';if(window.speechSynthesis)speechSynthesis.cancel();_ttsClearResumeTimer();dcSend({__control:'clearChat'});entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR</button>
+          <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';ttsStopAll();dcSend({__control:'clearChat'});entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR</button>
           <button class="speech-top-btn" id="findChatBtn" title="Find in chat">🔍 FIND</button>
         </div>
         <div id="translateBar">
@@ -4576,7 +4576,7 @@ function attachDataConn(dc) {
     if (f) {
       if (f.__control === 'video') { updateRemoteVideoState(f.enabled, f.hasTrack !== false); return; }
       if (f.__control === 'leave') { handleRemoteLeave(); return; }
-      if (f.__control === 'clearChat') { if (window.speechSynthesis) speechSynthesis.cancel(); _ttsClearResumeTimer(); clearHistory(); const ce=document.getElementById('chat'); if(ce) ce.innerHTML=''; entry('Remote cleared chat history','sys'); return; }
+      if (f.__control === 'clearChat') { ttsStopAll(); clearHistory(); const ce=document.getElementById('chat'); if(ce) ce.innerHTML=''; entry('Remote cleared chat history','sys'); return; }
       if (f.__control === 'refresh') { entry('Remote refreshed — reloading…', 'sys'); peerRefreshing = true; try { sessionStorage.setItem('fieldRadioRefreshing', '1'); } catch(e) {} setTimeout(() => window.location.reload(), 400); return; }
       if (f.__file  === true)      { addMediaBubble(f.name, f.type, f.data, false); return; }
       if (f.__chunk === true)      { receiveChunk(f); return; }
@@ -6577,6 +6577,14 @@ function _ttsChunkText(text, maxLen) {
   return chunks.length ? chunks : [text];
 }
 
+let _ttsGen = 0; // incremented to invalidate any in-flight chunk chain
+
+function ttsStopAll() {
+  _ttsGen++; // any pending _speakNext() calls for old chains will no-op
+  _ttsClearResumeTimer();
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+}
+
 function ttsSpeak(text, lang) {
   if (!_ttsEnabled || !text || !window.speechSynthesis) return;
   const ss = window.speechSynthesis;
@@ -6586,8 +6594,10 @@ function ttsSpeak(text, lang) {
   const _ttsLang = lang || _myLang || (navigator.language || 'en');
   const _chunks = _ttsChunkText(text);
   let _idx = 0;
+  const _myGen = ++_ttsGen;
 
   function _speakNext() {
+    if (_myGen !== _ttsGen) return; // a newer call (or ttsStopAll) superseded this chain
     if (_idx >= _chunks.length) { _ttsClearResumeTimer(); return; }
     const utter = new SpeechSynthesisUtterance(_chunks[_idx]);
     utter.lang = _ttsLang;
