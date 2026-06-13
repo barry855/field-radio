@@ -3818,19 +3818,60 @@ function _positionFloatSend() {
 //   "period" / "comma" / "question mark" / "new line" / "new paragraph"
 //   "delete N word(s)" / "delete N sentence(s)" / "delete sentence"
 //   "delete N message(s)" / "delete message"  (clears the whole input box)
+//   "scratch that" / "undo that"  (delete the last sentence)
 // Recognized punctuation words become real punctuation (with correct spacing);
 // recognized "delete" commands remove text from the END of the current box.
+// Punctuation/symbol vocabulary follows the common Windows Speech
+// Recognition / Voice Access dictation command set.
 
 const VOICE_PUNCT_MAP = [
-  [/\bfull stop\b/gi,     '.'],
-  [/\bperiod\b/gi,        '.'],
-  [/\bcomma\b/gi,         ','],
-  [/\bquestion mark\b/gi, '?'],
+  // Sentence-ending / clause punctuation
+  [/\bfull stop\b/gi,         '.'],
+  [/\bperiod\b/gi,            '.'],
+  [/\bcomma\b/gi,             ','],
+  [/\bquestion mark\b/gi,     '?'],
   [/\bexclamation (point|mark)\b/gi, '!'],
-  [/\bcolon\b/gi,         ':'],
-  [/\bsemicolon\b/gi,     ';'],
-  [/\bnew paragraph\b/gi, '\n\n'],
-  [/\bnew line\b/gi,      '\n'],
+  [/\bcolon\b/gi,             ':'],
+  [/\bsemicolon\b/gi,         ';'],
+  // Quotes, brackets, dashes
+  [/\bopen quote(s)?\b/gi,    '"'],
+  [/\bclose quote(s)?\b/gi,   '"'],
+  [/\bquotation mark(s)?\b/gi,'"'],
+  [/\bapostrophe\b/gi,        "'"],
+  [/\bopen paren(thesis)?\b/gi,  '('],
+  [/\bclose paren(thesis)?\b/gi, ')'],
+  [/\bopen bracket\b/gi,      '['],
+  [/\bclose bracket\b/gi,     ']'],
+  [/\bopen brace\b/gi,        '{'],
+  [/\bclose brace\b/gi,       '}'],
+  [/\bhyphen\b/gi,            '-'],
+  [/\bdash\b/gi,              '-'],
+  [/\bunderscore\b/gi,        '_'],
+  [/\bellipsis\b/gi,          '...'],
+  // Math / symbols
+  [/\bplus sign\b/gi,         '+'],
+  [/\bminus sign\b/gi,        '-'],
+  [/\bequals sign\b/gi,       '='],
+  [/\bpercent( sign)?\b/gi,   '%'],
+  [/\bampersand\b/gi,         '&'],
+  [/\basterisk\b/gi,          '*'],
+  [/\bat sign\b/gi,           '@'],
+  [/\bhash(tag)?\b/gi,        '#'],
+  [/\bpound sign\b/gi,        '#'],
+  [/\bdollar sign\b/gi,       '$'],
+  [/\bcaret\b/gi,             '^'],
+  [/\btilde\b/gi,             '~'],
+  [/\bbackslash\b/gi,         '\\'],
+  [/\bforward slash\b/gi,     '/'],
+  [/\bslash\b/gi,             '/'],
+  [/\bvertical bar\b/gi,      '|'],
+  [/\bpipe\b/gi,              '|'],
+  [/\bless than( sign)?\b/gi, '<'],
+  [/\bgreater than( sign)?\b/gi, '>'],
+  // Layout commands
+  [/\bnew paragraph\b/gi,     '\n\n'],
+  [/\bnew line\b/gi,          '\n'],
+  [/\btab key\b/gi,           '\t'],
 ];
 
 const VOICE_NUMBER_WORDS = {
@@ -3844,8 +3885,13 @@ const DELETE_WORD = '(?:delete|to lead|to leed|the lead|delete[d]?)';
 function applyVoicePunctuation(text) {
   let out = text;
   for (const [re, repl] of VOICE_PUNCT_MAP) out = out.replace(re, repl);
-  // Remove space(s) before inserted punctuation: "hello ." -> "hello."
-  out = out.replace(/[ \t]+([.,!?:;])/g, '$1');
+  // Remove space(s) before closing/sentence punctuation: "hello ." -> "hello."
+  out = out.replace(/[ \t]+([.,!?:;)\]}"])/g, '$1');
+  // Remove space(s) after opening brackets/quotes: "( hello" -> "(hello"
+  out = out.replace(/([(\[{"])[ \t]+/g, '$1');
+  // Remove space between a symbol (#, $, %, @, etc.) and an adjacent number/word
+  out = out.replace(/([#$%^&*+=<>|~@\/\\_-]) (?=\w)/g, '$1');
+  out = out.replace(/(?<=\w) ([#$%^&*+=<>|~@\/\\_-])/g, '$1');
   out = out.replace(/ {2,}/g, ' ');
   out = out.replace(/[ \t]*\n[ \t]*/g, '\n');
   return out;
@@ -3885,6 +3931,11 @@ function processVoiceChunk(currentText, chunk) {
 
   const numPattern = '(' + Object.keys(VOICE_NUMBER_WORDS).join('|') + '|\\d+)';
 
+  // "scratch that" / "undo that" -> delete the last sentence
+  if (/^(scratch|undo) that$/i.test(text)) {
+    return _removeLastSentences(currentText, 1);
+  }
+
   // "delete N message(s)" / "delete message" -> clear the whole box
   let m = text.match(new RegExp('^' + DELETE_WORD + '\\s+(?:' + numPattern + '\\s+)?messages?$', 'i'));
   if (m) return '';
@@ -3907,7 +3958,7 @@ function processVoiceChunk(currentText, chunk) {
   const cleaned = applyVoicePunctuation(text);
   const base = currentText;
   const needsSpace = base && !base.endsWith(' ') && !base.endsWith('\n')
-    && !/^[.,!?:;\n]/.test(cleaned);
+    && !/^[.,!?:;)\]}\n]/.test(cleaned);
   return base + (needsSpace ? ' ' : '') + cleaned;
 }
 
