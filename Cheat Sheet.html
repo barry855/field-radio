@@ -1,0 +1,154 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Field Radio — Cheat Sheet</title>
+<style>
+  :root {
+    --accent: #00667a;
+    --accent2: #00663f;
+    --ink: #1a1a1a;
+    --rule: #999;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 20px;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    color: var(--ink);
+    line-height: 1.4;
+    max-width: 780px;
+    margin: 0 auto;
+    font-size: 12.5px;
+  }
+  h1 {
+    font-family: 'Courier New', monospace;
+    letter-spacing: 3px;
+    font-size: 22px;
+    margin: 0 0 4px;
+  }
+  .subtitle {
+    font-size: 11px; letter-spacing: 1px; color: #555;
+    margin-bottom: 14px;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 10px;
+  }
+  .cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 24px;
+  }
+  h2 {
+    font-family: 'Courier New', monospace;
+    font-size: 13px; letter-spacing: 2px;
+    margin: 16px 0 6px;
+    padding-bottom: 3px;
+    border-bottom: 1px solid var(--rule);
+    grid-column: 1 / -1;
+  }
+  h2:first-of-type { margin-top: 0; }
+  table {
+    width: 100%; border-collapse: collapse; margin-bottom: 4px;
+  }
+  th, td {
+    border: 1px solid var(--rule); padding: 4px 6px; text-align: left; vertical-align: top;
+  }
+  th { background: #eee; font-family: 'Courier New', monospace; letter-spacing: 1px; font-size: 11px; }
+  td.key {
+    font-family: 'Courier New', monospace; font-weight: bold; white-space: nowrap; width: 1%;
+  }
+  .full { grid-column: 1 / -1; }
+  .note {
+    font-size: 11px; background: #f4f4f4; border-left: 3px solid var(--ink);
+    padding: 6px 10px; margin: 6px 0; border-radius: 0 4px 4px 0;
+  }
+  @media print {
+    body { padding: 0.3in; font-size: 10px; }
+    h1 { font-size: 18px; }
+    .subtitle { margin-bottom: 8px; padding-bottom: 6px; }
+    h2 { margin: 10px 0 4px; font-size: 12px; page-break-after: avoid; }
+    table { page-break-inside: avoid; }
+    th, td { padding: 3px 5px; }
+  }
+</style>
+</head>
+<body>
+
+<h1>⚡ FIELD RADIO — CHEAT SHEET</h1>
+<div class="subtitle">Quick reference for on-screen controls and keyboard shortcuts</div>
+
+<div class="cols">
+
+<h2>Top Bar Controls</h2>
+<table class="full">
+  <tr><th>Button</th><th>Function</th></tr>
+  <tr><td class="key">↺ Refresh</td><td>Reload the page to force a clean reconnect if the connection gets stuck</td></tr>
+  <tr><td class="key">✕ Leave</td><td>End the session and notify the other side cleanly</td></tr>
+  <tr><td class="key">⟳ Flip Cam</td><td>Switch between front/back camera (mobile)</td></tr>
+  <tr><td class="key">FS OFF / FS ON</td><td>Toggle full-screen chat/video view</td></tr>
+  <tr><td class="key">MINI OFF / MINI ON</td><td>Toggle the small picture-in-picture video overlay</td></tr>
+  <tr><td class="key">SEEING THEM</td><td>Toggle which video feed (yours / theirs) fills the main view</td></tr>
+  <tr><td class="key">➤ RECORD</td><td>Record the current main feed (plus mini overlay, if visible)</td></tr>
+  <tr><td class="key">Video Off / On</td><td>Turn your camera feed on or off</td></tr>
+  <tr><td class="key">Audio On / Off</td><td>Mute or unmute your microphone</td></tr>
+  <tr><td class="key">Sys Audio Off/On</td><td>Capture computer audio output and mix into your transmitted audio (desktop/Firefox only — use headphones)</td></tr>
+  <tr><td class="key">Share Off/On</td><td>Share your screen (desktop only — hidden on Android)</td></tr>
+  <tr><td class="key">SYS LOG</td><td>Toggle the technical connection/event log panel</td></tr>
+</table>
+
+<h2>Chat Tools</h2>
+<table class="full">
+  <tr><th>Button</th><th>Function</th></tr>
+  <tr><td class="key">💾 SAVE</td><td>Export the current chat as a printable HTML file</td></tr>
+  <tr><td class="key">↩ RESTORE</td><td>Reload the previous session's chat history into the window</td></tr>
+  <tr><td class="key">🗑 CLEAR</td><td>Erase chat history on both sides</td></tr>
+  <tr><td class="key">🔍 FIND</td><td>Search within the chat (opens the find bar)</td></tr>
+  <tr><td class="key">+ (bubble)</td><td>Copy a message's text (+ translation, if shown) — top-left of bubble</td></tr>
+  <tr><td class="key">✕ (bubble)</td><td>Delete that message for both sides — top-right of bubble</td></tr>
+</table>
+
+<h2>Translate Bar</h2>
+<table class="full">
+  <tr><th>Control</th><th>Function</th></tr>
+  <tr><td class="key">Language dropdown</td><td>Auto-translate incoming chat messages into this language</td></tr>
+  <tr><td class="key">ORIGINAL</td><td>Revert translation back to the system/default language</td></tr>
+  <tr><td class="key">Tap/hover bubble</td><td>Peek the original (untranslated) text; tap again to lock it open</td></tr>
+</table>
+
+<h2>Talk / Type Panel</h2>
+<table class="full">
+  <tr><th>Control</th><th>Function</th></tr>
+  <tr><td class="key">Talk/Type in Chat</td><td>Open or close the speech/text input panel</td></tr>
+  <tr><td class="key">TALK</td><td>Start/stop voice dictation into the input box</td></tr>
+  <tr><td class="key">SEND</td><td>Send the input box text to chat</td></tr>
+  <tr><td class="key">ATTACH</td><td>Attach a file (or drag &amp; drop onto the panel)</td></tr>
+  <tr><td class="key">LOAD</td><td>Load a text file's contents into the input box</td></tr>
+  <tr><td class="key">SAVE</td><td>Save the input box text to a file</td></tr>
+  <tr><td class="key">COPY</td><td>Copy the input box text to clipboard</td></tr>
+  <tr><td class="key">CLEAR</td><td>Clear the input box</td></tr>
+  <tr><td class="key">Lang dropdown</td><td>Set the speech-recognition (dictation) language</td></tr>
+  <tr><td class="key">ORIGINAL</td><td>Revert dictation language to your system language</td></tr>
+  <tr><td class="key">TTS Off/On</td><td>Toggle auto-speak (text-to-speech) for incoming messages</td></tr>
+  <tr><td class="key">Voice dropdown</td><td>Choose the TTS voice used for spoken output</td></tr>
+</table>
+
+<h2>Keyboard Shortcuts</h2>
+<table class="full">
+  <tr><th>Key</th><th>Where</th><th>Function</th></tr>
+  <tr><td class="key">Enter</td><td>Speech input box</td><td>New line</td></tr>
+  <tr><td class="key">Ctrl+Enter</td><td>Speech input box</td><td>Send to chat</td></tr>
+  <tr><td class="key">Escape</td><td>Speech input box</td><td>Close the speech panel</td></tr>
+  <tr><td class="key">Enter</td><td>Session code field</td><td>Start / join session</td></tr>
+  <tr><td class="key">Enter</td><td>Chat find box</td><td>Next match (Shift+Enter = previous)</td></tr>
+  <tr><td class="key">Escape</td><td>Chat find box</td><td>Close find bar</td></tr>
+</table>
+
+<div class="note full">
+  <strong>RECONNECTING…</strong> overlay — appears automatically if the connection drops, with a 30-second countdown while the app tries to silently recover. If it times out, you're returned to the session-code screen.
+</div>
+
+</div>
+
+</body>
+</html>
