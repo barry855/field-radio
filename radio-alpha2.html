@@ -1396,15 +1396,16 @@
     body.app-fullscreen .shell { padding: 0; gap: 0; }
     body.app-fullscreen .tab-content { padding: 0; gap: 0; border: none; border-radius: 0; background: #000; }
     body.app-fullscreen #paneChat { gap: 0; }
-    body.app-fullscreen .chat-btn-bar-row,
-    body.app-fullscreen .gain-row,
-    body.app-fullscreen .zoom-row,
-    body.app-fullscreen #chatFindBar,
-    body.app-fullscreen #logPanel,
-    body.app-fullscreen #speechPanel,
     body.app-fullscreen #chat,
-    body.app-fullscreen #translateBar,
-    body.app-fullscreen .chat-panel > .panel-label { display: none !important; }
+    body.app-fullscreen #translateBar { display: none !important; }
+    body.app-fullscreen.fs-controls-hidden .chat-btn-bar-row,
+    body.app-fullscreen.fs-controls-hidden .gain-row,
+    body.app-fullscreen.fs-controls-hidden .zoom-row,
+    body.app-fullscreen.fs-controls-hidden #chatFindBar,
+    body.app-fullscreen.fs-controls-hidden #logPanel,
+    body.app-fullscreen.fs-controls-hidden #speechPanel,
+    body.app-fullscreen.fs-controls-hidden #chatToolsWrap,
+    body.app-fullscreen.fs-controls-hidden .chat-panel > .panel-label { display: none !important; }
     body.app-fullscreen #chatPanel {
       position: fixed; inset: 0; z-index: 50;
       border-radius: 0; border: none;
