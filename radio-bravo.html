@@ -3843,9 +3843,11 @@ const VOICE_PUNCT_MAP = [
   [/\bopen quote(s)?\b/gi,    '"'],
   [/\bclose quote(s)?\b/gi,   '"'],
   [/\bquotation mark(s)?\b/gi,'"'],
+  [/\bquote(s)?\b/gi,         '"'],
   [/\bapostrophe\b/gi,        "'"],
-  [/\bopen paren(thesis)?\b/gi,  '('],
-  [/\bclose paren(thesis)?\b/gi, ')'],
+  [/\bopen paren(thes[ie]s)?\b/gi,  '('],
+  [/\bclose paren(thes[ie]s)?\b/gi, ')'],
+  [/\bparen(thes[ie]s)?\b/gi, ''],
   [/\bopen bracket\b/gi,      '['],
   [/\bclose bracket\b/gi,     ']'],
   [/\bopen brace\b/gi,        '{'],
@@ -3962,8 +3964,10 @@ function processVoiceChunk(currentText, chunk) {
 
   // Not a recognized edit command — apply punctuation substitutions and append.
   const cleaned = applyVoicePunctuation(text);
+  if (!cleaned) return currentText; // e.g. bare "parenthesis" with nothing else said
   const base = currentText;
   const needsSpace = base && !base.endsWith(' ') && !base.endsWith('\n')
+    && !/[(\[{"]$/.test(base)
     && !/^[.,!?:;)\]}\n]/.test(cleaned);
   return base + (needsSpace ? ' ' : '') + cleaned;
 }
