@@ -1,0 +1,174 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Field Radio — Voice Commands Reference</title>
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --rule: #999;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 20px;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    color: var(--ink);
+    line-height: 1.4;
+    max-width: 780px;
+    margin: 0 auto;
+    font-size: 12.5px;
+  }
+  h1 {
+    font-family: 'Courier New', monospace;
+    letter-spacing: 3px;
+    font-size: 22px;
+    margin: 0 0 4px;
+  }
+  .subtitle {
+    font-size: 11px; letter-spacing: 1px; color: #555;
+    margin-bottom: 14px;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 10px;
+  }
+  h2 {
+    font-family: 'Courier New', monospace;
+    font-size: 13px; letter-spacing: 2px;
+    margin: 16px 0 6px;
+    padding-bottom: 3px;
+    border-bottom: 1px solid var(--rule);
+  }
+  h2:first-of-type { margin-top: 0; }
+  table {
+    width: 100%; border-collapse: collapse; margin-bottom: 4px;
+  }
+  th, td {
+    border: 1px solid var(--rule); padding: 5px 7px; text-align: left; vertical-align: top;
+  }
+  th { background: #eee; font-family: 'Courier New', monospace; letter-spacing: 1px; font-size: 11px; }
+  td.say {
+    font-family: 'Courier New', monospace; font-weight: bold; white-space: nowrap;
+  }
+  td.result {
+    font-family: 'Courier New', monospace; text-align: center; width: 1%; white-space: nowrap;
+  }
+  .note {
+    font-size: 11px; background: #f4f4f4; border-left: 3px solid var(--ink);
+    padding: 6px 10px; margin: 8px 0; border-radius: 0 4px 4px 0;
+  }
+  .note strong { font-family: 'Courier New', monospace; }
+  .example {
+    font-size: 11px; background: #f4f4f4; border-left: 3px solid var(--ink);
+    padding: 8px 10px; margin: 8px 0; border-radius: 0 4px 4px 0;
+  }
+  .example .row { margin: 3px 0; }
+  .example .say-ex { font-family: 'Courier New', monospace; font-weight: bold; }
+  .example .arrow { color: #777; padding: 0 6px; }
+  .example .out { font-family: 'Courier New', monospace; background: #fff; padding: 1px 4px; border: 1px solid #ccc; border-radius: 3px; }
+  @media print {
+    body { padding: 0.3in; font-size: 10px; }
+    h1 { font-size: 18px; }
+    .subtitle { margin-bottom: 8px; padding-bottom: 6px; }
+    h2 { margin: 10px 0 4px; font-size: 12px; page-break-after: avoid; }
+    table { page-break-inside: avoid; }
+    th, td { padding: 3px 5px; }
+  }
+</style>
+</head>
+<body>
+
+<h1>⚡ FIELD RADIO — VOICE COMMANDS</h1>
+<div class="subtitle">Spoken commands recognized in the Talk/Type dictation box</div>
+
+<div class="note">
+  <strong>How it works:</strong> While dictating, certain spoken words and phrases are automatically converted into punctuation, symbols, or text-editing actions instead of being typed literally. Say the word naturally as part of your sentence — e.g. "My name is Jose period" becomes <strong>"My name is Jose."</strong> Commands are not case-sensitive.
+</div>
+
+<h2>Sentence Punctuation</h2>
+<table>
+  <tr><th>Say</th><th>Result</th></tr>
+  <tr><td class="say">period / full stop</td><td class="result">.</td></tr>
+  <tr><td class="say">comma</td><td class="result">,</td></tr>
+  <tr><td class="say">question mark</td><td class="result">?</td></tr>
+  <tr><td class="say">exclamation point / exclamation mark</td><td class="result">!</td></tr>
+  <tr><td class="say">colon</td><td class="result">:</td></tr>
+  <tr><td class="say">semicolon</td><td class="result">;</td></tr>
+</table>
+
+<h2>Quotes &amp; Brackets</h2>
+<table>
+  <tr><th>Say</th><th>Result</th></tr>
+  <tr><td class="say">open quote / close quote / quotation mark(s)</td><td class="result">"</td></tr>
+  <tr><td class="say">apostrophe</td><td class="result">'</td></tr>
+  <tr><td class="say">open paren / open parenthesis</td><td class="result">(</td></tr>
+  <tr><td class="say">close paren / close parenthesis</td><td class="result">)</td></tr>
+  <tr><td class="say">open bracket</td><td class="result">[</td></tr>
+  <tr><td class="say">close bracket</td><td class="result">]</td></tr>
+  <tr><td class="say">open brace</td><td class="result">{</td></tr>
+  <tr><td class="say">close brace</td><td class="result">}</td></tr>
+</table>
+
+<h2>Dashes &amp; Spacing</h2>
+<table>
+  <tr><th>Say</th><th>Result</th></tr>
+  <tr><td class="say">hyphen / dash</td><td class="result">-</td></tr>
+  <tr><td class="say">underscore</td><td class="result">_</td></tr>
+  <tr><td class="say">ellipsis</td><td class="result">...</td></tr>
+  <tr><td class="say">new line</td><td class="result">(line break)</td></tr>
+  <tr><td class="say">new paragraph</td><td class="result">(blank line / paragraph break)</td></tr>
+  <tr><td class="say">tab key</td><td class="result">(tab character)</td></tr>
+</table>
+
+<h2>Math &amp; Symbols</h2>
+<table>
+  <tr><th>Say</th><th>Result</th></tr>
+  <tr><td class="say">plus sign</td><td class="result">+</td></tr>
+  <tr><td class="say">minus sign</td><td class="result">-</td></tr>
+  <tr><td class="say">equals sign</td><td class="result">=</td></tr>
+  <tr><td class="say">percent / percent sign</td><td class="result">%</td></tr>
+  <tr><td class="say">ampersand</td><td class="result">&amp;</td></tr>
+  <tr><td class="say">asterisk</td><td class="result">*</td></tr>
+  <tr><td class="say">at sign</td><td class="result">@</td></tr>
+  <tr><td class="say">hash / hashtag / pound sign</td><td class="result">#</td></tr>
+  <tr><td class="say">dollar sign</td><td class="result">$</td></tr>
+  <tr><td class="say">caret</td><td class="result">^</td></tr>
+  <tr><td class="say">tilde</td><td class="result">~</td></tr>
+  <tr><td class="say">slash / forward slash</td><td class="result">/</td></tr>
+  <tr><td class="say">backslash</td><td class="result">\</td></tr>
+  <tr><td class="say">vertical bar / pipe</td><td class="result">|</td></tr>
+  <tr><td class="say">less than / less than sign</td><td class="result">&lt;</td></tr>
+  <tr><td class="say">greater than / greater than sign</td><td class="result">&gt;</td></tr>
+</table>
+
+<h2>Editing Commands</h2>
+<table>
+  <tr><th>Say</th><th>Result</th></tr>
+  <tr><td class="say">delete word / delete N words</td><td class="result">Removes the last word(s) typed</td></tr>
+  <tr><td class="say">delete sentence / delete N sentences</td><td class="result">Removes the last sentence(s)</td></tr>
+  <tr><td class="say">delete message / delete N messages</td><td class="result">Clears the entire input box</td></tr>
+  <tr><td class="say">scratch that / undo that</td><td class="result">Removes the last sentence</td></tr>
+</table>
+
+<div class="note">
+  <strong>Numbers:</strong> N can be spoken as a word (<em>one, two, three… ten</em>) or a digit (<em>1, 2, 3…</em>). If no number is said, "delete word" / "delete sentence" removes just one.
+</div>
+
+<div class="note">
+  <strong>Mis-hearings of "delete":</strong> Speech recognition sometimes mishears "delete" — the phrases <strong>"to lead"</strong>, <strong>"to leed"</strong>, and <strong>"the lead"</strong> are also recognized as "delete" so the editing commands above still work even if misheard this way.
+</div>
+
+<h2>Worked Example</h2>
+<div class="example">
+  <div class="row"><span class="say-ex">"My name is Jose Jimenez period"</span><span class="arrow">→</span><span class="out">My name is Jose Jimenez.</span></div>
+  <div class="row"><span class="say-ex">"I live in Los Angeles period"</span><span class="arrow">→</span><span class="out">My name is Jose Jimenez. I live in Los Angeles.</span></div>
+  <div class="row"><span class="say-ex">"Eli Ipshay"</span><span class="arrow">→</span><span class="out">…Los Angeles. Eli Ipshay</span></div>
+  <div class="row"><span class="say-ex">"delete two words"</span><span class="arrow">→</span><span class="out">My name is Jose Jimenez. I live in Los Angeles.</span></div>
+  <div class="row"><span class="say-ex">"new paragraph"</span><span class="arrow">→</span><span class="out">(starts a new paragraph)</span></div>
+  <div class="row"><span class="say-ex">"the total is dollar sign 5 percent off"</span><span class="arrow">→</span><span class="out">the total is $5% off</span></div>
+  <div class="row"><span class="say-ex">"delete one sentence"</span><span class="arrow">→</span><span class="out">(removes the last sentence)</span></div>
+  <div class="row"><span class="say-ex">"delete one message"</span><span class="arrow">→</span><span class="out">(clears the input box entirely)</span></div>
+</div>
+
+</body>
+</html>
