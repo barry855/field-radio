@@ -3303,11 +3303,32 @@ function addBubble(text, mine, ts, save = true, restoredStatus = null, orig = nu
 
 let _sendChatLast = 0;
 let _pendingChatMsg = null; // one queued message to send when channel recovers
+// Capitalize the first letter of the text, the first letter after sentence-
+// ending punctuation (. ! ?) followed by whitespace/newline, and standalone
+// "i" -> "I". Also appends a trailing period if the message doesn't already
+// end in sentence/clause punctuation, a closing bracket/quote, or an ellipsis.
+function autoCapitalizeText(text) {
+  if (!text) return text;
+  let out = text;
+  // Capitalize first letter of the whole string (skipping leading whitespace/punct)
+  out = out.replace(/^(\s*)([a-z])/, (m, ws, c) => ws + c.toUpperCase());
+  // Capitalize first letter after . ! ? followed by space(s)/newline(s)
+  out = out.replace(/([.!?]\s+)([a-z])/g, (m, sep, c) => sep + c.toUpperCase());
+  // Capitalize standalone "i" as a word -> "I"
+  out = out.replace(/\bi\b/g, 'I');
+  // Add a trailing period if the message lacks closing punctuation.
+  const trimmedEnd = out.replace(/\s+$/, '');
+  if (trimmedEnd && !/[.!?,:;)\]}"'…]$/.test(trimmedEnd) && !trimmedEnd.endsWith('...')) {
+    out = trimmedEnd + '.';
+  }
+  return out;
+}
+
 async function sendChat(overrideText) {
   const now = Date.now();
   if (now - _sendChatLast < 300) return;   // debounce — blocks multi-fire on older Android
   _sendChatLast = now;
-  const txt = (overrideText !== undefined ? overrideText : chatInput.value).trim();
+  const txt = autoCapitalizeText((overrideText !== undefined ? overrideText : chatInput.value).trim());
   const hasFiles = pendingFiles.length > 0;
   if (!txt && !hasFiles) return;
   // Always show the sender's own bubble immediately — regardless of DC state.
@@ -4019,10 +4040,27 @@ function processVoiceChunk(currentText, chunk) {
     }
   }
   const base = currentText;
-  const needsSpace = base && !base.endsWith(' ') && !base.endsWith('\n')
-    && !/[(\[{"]$/.test(base)
+  // At a pause boundary (new finalized chunk being appended to existing text),
+  // insert a period if the prior text doesn't already end in sentence/clause
+  // punctuation and the new chunk doesn't look like a continuation of the
+  // same sentence (starts with a conjunction/connector, or with punctuation).
+  const CONTINUATION_WORDS = /^(and|but|or|nor|so|yet|because|since|although|though|while|if|when|then|also|plus|with|that|which|who|whom|whose)\b/i;
+  let joiner = '';
+  let outBase = base;
+  const trimmedBase = base.replace(/[ \t]+$/, '');
+  if (trimmedBase
+      && !/[.!?,:;\-—([{"'\n]$/.test(trimmedBase)
+      && !/^[.,!?:;)\]}\n"']/.test(cleaned)
+      && !CONTINUATION_WORDS.test(cleaned)) {
+    joiner = '.';
+    outBase = trimmedBase;
+    // Capitalize the first letter of the new chunk since it now starts a sentence.
+    cleaned = cleaned.replace(/^([a-z])/, (m, c) => c.toUpperCase());
+  }
+  const needsSpace = outBase && !outBase.endsWith(' ') && !outBase.endsWith('\n')
+    && !/[(\[{"]$/.test(outBase)
     && !/^[.,!?:;)\]}\n]/.test(cleaned);
-  return base + (needsSpace ? ' ' : '') + cleaned;
+  return outBase + joiner + (needsSpace ? ' ' : '') + cleaned;
 }
 
 function sendSpeechToChat() {
