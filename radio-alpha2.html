@@ -1398,6 +1398,15 @@
     body.app-fullscreen #paneChat { gap: 0; }
     body.app-fullscreen #chat,
     body.app-fullscreen #translateBar { display: none !important; }
+    body.app-fullscreen.fs-controls-visible .chat-btn-bar-row,
+    body.app-fullscreen.fs-controls-visible #chatToolsWrap {
+      position: fixed; left: 0; right: 0; z-index: 1002;
+      background: rgba(0,0,0,0.55);
+      max-height: 40vh; overflow-y: auto;
+    }
+    body.app-fullscreen.fs-controls-visible .chat-btn-bar-row:nth-of-type(1) { top: 0; }
+    body.app-fullscreen.fs-controls-visible .chat-btn-bar-row:nth-of-type(2) { top: 34px; }
+    body.app-fullscreen.fs-controls-visible #chatToolsWrap { bottom: 0; }
     body.app-fullscreen.fs-controls-hidden .chat-btn-bar-row,
     body.app-fullscreen.fs-controls-hidden .gain-row,
     body.app-fullscreen.fs-controls-hidden .zoom-row,
