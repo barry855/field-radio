@@ -1,0 +1,121 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Field Radio — Offline Functions Cheat Sheet</title>
+<style>
+  :root {
+    --accent: #00667a;
+    --accent2: #00663f;
+    --ink: #1a1a1a;
+    --rule: #999;
+    --ok: #1a7a1a;
+    --no: #aa1a1a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 20px;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    color: var(--ink);
+    line-height: 1.4;
+    max-width: 780px;
+    margin: 0 auto;
+    font-size: 12.5px;
+  }
+  h1 {
+    font-family: 'Courier New', monospace;
+    letter-spacing: 3px;
+    font-size: 22px;
+    margin: 0 0 4px;
+  }
+  .subtitle {
+    font-size: 11px; letter-spacing: 1px; color: #555;
+    margin-bottom: 14px;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 10px;
+  }
+  h2 {
+    font-family: 'Courier New', monospace;
+    font-size: 13px; letter-spacing: 2px;
+    margin: 16px 0 6px;
+    padding-bottom: 3px;
+    border-bottom: 1px solid var(--rule);
+  }
+  h2:first-of-type { margin-top: 0; }
+  table {
+    width: 100%; border-collapse: collapse; margin-bottom: 4px;
+  }
+  th, td {
+    border: 1px solid var(--rule); padding: 5px 7px; text-align: left; vertical-align: top;
+  }
+  th { background: #eee; font-family: 'Courier New', monospace; letter-spacing: 1px; font-size: 11px; }
+  td.key {
+    font-family: 'Courier New', monospace; font-weight: bold; white-space: nowrap; width: 1%;
+  }
+  td.status { text-align: center; font-weight: bold; width: 1%; white-space: nowrap; }
+  .yes { color: var(--ok); }
+  .no  { color: var(--no); }
+  .note {
+    font-size: 11px; background: #f4f4f4; border-left: 3px solid var(--ink);
+    padding: 6px 10px; margin: 8px 0; border-radius: 0 4px 4px 0;
+  }
+  .note strong { font-family: 'Courier New', monospace; }
+  @media print {
+    body { padding: 0.3in; font-size: 10px; }
+    h1 { font-size: 18px; }
+    .subtitle { margin-bottom: 8px; padding-bottom: 6px; }
+    h2 { margin: 10px 0 4px; font-size: 12px; page-break-after: avoid; }
+    table { page-break-inside: avoid; }
+    th, td { padding: 3px 5px; }
+  }
+</style>
+</head>
+<body>
+
+<h1>⚡ FIELD RADIO — OFFLINE FUNCTIONS</h1>
+<div class="subtitle">What still works with no internet connection (e.g. radios only, no Wi-Fi/data)</div>
+
+<div class="note">
+  <strong>Big picture:</strong> Field Radio's <em>peer-to-peer connection itself requires internet</em> — it relies on a signaling server (PeerJS) and presence service (Firebase) to find the other device, plus STUN/TURN servers to establish the audio/video/data link. <strong>Without internet, ALPHA and BRAVO cannot connect to each other.</strong> Everything below applies to a <em>single device, already-open</em> instance of the app — useful for prep, review, or if you opened the page before losing signal.
+</div>
+
+<h2>✅ Works Fully Offline</h2>
+<table>
+  <tr><th>Status</th><th>Feature</th><th>Notes</th></tr>
+  <tr><td class="status yes">✓</td><td>Open ALPHA.html / BRAVO.html</td><td>Both are self-contained local files</td></tr>
+  <tr><td class="status yes">✓</td><td>Talk/Type panel — typing</td><td>Type messages manually into the input box</td></tr>
+  <tr><td class="status yes">✓</td><td>ATTACH / LOAD / SAVE / COPY / CLEAR</td><td>File and clipboard operations on the input box are all local</td></tr>
+  <tr><td class="status yes">✓</td><td>RESTORE chat history</td><td>Reloads previously saved chat from this browser's local storage</td></tr>
+  <tr><td class="status yes">✓</td><td>💾 SAVE chat as HTML</td><td>Exports current on-screen chat to a local printable file</td></tr>
+  <tr><td class="status yes">✓</td><td>🗑 CLEAR chat history</td><td>Local-only action (the "notify other side" part needs a live connection)</td></tr>
+  <tr><td class="status yes">✓</td><td>🔍 FIND in chat</td><td>Searches messages already loaded on screen</td></tr>
+  <tr><td class="status yes">✓</td><td>TTS (text-to-speech)</td><td>Uses the browser/OS built-in voice — no network needed</td></tr>
+  <tr><td class="status yes">✓</td><td>Mic gain slider, zoom, speaker toggle</td><td>Local audio/UI controls — but have no effect without a live call</td></tr>
+  <tr><td class="status yes">✓</td><td>Settings persist (saved code, language, gain, toggles)</td><td>Stored in this browser's local storage</td></tr>
+</table>
+
+<h2>⚠️ Partially Works / Device-Dependent</h2>
+<table>
+  <tr><th>Status</th><th>Feature</th><th>Notes</th></tr>
+  <tr><td class="status">~</td><td>TALK (speech-to-text dictation)</td><td>On Chrome, speech recognition typically requires a network connection to Google's servers — may fail or show "NOT SUPPORTED" offline. Some browsers/OS combos support fully local recognition.</td></tr>
+  <tr><td class="status">~</td><td>Camera / mic preview</td><td>Local camera and mic access works offline, but the video/audio has nowhere to go without a connection</td></tr>
+</table>
+
+<h2>❌ Requires Internet</h2>
+<table>
+  <tr><th>Status</th><th>Feature</th><th>Why</th></tr>
+  <tr><td class="status no">✕</td><td>Connecting ALPHA ↔ BRAVO</td><td>Needs PeerJS signaling server + Firebase presence + STUN/TURN servers</td></tr>
+  <tr><td class="status no">✕</td><td>Voice / video / chat with the other unit</td><td>Depends entirely on the peer connection above</td></tr>
+  <tr><td class="status no">✕</td><td>Auto-translate (chat &amp; speech panel)</td><td>Calls Google Translate / MyMemory translation APIs</td></tr>
+  <tr><td class="status no">✕</td><td>Login screen presence indicator</td><td>Polls Firebase to show "BRAVO ONLINE/OFFLINE"</td></tr>
+  <tr><td class="status no">✕</td><td>Screen Share / Sys Audio capture</td><td>Only meaningful when actively shared to a connected peer</td></tr>
+</table>
+
+<div class="note">
+  <strong>Practical tip:</strong> If you're prepping before heading somewhere without signal, open both pages, save your speech/translate language preferences, and write/save any draft messages while you still have a connection — those are stored locally and will be there when you reconnect.
+</div>
+
+</body>
+</html>
