@@ -163,6 +163,7 @@
   .bubble .who {
     font-size: 12px; letter-spacing: 2px; margin-bottom: 5px;
     text-transform: uppercase; font-family: 'Orbitron', sans-serif;
+    padding-left: 24px; padding-right: 24px;
   }
   .bubble.mine .who   { color: #0077aa; }
   .bubble.theirs .who { color: #007744; }
@@ -183,7 +184,7 @@
   /* Copy (+) button in bubble top-right */
   .bubble { position: relative; }
   .bubble-copy-btn {
-    position: absolute; top: 5px; right: 5px;
+    position: absolute; top: 5px; left: 5px;
     width: 18px; height: 18px;
     background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.3);
     border-radius: 3px; color: rgba(255,255,255,0.7);
@@ -195,6 +196,19 @@
   .bubble:hover .bubble-copy-btn { opacity: 1; background: rgba(0,0,0,0.4); }
   .bubble-copy-btn:hover { background: rgba(0,0,0,0.5); color: #fff; }
   .bubble-copy-btn.copied { background: rgba(0,200,100,0.5); color: #fff; opacity: 1; }
+  /* Delete (X) button in bubble top-right — deletes for both sides */
+  .bubble-delete-btn {
+    position: absolute; top: 5px; right: 5px;
+    width: 18px; height: 18px;
+    background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 3px; color: rgba(255,255,255,0.7);
+    font-size: 12px; font-weight: 900; line-height: 1;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    opacity: 0.7; transition: opacity 0.15s, background 0.15s;
+    z-index: 5; user-select: none; font-family: monospace;
+  }
+  .bubble:hover .bubble-delete-btn { opacity: 1; background: rgba(0,0,0,0.4); }
+  .bubble-delete-btn:hover { background: rgba(180,0,0,0.6); color: #fff; }
   /* Original-text peek on hover / tap */
   .bubble[data-orig] { cursor: default; }
   .bubble[data-orig] .msg-text { transition: opacity 0.15s; }
@@ -2843,6 +2857,29 @@ function updateMessageStatus(text, ts, newStatus) {
   } catch(e) {}
 }
 
+function removeMessageFromHistory(ts) {
+  try {
+    const key = HISTORY_KEY();
+    const history = JSON.parse(localStorage.getItem(key) || '[]');
+    const idx = history.findIndex(m => m.ts === ts);
+    if (idx !== -1) { history.splice(idx, 1); localStorage.setItem(key, JSON.stringify(history)); }
+  } catch(e) {}
+}
+
+// Delete a bubble by its data-ts. If broadcast is true, also tell the remote
+// side to delete its copy (used when the local user clicks the X).
+function deleteBubble(ts, broadcast) {
+  const chatEl = document.getElementById('chat');
+  if (chatEl) {
+    const el = chatEl.querySelector('.bubble[data-ts="' + ts + '"]');
+    if (el) el.remove();
+  }
+  removeMessageFromHistory(ts);
+  if (broadcast) {
+    try { dcSend({ __control: 'deleteMsg', ts: ts }); } catch(e) {}
+  }
+}
+
 function loadHistory() {
   // Clear chat screen on program start — do not auto-restore previous session
   const chatEl = document.getElementById('chat');
@@ -2925,14 +2962,14 @@ function saveChatToFile() {
     const align  = b.mine ? 'flex-end'  : 'flex-start';
     const bg     = b.mine ? 'rgba(0,212,255,0.15)' : 'rgba(0,255,159,0.12)';
     const border = b.mine ? '#00d4ff'   : '#00ff9f';
-    const whoCol = b.mine ? '#0077aa'   : '#007744';
+    const whoCol = b.mine ? '#004f73'   : '#004d29';
     return `<div style="display:flex;justify-content:${align};margin:6px 0;">
-  <div style="max-width:75%;padding:10px 14px;border-radius:6px;background:${bg};border:1px solid ${border};font-size:18px;font-weight:bold;color:#000;line-height:1.55;word-break:break-word;">
+  <div style="max-width:75%;padding:10px 14px;border-radius:6px;background:${bg};font-size:18px;font-weight:bold;color:#000;line-height:1.55;word-break:break-word;">
     <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;font-family:monospace;color:${whoCol};margin-bottom:5px;font-weight:bold;">${b.who}</div>
     <div${b.orig ? ' title="' + b.orig.replace(/"/g, '&quot;') + '" style="cursor:help;"' : ''}>${b.html}</div>
     ${b.downloadHtml ? '<div style="margin-top:5px;">' + b.downloadHtml + '</div>' : ''}
     ${b.orig ? '<div style="font-size:18px;color:#444;font-style:italic;margin-top:6px;border-top:1px dashed #ccc;padding-top:6px;font-weight:bold;line-height:1.55;">' + b.orig.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>' : ''}
-    <div style="font-size:11px;color:#555;text-align:right;margin-top:5px;font-weight:normal;">${b.time}</div>
+    <div style="font-size:12px;color:#222;text-align:right;margin-top:5px;font-weight:bold;">${b.time}</div>
   </div>
 </div>`;
   }).join('\n');
@@ -3144,6 +3181,7 @@ function addBubble(text, mine, ts, save = true, restoredStatus = null, orig = nu
   const now = ts || Date.now();
   const wrap = document.createElement('div');
   wrap.className = 'bubble ' + (mine ? 'mine' : 'theirs');
+  wrap.dataset.ts = now;
   const who = document.createElement('div');
   who.className = 'who';
   who.textContent = mine ? 'ALPHA' : 'BRAVO';
@@ -3221,6 +3259,16 @@ function addBubble(text, mine, ts, save = true, restoredStatus = null, orig = nu
     });
   });
   wrap.appendChild(copyBtn);
+  // Delete (X) button — removes this bubble on both sides
+  const delBtn = document.createElement('button');
+  delBtn.className = 'bubble-delete-btn';
+  delBtn.title = 'Delete message (for both sides)';
+  delBtn.textContent = '✕';
+  delBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    deleteBubble(wrap.dataset.ts, true);
+  });
+  wrap.appendChild(delBtn);
   wrap.appendChild(who);
   wrap.appendChild(msg);
   wrap.appendChild(origPeek);
@@ -3496,7 +3544,7 @@ function sendFileChunked(item) {
         index: i, total, data: chunk
       });
     }
-    addMediaBubble(item.file.name, item.file.type, item.dataUrl, true);
+    addMediaBubble(item.file.name, item.file.type, item.dataUrl, true, id);
   } catch(e) {
     entry('Failed to send file: ' + item.file.name + ' — ' + e.message, 'err');
   }
@@ -3518,7 +3566,7 @@ function receiveChunk(f) {
     const dataUrl = rec.parts.join('');
     delete _incomingChunks[f.id];
     removeTransferProgress(f.id);
-    addMediaBubble(rec.name, rec.type, dataUrl, false);
+    addMediaBubble(rec.name, rec.type, dataUrl, false, f.id);
   }
 }
 
@@ -3541,9 +3589,10 @@ function removeTransferProgress(id) {
 }
 
 // ── Render a media bubble (sent or received) ──────────────────
-function addMediaBubble(name, type, dataUrl, mine) {
+function addMediaBubble(name, type, dataUrl, mine, ts) {
   const wrap = document.createElement('div');
   wrap.className = 'bubble ' + (mine ? 'mine' : 'theirs');
+  wrap.dataset.ts = ts || Date.now();
   const who = document.createElement('div');
   who.className = 'who';
   who.textContent = mine ? 'ALPHA' : 'BRAVO';
@@ -3560,6 +3609,16 @@ function addMediaBubble(name, type, dataUrl, mine) {
     }).catch(() => {});
   });
   wrap.appendChild(copyBtn);
+  // Delete (X) button — removes this bubble on both sides
+  const delBtn = document.createElement('button');
+  delBtn.className = 'bubble-delete-btn';
+  delBtn.title = 'Delete message (for both sides)';
+  delBtn.textContent = '✕';
+  delBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    deleteBubble(wrap.dataset.ts, true);
+  });
+  wrap.appendChild(delBtn);
   wrap.appendChild(who);
   if (type.startsWith('image/')) {
     const img = document.createElement('img');
@@ -3980,28 +4039,25 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('resize', _positionFloatSend);
 
   // ── Global keyboard shortcuts ──────────────────────────────
-  document.addEventListener('keydown', e => {
-    if (!e.ctrlKey && !e.metaKey) return;
-    if (e.key === 's' || e.key === 'S') {
-      // Ctrl+S — send from voice input box if panel is open and has content
-      if (_speechVisible) {
+  // Speech textarea hotkeys (scoped to the box):
+  //   Ctrl+Enter (Cmd+Enter on Mac) — send to chat
+  //   Enter                         — insert a newline (default textarea behavior)
+  //   Escape                        — close the speech panel
+  (function() {
+    const box = document.getElementById('speechEditBox');
+    if (!box) return;
+    box.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
         const sb = document.getElementById('speechFloatSend');
         if (sb && !sb.disabled) sendSpeechToChat();
-      }
-    } else if (e.key === 'Enter') {
-      // Ctrl+Enter — send from voice input box if panel is open and has content
-      if (_speechVisible) {
+      } else if (e.key === 'Escape') {
         e.preventDefault();
-        const sb = document.getElementById('speechFloatSend');
-        if (sb && !sb.disabled) sendSpeechToChat();
+        if (_speechVisible) toggleSpeechPanel();
       }
-    } else if (e.key === 't' || e.key === 'T') {
-      // Ctrl+T — toggle Talk/Type in Chat panel
-      e.preventDefault();
-      toggleSpeechPanel();
-    }
-  });
+    });
+  })();
+
   // Init speech lang select: saved choice > system language > en-US
   // Also resolves and stores the system-language option for the ORIGINAL button.
   (function() {
@@ -4665,6 +4721,7 @@ function attachDataConn(dc) {
       if (f.__control === 'video') { updateRemoteVideoState(f.enabled, f.hasTrack !== false); return; }
       if (f.__control === 'leave') { handleRemoteLeave(); return; }
       if (f.__control === 'clearChat') { ttsStopAll(); clearHistory(); const ce=document.getElementById('chat'); if(ce) ce.innerHTML=''; entry('Remote cleared chat history','sys'); return; }
+      if (f.__control === 'deleteMsg') { deleteBubble(f.ts, false); return; }
       if (f.__control === 'refresh') { entry('Remote refreshed — reloading…', 'sys'); peerRefreshing = true; try { sessionStorage.setItem('fieldRadioRefreshing', '1'); } catch(e) {} setTimeout(() => window.location.reload(), 400); return; }
       if (f.__file  === true)      { addMediaBubble(f.name, f.type, f.data, false); return; }
       if (f.__chunk === true)      { receiveChunk(f); return; }
@@ -6412,10 +6469,15 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-window.addEventListener('beforeunload', () => {
+// Android WebViews can fire 'beforeunload' spuriously — e.g. when the on-screen
+// keyboard is dismissed while in app-fullscreen mode — even though the page
+// isn't actually closing. Destroying the peer / sending 'leave' in that case
+// looks like a crash (both sides drop the call for no reason).
+// 'pagehide' with persisted=false is a much more reliable signal of an actual
+// unload; beforeunload alone is too noisy on Android.
+window.addEventListener('pagehide', (ev) => {
+  if (ev.persisted) return; // page is being cached (bfcache), not closing
   saveSpeechDraft();
-  // Notify remote that this side is leaving — but NOT during a refresh-reload,
-  // otherwise the remote wrongly shows the leave screen instead of reconnecting.
   if (!leftPermanently && !peerRefreshing) {
     try { dcSend({ __control: 'leave' }); } catch(e) {}
   }
