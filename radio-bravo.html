@@ -1810,6 +1810,7 @@
         <div id="speechStatus" class="speech-status">IDLE</div>
 
         <div class="speech-btn-row" id="speechBtnRow1">
+          <span class="sbr-label">Chat:</span>
           <button id="speechAttachBtn" onclick="speechAttachClick()" title="Attach file or drag &amp; drop">ATTACH</button>
           <input type="file" id="speechFileInput" multiple style="display:none" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx">
           <input type="file" id="speechTextFileInput" style="display:none" accept=".txt,.md,.text">
@@ -1819,6 +1820,7 @@
           <button id="speechClearBtn" onclick="speechClearText()" title="Clear input box">CLEAR</button>
         </div>
         <div class="speech-btn-row" id="speechBtnRow2">
+          <span class="sbr-label">Spoken Language:</span>
           <select id="speechLangSelect" title="Speech recognition language" onchange="setSpeechLang(this.value)">
             <option value="en-US" title="Eng">English (US)</option>
             <option value="en-GB" title="Eng UK">English (UK)</option>
@@ -1832,6 +1834,7 @@
           <button id="speechOriginalBtn" onclick="speechOriginalLang()" title="Revert to system language">ORIGINAL</button>
         </div>
         <div class="speech-btn-row" id="speechBtnRow3">
+          <span class="sbr-label">Text To Speech:</span>
           <select id="ttsVoiceSelect" title="TTS voice for spoken output"></select>
           <button id="speechTtsBtn" onclick="toggleTts()" title="Toggle auto-speak for incoming messages">TTS Off</button>
           <button id="speechListenBtn" onclick="toggleListening()">TALK</button>
