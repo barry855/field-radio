@@ -2962,14 +2962,14 @@ function saveChatToFile() {
     const align  = b.mine ? 'flex-end'  : 'flex-start';
     const bg     = b.mine ? 'rgba(0,212,255,0.15)' : 'rgba(0,255,159,0.12)';
     const border = b.mine ? '#00d4ff'   : '#00ff9f';
-    const whoCol = b.mine ? '#0077aa'   : '#007744';
+    const whoCol = b.mine ? '#004f73'   : '#004d29';
     return `<div style="display:flex;justify-content:${align};margin:6px 0;">
-  <div style="max-width:75%;padding:10px 14px;border-radius:6px;background:${bg};border:1px solid ${border};font-size:18px;font-weight:bold;color:#000;line-height:1.55;word-break:break-word;">
+  <div style="max-width:75%;padding:10px 14px;border-radius:6px;background:${bg};font-size:18px;font-weight:bold;color:#000;line-height:1.55;word-break:break-word;">
     <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;font-family:monospace;color:${whoCol};margin-bottom:5px;font-weight:bold;">${b.who}</div>
     <div${b.orig ? ' title="' + b.orig.replace(/"/g, '&quot;') + '" style="cursor:help;"' : ''}>${b.html}</div>
     ${b.downloadHtml ? '<div style="margin-top:5px;">' + b.downloadHtml + '</div>' : ''}
     ${b.orig ? '<div style="font-size:18px;color:#444;font-style:italic;margin-top:6px;border-top:1px dashed #ccc;padding-top:6px;font-weight:bold;line-height:1.55;">' + b.orig.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>' : ''}
-    <div style="font-size:11px;color:#555;text-align:right;margin-top:5px;font-weight:normal;">${b.time}</div>
+    <div style="font-size:12px;color:#222;text-align:right;margin-top:5px;font-weight:bold;">${b.time}</div>
   </div>
 </div>`;
   }).join('\n');
