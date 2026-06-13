@@ -3835,10 +3835,11 @@ const VOICE_PUNCT_MAP = [
   [/\bpoint\b/gi,             '.'],
   [/\bdot\b/gi,               '.'],
   [/\bcomma\b/gi,             ','],
-  [/\bquestion mark\b/gi,     '?'],
+  [/\bquestion[ -]mark\b/gi,     '?'],
   [/\bkarma\b/gi,             '?'],
-  [/\bexclamation (point|mark)\b/gi, '!'],
-  [/\bexplanation (point|mark)\b/gi, '!'],
+  [/\bexclamation[ -](point|mark)\b/gi, '!'],
+  [/\bexclamation\b/gi,       '!'],
+  [/\bexplanation[ -](point|mark)\b/gi, '!'],
   [/\bcolon\b/gi,             ':'],
   [/\bsemicolon\b/gi,         ';'],
   // Quotes, brackets, dashes
@@ -3849,13 +3850,17 @@ const VOICE_PUNCT_MAP = [
   [/\bapostrophe\b/gi,        "'"],
   [/\bopen paren(thes[ie]s)?\b/gi,  '('],
   [/\bopen parent\b/gi,             '('],
+  [/\bopen pairing(s)?\b/gi,        '('],
   [/\bclose paren(thes[ie]s)?\b/gi, ')'],
   [/\bclose pattern\b/gi,           ')'],
+  [/\bclose pairing(s)?\b/gi,       ')'],
   [/\bparen(thes[ie]s)?\b/gi, ''],
   [/\bopen bracket\b/gi,      '['],
   [/\bclose bracket\b/gi,     ']'],
   [/\bopen brace\b/gi,        '{'],
   [/\bclose brace\b/gi,       '}'],
+  [/\bclothes brace\b/gi,     '}'],
+  [/\bback ?space\b/gi,       '\x08'],
   [/\bhyphen\b/gi,            '-'],
   [/\bdash\b/gi,              '-'],
   [/\bunderscore\b/gi,        '_'],
@@ -3900,16 +3905,31 @@ const DELETE_WORD = '(?:delete|to lead|to leed|the lead|delete[d]?)';
 
 function applyVoicePunctuation(text) {
   let out = text;
+  // Strip stray curly-brace command artifacts the recognizer sometimes emits
+  // verbatim (e.g. "{Question-Mark}") when a command word isn't matched above.
+  out = out.replace(/\{([^{}]*)\}/g, '$1');
+  // Also strip any leftover unmatched/stray brace characters.
+  out = out.replace(/[{}]/g, '');
+  for (const [re, repl] of VOICE_PUNCT_MAP) out = out.replace(re, repl);
+  // Re-run once more in case unwrapping braces revealed additional command words.
   for (const [re, repl] of VOICE_PUNCT_MAP) out = out.replace(re, repl);
   // Remove space(s) before closing/sentence punctuation: "hello ." -> "hello."
   out = out.replace(/[ \t]+([.,!?:;)\]}"])/g, '$1');
   // Remove space(s) after opening brackets/quotes: "( hello" -> "(hello"
   out = out.replace(/([(\[{"])[ \t]+/g, '$1');
-  // Remove space between a symbol (#, $, %, @, etc.) and an adjacent number/word
-  out = out.replace(/([#$%^&*+=<>|~@\/\\_-]) (?=\w)/g, '$1');
-  out = out.replace(/(?<=\w) ([#$%^&*+=<>|~@\/\\_-])/g, '$1');
+  // Remove space between a symbol (#, @, etc.) and an adjacent number/word
+  out = out.replace(/([#^&*+=<>|~@\/\\_-]) (?=\w)/g, '$1');
+  out = out.replace(/(?<=\w) ([#^&*+=<>|~@\/\\_-])/g, '$1');
+  // $ / % only glue to an immediately adjacent NUMBER (not arbitrary words)
+  out = out.replace(/\$ (?=\d)/g, '$');
+  out = out.replace(/(\d) %/g, '$1%');
+  out = out.replace(/(\d)% (?=\w)/g, '$1% ');
   out = out.replace(/ {2,}/g, ' ');
   out = out.replace(/[ \t]*\n[ \t]*/g, '\n');
+  // Process backspace command characters: each removes the preceding char.
+  while (out.includes('\x08')) {
+    out = out.replace(/[^\x08]?\x08/, '');
+  }
   return out;
 }
 
@@ -3952,8 +3972,15 @@ function processVoiceChunk(currentText, chunk) {
     return _removeLastSentences(currentText, 1);
   }
 
+  // "back space" / "backspace" (optionally "N times") -> delete the last N character(s)
+  let m = text.match(new RegExp('^back ?space(?:\\s+' + numPattern + '(?:\\s+times?)?)?$', 'i'));
+  if (m) {
+    const n = m[1] ? (VOICE_NUMBER_WORDS[m[1].toLowerCase()] || parseInt(m[1], 10) || 1) : 1;
+    return currentText.slice(0, Math.max(0, currentText.length - n));
+  }
+
   // "delete N message(s)" / "delete message" -> clear the whole box
-  let m = text.match(new RegExp('^' + DELETE_WORD + '\\s+(?:' + numPattern + '\\s+)?messages?$', 'i'));
+  m = text.match(new RegExp('^' + DELETE_WORD + '\\s+(?:' + numPattern + '\\s+)?messages?$', 'i'));
   if (m) return '';
 
   // "delete N sentence(s)" / "delete sentence"
@@ -3971,8 +3998,23 @@ function processVoiceChunk(currentText, chunk) {
   }
 
   // Not a recognized edit command — apply punctuation substitutions and append.
-  const cleaned = applyVoicePunctuation(text);
+  let cleaned = applyVoicePunctuation(text);
   if (!cleaned) return currentText; // e.g. bare "parenthesis" with nothing else said
+  // Speech recognition sometimes re-finalizes an overlapping result, producing
+  // an immediate duplicate run within a single chunk (e.g. "Five% Five%" or
+  // "Five percent Five percent"). Collapse consecutive duplicate single tokens...
+  cleaned = cleaned.replace(/\b(\S+)(\s+\1)+\b/gi, '$1');
+  // ...and collapse a whole-chunk doubled phrase ("X X" -> "X"), comparing
+  // by word tokens rather than raw character length.
+  {
+    const wordsC = cleaned.trim().split(/\s+/);
+    if (wordsC.length >= 2 && wordsC.length % 2 === 0) {
+      const half = wordsC.length / 2;
+      const a = wordsC.slice(0, half).join(' ');
+      const b = wordsC.slice(half).join(' ');
+      if (a.toLowerCase() === b.toLowerCase()) cleaned = a;
+    }
+  }
   const base = currentText;
   const needsSpace = base && !base.endsWith(' ') && !base.endsWith('\n')
     && !/[(\[{"]$/.test(base)
@@ -4068,7 +4110,10 @@ function startListening() {
 
     _recognition.onerror = (e) => {
       _sttLastError = e.error;
-      setSpeechStatus('ERR: ' + e.error);
+      // Routine, expected conditions — don't spam the status display with them.
+      if (e.error !== 'no-speech' && e.error !== 'aborted') {
+        setSpeechStatus('ERR: ' + e.error);
+      }
       if (e.error === 'no-speech' || e.error === 'aborted') return;
       stopListening();
     };
