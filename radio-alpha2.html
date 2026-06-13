@@ -163,7 +163,7 @@
   .bubble .who {
     font-size: 12px; letter-spacing: 2px; margin-bottom: 5px;
     text-transform: uppercase; font-family: 'Orbitron', sans-serif;
-    padding-left: 24px;
+    padding-left: 24px; padding-right: 24px;
   }
   .bubble.mine .who   { color: #0077aa; }
   .bubble.theirs .who { color: #007744; }
@@ -196,6 +196,19 @@
   .bubble:hover .bubble-copy-btn { opacity: 1; background: rgba(0,0,0,0.4); }
   .bubble-copy-btn:hover { background: rgba(0,0,0,0.5); color: #fff; }
   .bubble-copy-btn.copied { background: rgba(0,200,100,0.5); color: #fff; opacity: 1; }
+  /* Delete (X) button in bubble top-right — deletes for both sides */
+  .bubble-delete-btn {
+    position: absolute; top: 5px; right: 5px;
+    width: 18px; height: 18px;
+    background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 3px; color: rgba(255,255,255,0.7);
+    font-size: 12px; font-weight: 900; line-height: 1;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    opacity: 0.7; transition: opacity 0.15s, background 0.15s;
+    z-index: 5; user-select: none; font-family: monospace;
+  }
+  .bubble:hover .bubble-delete-btn { opacity: 1; background: rgba(0,0,0,0.4); }
+  .bubble-delete-btn:hover { background: rgba(180,0,0,0.6); color: #fff; }
   /* Original-text peek on hover / tap */
   .bubble[data-orig] { cursor: default; }
   .bubble[data-orig] .msg-text { transition: opacity 0.15s; }
@@ -2844,6 +2857,29 @@ function updateMessageStatus(text, ts, newStatus) {
   } catch(e) {}
 }
 
+function removeMessageFromHistory(ts) {
+  try {
+    const key = HISTORY_KEY();
+    const history = JSON.parse(localStorage.getItem(key) || '[]');
+    const idx = history.findIndex(m => m.ts === ts);
+    if (idx !== -1) { history.splice(idx, 1); localStorage.setItem(key, JSON.stringify(history)); }
+  } catch(e) {}
+}
+
+// Delete a bubble by its data-ts. If broadcast is true, also tell the remote
+// side to delete its copy (used when the local user clicks the X).
+function deleteBubble(ts, broadcast) {
+  const chatEl = document.getElementById('chat');
+  if (chatEl) {
+    const el = chatEl.querySelector('.bubble[data-ts="' + ts + '"]');
+    if (el) el.remove();
+  }
+  removeMessageFromHistory(ts);
+  if (broadcast) {
+    try { dcSend({ __control: 'deleteMsg', ts: ts }); } catch(e) {}
+  }
+}
+
 function loadHistory() {
   // Clear chat screen on program start — do not auto-restore previous session
   const chatEl = document.getElementById('chat');
@@ -3145,6 +3181,7 @@ function addBubble(text, mine, ts, save = true, restoredStatus = null, orig = nu
   const now = ts || Date.now();
   const wrap = document.createElement('div');
   wrap.className = 'bubble ' + (mine ? 'mine' : 'theirs');
+  wrap.dataset.ts = now;
   const who = document.createElement('div');
   who.className = 'who';
   who.textContent = mine ? 'ALPHA' : 'BRAVO';
@@ -3222,6 +3259,16 @@ function addBubble(text, mine, ts, save = true, restoredStatus = null, orig = nu
     });
   });
   wrap.appendChild(copyBtn);
+  // Delete (X) button — removes this bubble on both sides
+  const delBtn = document.createElement('button');
+  delBtn.className = 'bubble-delete-btn';
+  delBtn.title = 'Delete message (for both sides)';
+  delBtn.textContent = '✕';
+  delBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    deleteBubble(wrap.dataset.ts, true);
+  });
+  wrap.appendChild(delBtn);
   wrap.appendChild(who);
   wrap.appendChild(msg);
   wrap.appendChild(origPeek);
@@ -3497,7 +3544,7 @@ function sendFileChunked(item) {
         index: i, total, data: chunk
       });
     }
-    addMediaBubble(item.file.name, item.file.type, item.dataUrl, true);
+    addMediaBubble(item.file.name, item.file.type, item.dataUrl, true, id);
   } catch(e) {
     entry('Failed to send file: ' + item.file.name + ' — ' + e.message, 'err');
   }
@@ -3519,7 +3566,7 @@ function receiveChunk(f) {
     const dataUrl = rec.parts.join('');
     delete _incomingChunks[f.id];
     removeTransferProgress(f.id);
-    addMediaBubble(rec.name, rec.type, dataUrl, false);
+    addMediaBubble(rec.name, rec.type, dataUrl, false, f.id);
   }
 }
 
@@ -3542,9 +3589,10 @@ function removeTransferProgress(id) {
 }
 
 // ── Render a media bubble (sent or received) ──────────────────
-function addMediaBubble(name, type, dataUrl, mine) {
+function addMediaBubble(name, type, dataUrl, mine, ts) {
   const wrap = document.createElement('div');
   wrap.className = 'bubble ' + (mine ? 'mine' : 'theirs');
+  wrap.dataset.ts = ts || Date.now();
   const who = document.createElement('div');
   who.className = 'who';
   who.textContent = mine ? 'ALPHA' : 'BRAVO';
@@ -3561,6 +3609,16 @@ function addMediaBubble(name, type, dataUrl, mine) {
     }).catch(() => {});
   });
   wrap.appendChild(copyBtn);
+  // Delete (X) button — removes this bubble on both sides
+  const delBtn = document.createElement('button');
+  delBtn.className = 'bubble-delete-btn';
+  delBtn.title = 'Delete message (for both sides)';
+  delBtn.textContent = '✕';
+  delBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    deleteBubble(wrap.dataset.ts, true);
+  });
+  wrap.appendChild(delBtn);
   wrap.appendChild(who);
   if (type.startsWith('image/')) {
     const img = document.createElement('img');
@@ -4663,6 +4721,7 @@ function attachDataConn(dc) {
       if (f.__control === 'video') { updateRemoteVideoState(f.enabled, f.hasTrack !== false); return; }
       if (f.__control === 'leave') { handleRemoteLeave(); return; }
       if (f.__control === 'clearChat') { ttsStopAll(); clearHistory(); const ce=document.getElementById('chat'); if(ce) ce.innerHTML=''; entry('Remote cleared chat history','sys'); return; }
+      if (f.__control === 'deleteMsg') { deleteBubble(f.ts, false); return; }
       if (f.__control === 'refresh') { entry('Remote refreshed — reloading…', 'sys'); peerRefreshing = true; try { sessionStorage.setItem('fieldRadioRefreshing', '1'); } catch(e) {} setTimeout(() => window.location.reload(), 400); return; }
       if (f.__file  === true)      { addMediaBubble(f.name, f.type, f.data, false); return; }
       if (f.__chunk === true)      { receiveChunk(f); return; }
