@@ -1339,7 +1339,9 @@
   body.app-fullscreen #paneChat .gain-row,
   body.app-fullscreen #paneChat .zoom-row,
   body.app-fullscreen #paneChat #speechPanel,
-  body.app-fullscreen #paneChat #chatToolsWrap {
+  body.app-fullscreen #paneChat #chatToolsWrap,
+  body.app-fullscreen #paneChat #translateBar,
+  body.app-fullscreen #paneChat .chat-panel > .panel-label {
     position: relative; z-index: 1002;
   }
   body.app-fullscreen #chatPanel {
@@ -1356,6 +1358,7 @@
   body.app-fullscreen.fs-controls-hidden #paneChat .zoom-row,
   body.app-fullscreen.fs-controls-hidden #paneChat #speechPanel,
   body.app-fullscreen.fs-controls-hidden #paneChat #chatToolsWrap,
+  body.app-fullscreen.fs-controls-hidden #paneChat #translateBar,
   body.app-fullscreen.fs-controls-hidden .chat-panel > .panel-label {
     opacity: 0;
     pointer-events: none;
@@ -1369,6 +1372,7 @@
   body.app-fullscreen.fs-controls-visible #paneChat .zoom-row,
   body.app-fullscreen.fs-controls-visible #paneChat #speechPanel,
   body.app-fullscreen.fs-controls-visible #paneChat #chatToolsWrap,
+  body.app-fullscreen.fs-controls-visible #paneChat #translateBar,
   body.app-fullscreen.fs-controls-visible .chat-panel > .panel-label {
     opacity: 1;
     pointer-events: auto;
@@ -1392,15 +1396,25 @@
     body.app-fullscreen .shell { padding: 0; gap: 0; }
     body.app-fullscreen .tab-content { padding: 0; gap: 0; border: none; border-radius: 0; background: #000; }
     body.app-fullscreen #paneChat { gap: 0; }
-    body.app-fullscreen .chat-btn-bar-row,
-    body.app-fullscreen .gain-row,
-    body.app-fullscreen .zoom-row,
-    body.app-fullscreen #chatFindBar,
-    body.app-fullscreen #logPanel,
-    body.app-fullscreen #speechPanel,
     body.app-fullscreen #chat,
-    body.app-fullscreen #translateBar,
-    body.app-fullscreen .chat-panel > .panel-label { display: none !important; }
+    body.app-fullscreen #translateBar { display: none !important; }
+    body.app-fullscreen.fs-controls-visible .chat-btn-bar-row,
+    body.app-fullscreen.fs-controls-visible #chatToolsWrap {
+      position: fixed; left: 0; right: 0; z-index: 1002;
+      background: rgba(0,0,0,0.55);
+      max-height: 40vh; overflow-y: auto;
+    }
+    body.app-fullscreen.fs-controls-visible #chatBtnRow1 { top: 0; }
+    body.app-fullscreen.fs-controls-visible #chatBtnRow2 { top: 34px; }
+    body.app-fullscreen.fs-controls-visible #chatToolsWrap { bottom: 0; }
+    body.app-fullscreen.fs-controls-hidden .chat-btn-bar-row,
+    body.app-fullscreen.fs-controls-hidden .gain-row,
+    body.app-fullscreen.fs-controls-hidden .zoom-row,
+    body.app-fullscreen.fs-controls-hidden #chatFindBar,
+    body.app-fullscreen.fs-controls-hidden #logPanel,
+    body.app-fullscreen.fs-controls-hidden #speechPanel,
+    body.app-fullscreen.fs-controls-hidden #chatToolsWrap,
+    body.app-fullscreen.fs-controls-hidden .chat-panel > .panel-label { display: none !important; }
     body.app-fullscreen #chatPanel {
       position: fixed; inset: 0; z-index: 50;
       border-radius: 0; border: none;
@@ -1570,14 +1584,14 @@
         <button class="chat-find-nav" id="chatFindNext" title="Next match">▼</button>
         <button class="chat-find-close" id="chatFindClose" title="Close">✕</button>
       </div>
-      <div class="chat-btn-bar-row" style="flex-shrink:0; margin-bottom:4px; flex-wrap:nowrap; overflow:hidden;">
+      <div class="chat-btn-bar-row" id="chatBtnRow1" style="flex-shrink:0; margin-bottom:4px; flex-wrap:nowrap; overflow:hidden;">
         <button class="speech-top-btn" onclick="refreshScreen()" title="Refresh / Reconnect" style="flex-shrink:0;">↺</button>
         <button class="speech-top-btn leave-style" id="leaveChatBtn" onclick="leaveSession()" title="Leave session" style="flex-shrink:0;">✕ Leave</button>
         <span id="flipWrapChat"><button class="speech-top-btn" id="flipChatBtn" onclick="flipCamera()" title="Flip camera" style="flex-shrink:0;">⟳ Flip Cam</button></span>
         <button class="speech-top-btn" id="fsChatBtn" onclick="toggleFullScreen()" title="Full Screen Toggle" style="flex-shrink:0;">FS OFF</button>
         <button class="speech-top-btn" id="miniChatBtn" onclick="toggleMiniChat()" title="Toggle mini video in chat" style="flex-shrink:0;">MINI OFF</button>
       </div>
-      <div class="chat-btn-bar-row" style="flex-shrink:0;">
+      <div class="chat-btn-bar-row" id="chatBtnRow2" style="flex-shrink:0;">
         <button class="speech-top-btn" id="chatVideoViewBtn" onclick="toggleChatVideoView()" title="Toggle chat video view">SEEING THEM</button>
         <button class="speech-top-btn rec-chat-btn" id="recChatBtn" onclick="toggleRecordChat()" title="Record current main feed + mini if visible">➤ RECORD</button>
         <button class="speech-top-btn video-off-state" id="videoOffChatBtn" onclick="toggleVideo()" title="Video on/off">Video Off</button>
@@ -5532,7 +5546,9 @@ document.addEventListener('DOMContentLoaded', function initScreenShareSupport() 
     });
   }
   // Firefox does not expose system audio tracks via getDisplayMedia — hide sys audio buttons.
-  if (isFirefox) {
+  // Also hide on any platform lacking getDisplayMedia support (e.g. Android Chrome),
+  // same as the Share button above.
+  if (isFirefox || !supported) {
     document.querySelectorAll('#sysAudioBtn, #sysAudioBtn2, #sysAudioChatBtn').forEach(btn => {
       if (btn) btn.style.display = 'none';
     });
