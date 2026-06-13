@@ -5546,7 +5546,9 @@ document.addEventListener('DOMContentLoaded', function initScreenShareSupport() 
     });
   }
   // Firefox does not expose system audio tracks via getDisplayMedia — hide sys audio buttons.
-  if (isFirefox) {
+  // Also hide on any platform lacking getDisplayMedia support (e.g. Android Chrome),
+  // same as the Share button above.
+  if (isFirefox || !supported) {
     document.querySelectorAll('#sysAudioBtn, #sysAudioBtn2, #sysAudioChatBtn').forEach(btn => {
       if (btn) btn.style.display = 'none';
     });
