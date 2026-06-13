@@ -3980,28 +3980,25 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('resize', _positionFloatSend);
 
   // ── Global keyboard shortcuts ──────────────────────────────
-  document.addEventListener('keydown', e => {
-    if (!e.ctrlKey && !e.metaKey) return;
-    if (e.key === 's' || e.key === 'S') {
-      // Ctrl+S — send from voice input box if panel is open and has content
-      if (_speechVisible) {
+  // Speech textarea hotkeys (scoped to the box):
+  //   Ctrl+Enter (Cmd+Enter on Mac) — send to chat
+  //   Enter                         — insert a newline (default textarea behavior)
+  //   Escape                        — close the speech panel
+  (function() {
+    const box = document.getElementById('speechEditBox');
+    if (!box) return;
+    box.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
         const sb = document.getElementById('speechFloatSend');
         if (sb && !sb.disabled) sendSpeechToChat();
-      }
-    } else if (e.key === 'Enter') {
-      // Ctrl+Enter — send from voice input box if panel is open and has content
-      if (_speechVisible) {
+      } else if (e.key === 'Escape') {
         e.preventDefault();
-        const sb = document.getElementById('speechFloatSend');
-        if (sb && !sb.disabled) sendSpeechToChat();
+        if (_speechVisible) toggleSpeechPanel();
       }
-    } else if (e.key === 't' || e.key === 'T') {
-      // Ctrl+T — toggle Talk/Type in Chat panel
-      e.preventDefault();
-      toggleSpeechPanel();
-    }
-  });
+    });
+  })();
+
   // Init speech lang select: saved choice > system language > en-US
   // Also resolves and stores the system-language option for the ORIGINAL button.
   (function() {
@@ -6264,10 +6261,15 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-window.addEventListener('beforeunload', () => {
+// Android WebViews can fire 'beforeunload' spuriously — e.g. when the on-screen
+// keyboard is dismissed while in app-fullscreen mode — even though the page
+// isn't actually closing. Destroying the peer / sending 'leave' in that case
+// looks like a crash (both sides drop the call for no reason).
+// 'pagehide' with persisted=false is a much more reliable signal of an actual
+// unload; beforeunload alone is too noisy on Android.
+window.addEventListener('pagehide', (ev) => {
+  if (ev.persisted) return; // page is being cached (bfcache), not closing
   saveSpeechDraft();
-  // Notify remote that this side is leaving — but NOT during a refresh-reload,
-  // otherwise the remote wrongly shows the leave screen instead of reconnecting.
   if (!leftPermanently && !peerRefreshing) {
     try { dcSend({ __control: 'leave' }); } catch(e) {}
   }
