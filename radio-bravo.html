@@ -3816,6 +3816,104 @@ function _positionFloatSend() {
   fsBtn.disabled = false;
 }
 
+// ── Voice command filter ───────────────────────────────────────────────────
+// Lets you dictate punctuation and basic edits by speaking commands like:
+//   "period" / "comma" / "question mark" / "new line" / "new paragraph"
+//   "delete N word(s)" / "delete N sentence(s)" / "delete sentence"
+//   "delete N message(s)" / "delete message"  (clears the whole input box)
+// Recognized punctuation words become real punctuation (with correct spacing);
+// recognized "delete" commands remove text from the END of the current box.
+
+const VOICE_PUNCT_MAP = [
+  [/\bfull stop\b/gi,     '.'],
+  [/\bperiod\b/gi,        '.'],
+  [/\bcomma\b/gi,         ','],
+  [/\bquestion mark\b/gi, '?'],
+  [/\bexclamation (point|mark)\b/gi, '!'],
+  [/\bcolon\b/gi,         ':'],
+  [/\bsemicolon\b/gi,     ';'],
+  [/\bnew paragraph\b/gi, '\n\n'],
+  [/\bnew line\b/gi,      '\n'],
+];
+
+const VOICE_NUMBER_WORDS = {
+  a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5,
+  six: 6, seven: 7, eight: 8, nine: 9, ten: 10
+};
+
+// Speech recognition sometimes mishears "delete" — accept common variants.
+const DELETE_WORD = '(?:delete|to lead|to leed|the lead|delete[d]?)';
+
+function applyVoicePunctuation(text) {
+  let out = text;
+  for (const [re, repl] of VOICE_PUNCT_MAP) out = out.replace(re, repl);
+  // Remove space(s) before inserted punctuation: "hello ." -> "hello."
+  out = out.replace(/[ \t]+([.,!?:;])/g, '$1');
+  out = out.replace(/ {2,}/g, ' ');
+  out = out.replace(/[ \t]*\n[ \t]*/g, '\n');
+  return out;
+}
+
+// Remove the last N "words" from text (words = whitespace-separated tokens).
+function _removeLastWords(text, n) {
+  const trimmed = text.replace(/\s+$/, '');
+  if (!trimmed) return '';
+  const words = trimmed.split(/\s+/);
+  words.splice(Math.max(0, words.length - n), n);
+  return words.join(' ');
+}
+
+// Remove the last N sentences from text. A "sentence" ends at . ! or ?
+function _removeLastSentences(text, n) {
+  let out = text;
+  for (let i = 0; i < n; i++) {
+    const trimmed = out.replace(/\s+$/, '');
+    if (!trimmed) break;
+    const withoutTrailingPunct = trimmed.replace(/[.!?]+$/, '');
+    const lastEnd = Math.max(
+      withoutTrailingPunct.lastIndexOf('.'),
+      withoutTrailingPunct.lastIndexOf('!'),
+      withoutTrailingPunct.lastIndexOf('?')
+    );
+    out = lastEnd === -1 ? '' : trimmed.slice(0, lastEnd + 1);
+  }
+  return out;
+}
+
+// Process a finalized voice transcript chunk against the current box text.
+// Returns the new full text for the box.
+function processVoiceChunk(currentText, chunk) {
+  let text = chunk.trim();
+  if (!text) return currentText;
+
+  const numPattern = '(' + Object.keys(VOICE_NUMBER_WORDS).join('|') + '|\\d+)';
+
+  // "delete N message(s)" / "delete message" -> clear the whole box
+  let m = text.match(new RegExp('^' + DELETE_WORD + '\\s+(?:' + numPattern + '\\s+)?messages?$', 'i'));
+  if (m) return '';
+
+  // "delete N sentence(s)" / "delete sentence"
+  m = text.match(new RegExp('^' + DELETE_WORD + '\\s+(?:' + numPattern + '\\s+)?sentences?$', 'i'));
+  if (m) {
+    const n = m[1] ? (VOICE_NUMBER_WORDS[m[1].toLowerCase()] || parseInt(m[1], 10) || 1) : 1;
+    return _removeLastSentences(currentText, n);
+  }
+
+  // "delete N word(s)" / "delete word"
+  m = text.match(new RegExp('^' + DELETE_WORD + '\\s+(?:' + numPattern + '\\s+)?words?$', 'i'));
+  if (m) {
+    const n = m[1] ? (VOICE_NUMBER_WORDS[m[1].toLowerCase()] || parseInt(m[1], 10) || 1) : 1;
+    return _removeLastWords(currentText, n);
+  }
+
+  // Not a recognized edit command — apply punctuation substitutions and append.
+  const cleaned = applyVoicePunctuation(text);
+  const base = currentText;
+  const needsSpace = base && !base.endsWith(' ') && !base.endsWith('\n')
+    && !/^[.,!?:;\n]/.test(cleaned);
+  return base + (needsSpace ? ' ' : '') + cleaned;
+}
+
 function sendSpeechToChat() {
   const box = document.getElementById('speechEditBox');
   if (!box) return;
@@ -3883,7 +3981,7 @@ function startListening() {
       if (finalChunk) {
         const base = (_interimText && box.value.endsWith(_interimText))
           ? box.value.slice(0, box.value.length - _interimText.length) : box.value;
-        box.value = base + (base && !base.endsWith(' ') ? ' ' : '') + finalChunk.trim();
+        box.value = processVoiceChunk(base, finalChunk);
         _interimText = '';
       } else if (interimChunk) {
         const base = (_interimText && box.value.endsWith(_interimText))
