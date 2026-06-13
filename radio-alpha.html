@@ -3843,6 +3843,7 @@ const VOICE_PUNCT_MAP = [
   [/\bquote(s)?\b/gi,         '"'],
   [/\bapostrophe\b/gi,        "'"],
   [/\bopen paren(thes[ie]s)?\b/gi,  '('],
+  [/\bopen parent\b/gi,             '('],
   [/\bclose paren(thes[ie]s)?\b/gi, ')'],
   [/\bparen(thes[ie]s)?\b/gi, ''],
   [/\bopen bracket\b/gi,      '['],
@@ -4041,8 +4042,11 @@ function startListening() {
       } else if (interimChunk) {
         const base = (_interimText && box.value.endsWith(_interimText))
           ? box.value.slice(0, box.value.length - _interimText.length) : box.value;
-        _interimText = interimChunk;
-        box.value = base + (base && !base.endsWith(' ') ? ' ' : '') + interimChunk;
+        const cleanedInterim = applyVoicePunctuation(interimChunk.trim());
+        const sep = (base && !base.endsWith(' ') && !base.endsWith('\n')
+          && !/[([{"]]$/.test(base) && !/^[.,!?:;)\]}\n]/.test(cleanedInterim)) ? ' ' : '';
+        _interimText = sep + cleanedInterim;
+        box.value = base + _interimText;
       }
       updateSpeechSendBtn();
       box.scrollTop = box.scrollHeight;
@@ -4069,7 +4073,7 @@ function startListening() {
         if (box) {
           const base = box.value.endsWith(_interimText)
             ? box.value.slice(0, box.value.length - _interimText.length) : box.value;
-          box.value = base + (base && !base.endsWith(' ') ? ' ' : '') + _interimText.trim();
+          box.value = processVoiceChunk(base, _interimText.trim());
           _interimText = '';
           updateSpeechSendBtn();
           box.scrollTop = box.scrollHeight;
