@@ -1,23 +1,1078 @@
-MORSE·
-PRACTICE & TRAINER
-Listen
-Decode
-Quiz
-Reference
-Speed
-WPM
 
-15
-Tone (Hz)
+<!DOCTYPE html>
+<html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<meta name="google" content="notranslate">
+<title>DELTA — Field Radio Chat</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📡</text></svg>">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;900&display=swap');
 
-600
-Text to Send
-CQ CQ DE TEST
-▶ Play Morse
-■ Stop
-Morse Output
-Random Practice
-Group length
+  :root {
+    --bg:         #6b7280;
+    --panel:      #4b5563;
+    --border:     #374151;
+    --accent:     #00d4ff;
+    --accent2:    #00ff9f;
+    --warn:       #ffcc00;
+    --danger:     #ff4444;
+    --btn-bg:     #374151;
+    --btn-hover:  #4b5563;
+    --btn-active: #1e3a5f;
+    --text:       #f1f5f9;
+    --text-dim:   #cbd5e1;
+  }
 
-5-char groups
-⚄ New & Play
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    height: 100vh;
+    height: -webkit-fill-available;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .shell {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    max-width: 600px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 12px;
+    gap: 10px;
+    overflow: hidden;
+  }
+
+  header {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; border-top: 2px solid var(--accent);
+    padding: 10px 14px;
+    flex-shrink: 0;
+  }
+  .logo {
+    font-family: 'Orbitron', sans-serif; font-size: 20px; font-weight: 900;
+    color: var(--accent); letter-spacing: 4px;
+    text-shadow: 0 0 20px rgba(0,212,255,0.5); white-space: nowrap;
+  }
+  .logo span { color: var(--accent2); }
+
+  .statusbar { display: flex; align-items: center; gap: 14px; flex: 1; flex-wrap: wrap; }
+  .status-item {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .led {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: #333; box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);
+    transition: background 0.2s, box-shadow 0.2s; flex-shrink: 0;
+  }
+  .led.on-green  { background: var(--accent2); box-shadow: 0 0 6px var(--accent2); }
+  .led.on-cyan   { background: var(--accent);  box-shadow: 0 0 6px var(--accent); animation: blink 0.8s step-end infinite; }
+  .led.on-red    { background: var(--danger);  box-shadow: 0 0 6px var(--danger); }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.35} }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .panel-label {
+    position: absolute; top: -9px; left: 12px;
+    background: var(--panel); padding: 0 6px;
+    font-size: 10px; color: var(--text-dim);
+    letter-spacing: 2px; text-transform: uppercase;
+  }
+
+  .chat-panel {
+    flex: 1;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  #chat {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 6px;
+  }
+  .bubble {
+    max-width: 85%;
+    padding: 7px 10px;
+    border-radius: 10px;
+    font-size: 13px;
+    line-height: 1.35;
+    word-break: break-word;
+    white-space: pre-wrap;
+  }
+  .bubble.me   { align-self: flex-end;  background: var(--btn-active); border:1px solid var(--accent); }
+  .bubble.them { align-self: flex-start; background: var(--btn-bg); border:1px solid var(--border); }
+  .bubble .ts { display:block; font-size:10px; color: var(--text-dim); margin-top:3px; }
+
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+  textarea#chatInput {
+    flex: 1;
+    min-height: 40px;
+    max-height: 120px;
+    resize: vertical;
+    background: #2b3440;
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px;
+    font-family: inherit;
+    font-size: 13px;
+  }
+
+  button {
+    font-family: inherit;
+    font-size: 12px;
+    background: var(--btn-bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background 0.15s;
+    white-space: nowrap;
+  }
+  button:hover { background: var(--btn-hover); }
+  button:active { background: var(--btn-active); }
+  button:disabled { opacity: 0.5; cursor: default; }
+  button.accent { border-color: var(--accent); color: var(--accent); }
+  button.danger { border-color: var(--danger); color: var(--danger); }
+  button.toggle-on { background: var(--btn-active); border-color: var(--accent2); color: var(--accent2); }
+
+  select {
+    font-family: inherit; font-size: 12px;
+    background: var(--btn-bg); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 7px 8px;
+  }
+
+  #log {
+    height: 110px;
+    overflow-y: auto;
+    background: #20262e;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--text-dim);
+    margin-top: 8px;
+  }
+  #log.collapsed { display: none; }
+
+  .log-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    user-select: none;
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .log-toggle .chev { transition: transform 0.15s; font-size: 10px; }
+  .log-toggle.expanded .chev { transform: rotate(180deg); }
+  #log .ok   { color: var(--accent2); }
+  #log .err  { color: var(--danger); }
+  #log .info { color: var(--accent); }
+  #log .sys  { color: var(--text-dim); }
+
+  /* ── Session overlay ─────────────────────────────────────── */
+  .session-overlay {
+    position: fixed; inset: 0; z-index: 2000;
+    background: rgba(0,0,0,0.75);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .session-box {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-top: 2px solid var(--accent2);
+    border-radius: 10px;
+    padding: 28px 26px;
+    width: 280px;
+    display: flex; flex-direction: column; gap: 14px;
+    text-align: center;
+  }
+  .session-title {
+    font-family: 'Orbitron', sans-serif; font-size: 22px; font-weight: 900;
+    letter-spacing: 4px;
+  }
+  .session-box label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; text-align: left; }
+  .session-box input {
+    background: #2b3440; color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 10px; font-family: inherit; font-size: 16px;
+    text-align: center; letter-spacing: 3px; text-transform: uppercase;
+  }
+  .session-go {
+    background: var(--btn-active); border-color: var(--accent2); color: var(--accent2);
+    font-size: 14px; padding: 10px; letter-spacing: 2px;
+  }
+  .pled { width:8px; height:8px; border-radius:50%; display:inline-block; background:#333; }
+  .pled.p-reachable { background: var(--accent2); box-shadow:0 0 6px var(--accent2); }
+  .pled.p-offline   { background: var(--danger); }
+  .pled.p-searching { background: var(--warn); animation: blink 0.8s step-end infinite; }
+  .ptxt { font-size: 10px; letter-spacing: 1px; color: var(--text-dim); }
+  .ptxt.p-reachable { color: var(--accent2); }
+  .ptxt.p-offline   { color: var(--danger); }
+  .presence-row { display:flex; align-items:center; gap:6px; justify-content:center; }
+  .unit-id { font-size: 11px; color: var(--text-dim); letter-spacing: 1px; }
+  .unit-id b { color: var(--accent); }
+
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; }
+  .toolbar button { flex: 1; min-width: 70px; }
+
+  .tab-bar { display: flex; gap: 6px; flex-shrink: 0; }
+  .tab-bar button {
+    flex: 1;
+    background: var(--btn-bg); color: var(--text-dim);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 9px 6px; font-family: inherit; font-size: 12px;
+    letter-spacing: 1px; text-transform: uppercase;
+    cursor: pointer;
+  }
+  .tab-bar button.active {
+    background: var(--btn-active); border-color: var(--accent); color: var(--accent);
+  }
+
+  .main-tab {
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+  }
+  .main-tab.active { display: flex; }
+  #mainTabChat.active { overflow: hidden; }
+
+  .quiz-feedback.correct { color: var(--accent2); }
+  .quiz-feedback.wrong { color: var(--danger); }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js"></script>
+</head>
+<body>
+
+<div class="session-overlay" id="sessionOverlay">
+  <div class="session-box">
+    <span class="session-title" style="color:#00ff9f;text-shadow:0 0 20px rgba(0,255,159,0.5);">DELTA</span>
+    <label>Channel Code</label>
+    <input type="text" id="sessionCode" maxlength="8" placeholder="ENTER CODE" autocomplete="off">
+    <div class="presence-row">
+      <span class="pled" id="loginPresenceLed"></span>
+      <span class="ptxt" id="loginPresenceTxt">ENTER CODE</span>
+    </div>
+    <button class="session-go" onclick="startSession()">CONNECT</button>
+  </div>
+</div>
+
+<div class="shell">
+  <header>
+    <div class="logo">DELTA<span>·</span></div>
+    <div class="statusbar">
+      <div class="status-item"><span class="led" id="linkLed"></span><span id="statusText">OFFLINE</span></div>
+      <div class="status-item" id="unitIdDisplay" style="display:none">CH <b id="unitIdValue"></b></div>
+    </div>
+    <button id="refreshBtn" onclick="refreshScreen()" title="Reload page">↻ Refresh</button>
+    <button class="danger" id="leaveBtn" onclick="leaveSession()" title="Leave session">⏏ Leave</button>
+  </header>
+
+  <div class="tab-bar">
+    <button class="active" id="tabBtnChat" onclick="switchMainTab('chat')">Chat</button>
+    <button id="tabBtnPractice" onclick="switchMainTab('practice')">Morse Practice</button>
+  </div>
+
+  <div class="main-tab active" id="mainTabChat">
+
+  <div class="chat-panel" id="chatPanel">
+    <span class="panel-label">Chat</span>
+    <div id="chat"></div>
+  </div>
+
+  <div class="panel">
+    <span class="panel-label">Send</span>
+    <div class="row" style="margin-top:4px">
+      <textarea id="chatInput" placeholder="Type message…"></textarea>
+    </div>
+    <div class="toolbar" style="margin-top:8px">
+      <button class="accent" id="sendBtn" onclick="sendChat()" disabled>▶ Send</button>
+      <button id="morseSendBtn" onclick="sendMorse()" disabled>⠇⠇⠇ Send as Morse</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button id="speakerBtn" class="toggle-on" onclick="toggleSpeaker()">🔊 Speaker On</button>
+      <label style="font-size:11px;color:var(--text-dim);letter-spacing:1px;">Morse Speed</label>
+      <select id="morseSpeed" onchange="saveMorseSpeed()">
+        <option value="10">10 WPM (slow)</option>
+        <option value="15">15 WPM</option>
+        <option value="20" selected>20 WPM</option>
+        <option value="25">25 WPM</option>
+        <option value="30">30 WPM (fast)</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="log-toggle" id="logToggle" onclick="toggleLog()">
+      <span>Debug Log</span>
+      <span class="chev">▾</span>
+    </div>
+    <div id="log" class="collapsed"></div>
+  </div>
+
+  </div>
+  <!-- ── PRACTICE TAB (offline morse trainer) ────────────────────── -->
+  <div class="main-tab" id="mainTabPractice">
+
+  <div class="panel">
+    <span class="panel-label">Speed &amp; Tone</span>
+    <div class="row" style="margin-top:4px">
+      <label style="font-size:11px;color:var(--text-dim);letter-spacing:1px;">WPM</label>
+      <select id="practiceWpm" onchange="savePracticeSettings()">
+        <option value="5">5</option>
+        <option value="10">10</option>
+        <option value="13">13</option>
+        <option value="15">15</option>
+        <option value="20" selected>20</option>
+        <option value="25">25</option>
+        <option value="30">30</option>
+      </select>
+      <label style="font-size:11px;color:var(--text-dim);letter-spacing:1px;">Tone (Hz)</label>
+      <select id="practiceTone" onchange="savePracticeSettings()">
+        <option value="500">500</option>
+        <option value="550">550</option>
+        <option value="600" selected>600</option>
+        <option value="650">650</option>
+        <option value="700">700</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="panel">
+    <span class="panel-label">Listen — Text to Morse</span>
+    <div class="row" style="margin-top:4px">
+      <textarea id="practiceListenText" placeholder="Type text to hear as Morse…" style="flex:1">CQ CQ DE TEST</textarea>
+    </div>
+    <div class="toolbar" style="margin-top:8px">
+      <button class="accent" onclick="practicePlayListen()">▶ Play</button>
+      <button onclick="practiceRandomGroup()">⚄ Random Group</button>
+      <button onclick="stopAllAudio()">■ Stop</button>
+    </div>
+    <div id="practiceMorseOut" style="margin-top:8px;background:#20262e;border:1px solid var(--border);border-radius:6px;padding:10px;font-size:16px;letter-spacing:3px;color:var(--accent2);min-height:30px;word-break:break-all;"></div>
+  </div>
+
+  <div class="panel">
+    <span class="panel-label">Quiz — Hear &amp; Type</span>
+    <div id="practiceQuizPrompt" style="margin-top:4px;text-align:center;font-family:'Orbitron',sans-serif;font-size:30px;font-weight:900;color:var(--accent);letter-spacing:6px;padding:10px 0;">—</div>
+    <div class="row">
+      <input type="text" id="practiceQuizInput" placeholder="Type the character you heard…" style="flex:1" autocomplete="off" autocapitalize="characters">
+      <button class="accent" onclick="practiceSubmitQuiz()">Submit</button>
+    </div>
+    <div class="quiz-feedback" id="practiceQuizFeedback" style="text-align:center;font-size:13px;min-height:18px;letter-spacing:1px;margin-top:4px;"></div>
+    <div class="toolbar" style="margin-top:8px">
+      <button class="go" onclick="practiceStartQuiz()">▶ Start / Next</button>
+      <button onclick="practiceReplayQuiz()">🔁 Replay</button>
+    </div>
+    <div class="quiz-stats" style="display:flex;justify-content:space-around;gap:8px;font-size:11px;color:var(--text-dim);letter-spacing:1px;margin-top:10px;">
+      <div><b id="practiceQuizCorrect" style="color:var(--accent2);font-size:15px;display:block;">0</b>Correct</div>
+      <div><b id="practiceQuizWrong" style="color:var(--accent2);font-size:15px;display:block;">0</b>Wrong</div>
+      <div><b id="practiceQuizStreak" style="color:var(--accent2);font-size:15px;display:block;">0</b>Streak</div>
+      <div><b id="practiceQuizAccuracy" style="color:var(--accent2);font-size:15px;display:block;">—</b>Accuracy</div>
+    </div>
+    <div class="toolbar" style="margin-top:8px">
+      <button class="danger" onclick="practiceResetQuiz()">Reset Score</button>
+    </div>
+  </div>
+
+  </div>
+</div>
+
+<script>
+// ── localStorage shim (file:// safe) ─────────────────────────────────────────
+let _lsOk = false;
+try { localStorage.setItem('__test__','1'); localStorage.removeItem('__test__'); _lsOk = true; } catch(e) {}
+if (!_lsOk) {
+  const _mem = {};
+  const _shim = {
+    getItem: k => (k in _mem ? _mem[k] : null),
+    setItem: (k,v) => { _mem[k] = String(v); },
+    removeItem: k => { delete _mem[k]; },
+  };
+  try { Object.defineProperty(window, 'localStorage', { value: _shim, configurable: true }); } catch(e) {}
+}
+
+// ── Config ────────────────────────────────────────────────────────────────
+const ME       = 'delta';
+const THEM     = 'gamma';
+const FB_URL   = 'https://alpha-bravo-chat-default-rtdb.firebaseio.com';
+const PRESENCE_STALE_MS = 15000;
+
+const ICE_SERVERS = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+  { urls: 'stun:stun2.l.google.com:19302' },
+  { urls: 'stun:stun3.l.google.com:19302' },
+  { urls: 'stun:stun.cloudflare.com:3478' },
+  { urls: 'stun:openrelay.metered.ca:80' },
+  { urls: 'turn:openrelay.metered.ca:80',              username: 'openrelayproject', credential: 'openrelayproject' },
+  { urls: 'turn:openrelay.metered.ca:443',             username: 'openrelayproject', credential: 'openrelayproject' },
+  { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+  { urls: 'turns:openrelay.metered.ca:443',            username: 'openrelayproject', credential: 'openrelayproject' },
+];
+
+// ── State ────────────────────────────────────────────────────────────────
+let peer, dataConn, linked = false, pendingDC = false;
+let MY_ID = '', REMOTE_ID = '';
+let presencePollTimer = null, presenceWriteTimer = null, remoteIdPollTimer = null;
+let retryTimer = null;
+let _unavailIdRetries = 0;
+let speakerOn = true;
+
+const logEl    = document.getElementById('log');
+const chatEl   = document.getElementById('chat');
+const chatInput = document.getElementById('chatInput');
+
+// ── Debug log ────────────────────────────────────────────────────────────
+function entry(msg, cls='sys') {
+  const div = document.createElement('div');
+  div.className = cls;
+  const t = new Date().toLocaleTimeString();
+  div.textContent = '[' + t + '] ' + msg;
+  logEl.appendChild(div);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function toggleLog() {
+  const log = document.getElementById('log');
+  const toggle = document.getElementById('logToggle');
+  log.classList.toggle('collapsed');
+  toggle.classList.toggle('expanded');
+  if (!log.classList.contains('collapsed')) {
+    log.scrollTop = log.scrollHeight;
+  }
+}
+
+function setStatus(state) {
+  const led = document.getElementById('linkLed');
+  const txt = document.getElementById('statusText');
+  led.className = 'led';
+  switch(state) {
+    case 'online':   led.classList.add('on-cyan');  txt.textContent = 'ONLINE — DIALLING'; break;
+    case 'linked':   led.classList.add('on-green'); txt.textContent = 'LINKED'; break;
+    case 'offline':  txt.textContent = 'OFFLINE'; break;
+    case 'error':    led.classList.add('on-red');   txt.textContent = 'ERROR'; break;
+    default:         txt.textContent = state.toUpperCase();
+  }
+}
+
+// ── Chat bubbles ─────────────────────────────────────────────────────────
+function addBubble(text, mine) {
+  const b = document.createElement('div');
+  b.className = 'bubble ' + (mine ? 'me' : 'them');
+  const span = document.createElement('span');
+  span.textContent = text;
+  b.appendChild(span);
+  const ts = document.createElement('span');
+  ts.className = 'ts';
+  ts.textContent = (mine ? 'You' : 'Remote') + ' · ' + new Date().toLocaleTimeString();
+  b.appendChild(ts);
+  chatEl.appendChild(b);
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+
+// ── Presence (Firebase) ──────────────────────────────────────────────────
+function loginPresenceSetState(state, text) {
+  const led = document.getElementById('loginPresenceLed');
+  const txt = document.getElementById('loginPresenceTxt');
+  if (!led || !txt) return;
+  led.className = 'pled ' + (state ? 'p-' + state : '');
+  txt.className = 'ptxt ' + (state ? 'p-' + state : '');
+  txt.textContent = text;
+}
+
+async function presenceWrite(myKey) {
+  try {
+    await fetch(FB_URL + '/presence/' + myKey + '.json', {
+      method: 'PUT',
+      body: JSON.stringify({ ts: Date.now(), peerId: MY_ID })
+    });
+  } catch(e) {}
+}
+
+async function presencePoll(partnerKey, myKey) {
+  try {
+    const res = await fetch(FB_URL + '/presence/' + partnerKey + '.json');
+    const data = await res.json();
+    if (data && data.ts && (Date.now() - data.ts) < PRESENCE_STALE_MS) {
+      if (data.peerId && data.peerId !== REMOTE_ID) {
+        entry('GAMMA peer ID: ' + data.peerId, 'sys');
+        REMOTE_ID = data.peerId;
+      }
+      loginPresenceSetState('reachable', 'GAMMA REACHABLE');
+    } else {
+      loginPresenceSetState('offline', 'GAMMA OFFLINE');
+    }
+  } catch(e) {
+    loginPresenceSetState('offline', 'NO NETWORK');
+  }
+  await presenceWrite(myKey);
+}
+
+function startPresencePolling(code) {
+  stopPresencePolling();
+  if (!code || code.length < 2) { loginPresenceSetState('', 'ENTER CODE'); return; }
+  const myKey = ME + '-' + code;
+  const partnerKey = THEM + '-' + code;
+  loginPresenceSetState('searching', 'CHECKING…');
+  presencePoll(partnerKey, myKey);
+  presencePollTimer = setInterval(() => presencePoll(partnerKey, myKey), 5000);
+}
+
+function stopPresencePolling() {
+  clearInterval(presencePollTimer);
+  clearInterval(presenceWriteTimer);
+  if (remoteIdPollTimer) { clearInterval(remoteIdPollTimer); remoteIdPollTimer = null; }
+  presencePollTimer = null;
+  presenceWriteTimer = null;
+}
+
+async function _refreshRemoteId() {
+  try {
+    const code = MY_ID.replace(new RegExp('^' + ME + '-'), '').replace(/-[0-9a-f]{4}$/, '');
+    const partnerKey = THEM + '-' + code;
+    const r = await fetch(FB_URL + '/presence/' + partnerKey + '.json');
+    const d = await r.json();
+    if (d && d.peerId && d.peerId !== REMOTE_ID) {
+      entry('GAMMA peer ID: ' + d.peerId, 'sys');
+      REMOTE_ID = d.peerId;
+    }
+  } catch(e) {}
+}
+
+function _setupRemoteIdPoll() {
+  _refreshRemoteId();
+  if (remoteIdPollTimer) clearInterval(remoteIdPollTimer);
+  remoteIdPollTimer = setInterval(_refreshRemoteId, 5000);
+}
+
+// ── Session start ────────────────────────────────────────────────────────
+function startSession() {
+  stopPresencePolling();
+  const code = document.getElementById('sessionCode').value.trim().toUpperCase().replace(/\s+/g,'');
+  if (!code) { document.getElementById('sessionCode').focus(); return; }
+  MY_ID     = ME + '-' + code;
+  REMOTE_ID = THEM + '-' + code;
+  try { localStorage.setItem('delta_last_code', code); } catch(e) {}
+
+  const myKey = ME + '-' + code;
+  presenceWrite(myKey);
+  presenceWriteTimer = setInterval(() => presenceWrite(myKey), 5000);
+  _setupRemoteIdPoll();
+
+  document.getElementById('sessionOverlay').style.display = 'none';
+  document.getElementById('unitIdDisplay').style.display = 'flex';
+  document.getElementById('unitIdValue').textContent = code;
+
+  entry('Session started — code ' + code, 'sys');
+  startPeer();
+}
+
+// ── PeerJS connection ────────────────────────────────────────────────────
+function startPeer() {
+  if (typeof Peer === 'undefined') {
+    entry('PeerJS not ready yet — retrying in 500ms…', 'sys');
+    setTimeout(startPeer, 500);
+    return;
+  }
+  if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e){} }
+  peer = null;
+  if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
+  pendingDC = false;
+  linked = false;
+  document.getElementById('sendBtn').disabled = true;
+  document.getElementById('morseSendBtn').disabled = true;
+
+  peer = new Peer(MY_ID, {
+    host: '0.peerjs.com', port: 443, path: '/', secure: true, pingInterval: 5000,
+    config: { iceServers: ICE_SERVERS, iceCandidatePoolSize: 10 }
+  });
+
+  peer.on('open', () => {
+    _unavailIdRetries = 0;
+    entry('Radio online as ' + MY_ID, 'ok');
+    setStatus('online');
+    let pollCount = 0;
+    const pollMax = 20;
+    function pollAndDial() {
+      _refreshRemoteId().then(() => {
+        pollCount++;
+        const hasSuffix = REMOTE_ID && /-[0-9a-f]{4}$/.test(REMOTE_ID);
+        if (hasSuffix || pollCount >= pollMax) {
+          if (!hasSuffix) entry('GAMMA peerId not found after 30s — dialling base ID', 'sys');
+          dial();
+        } else {
+          entry('Waiting for GAMMA peerId... (' + pollCount + ')', 'sys');
+          setTimeout(pollAndDial, 1500);
+        }
+      });
+    }
+    pollAndDial();
+  });
+
+  peer.on('connection', dc => {
+    if (dataConn) { dc.close(); return; }
+    if (pendingDC) {
+      entry('DC collision — accepting inbound DC from Gamma', 'sys');
+      pendingDC = false;
+    } else {
+      entry('Inbound data channel from Gamma', 'sys');
+    }
+    attachDataConn(dc);
+  });
+
+  peer.on('disconnected', () => {
+    if (!peer || peer.destroyed) return;
+    entry('Signalling server disconnected — reconnecting…', 'sys');
+    peer.reconnect();
+  });
+
+  peer.on('error', e => {
+    entry('Peer error [' + e.type + ']: ' + e.message, 'err');
+    if (e.type === 'browser-incompatible') return;
+    if (e.type === 'peer-unavailable') {
+      entry('Gamma offline — retry in 5s', 'sys');
+      if (dataConn) { try { dataConn.close(); } catch(ex){} dataConn = null; }
+      pendingDC = false;
+      retryTimer = setTimeout(() => _refreshRemoteId().then(dial), 5000);
+      return;
+    }
+    if (e.type === 'unavailable-id') {
+      _unavailIdRetries++;
+      if (_unavailIdRetries > 3) {
+        const code = MY_ID.replace(new RegExp('^' + ME + '-'), '').replace(/-[0-9a-f]{4}$/, '');
+        MY_ID = ME + '-' + code + '-' + Math.random().toString(16).slice(2, 6);
+        entry('ID still taken — switching to ' + MY_ID, 'sys');
+        _unavailIdRetries = 0;
+        try { peer.destroy(); } catch(e){}
+        setTimeout(startPeer, 500);
+        return;
+      }
+      const delay = Math.min(10000 * Math.pow(2, _unavailIdRetries - 1), 60000);
+      entry('ID taken — retrying same ID in ' + Math.round(delay/1000) + 's (attempt ' + _unavailIdRetries + ')…', 'sys');
+      try { peer.destroy(); } catch(e){}
+      setTimeout(startPeer, delay);
+      return;
+    }
+    entry('Retrying in 6s…', 'sys');
+    retryTimer = setTimeout(() => { try { peer.destroy(); } catch(e){} startPeer(); }, 6000);
+  });
+}
+
+function dial() {
+  clearTimeout(retryTimer);
+  if (linked || pendingDC) return;
+  const peerReady = peer && !peer.destroyed && peer.open;
+  if (!peerReady) {
+    entry('Refreshing peer before dial…', 'sys');
+    if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e){} }
+    peer = null;
+    startPeer();
+    return;
+  }
+  entry('Dialling Gamma…', 'info');
+  pendingDC = true;
+  const dc = peer.connect(REMOTE_ID, { reliable: true });
+  attachDataConn(dc);
+  retryTimer = setTimeout(() => {
+    if (!linked) {
+      entry('No answer after 30s — redialling…', 'sys');
+      if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
+      pendingDC = false;
+      _refreshRemoteId().then(dial);
+    }
+  }, 30000);
+}
+
+function attachDataConn(dc) {
+  pendingDC = true;
+  function onDcOpen() {
+    if (dataConn === dc) return;
+    clearTimeout(retryTimer);
+    pendingDC = false;
+    dataConn = dc;
+    linked = true;
+    entry('Chat channel open', 'ok');
+    setStatus('linked');
+    document.getElementById('sendBtn').disabled = false;
+    document.getElementById('morseSendBtn').disabled = false;
+  }
+  dc.on('open', onDcOpen);
+  if (dc.open) setTimeout(onDcOpen, 0);
+  dc.on('data', msg => {
+    const decoded = dcDecode(msg);
+    if (!decoded) return;
+    if (decoded.obj) {
+      const f = decoded.obj;
+      if (f.__control === 'leave') { handleRemoteLeave(); return; }
+      if (f.__control === 'refresh') { entry('Remote refreshed — reloading…', 'sys'); setTimeout(() => window.location.reload(), 400); return; }
+      if (f.__morse === true) {
+        addBubble(f.text + '  (sent as Morse, ' + f.wpm + ' WPM)', false);
+        playMorse(f.text, f.wpm);
+        return;
+      }
+      addBubble(JSON.stringify(f), false);
+    } else {
+      addBubble(decoded.text, false);
+    }
+  });
+  dc.on('close', () => {
+    if (dataConn !== dc) return;
+    pendingDC = false;
+    dataConn = null;
+    linked = false;
+    document.getElementById('sendBtn').disabled = true;
+    document.getElementById('morseSendBtn').disabled = true;
+    entry('Chat channel closed', 'sys');
+    setStatus('online');
+    setTimeout(() => { if (!linked) dial(); }, 1000);
+  });
+  dc.on('error', e => {
+    pendingDC = false;
+    entry('Data channel error: ' + (e.message || e), 'err');
+    if (linked && dataConn === dc) {
+      dataConn = null;
+      linked = false;
+      entry('Reopening data channel after error…', 'sys');
+      setTimeout(dial, 1000);
+    }
+  });
+}
+
+// ── Wire format ──────────────────────────────────────────────────────────
+function dcSend(payload) {
+  if (!dataConn || !dataConn.open) { entry('Send failed — no open data channel', 'err'); return false; }
+  const wire = (typeof payload === 'string') ? 'T:' + payload : 'J:' + JSON.stringify(payload);
+  dataConn.send(wire);
+  return true;
+}
+
+function dcDecode(raw) {
+  let s;
+  if (raw instanceof ArrayBuffer) s = new TextDecoder().decode(raw);
+  else if (raw instanceof Blob)   return null;
+  else                            s = String(raw);
+  if (s.startsWith('T:')) return { text: s.slice(2) };
+  if (s.startsWith('J:')) {
+    try { return { obj: JSON.parse(s.slice(2)) }; } catch(e) { return { text: s }; }
+  }
+  return { text: s };
+}
+
+// ── Send chat ────────────────────────────────────────────────────────────
+function sendChat() {
+  const text = chatInput.value.trim();
+  if (!text) return;
+  if (dcSend(text)) {
+    addBubble(text, true);
+    chatInput.value = '';
+    entry('Sent: ' + text, 'sys');
+  }
+}
+
+chatInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
+});
+
+// ── Morse code ───────────────────────────────────────────────────────────
+const MORSE_MAP = {
+  A:'.-', B:'-...', C:'-.-.', D:'-..', E:'.', F:'..-.', G:'--.', H:'....',
+  I:'..', J:'.---', K:'-.-', L:'.-..', M:'--', N:'-.', O:'---', P:'.--.',
+  Q:'--.-', R:'.-.', S:'...', T:'-', U:'..-', V:'...-', W:'.--', X:'-..-',
+  Y:'-.--', Z:'--..',
+  '0':'-----','1':'.----','2':'..---','3':'...--','4':'....-',
+  '5':'.....','6':'-....','7':'--...','8':'---..','9':'----.',
+  '.':'.-.-.-', ',':'--..--', '?':'..--..', "'":'.----.', '!':'-.-.--',
+  '/':'-..-.', '(':'-.--.', ')':'-.--.-', '&':'.-...', ':':'---...',
+  ';':'-.-.-.', '=':'-...-', '+':'.-.-.', '-':'-....-', '_':'..--.-',
+  '"':'.-..-.', '$':'...-..-', '@':'.--.-.'
+};
+
+function saveMorseSpeed() {
+  try { localStorage.setItem('delta_morse_wpm', document.getElementById('morseSpeed').value); } catch(e) {}
+}
+
+let _audioCtx = null;
+function getAudioCtx() {
+  if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (_audioCtx.state === 'suspended') _audioCtx.resume();
+  return _audioCtx;
+}
+
+let _activeOscillators = [];
+function stopAllAudio() {
+  _activeOscillators.forEach(o => { try { o.stop(); } catch(e) {} });
+  _activeOscillators = [];
+}
+
+// Plays morse code as audio tone. unit = duration of one dot, in ms.
+// Used for received/sent chat morse — respects the chat Speaker toggle.
+function playMorse(text, wpm) {
+  if (!speakerOn) return;
+  playMorseRaw(text, wpm, 600);
+}
+
+// Plays morse code regardless of the chat Speaker toggle — used by the
+// offline Morse Practice tab, which has its own audio controls.
+function playMorseRaw(text, wpm, freq) {
+  const ctx = getAudioCtx();
+  const unit = 1200 / wpm; // ms per dot, standard PARIS formula
+  let t = ctx.currentTime + 0.05;
+
+  text.toUpperCase().split('').forEach(ch => {
+    if (ch === ' ') {
+      t += (unit * 7) / 1000; // word gap
+      return;
+    }
+    const code = MORSE_MAP[ch];
+    if (!code) return;
+    code.split('').forEach(sym => {
+      const dur = (sym === '.' ? unit : unit * 3) / 1000;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.3, t + 0.005);
+      gain.gain.setValueAtTime(0.3, t + dur - 0.005);
+      gain.gain.linearRampToValueAtTime(0, t + dur);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + dur);
+      _activeOscillators.push(osc);
+      t += dur + (unit / 1000); // intra-character gap
+    });
+    t += (unit * 2) / 1000; // inter-character gap (total 3 with above)
+  });
+  return (t - ctx.currentTime) * 1000; // total duration in ms
+}
+
+function sendMorse() {
+  const text = chatInput.value.trim();
+  if (!text) return;
+  const wpm = parseInt(document.getElementById('morseSpeed').value, 10) || 20;
+  if (dcSend({ __morse: true, text: text, wpm: wpm })) {
+    addBubble(text + '  (sent as Morse, ' + wpm + ' WPM)', true);
+    playMorse(text, wpm); // local sidetone
+    chatInput.value = '';
+    entry('Sent as Morse @ ' + wpm + ' WPM: ' + text, 'sys');
+  }
+}
+
+// ── Speaker toggle ───────────────────────────────────────────────────────
+function toggleSpeaker() {
+  speakerOn = !speakerOn;
+  const btn = document.getElementById('speakerBtn');
+  if (speakerOn) {
+    btn.textContent = '🔊 Speaker On';
+    btn.classList.add('toggle-on');
+  } else {
+    btn.textContent = '🔇 Speaker Off';
+    btn.classList.remove('toggle-on');
+  }
+  try { localStorage.setItem('delta_speaker', speakerOn ? '1' : '0'); } catch(e) {}
+  entry('Speaker ' + (speakerOn ? 'ON' : 'OFF'), 'sys');
+}
+
+// ── Refresh / Leave ──────────────────────────────────────────────────────
+function refreshScreen() {
+  if (dataConn && dataConn.open) {
+    try { dcSend({ __control: 'refresh' }); } catch(e) {}
+  }
+  window.location.reload();
+}
+
+function handleRemoteLeave() {
+  entry('Remote left the session', 'sys');
+  setStatus('offline');
+  linked = false;
+  document.getElementById('sendBtn').disabled = true;
+  document.getElementById('morseSendBtn').disabled = true;
+}
+
+function leaveSession() {
+  if (dataConn && dataConn.open) {
+    try { dcSend({ __control: 'leave' }); } catch(e) {}
+  }
+  stopPresencePolling();
+  clearTimeout(retryTimer);
+  if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
+  if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e){} }
+  peer = null;
+  linked = false;
+  pendingDC = false;
+  document.getElementById('sendBtn').disabled = true;
+  document.getElementById('morseSendBtn').disabled = true;
+  setStatus('offline');
+  document.getElementById('unitIdDisplay').style.display = 'none';
+  document.getElementById('sessionOverlay').style.display = 'flex';
+  entry('Left session', 'sys');
+}
+
+// ── Main tab switching (Chat / Morse Practice) ───────────────────────────
+function switchMainTab(name) {
+  stopAllAudio();
+  document.querySelectorAll('.main-tab').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-bar > button').forEach(el => el.classList.remove('active'));
+  document.getElementById('mainTab' + name.charAt(0).toUpperCase() + name.slice(1)).classList.add('active');
+  document.getElementById('tabBtn' + name.charAt(0).toUpperCase() + name.slice(1)).classList.add('active');
+}
+
+// ── Offline Morse Practice ────────────────────────────────────────────────
+function practiceGetWpm()  { return parseInt(document.getElementById('practiceWpm').value, 10) || 20; }
+function practiceGetTone() { return parseInt(document.getElementById('practiceTone').value, 10) || 600; }
+
+function savePracticeSettings() {
+  try {
+    localStorage.setItem('delta_practice_wpm', document.getElementById('practiceWpm').value);
+    localStorage.setItem('delta_practice_tone', document.getElementById('practiceTone').value);
+  } catch(e) {}
+}
+
+function textToMorseString(text) {
+  return text.toUpperCase().split('').map(ch => {
+    if (ch === ' ') return '/';
+    return MORSE_MAP[ch] || '';
+  }).filter(Boolean).join(' ');
+}
+
+function practicePlayListen() {
+  const text = document.getElementById('practiceListenText').value.trim();
+  if (!text) return;
+  stopAllAudio();
+  document.getElementById('practiceMorseOut').textContent = textToMorseString(text);
+  playMorseRaw(text, practiceGetWpm(), practiceGetTone());
+}
+
+const PRACTICE_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+function practiceRandomGroup() {
+  let s = '';
+  for (let i = 0; i < 5; i++) s += PRACTICE_LETTERS[Math.floor(Math.random() * 26)];
+  document.getElementById('practiceListenText').value = s;
+  practicePlayListen();
+}
+
+// ── Practice quiz ───────────────────────────────────────────────────────
+let _pqCorrect = 0, _pqWrong = 0, _pqStreak = 0, _pqCurrentChar = '', _pqActive = false;
+
+function practiceStartQuiz() {
+  _pqCurrentChar = PRACTICE_LETTERS[Math.floor(Math.random() * 26)];
+  _pqActive = true;
+  document.getElementById('practiceQuizInput').value = '';
+  document.getElementById('practiceQuizFeedback').textContent = '';
+  document.getElementById('practiceQuizFeedback').className = 'quiz-feedback';
+  document.getElementById('practiceQuizPrompt').textContent = '🔊 ?';
+  stopAllAudio();
+  playMorseRaw(_pqCurrentChar, practiceGetWpm(), practiceGetTone());
+  document.getElementById('practiceQuizInput').focus();
+}
+
+function practiceReplayQuiz() {
+  if (!_pqActive) return;
+  stopAllAudio();
+  playMorseRaw(_pqCurrentChar, practiceGetWpm(), practiceGetTone());
+}
+
+function practiceSubmitQuiz() {
+  if (!_pqActive) return;
+  const input = document.getElementById('practiceQuizInput').value.trim().toUpperCase();
+  const fb = document.getElementById('practiceQuizFeedback');
+  if (input === _pqCurrentChar) {
+    _pqCorrect++; _pqStreak++;
+    fb.textContent = '✓ Correct! "' + _pqCurrentChar + '" = ' + MORSE_MAP[_pqCurrentChar];
+    fb.className = 'quiz-feedback correct';
+  } else {
+    _pqWrong++; _pqStreak = 0;
+    fb.textContent = '✗ Expected "' + _pqCurrentChar + '" (' + MORSE_MAP[_pqCurrentChar] + ')';
+    fb.className = 'quiz-feedback wrong';
+  }
+  practiceUpdateQuizStats();
+  _pqActive = false;
+  setTimeout(() => { if (!_pqActive) practiceStartQuiz(); }, 1200);
+}
+
+function practiceUpdateQuizStats() {
+  document.getElementById('practiceQuizCorrect').textContent = _pqCorrect;
+  document.getElementById('practiceQuizWrong').textContent = _pqWrong;
+  document.getElementById('practiceQuizStreak').textContent = _pqStreak;
+  const total = _pqCorrect + _pqWrong;
+  document.getElementById('practiceQuizAccuracy').textContent = total > 0 ? Math.round(100*_pqCorrect/total) + '%' : '—';
+}
+
+function practiceResetQuiz() {
+  _pqCorrect = 0; _pqWrong = 0; _pqStreak = 0;
+  practiceUpdateQuizStats();
+}
+
+document.getElementById('practiceQuizInput')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); practiceSubmitQuiz(); }
+});
+
+
+(function init() {
+  setStatus('offline');
+  try {
+    const lastCode = localStorage.getItem('delta_last_code');
+    if (lastCode) {
+      document.getElementById('sessionCode').value = lastCode;
+      startPresencePolling(lastCode);
+    }
+    const savedSpeed = localStorage.getItem('delta_morse_wpm');
+    if (savedSpeed) document.getElementById('morseSpeed').value = savedSpeed;
+    const savedSpeaker = localStorage.getItem('delta_speaker');
+    if (savedSpeaker === '0') {
+      speakerOn = false;
+      const btn = document.getElementById('speakerBtn');
+      btn.textContent = '🔇 Speaker Off';
+      btn.classList.remove('toggle-on');
+    }
+    const pWpm = localStorage.getItem('delta_practice_wpm');
+    if (pWpm) document.getElementById('practiceWpm').value = pWpm;
+    const pTone = localStorage.getItem('delta_practice_tone');
+    if (pTone) document.getElementById('practiceTone').value = pTone;
+  } catch(e) {}
+
+  document.getElementById('sessionCode').addEventListener('input', e => {
+    const code = e.target.value.trim().toUpperCase().replace(/\s+/g,'');
+    startPresencePolling(code);
+  });
+  document.getElementById('sessionCode').addEventListener('keydown', e => {
+    if (e.key === 'Enter') startSession();
+  });
+})();
+</script>
+</body>
+</html>
