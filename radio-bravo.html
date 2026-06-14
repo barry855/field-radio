@@ -772,8 +772,22 @@
     background: rgba(75,85,99,0.55); border: 1px solid var(--border);
     border-radius: 8px; padding: 10px 14px;
     flex-direction: column; gap: 8px;
+    overflow-y: auto;
   }
   #speechPanel.speech-open { display: flex; }
+  @media (pointer: coarse) {
+    #speechEditWrap { min-height: 50px; flex: 0 1 auto; }
+    #speechEditBox { min-height: 50px; }
+    .speech-btn-row { gap: 3px; }
+    #speechLangSelect, #ttsVoiceSelect, .flip-cam-select {
+      height: 40px; font-size: 13px;
+    }
+    .speech-btn-row .speech-btn,
+    .speech-btn-row button {
+      height: 40px; padding: 0 8px; font-size: 11px;
+    }
+    .sbr-label { font-size: 0.7rem; padding: 0 2px; }
+  }
   #speechPanel .speech-header {
     font-size: 10px; letter-spacing: 2px; color: var(--accent2);
     text-transform: uppercase; font-family: 'Share Tech Mono', monospace;
