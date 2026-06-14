@@ -1822,10 +1822,9 @@
             <option value="pt-BR" title="Portuguese (BR)">Português (BR)</option>
           </select>
           <button id="speechOriginalBtn" onclick="speechOriginalLang()" title="Revert to system language">ORIGINAL</button>
-          <button id="speechCwBtn" title="Send the input box text as Morse code (CW)"><span class="led cw-off" id="cwLed"></span>CW</button>
+          <button id="speechCwBtn" onclick="sendMorseFromSpeech()" title="Send the input box text as Morse code (CW)"><span class="led cw-off" id="cwLed"></span>CW</button>
           <span class="sbr-label">WPM:</span>
           <input type="number" id="cwWpmInput" min="5" max="40" step="1" value="15" title="Morse code speed in words per minute">
-          <span class="sbr-label" style="display:flex;align-items:center;gap:5px;" title="Incoming CW indicator"><span class="led cw-off" id="cwRxLed"></span>RX</span>
         </div>
         <div class="speech-btn-row" id="speechBtnRow3">
           <span class="sbr-label">Text To Speech:</span>
@@ -5002,8 +5001,8 @@ function attachDataConn(dc) {
       if (f.__file  === true)      { addMediaBubble(f.name, f.type, f.data, false); return; }
       if (f.__chunk === true)      { receiveChunk(f); return; }
       if (f.__morse === true) {
-        try { addBubble(f.text || '', false); } catch(e) { entry('CW bubble failed: ' + e.message, 'err'); }
-        try { playMorse(f.morse || textToMorse(f.text || ''), f.wpm || 15, 'cwRxLed'); } catch(e) { entry('CW playback failed: ' + e.message, 'err'); }
+        addBubble(f.text || '', false);
+        playMorse(f.morse || textToMorse(f.text || ''), f.wpm || 15);
         return;
       }
       // Language-learning chat message: translate from sender's lang to our lang
@@ -5113,18 +5112,16 @@ function textToMorse(text) {
   }).filter(s => s !== '').join(' ');
 }
 
-function setCwLed(ledId, on) {
-  const led = document.getElementById(ledId);
+function setCwLed(on) {
+  const led = document.getElementById('cwLed');
   if (!led) return;
   led.classList.toggle('cw-on', on);
   led.classList.toggle('cw-off', !on);
 }
 
 // Play a morse string ('.', '-', '/', ' ' separators) as audio tones
-// and flash the given LED (by element id) in sync. Returns a Promise
-// that resolves when playback is done.
-function playMorse(morse, wpm, ledId) {
-  ledId = ledId || 'cwLed';
+// and flash the CW LED in sync. Returns a Promise that resolves when done.
+function playMorse(morse, wpm) {
   return new Promise(resolve => {
     if (!_actx) _actx = new (window.AudioContext || window.webkitAudioContext)();
     try { if (_actx.state === 'suspended') _actx.resume(); } catch(e) {}
@@ -5155,11 +5152,11 @@ function playMorse(morse, wpm, ledId) {
     }
     // Schedule LED on/off relative to now
     ledEvents.forEach(ev => {
-      setTimeout(() => setCwLed(ledId, true),  (ev.on  - ctxNow) * 1000);
-      setTimeout(() => setCwLed(ledId, false), (ev.off - ctxNow) * 1000);
+      setTimeout(() => setCwLed(true),  (ev.on  - ctxNow) * 1000);
+      setTimeout(() => setCwLed(false), (ev.off - ctxNow) * 1000);
     });
     const totalMs = (t - ctxNow) * 1000;
-    setTimeout(() => { setCwLed(ledId, false); resolve(); }, totalMs + 50);
+    setTimeout(() => { setCwLed(false); resolve(); }, totalMs + 50);
   });
 }
 
@@ -5169,7 +5166,7 @@ function sendMorseFromSpeech() {
   const box = document.getElementById('speechEditBox');
   const wpmInput = document.getElementById('cwWpmInput');
   const txt = (box ? box.value : '').trim();
-  if (!txt) { entry('CW: nothing to send — type text in the speech box first', 'sys'); return; }
+  if (!txt) return;
   let wpm = parseInt(wpmInput ? wpmInput.value : '15', 10);
   if (isNaN(wpm)) wpm = 15;
   wpm = Math.max(5, Math.min(40, wpm));
@@ -5181,35 +5178,18 @@ function sendMorseFromSpeech() {
   addBubble(txt, true, null, true, null, null);
 
   // Send to remote: text + morse + speed, so the other side can play/display it
-  if (!dataConn || !dataConn.open) {
-    entry('CW: data channel not connected — played locally only', 'sys');
-  } else {
-    try {
-      dcSend({ __morse: true, text: txt, morse: morse, wpm: wpm });
-      entry('CW sent: ' + txt + ' (' + wpm + ' WPM)', 'sys');
-    } catch(e) {
-      entry('CW send failed: ' + e.message, 'err');
-    }
+  try {
+    dcSend({ __morse: true, text: txt, morse: morse, wpm: wpm });
+  } catch(e) {
+    entry('CW send failed: ' + e.message, 'err');
   }
 
   // Play it locally too
-  playMorse(morse, wpm, 'cwLed');
+  playMorse(morse, wpm);
 
   box.value = '';
   box.dispatchEvent(new Event('input'));
 }
-
-(function() {
-  const cwBtn = document.getElementById('speechCwBtn');
-  if (cwBtn) {
-    cwBtn.addEventListener('click', function() {
-      try { entry('CW button clicked', 'sys'); } catch(e) {}
-      sendMorseFromSpeech();
-    });
-  } else {
-    try { entry('CW button not found in DOM', 'err'); } catch(e) {}
-  }
-})();
 
 
 function openDataConn() {
