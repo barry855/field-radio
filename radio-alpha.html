@@ -1822,7 +1822,7 @@
             <option value="pt-BR" title="Portuguese (BR)">Português (BR)</option>
           </select>
           <button id="speechOriginalBtn" onclick="speechOriginalLang()" title="Revert to system language">ORIGINAL</button>
-          <button id="speechCwBtn" onclick="sendMorseFromSpeech()" title="Send the input box text as Morse code (CW)"><span class="led cw-off" id="cwLed"></span>CW</button>
+          <button id="speechCwBtn" title="Send the input box text as Morse code (CW)"><span class="led cw-off" id="cwLed"></span>CW</button>
           <span class="sbr-label">WPM:</span>
           <input type="number" id="cwWpmInput" min="5" max="40" step="1" value="15" title="Morse code speed in words per minute">
           <span class="sbr-label" style="display:flex;align-items:center;gap:5px;" title="Incoming CW indicator"><span class="led cw-off" id="cwRxLed"></span>RX</span>
@@ -5198,6 +5198,18 @@ function sendMorseFromSpeech() {
   box.value = '';
   box.dispatchEvent(new Event('input'));
 }
+
+(function() {
+  const cwBtn = document.getElementById('speechCwBtn');
+  if (cwBtn) {
+    cwBtn.addEventListener('click', function() {
+      try { entry('CW button clicked', 'sys'); } catch(e) {}
+      sendMorseFromSpeech();
+    });
+  } else {
+    try { entry('CW button not found in DOM', 'err'); } catch(e) {}
+  }
+})();
 
 
 function openDataConn() {
