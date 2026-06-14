@@ -5146,7 +5146,7 @@ function sendMorseFromSpeech() {
   const box = document.getElementById('speechEditBox');
   const wpmInput = document.getElementById('cwWpmInput');
   const txt = (box ? box.value : '').trim();
-  if (!txt) return;
+  if (!txt) { entry('CW: nothing to send — type text in the speech box first', 'sys'); return; }
   let wpm = parseInt(wpmInput ? wpmInput.value : '15', 10);
   if (isNaN(wpm)) wpm = 15;
   wpm = Math.max(5, Math.min(40, wpm));
@@ -5158,10 +5158,15 @@ function sendMorseFromSpeech() {
   addBubble(txt, true, null, true, null, null);
 
   // Send to remote: text + morse + speed, so the other side can play/display it
-  try {
-    dcSend({ __morse: true, text: txt, morse: morse, wpm: wpm });
-  } catch(e) {
-    entry('CW send failed: ' + e.message, 'err');
+  if (!dataConn || !dataConn.open) {
+    entry('CW: data channel not connected — played locally only', 'sys');
+  } else {
+    try {
+      dcSend({ __morse: true, text: txt, morse: morse, wpm: wpm });
+      entry('CW sent: ' + txt + ' (' + wpm + ' WPM)', 'sys');
+    } catch(e) {
+      entry('CW send failed: ' + e.message, 'err');
+    }
   }
 
   // Play it locally too
