@@ -1825,6 +1825,7 @@
           <button id="speechCwBtn" onclick="sendMorseFromSpeech()" title="Send the input box text as Morse code (CW)"><span class="led cw-off" id="cwLed"></span>CW</button>
           <span class="sbr-label">WPM:</span>
           <input type="number" id="cwWpmInput" min="5" max="40" step="1" value="15" title="Morse code speed in words per minute">
+          <span class="sbr-label" style="display:flex;align-items:center;gap:5px;" title="Incoming CW indicator"><span class="led cw-off" id="cwRxLed"></span>RX</span>
         </div>
         <div class="speech-btn-row" id="speechBtnRow3">
           <span class="sbr-label">Text To Speech:</span>
@@ -5001,8 +5002,8 @@ function attachDataConn(dc) {
       if (f.__file  === true)      { addMediaBubble(f.name, f.type, f.data, false); return; }
       if (f.__chunk === true)      { receiveChunk(f); return; }
       if (f.__morse === true) {
-        addBubble(f.text || '', false);
-        playMorse(f.morse || textToMorse(f.text || ''), f.wpm || 15);
+        try { addBubble(f.text || '', false); } catch(e) { entry('CW bubble failed: ' + e.message, 'err'); }
+        try { playMorse(f.morse || textToMorse(f.text || ''), f.wpm || 15, 'cwRxLed'); } catch(e) { entry('CW playback failed: ' + e.message, 'err'); }
         return;
       }
       // Language-learning chat message: translate from sender's lang to our lang
@@ -5112,16 +5113,18 @@ function textToMorse(text) {
   }).filter(s => s !== '').join(' ');
 }
 
-function setCwLed(on) {
-  const led = document.getElementById('cwLed');
+function setCwLed(ledId, on) {
+  const led = document.getElementById(ledId);
   if (!led) return;
   led.classList.toggle('cw-on', on);
   led.classList.toggle('cw-off', !on);
 }
 
 // Play a morse string ('.', '-', '/', ' ' separators) as audio tones
-// and flash the CW LED in sync. Returns a Promise that resolves when done.
-function playMorse(morse, wpm) {
+// and flash the given LED (by element id) in sync. Returns a Promise
+// that resolves when playback is done.
+function playMorse(morse, wpm, ledId) {
+  ledId = ledId || 'cwLed';
   return new Promise(resolve => {
     if (!_actx) _actx = new (window.AudioContext || window.webkitAudioContext)();
     try { if (_actx.state === 'suspended') _actx.resume(); } catch(e) {}
@@ -5152,11 +5155,11 @@ function playMorse(morse, wpm) {
     }
     // Schedule LED on/off relative to now
     ledEvents.forEach(ev => {
-      setTimeout(() => setCwLed(true),  (ev.on  - ctxNow) * 1000);
-      setTimeout(() => setCwLed(false), (ev.off - ctxNow) * 1000);
+      setTimeout(() => setCwLed(ledId, true),  (ev.on  - ctxNow) * 1000);
+      setTimeout(() => setCwLed(ledId, false), (ev.off - ctxNow) * 1000);
     });
     const totalMs = (t - ctxNow) * 1000;
-    setTimeout(() => { setCwLed(false); resolve(); }, totalMs + 50);
+    setTimeout(() => { setCwLed(ledId, false); resolve(); }, totalMs + 50);
   });
 }
 
@@ -5185,7 +5188,7 @@ function sendMorseFromSpeech() {
   }
 
   // Play it locally too
-  playMorse(morse, wpm);
+  playMorse(morse, wpm, 'cwLed');
 
   box.value = '';
   box.dispatchEvent(new Event('input'));
