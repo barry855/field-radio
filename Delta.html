@@ -179,7 +179,23 @@
     font-size: 11px;
     line-height: 1.5;
     color: var(--text-dim);
+    margin-top: 8px;
   }
+  #log.collapsed { display: none; }
+
+  .log-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    user-select: none;
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .log-toggle .chev { transition: transform 0.15s; font-size: 10px; }
+  .log-toggle.expanded .chev { transform: rotate(180deg); }
   #log .ok   { color: var(--accent2); }
   #log .err  { color: var(--danger); }
   #log .info { color: var(--accent); }
@@ -229,6 +245,33 @@
 
   .toolbar { display: flex; gap: 8px; flex-wrap: wrap; }
   .toolbar button { flex: 1; min-width: 70px; }
+
+  .tab-bar { display: flex; gap: 6px; flex-shrink: 0; }
+  .tab-bar button {
+    flex: 1;
+    background: var(--btn-bg); color: var(--text-dim);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 9px 6px; font-family: inherit; font-size: 12px;
+    letter-spacing: 1px; text-transform: uppercase;
+    cursor: pointer;
+  }
+  .tab-bar button.active {
+    background: var(--btn-active); border-color: var(--accent); color: var(--accent);
+  }
+
+  .main-tab {
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+  }
+  .main-tab.active { display: flex; }
+  #mainTabChat.active { overflow: hidden; }
+
+  .quiz-feedback.correct { color: var(--accent2); }
+  .quiz-feedback.wrong { color: var(--danger); }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js"></script>
 </head>
@@ -258,6 +301,13 @@
     <button class="danger" id="leaveBtn" onclick="leaveSession()" title="Leave session">⏏ Leave</button>
   </header>
 
+  <div class="tab-bar">
+    <button class="active" id="tabBtnChat" onclick="switchMainTab('chat')">Chat</button>
+    <button id="tabBtnPractice" onclick="switchMainTab('practice')">Morse Practice</button>
+  </div>
+
+  <div class="main-tab active" id="mainTabChat">
+
   <div class="chat-panel" id="chatPanel">
     <span class="panel-label">Chat</span>
     <div id="chat"></div>
@@ -286,8 +336,77 @@
   </div>
 
   <div class="panel">
-    <span class="panel-label">Debug Log</span>
-    <div id="log" style="margin-top:4px"></div>
+    <div class="log-toggle" id="logToggle" onclick="toggleLog()">
+      <span>Debug Log</span>
+      <span class="chev">▾</span>
+    </div>
+    <div id="log" class="collapsed"></div>
+  </div>
+
+  </div>
+  <!-- ── PRACTICE TAB (offline morse trainer) ────────────────────── -->
+  <div class="main-tab" id="mainTabPractice">
+
+  <div class="panel">
+    <span class="panel-label">Speed &amp; Tone</span>
+    <div class="row" style="margin-top:4px">
+      <label style="font-size:11px;color:var(--text-dim);letter-spacing:1px;">WPM</label>
+      <select id="practiceWpm" onchange="savePracticeSettings()">
+        <option value="5">5</option>
+        <option value="10">10</option>
+        <option value="13">13</option>
+        <option value="15">15</option>
+        <option value="20" selected>20</option>
+        <option value="25">25</option>
+        <option value="30">30</option>
+      </select>
+      <label style="font-size:11px;color:var(--text-dim);letter-spacing:1px;">Tone (Hz)</label>
+      <select id="practiceTone" onchange="savePracticeSettings()">
+        <option value="500">500</option>
+        <option value="550">550</option>
+        <option value="600" selected>600</option>
+        <option value="650">650</option>
+        <option value="700">700</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="panel">
+    <span class="panel-label">Listen — Text to Morse</span>
+    <div class="row" style="margin-top:4px">
+      <textarea id="practiceListenText" placeholder="Type text to hear as Morse…" style="flex:1">CQ CQ DE TEST</textarea>
+    </div>
+    <div class="toolbar" style="margin-top:8px">
+      <button class="accent" onclick="practicePlayListen()">▶ Play</button>
+      <button onclick="practiceRandomGroup()">⚄ Random Group</button>
+      <button onclick="stopAllAudio()">■ Stop</button>
+    </div>
+    <div id="practiceMorseOut" style="margin-top:8px;background:#20262e;border:1px solid var(--border);border-radius:6px;padding:10px;font-size:16px;letter-spacing:3px;color:var(--accent2);min-height:30px;word-break:break-all;"></div>
+  </div>
+
+  <div class="panel">
+    <span class="panel-label">Quiz — Hear &amp; Type</span>
+    <div id="practiceQuizPrompt" style="margin-top:4px;text-align:center;font-family:'Orbitron',sans-serif;font-size:30px;font-weight:900;color:var(--accent);letter-spacing:6px;padding:10px 0;">—</div>
+    <div class="row">
+      <input type="text" id="practiceQuizInput" placeholder="Type the character you heard…" style="flex:1" autocomplete="off" autocapitalize="characters">
+      <button class="accent" onclick="practiceSubmitQuiz()">Submit</button>
+    </div>
+    <div class="quiz-feedback" id="practiceQuizFeedback" style="text-align:center;font-size:13px;min-height:18px;letter-spacing:1px;margin-top:4px;"></div>
+    <div class="toolbar" style="margin-top:8px">
+      <button class="go" onclick="practiceStartQuiz()">▶ Start / Next</button>
+      <button onclick="practiceReplayQuiz()">🔁 Replay</button>
+    </div>
+    <div class="quiz-stats" style="display:flex;justify-content:space-around;gap:8px;font-size:11px;color:var(--text-dim);letter-spacing:1px;margin-top:10px;">
+      <div><b id="practiceQuizCorrect" style="color:var(--accent2);font-size:15px;display:block;">0</b>Correct</div>
+      <div><b id="practiceQuizWrong" style="color:var(--accent2);font-size:15px;display:block;">0</b>Wrong</div>
+      <div><b id="practiceQuizStreak" style="color:var(--accent2);font-size:15px;display:block;">0</b>Streak</div>
+      <div><b id="practiceQuizAccuracy" style="color:var(--accent2);font-size:15px;display:block;">—</b>Accuracy</div>
+    </div>
+    <div class="toolbar" style="margin-top:8px">
+      <button class="danger" onclick="practiceResetQuiz()">Reset Score</button>
+    </div>
+  </div>
+
   </div>
 </div>
 
@@ -344,6 +463,16 @@ function entry(msg, cls='sys') {
   div.textContent = '[' + t + '] ' + msg;
   logEl.appendChild(div);
   logEl.scrollTop = logEl.scrollHeight;
+}
+
+function toggleLog() {
+  const log = document.getElementById('log');
+  const toggle = document.getElementById('logToggle');
+  log.classList.toggle('collapsed');
+  toggle.classList.toggle('expanded');
+  if (!log.classList.contains('collapsed')) {
+    log.scrollTop = log.scrollHeight;
+  }
 }
 
 function setStatus(state) {
@@ -702,9 +831,22 @@ function getAudioCtx() {
   return _audioCtx;
 }
 
+let _activeOscillators = [];
+function stopAllAudio() {
+  _activeOscillators.forEach(o => { try { o.stop(); } catch(e) {} });
+  _activeOscillators = [];
+}
+
 // Plays morse code as audio tone. unit = duration of one dot, in ms.
+// Used for received/sent chat morse — respects the chat Speaker toggle.
 function playMorse(text, wpm) {
   if (!speakerOn) return;
+  playMorseRaw(text, wpm, 600);
+}
+
+// Plays morse code regardless of the chat Speaker toggle — used by the
+// offline Morse Practice tab, which has its own audio controls.
+function playMorseRaw(text, wpm, freq) {
   const ctx = getAudioCtx();
   const unit = 1200 / wpm; // ms per dot, standard PARIS formula
   let t = ctx.currentTime + 0.05;
@@ -721,7 +863,7 @@ function playMorse(text, wpm) {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'sine';
-      osc.frequency.value = 600;
+      osc.frequency.value = freq;
       gain.gain.setValueAtTime(0, t);
       gain.gain.linearRampToValueAtTime(0.3, t + 0.005);
       gain.gain.setValueAtTime(0.3, t + dur - 0.005);
@@ -730,10 +872,12 @@ function playMorse(text, wpm) {
       gain.connect(ctx.destination);
       osc.start(t);
       osc.stop(t + dur);
+      _activeOscillators.push(osc);
       t += dur + (unit / 1000); // intra-character gap
     });
     t += (unit * 2) / 1000; // inter-character gap (total 3 with above)
   });
+  return (t - ctx.currentTime) * 1000; // total duration in ms
 }
 
 function sendMorse() {
@@ -798,7 +942,106 @@ function leaveSession() {
   entry('Left session', 'sys');
 }
 
-// ── Init ─────────────────────────────────────────────────────────────────
+// ── Main tab switching (Chat / Morse Practice) ───────────────────────────
+function switchMainTab(name) {
+  stopAllAudio();
+  document.querySelectorAll('.main-tab').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-bar > button').forEach(el => el.classList.remove('active'));
+  document.getElementById('mainTab' + name.charAt(0).toUpperCase() + name.slice(1)).classList.add('active');
+  document.getElementById('tabBtn' + name.charAt(0).toUpperCase() + name.slice(1)).classList.add('active');
+}
+
+// ── Offline Morse Practice ────────────────────────────────────────────────
+function practiceGetWpm()  { return parseInt(document.getElementById('practiceWpm').value, 10) || 20; }
+function practiceGetTone() { return parseInt(document.getElementById('practiceTone').value, 10) || 600; }
+
+function savePracticeSettings() {
+  try {
+    localStorage.setItem('delta_practice_wpm', document.getElementById('practiceWpm').value);
+    localStorage.setItem('delta_practice_tone', document.getElementById('practiceTone').value);
+  } catch(e) {}
+}
+
+function textToMorseString(text) {
+  return text.toUpperCase().split('').map(ch => {
+    if (ch === ' ') return '/';
+    return MORSE_MAP[ch] || '';
+  }).filter(Boolean).join(' ');
+}
+
+function practicePlayListen() {
+  const text = document.getElementById('practiceListenText').value.trim();
+  if (!text) return;
+  stopAllAudio();
+  document.getElementById('practiceMorseOut').textContent = textToMorseString(text);
+  playMorseRaw(text, practiceGetWpm(), practiceGetTone());
+}
+
+const PRACTICE_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+function practiceRandomGroup() {
+  let s = '';
+  for (let i = 0; i < 5; i++) s += PRACTICE_LETTERS[Math.floor(Math.random() * 26)];
+  document.getElementById('practiceListenText').value = s;
+  practicePlayListen();
+}
+
+// ── Practice quiz ───────────────────────────────────────────────────────
+let _pqCorrect = 0, _pqWrong = 0, _pqStreak = 0, _pqCurrentChar = '', _pqActive = false;
+
+function practiceStartQuiz() {
+  _pqCurrentChar = PRACTICE_LETTERS[Math.floor(Math.random() * 26)];
+  _pqActive = true;
+  document.getElementById('practiceQuizInput').value = '';
+  document.getElementById('practiceQuizFeedback').textContent = '';
+  document.getElementById('practiceQuizFeedback').className = 'quiz-feedback';
+  document.getElementById('practiceQuizPrompt').textContent = '🔊 ?';
+  stopAllAudio();
+  playMorseRaw(_pqCurrentChar, practiceGetWpm(), practiceGetTone());
+  document.getElementById('practiceQuizInput').focus();
+}
+
+function practiceReplayQuiz() {
+  if (!_pqActive) return;
+  stopAllAudio();
+  playMorseRaw(_pqCurrentChar, practiceGetWpm(), practiceGetTone());
+}
+
+function practiceSubmitQuiz() {
+  if (!_pqActive) return;
+  const input = document.getElementById('practiceQuizInput').value.trim().toUpperCase();
+  const fb = document.getElementById('practiceQuizFeedback');
+  if (input === _pqCurrentChar) {
+    _pqCorrect++; _pqStreak++;
+    fb.textContent = '✓ Correct! "' + _pqCurrentChar + '" = ' + MORSE_MAP[_pqCurrentChar];
+    fb.className = 'quiz-feedback correct';
+  } else {
+    _pqWrong++; _pqStreak = 0;
+    fb.textContent = '✗ Expected "' + _pqCurrentChar + '" (' + MORSE_MAP[_pqCurrentChar] + ')';
+    fb.className = 'quiz-feedback wrong';
+  }
+  practiceUpdateQuizStats();
+  _pqActive = false;
+  setTimeout(() => { if (!_pqActive) practiceStartQuiz(); }, 1200);
+}
+
+function practiceUpdateQuizStats() {
+  document.getElementById('practiceQuizCorrect').textContent = _pqCorrect;
+  document.getElementById('practiceQuizWrong').textContent = _pqWrong;
+  document.getElementById('practiceQuizStreak').textContent = _pqStreak;
+  const total = _pqCorrect + _pqWrong;
+  document.getElementById('practiceQuizAccuracy').textContent = total > 0 ? Math.round(100*_pqCorrect/total) + '%' : '—';
+}
+
+function practiceResetQuiz() {
+  _pqCorrect = 0; _pqWrong = 0; _pqStreak = 0;
+  practiceUpdateQuizStats();
+}
+
+document.getElementById('practiceQuizInput')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); practiceSubmitQuiz(); }
+});
+
+
 (function init() {
   setStatus('offline');
   try {
@@ -816,6 +1059,10 @@ function leaveSession() {
       btn.textContent = '🔇 Speaker Off';
       btn.classList.remove('toggle-on');
     }
+    const pWpm = localStorage.getItem('delta_practice_wpm');
+    if (pWpm) document.getElementById('practiceWpm').value = pWpm;
+    const pTone = localStorage.getItem('delta_practice_tone');
+    if (pTone) document.getElementById('practiceTone').value = pTone;
   } catch(e) {}
 
   document.getElementById('sessionCode').addEventListener('input', e => {
