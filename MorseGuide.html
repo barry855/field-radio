@@ -1,0 +1,251 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GAMMA / DELTA Field Radio Chat — Quick-Start Guide</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@400;600;700&display=swap');
+
+  :root {
+    --accent: #1e3a5f;
+    --accent2: #00a878;
+    --text: #222;
+    --text-dim: #666;
+    --border: #ccc;
+    --row-alt: #f4f6f8;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    color: var(--text);
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 32px 24px 60px;
+    line-height: 1.5;
+    font-size: 15px;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: 26px;
+    margin: 0 0 4px;
+    color: var(--accent);
+  }
+  .subtitle {
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-dim);
+    margin: 0 0 14px;
+  }
+  hr.top {
+    border: none;
+    border-top: 2px solid var(--accent);
+    margin: 0 0 18px;
+  }
+
+  h2 {
+    font-size: 17px;
+    color: var(--accent);
+    margin: 28px 0 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  p { margin: 0 0 10px; }
+
+  ol, ul { margin: 0 0 10px; padding-left: 28px; }
+  li { margin-bottom: 6px; }
+
+  .note {
+    font-size: 13px;
+    color: var(--text-dim);
+    border-left: 3px solid var(--accent2);
+    background: var(--row-alt);
+    padding: 8px 12px;
+    border-radius: 4px;
+    margin: 8px 0 14px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+    margin: 6px 0 14px;
+  }
+  th, td {
+    border: 1px solid var(--border);
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: var(--accent);
+    color: #fff;
+    font-weight: 600;
+  }
+  td:first-child { font-weight: 600; white-space: nowrap; }
+  tr:nth-child(even) td { background: var(--row-alt); }
+
+  .status-light {
+    display: inline-block;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+    border: 1px solid rgba(0,0,0,0.15);
+  }
+  .light-grey   { background: #999; }
+  .light-cyan   { background: #00b8d9; }
+  .light-green  { background: #00c389; }
+  .light-red    { background: #e23b3b; }
+
+  code, .mono { font-family: 'Share Tech Mono', monospace; }
+
+  .footer {
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-dim);
+    border-top: 1px solid var(--border);
+    margin-top: 32px;
+    padding-top: 12px;
+  }
+
+  .print-btn-wrap {
+    text-align: center;
+    margin-bottom: 18px;
+  }
+  .print-btn-wrap button {
+    font-family: inherit;
+    font-size: 13px;
+    padding: 8px 18px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .print-btn-wrap button:hover { background: #16314f; }
+
+  /* ── Print ─────────────────────────────────────────────── */
+  @media print {
+    .print-btn-wrap { display: none; }
+    body { padding: 0 12px; font-size: 12.5px; }
+    h2 { page-break-after: avoid; }
+    table, .note { page-break-inside: avoid; }
+    a { color: var(--text); text-decoration: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="print-btn-wrap">
+  <button onclick="window.print()">🖨 Print / Save as PDF</button>
+</div>
+
+<h1>GAMMA / DELTA Field Radio Chat</h1>
+<p class="subtitle">Quick-Start Guide for Two-Station Peer-to-Peer Text &amp; Morse Comms</p>
+<hr class="top">
+
+<p>
+  Gamma and Delta are a paired set of simple web pages that let two stations exchange text
+  chat over a direct peer-to-peer link, with an optional built-in Morse code sender and
+  receiver. One station opens <code>GAMMA.html</code> and the other opens
+  <code>DELTA.html</code>. No installation is required — both pages run in any modern web
+  browser on a phone, tablet, Chromebook, or PC.
+</p>
+
+<h2>1. Getting Connected</h2>
+<p>
+  Both operators must agree on a shared <strong>channel code</strong> beforehand (over voice,
+  previously, or by any other means). The code can be any short string of letters and/or
+  numbers — for example <code>123456</code> — but <strong>both stations must enter the code
+  exactly the same way</strong>.
+</p>
+<ol>
+  <li>Open <strong>GAMMA.html</strong> on one device and <strong>DELTA.html</strong> on the other.</li>
+  <li>On the login screen, type the agreed channel code into the <strong>Channel Code</strong> box.</li>
+  <li>Watch the small status light below the box — it will show <strong>SEARCHING</strong>,
+      then <strong>REACHABLE</strong> (green) once the other station has entered the same
+      code, or <strong>OFFLINE</strong> (red) if not yet detected.</li>
+  <li>Tap <strong>CONNECT</strong>. Both stations should do this within a minute or so of each other.</li>
+  <li>The status bar at the top will progress from <strong>OFFLINE</strong> →
+      <strong>ONLINE — DIALLING</strong> → <strong>LINKED</strong> (green light). Once
+      LINKED, chat is ready.</li>
+</ol>
+<div class="note">
+  <strong>Tip:</strong> the connection is made over the public internet using a
+  relay/signalling service, so both devices need an active internet connection (Wi-Fi or
+  cellular data) — this is <em>not</em> a direct RF link.
+</div>
+
+<h2>2. Using the Chat Screen</h2>
+<table>
+  <tr><th>Control</th><th>What it does</th></tr>
+  <tr><td>Message box + Send</td><td>Type a message and send it as text. Press Enter to send (Shift+Enter for a new line).</td></tr>
+  <tr><td>Chat window</td><td>Shows your messages and the other station's messages with timestamps.</td></tr>
+  <tr><td>Refresh</td><td>Notifies the other station and reloads the page. Useful if the connection misbehaves.</td></tr>
+  <tr><td>Leave</td><td>Cleanly ends the session and returns you to the login screen.</td></tr>
+  <tr><td>Debug Log (collapsible)</td><td>Tap the header to expand/collapse a technical log of connection events — useful for troubleshooting.</td></tr>
+</table>
+
+<h2>3. Sending Morse Code to the Other Station</h2>
+<p>
+  Either station can send a message as Morse code instead of plain text. The receiving
+  station will both <strong>see the text</strong> and, if their Speaker is switched on,
+  <strong>hear it played as Morse tones</strong>.
+</p>
+<ol>
+  <li>Type your message in the message box as normal.</li>
+  <li>Choose a speed from the <strong>Morse Speed</strong> dropdown (10–30 WPM).</li>
+  <li>Tap <strong>Send as Morse</strong> instead of Send.</li>
+  <li>You will hear your own message as a sidetone immediately. The other station hears it
+      too (if their Speaker is ON) and also sees the text in their chat window.</li>
+</ol>
+<div class="note">
+  <strong>Speaker On/Off</strong> — controls whether <em>your</em> device plays incoming
+  Morse audio. Turn it off if you only want to read the text. Your setting is remembered
+  between sessions.
+</div>
+
+<h2>4. Practicing Morse Code (No Connection Needed)</h2>
+<p>
+  Both GAMMA and DELTA include a <strong>Morse Practice</strong> tab at the top of the page,
+  next to Chat. This works completely offline and does not require the other station to be
+  present.
+</p>
+<table>
+  <tr><th>Section</th><th>Purpose</th></tr>
+  <tr><td>Speed &amp; Tone</td><td>Set the practice WPM (5–30) and tone pitch (500–700 Hz), separate from the chat Morse speed.</td></tr>
+  <tr><td>Listen</td><td>Type text and tap Play to hear it in Morse. Tap Random Group for a random 5-letter group — good for copy practice.</td></tr>
+  <tr><td>Quiz</td><td>Hear a random letter played in Morse, type what you heard, and tap Submit. Tracks Correct, Wrong, Streak and Accuracy.</td></tr>
+</table>
+<div class="note">
+  A separate stand-alone page, <strong>MORSE.html</strong>, offers a fuller trainer with
+  Listen, Decode (including a tap-key for sending your own Morse), Quiz, and a full
+  character Reference table — useful for solo practice away from the Gamma/Delta link.
+</div>
+
+<h2>5. Quick Reference</h2>
+<table>
+  <tr><th>Status Light</th><th>Meaning</th></tr>
+  <tr><td><span class="status-light light-grey"></span>Grey</td><td>Offline / not yet connected</td></tr>
+  <tr><td><span class="status-light light-cyan"></span>Cyan, blinking</td><td>Online, attempting to dial the other station</td></tr>
+  <tr><td><span class="status-light light-green"></span>Green, solid</td><td>Linked — chat is ready</td></tr>
+  <tr><td><span class="status-light light-red"></span>Red</td><td>Error — check the Debug Log</td></tr>
+</table>
+<div class="note">
+  If the connection stalls on "OFFLINE" or repeatedly fails to link, double-check that
+  <strong>both stations entered the identical channel code</strong> — this is by far the
+  most common cause of connection trouble.
+</div>
+
+<div class="footer">
+  73 — Field Radio Gamma/Delta Quick-Start Guide
+</div>
+
+</body>
+</html>
