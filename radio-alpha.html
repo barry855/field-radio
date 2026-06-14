@@ -106,8 +106,6 @@
   .led.on-cyan   { background: var(--accent);  box-shadow: 0 0 6px var(--accent);  }
   .led.on-yellow { background: var(--warn);    box-shadow: 0 0 6px var(--warn);    animation: blink 0.8s step-end infinite; }
   .led.on-amber  { background: #ffaa00;       box-shadow: 0 0 8px #ffaa00; }  /* reachable — solid amber */
-  .led.cw-off    { background: #ff4444; box-shadow: 0 0 4px rgba(255,68,68,0.6); }
-  .led.cw-on     { background: var(--accent2); box-shadow: 0 0 8px var(--accent2); }
 
   @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.35} }
 
@@ -818,23 +816,6 @@
     cursor: pointer; max-width: 80px;
   }
   #speechLangSelect:focus { outline: none; border-color: var(--accent); }
-  #cwWpmInput {
-    background: var(--btn-bg); border: 1px solid var(--border);
-    color: var(--text); font-family: 'Share Tech Mono', monospace;
-    font-size: 11px; letter-spacing: 0.5px;
-    height: 28px; padding: 0 4px; border-radius: 4px;
-    width: 38px; text-align: center;
-  }
-  #cwWpmInput:focus { outline: none; border-color: var(--accent); }
-  #speechCwBtn {
-    background: var(--btn-bg); border: 1px solid var(--border);
-    color: var(--text); padding: 5px 9px; border-radius: 4px;
-    font-family: 'Share Tech Mono', monospace; font-size: 11px;
-    cursor: pointer; transition: background 0.15s, border-color 0.15s, color 0.15s;
-    white-space: nowrap; letter-spacing: 0.5px;
-    display: flex; align-items: center; gap: 6px;
-  }
-  #speechCwBtn:hover { border-color: var(--accent); color: var(--accent); }
   #ttsVoiceSelect {
     background: var(--btn-bg); border: 1px solid var(--border);
     color: var(--text-dim); font-family: 'Share Tech Mono', monospace;
@@ -1822,9 +1803,6 @@
             <option value="pt-BR" title="Portuguese (BR)">Português (BR)</option>
           </select>
           <button id="speechOriginalBtn" onclick="speechOriginalLang()" title="Revert to system language">ORIGINAL</button>
-          <button id="speechCwBtn" onclick="sendMorseFromSpeech()" title="Send the input box text as Morse code (CW)"><span class="led cw-off" id="cwLed"></span>CW</button>
-          <span class="sbr-label">WPM:</span>
-          <input type="number" id="cwWpmInput" min="5" max="40" step="1" value="15" title="Morse code speed in words per minute">
         </div>
         <div class="speech-btn-row" id="speechBtnRow3">
           <span class="sbr-label">Text To Speech:</span>
@@ -5000,11 +4978,6 @@ function attachDataConn(dc) {
       if (f.__control === 'refresh') { entry('Remote refreshed — reloading…', 'sys'); peerRefreshing = true; try { sessionStorage.setItem('fieldRadioRefreshing', '1'); } catch(e) {} setTimeout(() => window.location.reload(), 400); return; }
       if (f.__file  === true)      { addMediaBubble(f.name, f.type, f.data, false); return; }
       if (f.__chunk === true)      { receiveChunk(f); return; }
-      if (f.__morse === true) {
-        addBubble(f.text || '', false);
-        playMorse(f.morse || textToMorse(f.text || ''), f.wpm || 15);
-        return;
-      }
       // Language-learning chat message: translate from sender's lang to our lang
       if (f.__chat === true && f.text) {
         const srcText = f.text;
@@ -5092,106 +5065,7 @@ function dcDecode(raw) {
   return { text: s };
 }
 
-// ── CW / Morse code ────────────────────────────────────────────
-const _morseTable = {
-  'A':'.-','B':'-...','C':'-.-.','D':'-..','E':'.','F':'..-.','G':'--.','H':'....',
-  'I':'..','J':'.---','K':'-.-','L':'.-..','M':'--','N':'-.','O':'---','P':'.--.',
-  'Q':'--.-','R':'.-.','S':'...','T':'-','U':'..-','V':'...-','W':'.--','X':'-..-',
-  'Y':'-.--','Z':'--..',
-  '0':'-----','1':'.----','2':'..---','3':'...--','4':'....-','5':'.....',
-  '6':'-....','7':'--...','8':'---..','9':'----.',
-  '.':'.-.-.-',',':'--..--','?':'..--..',"'":'.----.','!':'-.-.--','/':'-..-.',
-  '(':'-.--.',')':'-.--.-','&':'.-...',':':'---...',';':'-.-.-.','=':'-...-',
-  '+':'.-.-.','-':'-....-','_':'..--.-','"':'.-..-.','$':'...-..-','@':'.--.-.'
-};
-
-function textToMorse(text) {
-  return text.toUpperCase().split('').map(ch => {
-    if (ch === ' ') return '/';
-    return _morseTable[ch] || '';
-  }).filter(s => s !== '').join(' ');
-}
-
-function setCwLed(on) {
-  const led = document.getElementById('cwLed');
-  if (!led) return;
-  led.classList.toggle('cw-on', on);
-  led.classList.toggle('cw-off', !on);
-}
-
-// Play a morse string ('.', '-', '/', ' ' separators) as audio tones
-// and flash the CW LED in sync. Returns a Promise that resolves when done.
-function playMorse(morse, wpm) {
-  return new Promise(resolve => {
-    if (!_actx) _actx = new (window.AudioContext || window.webkitAudioContext)();
-    try { if (_actx.state === 'suspended') _actx.resume(); } catch(e) {}
-    const ditMs = 1200 / Math.max(5, Math.min(40, wpm || 15)); // standard PARIS timing
-    const freq = 600;
-    let t = _actx.currentTime + 0.05;
-    const ctxNow = _actx.currentTime;
-    const ledEvents = [];
-    for (const sym of morse) {
-      if (sym === '.' || sym === '-') {
-        const dur = (sym === '.' ? ditMs : ditMs * 3) / 1000;
-        const osc = _actx.createOscillator();
-        const gain = _actx.createGain();
-        osc.connect(gain); gain.connect(_actx.destination);
-        osc.type = 'sine'; osc.frequency.value = freq;
-        gain.gain.setValueAtTime(0, t);
-        gain.gain.linearRampToValueAtTime(0.18, t + 0.005);
-        gain.gain.setValueAtTime(0.18, t + dur - 0.005);
-        gain.gain.linearRampToValueAtTime(0, t + dur);
-        osc.start(t); osc.stop(t + dur + 0.02);
-        ledEvents.push({ on: t, off: t + dur });
-        t += dur + ditMs / 1000; // intra-character gap = 1 dit
-      } else if (sym === ' ') {
-        t += (ditMs * 2) / 1000; // extra gap to make letter gap = 3 dits total
-      } else if (sym === '/') {
-        t += (ditMs * 6) / 1000; // word gap = 7 dits total
-      }
-    }
-    // Schedule LED on/off relative to now
-    ledEvents.forEach(ev => {
-      setTimeout(() => setCwLed(true),  (ev.on  - ctxNow) * 1000);
-      setTimeout(() => setCwLed(false), (ev.off - ctxNow) * 1000);
-    });
-    const totalMs = (t - ctxNow) * 1000;
-    setTimeout(() => { setCwLed(false); resolve(); }, totalMs + 50);
-  });
-}
-
-// Send the speech edit box text as Morse/CW to the remote station,
-// play it locally, and post the original text into the chat.
-function sendMorseFromSpeech() {
-  const box = document.getElementById('speechEditBox');
-  const wpmInput = document.getElementById('cwWpmInput');
-  const txt = (box ? box.value : '').trim();
-  if (!txt) return;
-  let wpm = parseInt(wpmInput ? wpmInput.value : '15', 10);
-  if (isNaN(wpm)) wpm = 15;
-  wpm = Math.max(5, Math.min(40, wpm));
-  if (wpmInput) wpmInput.value = wpm;
-
-  const morse = textToMorse(txt);
-
-  // Show in our own chat
-  addBubble(txt, true, null, true, null, null);
-
-  // Send to remote: text + morse + speed, so the other side can play/display it
-  try {
-    dcSend({ __morse: true, text: txt, morse: morse, wpm: wpm });
-  } catch(e) {
-    entry('CW send failed: ' + e.message, 'err');
-  }
-
-  // Play it locally too
-  playMorse(morse, wpm);
-
-  box.value = '';
-  box.dispatchEvent(new Event('input'));
-}
-
-
+let _dcWatchdog = null;
 function openDataConn() {
   if (dataConn || pendingDC) return;
   pendingDC = true;
