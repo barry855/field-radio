@@ -1,0 +1,177 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Say Hello to Alpha &amp; Bravo — Field Radio</title>
+<style>
+  :root {
+    --accent: #0080a0;
+    --accent-light: #f5fbfd;
+    --border: #cccccc;
+    --text: #1f2937;
+    --text-dim: #666666;
+    --link: #0066cc;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 0;
+    background: #f0f2f5;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    color: var(--text);
+    line-height: 1.6;
+  }
+
+  .page {
+    max-width: 680px;
+    margin: 24px auto;
+    background: #ffffff;
+    padding: 32px 36px 40px;
+    border-radius: 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+
+  h1 {
+    color: var(--accent);
+    font-size: 32px;
+    margin: 0 0 4px 0;
+    letter-spacing: 0.5px;
+  }
+
+  .tagline {
+    font-style: italic;
+    color: var(--text-dim);
+    font-size: 16px;
+    margin: 0 0 18px 0;
+  }
+
+  p {
+    font-size: 16px;
+    margin: 0 0 14px 0;
+  }
+
+  .endpoints {
+    display: flex;
+    gap: 0;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--accent-light);
+    margin: 18px 0;
+  }
+  .endpoint {
+    flex: 1;
+    padding: 14px 18px;
+  }
+  .endpoint:first-child {
+    border-right: 1px solid var(--border);
+  }
+  .endpoint h2 {
+    color: var(--accent);
+    font-size: 18px;
+    margin: 0 0 2px 0;
+  }
+  .endpoint p {
+    margin: 0;
+    color: var(--text-dim);
+    font-size: 14px;
+  }
+
+  ul.features {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 16px 0;
+  }
+  ul.features li {
+    font-size: 16px;
+    padding: 5px 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  ul.features .emoji {
+    flex-shrink: 0;
+    font-size: 20px;
+    line-height: 1.5;
+  }
+
+  h2.section {
+    font-size: 18px;
+    margin: 26px 0 8px 0;
+    padding-bottom: 4px;
+    border-bottom: 2px solid var(--accent-light);
+  }
+
+  a {
+    color: var(--link);
+    text-decoration: none;
+    font-size: 14px;
+    display: block;
+    margin: 4px 0;
+    word-break: break-all;
+  }
+  a:hover {
+    text-decoration: underline;
+  }
+
+  .cta {
+    margin-top: 8px;
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>Say Hello to Alpha &amp; Bravo</h1>
+  <p class="tagline">Two little communication tools that live on a screen</p>
+
+  <p>You can check it out by typing any user ID on the login screen.</p>
+
+  <p>I want to show you something fun I've been working on. It's called Field Radio, and you just open a page on a phone, tablet, or computer.</p>
+
+  <p>One side is called Alpha, and the other is called Bravo. Think of them like two ends of a phone call — whoever opens Alpha is talking to whoever opens Bravo, no matter how far apart you are.</p>
+
+  <div class="endpoints">
+    <div class="endpoint">
+      <h2>ALPHA</h2>
+      <p>One side of the conversation</p>
+    </div>
+    <div class="endpoint">
+      <h2>BRAVO</h2>
+      <p>The other side</p>
+    </div>
+  </div>
+
+  <p>Once you're connected, you can:</p>
+
+  <ul class="features">
+    <li><span class="emoji">🎙️</span><span>Talk to each other, just like a phone call</span></li>
+    <li><span class="emoji">📹</span><span>See each other with video, if you want</span></li>
+    <li><span class="emoji">💬</span><span>Send messages back and forth, like texting</span></li>
+    <li><span class="emoji">🗣️</span><span>Speak instead of typing — it can listen to your voice and turn it into text</span></li>
+    <li><span class="emoji">🌍</span><span>Translate messages if you're using different languages</span></li>
+  </ul>
+
+  <p>You don't need to sign up for anything or create an account. You just open the page, type in a short code so your two devices find each other, and you're connected.</p>
+
+  <p>It's a little like having your own private walkie-talkie channel — handy for staying in touch, checking in, or just chatting from different rooms, different cities, or wherever you happen to be.</p>
+
+  <p class="cta">I'd love to try it out with you sometime — want to give it a go?</p>
+
+  <h2 class="section">Documentation</h2>
+  <a href="https://barry855.github.io/field-radio/ConnectionGuide.html" target="_blank">https://barry855.github.io/field-radio/ConnectionGuide.html</a>
+  <a href="https://barry855.github.io/field-radio/CheatSheet.html" target="_blank">https://barry855.github.io/field-radio/CheatSheet.html</a>
+  <a href="https://barry855.github.io/field-radio/OffLineFunctions.html" target="_blank">https://barry855.github.io/field-radio/OffLineFunctions.html</a>
+
+  <h2 class="section">The two amigos, the actual web pages</h2>
+  <a href="https://barry855.github.io/field-radio/radio-alpha.html" target="_blank">https://barry855.github.io/field-radio/radio-alpha.html</a>
+  <a href="https://barry855.github.io/field-radio/radio-bravo.html" target="_blank">https://barry855.github.io/field-radio/radio-bravo.html</a>
+
+</div>
+</body>
+</html>
