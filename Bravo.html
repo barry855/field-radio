@@ -934,23 +934,7 @@
   .session-box {
     background: var(--panel); border: 1px solid var(--border);
     border-top: 2px solid var(--accent2); border-radius: 8px; padding: 24px 28px; width: 280px;
-    position: absolute;
-    cursor: grab;
   }
-  .session-box.dragging { cursor: grabbing; }
-  .login-preview-video {
-    position: absolute;
-    width: 240px; max-width: 80vw;
-    aspect-ratio: 16/9;
-    object-fit: cover;
-    border: 1px solid var(--border);
-    border-top: 2px solid var(--accent);
-    border-radius: 8px;
-    background: #000;
-    opacity: 1;
-    transform: scaleX(-1);
-  }
-  .login-preview-video.hidden { display: none; }
   .session-title {
     font-family: 'Orbitron', sans-serif; font-size: 18px; font-weight: 900;
     color: var(--accent2); letter-spacing: 4px; margin-bottom: 16px; display: block;
@@ -1503,7 +1487,6 @@
     </div>
     <button class="session-go" onclick="startSession()">CONNECT</button>
   </div>
-  <video id="loginPreviewVideo" class="login-preview-video hidden" autoplay playsinline muted></video>
 </div>
 
 <div class="reconnect-overlay" id="reconnectOverlay">
@@ -2779,7 +2762,7 @@ function toggleMiniChat() {
 }
 
 // ── Draggable mini video overlays ────────────────────────────
-function makeDraggable(el, onDrag) {
+function makeDraggable(el) {
   let startX, startY, origLeft, origTop;
   el.addEventListener('mousedown', onDragStart);
   el.addEventListener('touchstart', onDragStart, {passive: false});
@@ -2819,7 +2802,6 @@ function makeDraggable(el, onDrag) {
     const maxTop  = pr.height - padT - padB - el.offsetHeight;
     el.style.left = Math.max(0, Math.min(maxLeft, origLeft + dx)) + 'px';
     el.style.top  = Math.max(0, Math.min(maxTop,  origTop  + dy)) + 'px';
-    if (typeof onDrag === 'function') onDrag();
   }
   function onDragEnd() {
     el.classList.remove('dragging');
@@ -2834,78 +2816,6 @@ function makeDraggable(el, onDrag) {
   if (el) makeDraggable(el);
 });
 
-// ── Login screen: movable session box + self-view camera preview ──────────
-(function() {
-  const overlay = document.getElementById('sessionOverlay');
-  const box = overlay ? overlay.querySelector('.session-box') : null;
-  const preview = document.getElementById('loginPreviewVideo');
-  if (!overlay || !box) return;
-
-  function positionPreview() {
-    if (!preview) return;
-    const or = overlay.getBoundingClientRect();
-    const br = box.getBoundingClientRect();
-    let left = (br.left - or.left) + (br.width / 2) - (preview.offsetWidth / 2);
-    let top  = (br.bottom - or.top) + 14;
-    const maxLeft = or.width  - preview.offsetWidth;
-    const maxTop  = or.height - preview.offsetHeight;
-    left = Math.max(0, Math.min(maxLeft, left));
-    top  = Math.max(0, Math.min(maxTop, top));
-    preview.style.left = left + 'px';
-    preview.style.top  = top + 'px';
-  }
-
-  // Centre the session box initially (it's now position:absolute)
-  function centerBox() {
-    const or = overlay.getBoundingClientRect();
-    const br = box.getBoundingClientRect();
-    box.style.left = ((or.width - br.width) / 2) + 'px';
-    box.style.top  = ((or.height - br.height) / 2) + 'px';
-    positionPreview();
-  }
-  centerBox();
-  window.addEventListener('resize', () => { centerBox(); });
-
-  makeDraggable(box, positionPreview);
-
-  // Acquire a lightweight self-view camera preview while on the login screen
-  let _loginPreviewStream = null;
-  async function startLoginPreview() {
-    if (!preview || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
-    try {
-      const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
-      const constraint = isMobile
-        ? { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 360 } }
-        : { width: { ideal: 640 }, height: { ideal: 360 } };
-      _loginPreviewStream = await navigator.mediaDevices.getUserMedia({ video: constraint, audio: false });
-      preview.srcObject = _loginPreviewStream;
-      preview.classList.remove('hidden');
-      preview.onloadedmetadata = () => { positionPreview(); };
-    } catch (e) {
-      // Camera unavailable — leave preview hidden
-    }
-  }
-  function stopLoginPreview() {
-    if (_loginPreviewStream) {
-      _loginPreviewStream.getTracks().forEach(t => t.stop());
-      _loginPreviewStream = null;
-    }
-    if (preview) {
-      preview.srcObject = null;
-      preview.classList.add('hidden');
-    }
-  }
-  // Stop the preview once the user connects (main media pipeline takes over)
-  const _origStartSession = window.startSession;
-  window.startSession = function() {
-    stopLoginPreview();
-    return _origStartSession.apply(this, arguments);
-  };
-  // Only start the preview if the login screen is actually visible
-  if (overlay.style.display !== 'none') {
-    startLoginPreview();
-  }
-})();
 
 function linkify(text) {
   const frag = document.createDocumentFragment();
