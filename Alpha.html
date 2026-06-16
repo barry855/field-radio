@@ -3772,6 +3772,8 @@ function toggleSpeechPanel() {
     if (panel) panel.classList.remove('speech-open');
     if (btn)   { btn.classList.remove('active'); btn.textContent = 'Talk/Type in Chat'; }
     setChatBtnsDisabled(false);
+    // Speech panel closed — resume the FS auto-hide timer if in fullscreen
+    if (_fsIsActive()) _fsShowControls();
   }
   syncUnderlayOpacity();
 }
@@ -4066,12 +4068,13 @@ function sendSpeechToChat() {
   if (!box) return;
   const txt = box.value.trim();
   if (!txt && pendingFiles.length === 0) return;
-  _restoreMiniChatAfterInput();  // restore mini before panel closes
   sendChat(txt);
   box.value = '';
   if (chatInput) chatInput.value = '';
   updateSpeechSendBtn();
-  toggleSpeechPanel();
+  // Stay in the chat box — do NOT close the speech panel.
+  // User returns to chat view by pressing SHOW CHAT.
+  setTimeout(() => { box.focus(); _positionFloatSend(); }, 50);
 }
 
 function toggleListening() {
@@ -4974,7 +4977,7 @@ function attachDataConn(dc) {
     if (f) {
       if (f.__control === 'video') { updateRemoteVideoState(f.enabled, f.hasTrack !== false); return; }
       if (f.__control === 'leave') { handleRemoteLeave(); return; }
-      if (f.__control === 'clearChat') { ttsStopAll(); clearHistory(); const ce=document.getElementById('chat'); if(ce) ce.innerHTML=''; entry('Remote cleared chat history','sys'); return; }
+      // clearChat control intentionally not handled — CLEAR is local-only on each unit.
       if (f.__control === 'deleteMsg') { deleteBubble(f.ts, false); return; }
       if (f.__control === 'refresh') { entry('Remote refreshed — reloading…', 'sys'); peerRefreshing = true; try { sessionStorage.setItem('fieldRadioRefreshing', '1'); } catch(e) {} setTimeout(() => window.location.reload(), 400); return; }
       if (f.__file  === true)      { addMediaBubble(f.name, f.type, f.data, false); return; }
@@ -6543,7 +6546,11 @@ function _fsShowControls() {
   document.body.classList.remove('fs-controls-hidden');
   document.body.classList.add('fs-controls-visible');
   clearTimeout(_fsHideTimer);
-  _fsHideTimer = setTimeout(_fsHideControls, 10000);
+  // While the chat box (speech panel) is open, keep controls visible indefinitely —
+  // the user is actively typing. The timer resumes when SHOW CHAT is pressed.
+  if (!_speechVisible) {
+    _fsHideTimer = setTimeout(_fsHideControls, 10000);
+  }
 }
 
 function _fsHideControls() {
