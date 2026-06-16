@@ -5130,6 +5130,48 @@ function stopQualityPolling() {
   updateQuality(null, null);
 }
 
+// ── Mid-call audio health watchdog ───────────────────────────
+// Checks every 5 s while linked for three silent-audio failure modes:
+//   1. _mixCtx auto-suspended by browser → resume it so the mix output track
+//      keeps flowing to the WebRTC sender.
+//   2. Outbound sender holding an ended track (e.g. silentTrack GC'd) → replace
+//      it with a fresh track honoring the current mute state.
+//   3. remoteAudio element paused mid-call (browser policy / tab background) →
+//      call play() again so the far end stays audible.
+let _audioWatchdogTimer = null;
+function startAudioWatchdog() {
+  stopAudioWatchdog();
+  _audioWatchdogTimer = setInterval(() => {
+    if (!linked) return;
+    // 1. Keep AudioContext alive
+    if (_mixCtx && _mixCtx.state === 'suspended') {
+      _mixCtx.resume().catch(() => {});
+      entry('Audio watchdog: _mixCtx was suspended — resuming', 'sys');
+    }
+    if (silentCtx && silentCtx.state === 'suspended') {
+      silentCtx.resume().catch(() => {});
+    }
+    // 2. Check outbound sender track is alive
+    try {
+      const pc = call && (call.peerConnection || call._pc);
+      const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
+      if (sender && sender.track && sender.track.readyState === 'ended') {
+        entry('Audio watchdog: sender track ended — replacing', 'sys');
+        applyMuteToSenders();
+      }
+    } catch(e) {}
+    // 3. Keep remote audio playing
+    const ra = document.getElementById('remoteAudio');
+    if (ra && ra.srcObject && ra.paused) {
+      ra.play().catch(() => {});
+      entry('Audio watchdog: remoteAudio was paused — restarting', 'sys');
+    }
+  }, 5000);
+}
+function stopAudioWatchdog() {
+  if (_audioWatchdogTimer) { clearInterval(_audioWatchdogTimer); _audioWatchdogTimer = null; }
+}
+
 function updateQuality(rtt, lossPct) {
   const bars  = [document.getElementById('qbar1'), document.getElementById('qbar2'), document.getElementById('qbar3')];
   const label = document.getElementById('qualityLabel');
@@ -5219,6 +5261,7 @@ function markLinked() {
   startQualityPolling();
   openDataConn();
   applyMuteToSenders();
+  startAudioWatchdog();
 }
 
 function attachCall(c) {
@@ -5498,6 +5541,7 @@ function handleRemoteLeave() {
   });
   // Stop quality polling
   stopQualityPolling();
+  stopAudioWatchdog();
   entry('Remote user left the session', 'sys');
   // End this session immediately so both sides close at the same time
   _doLeave();
@@ -5514,6 +5558,7 @@ function onDrop() {
   if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
   pendingDC = false;
   stopQualityPolling();
+  stopAudioWatchdog();
   duplexBar.textContent = 'OFFLINE';
   duplexBar.className = 'duplex-overlay';
   syncControls();
