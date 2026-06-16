@@ -149,13 +149,13 @@
   }
   .bubble.mine {
     align-self: flex-end;
-    background: rgba(0,255,159,1);
+    background: rgba(0,255,159,0.78);
     border-color: var(--accent2);
     color: #0a1520;
   }
   .bubble.theirs {
     align-self: flex-start;
-    background: rgba(0,212,255,1);
+    background: rgba(0,212,255,0.78);
     border-color: var(--accent);
     color: #0a1520;
   }
@@ -1659,7 +1659,7 @@
           <span class="sbr-label">CHAT:</span>
           <button class="speech-top-btn" onclick="saveChatToFile()" id="saveChatBtn" title="Save chat as HTML">💾 SAVE</button>
           <button class="speech-top-btn" onclick="restoreChat()" id="restoreChatBtn" title="Restore previous session chat">↩ RESTORE</button>
-          <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';ttsStopAll();dcSend({__control:'clearChat'});entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR</button>
+          <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';ttsStopAll();entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR</button>
           <button class="speech-top-btn" id="findChatBtn" title="Find in chat">🔍 FIND</button>
         </div>
         <div id="translateBar">
@@ -2816,6 +2816,7 @@ function makeDraggable(el) {
   if (el) makeDraggable(el);
 });
 
+
 function linkify(text) {
   const frag = document.createDocumentFragment();
   const re = /(https?:\/\/[^\s]+)/g;
@@ -3774,6 +3775,8 @@ function toggleSpeechPanel() {
     if (panel) panel.classList.remove('speech-open');
     if (btn)   { btn.classList.remove('active'); btn.textContent = 'Talk/Type in Chat'; }
     setChatBtnsDisabled(false);
+    // Speech panel closed — resume the FS auto-hide timer if in fullscreen
+    if (_fsIsActive()) _fsShowControls();
   }
   syncUnderlayOpacity();
 }
@@ -4068,12 +4071,13 @@ function sendSpeechToChat() {
   if (!box) return;
   const txt = box.value.trim();
   if (!txt && pendingFiles.length === 0) return;
-  _restoreMiniChatAfterInput();  // restore mini before panel closes
   sendChat(txt);
   box.value = '';
   if (chatInput) chatInput.value = '';
   updateSpeechSendBtn();
-  toggleSpeechPanel();
+  // Stay in the chat box — do NOT close the speech panel.
+  // User returns to chat view by pressing SHOW CHAT.
+  setTimeout(() => { box.focus(); _positionFloatSend(); }, 50);
 }
 
 function toggleListening() {
@@ -4199,9 +4203,12 @@ function startListening() {
     try { _recognition.start(); } catch(e) { setSpeechStatus('ERR: START FAILED: ' + e.message); }
   }
 
-  // Swap WebRTC sender to silence (fire-and-forget), then start immediately
-  // _recognition.start() must be called synchronously in the gesture handler on Android
-  _releaseAndroidMic();
+  // On Android: swap WebRTC sender to silence before STT (mic hardware stays alive for STT).
+  // On non-Android: mic muting is handled inside onstart via gain node / track.enabled — do NOT
+  // call _releaseAndroidMic() here, or the sender gets silenced and _restoreAndroidMic() is
+  // never called in onend (which only runs the restore path for _isAndroid), leaving the mic
+  // muted until reload.
+  if (_isAndroid) _releaseAndroidMic();
   _doStart();
 }
 
@@ -4822,7 +4829,7 @@ function startPeer() {
     // Also listen for inbound calls from Alpha in parallel — whichever arrives first wins.
     // _pollCancelled is set true by peer.on('call') so the loop stops if Alpha reaches us first.
     let _dialPollCount = 0;
-    const _dialPollMax = 20; // 20 × 1500ms = 30s max wait
+    const _dialPollMax = 60; // 60 × 500ms = 30s max wait
     function _pollAndDial() {
       if (_pollCancelled) return; // Alpha already called us — stop polling
       _refreshRemoteId().then(() => {
@@ -4834,7 +4841,7 @@ function startPeer() {
           if (!linked && !_pollCancelled) dial();
         } else {
           entry('Waiting for ALPHA peerId… (' + _dialPollCount + ')', 'sys');
-          setTimeout(_pollAndDial, 1500);
+          setTimeout(_pollAndDial, 500);
         }
       });
     }
@@ -4956,7 +4963,7 @@ function attachDataConn(dc) {
     if (f) {
       if (f.__control === 'video') { updateRemoteVideoState(f.enabled, f.hasTrack !== false); return; }
       if (f.__control === 'leave') { handleRemoteLeave(); return; }
-      if (f.__control === 'clearChat') { ttsStopAll(); clearHistory(); const ce=document.getElementById('chat'); if(ce) ce.innerHTML=''; entry('Remote cleared chat history','sys'); return; }
+      // clearChat control intentionally not handled — CLEAR is local-only on each unit.
       if (f.__control === 'deleteMsg') { deleteBubble(f.ts, false); return; }
       if (f.__control === 'refresh') { entry('Remote refreshed — reloading…', 'sys'); peerRefreshing = true; try { sessionStorage.setItem('fieldRadioRefreshing', '1'); } catch(e) {} setTimeout(() => window.location.reload(), 400); return; }
       if (f.__file  === true)      { addMediaBubble(f.name, f.type, f.data, false); return; }
@@ -6370,7 +6377,11 @@ function _fsShowControls() {
   document.body.classList.remove('fs-controls-hidden');
   document.body.classList.add('fs-controls-visible');
   clearTimeout(_fsHideTimer);
-  _fsHideTimer = setTimeout(_fsHideControls, 3500);
+  // While the chat box (speech panel) is open, keep controls visible indefinitely —
+  // the user is actively typing. The timer resumes when SHOW CHAT is pressed.
+  if (!_speechVisible) {
+    _fsHideTimer = setTimeout(_fsHideControls, 10000);
+  }
 }
 
 function _fsHideControls() {
