@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -4802,7 +4803,7 @@ function startPeer() {
     // We poll every 1.5s for up to 30s; if still not found we dial anyway with
     // the base ID (works if BRAVO is also on the old non-suffix build).
     let _dialPollCount = 0;
-    const _dialPollMax = 20; // 20 x 1500ms = 30s max wait
+    const _dialPollMax = 60; // 60 x 500ms = 30s max wait
     function _pollAndDial() {
       _refreshRemoteId().then(() => {
         _dialPollCount++;
@@ -4812,7 +4813,7 @@ function startPeer() {
           dial();
         } else {
           entry('Waiting for BRAVO peerId... (' + _dialPollCount + ')', 'sys');
-          setTimeout(_pollAndDial, 1500);
+          setTimeout(_pollAndDial, 500);
         }
       });
     }
