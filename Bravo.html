@@ -4823,7 +4823,7 @@ function startPeer() {
     // Also listen for inbound calls from Alpha in parallel — whichever arrives first wins.
     // _pollCancelled is set true by peer.on('call') so the loop stops if Alpha reaches us first.
     let _dialPollCount = 0;
-    const _dialPollMax = 20; // 20 × 1500ms = 30s max wait
+    const _dialPollMax = 60; // 60 × 500ms = 30s max wait
     function _pollAndDial() {
       if (_pollCancelled) return; // Alpha already called us — stop polling
       _refreshRemoteId().then(() => {
@@ -4835,7 +4835,7 @@ function startPeer() {
           if (!linked && !_pollCancelled) dial();
         } else {
           entry('Waiting for ALPHA peerId… (' + _dialPollCount + ')', 'sys');
-          setTimeout(_pollAndDial, 1500);
+          setTimeout(_pollAndDial, 500);
         }
       });
     }
