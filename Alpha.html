@@ -1630,7 +1630,7 @@
           <span class="sbr-label">CHAT:</span>
           <button class="speech-top-btn" onclick="saveChatToFile()" id="saveChatBtn" title="Save chat as HTML">💾 SAVE</button>
           <button class="speech-top-btn" onclick="restoreChat()" id="restoreChatBtn" title="Restore previous session chat">↩ RESTORE</button>
-          <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';ttsStopAll();dcSend({__control:'clearChat'});entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR</button>
+          <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';ttsStopAll();entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR</button>
           <button class="speech-top-btn" id="findChatBtn" title="Find in chat">🔍 FIND</button>
         </div>
         <div id="translateBar">
@@ -6543,7 +6543,7 @@ function _fsShowControls() {
   document.body.classList.remove('fs-controls-hidden');
   document.body.classList.add('fs-controls-visible');
   clearTimeout(_fsHideTimer);
-  _fsHideTimer = setTimeout(_fsHideControls, 20000);
+  _fsHideTimer = setTimeout(_fsHideControls, 10000);
 }
 
 function _fsHideControls() {
