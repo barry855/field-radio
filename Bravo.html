@@ -371,7 +371,14 @@
     display: flex; gap: 6px; align-items: center;
     width: 100%; flex-wrap: wrap;
   }
-  .chat-btn-bar .mini-chat-wrapper {\n    margin-bottom: 0; margin-left: auto;\n    flex-direction: row; align-items: center; gap: 6px;\n  }
+  .chat-btn-bar .mini-chat-wrapper {
+    margin-bottom: 0; margin-left: auto;
+    flex-direction: row; align-items: center; gap: 6px;
+  }
+  .chat-btn-bar .mini-chat-wrapper .mini-video-overlay {
+    position: relative; top: auto; left: auto; right: auto;
+    width: 80px; flex-shrink: 0;
+  }
 
   /* ── Chat input wrapper — contains textarea + mini video ───── */
   .chat-input-wrap {
@@ -593,6 +600,7 @@
     background: #000; color: #fff; border-color: #000;
     font-weight: 700; letter-spacing: 2px;
   }
+  .duplex-bar {
     flex: 0 0 auto; height: 42px; padding: 0 16px;
     border-radius: 6px; border: 2px solid #1a2a1a;
     background: #050f05; color: #335533;
@@ -4250,7 +4258,7 @@ async function _restoreAndroidMic() {
 }
 
 function setSpeechLang(code) {
-  try { localStorage.setItem('alpha_speech_lang', code); } catch(e) {}
+  try { localStorage.setItem('bravo_speech_lang', code); } catch(e) {}
   // If currently listening, restart with new language
   if (_listening) { stopListening(); setTimeout(startListening, 150); }
 }
@@ -4336,7 +4344,7 @@ document.addEventListener('DOMContentLoaded', () => {
     _systemSpeechLang = (sysExact || sysPrefix || opts[0]).value;
 
     // Select saved preference, or fall back to system language
-    const saved = localStorage.getItem('alpha_speech_lang');
+    const saved = localStorage.getItem('bravo_speech_lang');
     const target = saved || _systemSpeechLang;
     const exact  = opts.find(o => o.value.toLowerCase() === target.toLowerCase());
     const prefix = !exact && opts.find(o => o.value.toLowerCase().startsWith(target.split('-')[0].toLowerCase()));
@@ -5042,7 +5050,7 @@ const _MORSE_MAP = {
   Y:'-.--',Z:'--..',
   '0':'-----','1':'.----','2':'..---','3':'...--','4':'....-',
   '5':'.....','6':'-....','7':'--...','8':'---..','9':'----.',
-  '.':'.-.-.-',',':'--..--','?':'..--..','"'":'.--.--','!':'-.-.--',
+  '.':'.-.-.-',',':'--..--','?':'..--..',"'":'.--.--','!':'-.-.--',
   '/':'-..-.','(':'-.--.',')':"-.--.-",'&':'.-...', ':':'---...',
   ';':'-.-.-.','=':'-...-','+':'.-.-.', '-':'-....-','"':'.-..-.','@':'.--.-.'
 };
