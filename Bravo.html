@@ -1663,7 +1663,7 @@
           <span class="sbr-label">CHAT:</span>
           <button class="speech-top-btn" onclick="saveChatToFile()" id="saveChatBtn" title="Save chat as HTML">💾 SAVE</button>
           <button class="speech-top-btn" onclick="restoreChat()" id="restoreChatBtn" title="Restore previous session chat">↩ RESTORE</button>
-          <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';ttsStopAll();entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR</button>
+          <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';ttsStopAll();morseStopAll();entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR</button>
           <button class="speech-top-btn" id="findChatBtn" title="Find in chat">🔍 FIND</button>
         </div>
         <div id="translateBar">
@@ -5042,11 +5042,22 @@ const _MORSE_MAP = {
   Y:'-.--',Z:'--..',
   '0':'-----','1':'.----','2':'..---','3':'...--','4':'....-',
   '5':'.....','6':'-....','7':'--...','8':'---..','9':'----.',
-  '.':'.-.-.-',',':'--..--','?':'..--..',"'":'.--.--','!':'-.-.--',
+  '.':'.-.-.-',',':'--..--','?':'..--..','\''':'.--.--','!':'-.-.--',
   '/':'-..-.','(':'-.--.',')':"-.--.-",'&':'.-...', ':':'---...',
   ';':'-.-.-.','=':'-...-','+':'.-.-.', '-':'-....-','"':'.-..-.','@':'.--.-.'
 };
+let _morseGen = 0;
+let _morseGains = [];
+function morseStopAll() {
+  _morseGen++;
+  _morseGains.forEach(g => { try { g.gain.cancelScheduledValues(0); g.gain.setValueAtTime(0, 0); g.disconnect(); } catch(e) {} });
+  _morseGains = [];
+  const btn = document.getElementById('cwSendBtn');
+  if (btn) btn.classList.remove('cw-tx');
+}
 function playMorseAudio(text, wpm) {
+  morseStopAll();
+  const myGen = _morseGen;
   try {
     if (!_actx) _actx = new (window.AudioContext || window.webkitAudioContext)();
     if (_actx.state === 'suspended') _actx.resume();
@@ -5064,6 +5075,7 @@ function playMorseAudio(text, wpm) {
         gain.gain.setValueAtTime(0.35, t + dur - 0.005);
         gain.gain.linearRampToValueAtTime(0, t + dur);
         osc.connect(gain); gain.connect(_actx.destination);
+        _morseGains.push(gain);
         osc.start(t); osc.stop(t + dur);
         t += dur + (unit / 1000);
       });
@@ -5073,7 +5085,7 @@ function playMorseAudio(text, wpm) {
     if (btn) {
       btn.classList.add('cw-tx');
       const totalMs = (t - (_actx.currentTime + 0.05)) * 1000 + 100;
-      setTimeout(() => btn.classList.remove('cw-tx'), Math.max(totalMs, 200));
+      setTimeout(() => { if (_morseGen === myGen) btn.classList.remove('cw-tx'); }, Math.max(totalMs, 200));
     }
   } catch(e) { entry('Morse audio error: ' + e.message, 'err'); }
 }
