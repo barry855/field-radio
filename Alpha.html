@@ -5555,6 +5555,8 @@ function leaveSession() {
 
 function _doLeave() {
   saveRecordingIfActive();
+  ttsStopAll();
+  morseStopAll();
   // Stop system audio capture if active
   if (sysAudioActive) _stopSysAudio();
   // Stop all local media
