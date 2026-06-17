@@ -5575,6 +5575,17 @@ function preferredMime() {
   ].find(t => MediaRecorder.isTypeSupported(t)) || 'video/webm';
 }
 
+// Returns a MediaStream containing the real mic track for recording,
+// bypassing the mute state (disabled track = silence in Web Audio).
+function getLocalAudioStreamForRec() {
+  if (realAudioTrack) return new MediaStream([realAudioTrack]);
+  const tracks = localStream ? localStream.getAudioTracks() : [];
+  if (!tracks.length) return null;
+  const clone = tracks[0].clone();
+  clone.enabled = true;
+  return new MediaStream([clone]);
+}
+
 async function buildAudioMix(...streams) {
   const ctx  = new (window.AudioContext || window.webkitAudioContext)();
   await ctx.resume();
@@ -5659,7 +5670,7 @@ async function toggleRecordRemote() {
   if (!hasRemote) { entry('No remote video to record', 'err'); return; }
 
   const { ctx: aCtx, dest: aDest } = await buildAudioMix(
-    localStream,
+    getLocalAudioStreamForRec(),
     remoteAudio ? remoteAudio.srcObject : remoteVideo.srcObject
   );
 
@@ -5704,7 +5715,7 @@ async function toggleRecordLocal() {
   const remoteAudio = document.getElementById('remoteAudio');
   const remoteVideo = document.getElementById('remoteVideo');
   const { ctx: aCtx, dest: aDest } = await buildAudioMix(
-    localStream,
+    getLocalAudioStreamForRec(),
     remoteAudio ? remoteAudio.srcObject : (remoteVideo ? remoteVideo.srcObject : null)
   );
 
@@ -5759,7 +5770,7 @@ async function toggleRecordChat() {
   }
 
   const { ctx: aCtx, dest: aDest } = await buildAudioMix(
-    localStream,
+    getLocalAudioStreamForRec(),
     remoteAudio ? remoteAudio.srcObject : (remoteVideo ? remoteVideo.srcObject : null)
   );
 
