@@ -5050,15 +5050,15 @@ let pendingDC = false;
 
 // ── Morse / CW ───────────────────────────────────────────────────────────
 const _MORSE_MAP = {
-  A:'.-',B:'-...',C:'-.-.',D:'-..',E:'.',F:'..-.',G:'--.',H:'....',
-  I:'..',J:'.---',K:'-.-',L:'.-..',M:'--',N:'-.',O:'---',P:'.--.',
-  Q:'--.-',R:'.-.',S:'...',T:'-',U:'..-',V:'...-',W:'.--',X:'-..-',
-  Y:'-.--',Z:'--..',
-  '0':'-----','1':'.----','2':'..---','3':'...--','4':'....-',
-  '5':'.....','6':'-....','7':'--...','8':'---..','9':'----.',
-  '.':'.-.-.-',',':'--..--','?':'..--..',"'":'.--.--','!':'-.-.--',
-  '/':'-..-.','(':'-.--.',')':"-.--.-",'&':'.-...', ':':'---...',
-  ';':'-.-.-.','=':'-...-','+':'.-.-.', '-':'-....-','"':'.-..-.','@':'.--.-.'
+  "A":".-","B":"-...","C":"-.-.","D":"-..","E":".","F":"..-.","G":"--.","H":"....",
+  "I":"..","J":".---","K":"-.-","L":".-..","M":"--","N":"-.","O":"---","P":".--.",
+  "Q":"--.-","R":".-.","S":"...","T":"-","U":"..-","V":"...-","W":".--","X":"-..-",
+  "Y":"-.--","Z":"--..",
+  "0":"-----","1":".----","2":"..---","3":"...--","4":"....-",
+  "5":".....","6":"-....","7":"--...","8":"---..","9":"----.",
+  ".":".-.-.-",",":"--..--","?":"..--..","'":".--.--","!":"-.-.--",
+  "/":"-..-.","(":"-.--.",")":"-.--.-","&":".-...",":":"---...",
+  ";":"-.-.-.","=":"-...-","+":".-.-.","-":"-....-","\"":".-..-.","@":".--.-."
 };
 let _morseGen = 0;
 let _morseGains = []; // active gain nodes for the current transmission
@@ -5697,7 +5697,11 @@ function preferredMime() {
 // Returns a MediaStream containing the real mic track for recording,
 // bypassing the mute state (disabled track = silence in Web Audio).
 function getLocalAudioStreamForRec() {
-  if (realAudioTrack) return new MediaStream([realAudioTrack]);
+  if (realAudioTrack) {
+    const clone = realAudioTrack.clone();
+    clone.enabled = true; // force-enable regardless of mute state — recording captures the raw mic
+    return new MediaStream([clone]);
+  }
   const tracks = localStream ? localStream.getAudioTracks() : [];
   if (!tracks.length) return null;
   // Temporarily clone so we can force-enable without affecting the live call
