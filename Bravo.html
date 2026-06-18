@@ -5654,18 +5654,12 @@ function preferredMime() {
 
 // Returns a MediaStream containing the real mic track for recording,
 // bypassing the mute state (disabled track = silence in Web Audio).
-async function getLocalAudioStreamForRec() {
-  try {
-    const s = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }, video: false });
-    return s;
-  } catch(e) {
-    entry('Rec mic fallback: ' + e.message, 'sys');
-    const src = realAudioTrack || (localStream && localStream.getAudioTracks()[0]) || null;
-    if (!src) return null;
-    const clone = src.clone();
-    clone.enabled = true;
-    return new MediaStream([clone]);
-  }
+function getLocalAudioTracksForRec() {
+  const src = realAudioTrack || (localStream && localStream.getAudioTracks()[0]) || null;
+  if (!src) return [];
+  const clone = src.clone();
+  clone.enabled = true;
+  return [clone];
 }
 
 async function buildAudioMix(...streams) {
@@ -5756,25 +5750,19 @@ async function toggleRecordRemote() {
   const hasRemote = remoteVideo.srcObject && remoteVideo.srcObject.getVideoTracks().length > 0;
   if (!hasRemote) { entry('No remote video to record', 'err'); return; }
 
-  const { ctx: aCtx, dest: aDest } = await buildAudioMix(
-    await getLocalAudioStreamForRec(),
-    remoteAudio ? remoteAudio.srcObject : remoteVideo.srcObject
-  );
-
   const mimeType = preferredMime();
-  let stopLoop = null, recStream;
-  recStream = new MediaStream([
-      ...remoteVideo.srcObject.getVideoTracks(),
-      ...aDest.stream.getAudioTracks()
-    ]);
+  const remoteStream = (remoteAudio && remoteAudio.srcObject) || remoteVideo.srcObject;
+  const recStream = new MediaStream([
+    ...remoteVideo.srcObject.getVideoTracks(),
+    ...getLocalAudioTracksForRec(),
+    ...(remoteStream ? remoteStream.getAudioTracks() : [])
+  ]);
 
   recRemoteChunks = [];
   recRemote = new MediaRecorder(recStream, { mimeType });
   recRemote.ondataavailable = e => { if (e.data.size > 0) recRemoteChunks.push(e.data); };
   recRemote.onstop = () => {
     recRemoteBusy = false;
-    if (stopLoop) stopLoop();
-    aCtx.close();
     saveRec(recRemoteChunks, mimeType, 'remote');
   };
   recRemote.start(1000);
@@ -5801,26 +5789,19 @@ async function toggleRecordLocal() {
 
   const remoteAudio = document.getElementById('remoteAudio');
   const remoteVideo = document.getElementById('remoteVideo');
-  const { ctx: aCtx, dest: aDest } = await buildAudioMix(
-    await getLocalAudioStreamForRec(),
-    remoteAudio ? remoteAudio.srcObject : (remoteVideo ? remoteVideo.srcObject : null)
-  );
-
   const mimeType = preferredMime();
-  let stopLoop = null, recStream;
-  const localVideo = document.getElementById('localVideo');
-  recStream = new MediaStream([
-      ...localStream.getVideoTracks(),
-      ...aDest.stream.getAudioTracks()
-    ]);
+  const remoteStream = (remoteAudio && remoteAudio.srcObject) || (remoteVideo && remoteVideo.srcObject) || null;
+  const recStream = new MediaStream([
+    ...localStream.getVideoTracks(),
+    ...getLocalAudioTracksForRec(),
+    ...(remoteStream ? remoteStream.getAudioTracks() : [])
+  ]);
 
   recLocalChunks = [];
   recLocal = new MediaRecorder(recStream, { mimeType });
   recLocal.ondataavailable = e => { if (e.data.size > 0) recLocalChunks.push(e.data); };
   recLocal.onstop = () => {
     recLocalBusy = false;
-    if (stopLoop) stopLoop();
-    aCtx.close();
     saveRec(recLocalChunks, mimeType, 'local');
   };
   recLocal.start(1000);
@@ -5856,33 +5837,19 @@ async function toggleRecordChat() {
     entry('No video available to record', 'err'); return;
   }
 
-  const { ctx: aCtx, dest: aDest } = await buildAudioMix(
-    await getLocalAudioStreamForRec(),
-    remoteAudio ? remoteAudio.srcObject : (remoteVideo ? remoteVideo.srcObject : null)
-  );
-
   const mimeType = preferredMime();
-  let stopLoop = null, recStream;
-  const withMini = !!miniChatVisible;
-
-  if (withMini) {
-    const miniChatVideo = document.getElementById('miniChatVideo');
-    const comp = buildCompositeStream(mainVideo, miniChatVideo, aDest.stream.getAudioTracks());
-    recStream = comp.stream; stopLoop = comp.stopLoop;
-  } else {
-    recStream = new MediaStream([
-      ...mainVideo.srcObject.getVideoTracks(),
-      ...aDest.stream.getAudioTracks()
-    ]);
-  }
+  const remoteStream = (remoteAudio && remoteAudio.srcObject) || (remoteVideo && remoteVideo.srcObject) || null;
+  const recStream = new MediaStream([
+    ...mainVideo.srcObject.getVideoTracks(),
+    ...getLocalAudioTracksForRec(),
+    ...(remoteStream ? remoteStream.getAudioTracks() : [])
+  ]);
 
   recChatChunks = [];
   recChat = new MediaRecorder(recStream, { mimeType });
   recChat.ondataavailable = e => { if (e.data.size > 0) recChatChunks.push(e.data); };
   recChat.onstop = () => {
     recChatBusy = false;
-    if (stopLoop) stopLoop();
-    aCtx.close();
     saveRec(recChatChunks, mimeType, isLocalMain ? 'chat-local' : 'chat-remote');
   };
   recChat.start(1000);
