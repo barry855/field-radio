@@ -5654,13 +5654,18 @@ function preferredMime() {
 
 // Returns a MediaStream containing the real mic track for recording,
 // bypassing the mute state (disabled track = silence in Web Audio).
-function getLocalAudioStreamForRec() {
-  // Always clone + force-enable so mute state on the live track doesn't silence the recording
-  const src = realAudioTrack || (localStream && localStream.getAudioTracks()[0]) || null;
-  if (!src) return null;
-  const clone = src.clone();
-  clone.enabled = true;
-  return new MediaStream([clone]);
+async function getLocalAudioStreamForRec() {
+  try {
+    const s = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }, video: false });
+    return s;
+  } catch(e) {
+    entry('Rec mic fallback: ' + e.message, 'sys');
+    const src = realAudioTrack || (localStream && localStream.getAudioTracks()[0]) || null;
+    if (!src) return null;
+    const clone = src.clone();
+    clone.enabled = true;
+    return new MediaStream([clone]);
+  }
 }
 
 async function buildAudioMix(...streams) {
@@ -5752,7 +5757,7 @@ async function toggleRecordRemote() {
   if (!hasRemote) { entry('No remote video to record', 'err'); return; }
 
   const { ctx: aCtx, dest: aDest } = await buildAudioMix(
-    getLocalAudioStreamForRec(),
+    await getLocalAudioStreamForRec(),
     remoteAudio ? remoteAudio.srcObject : remoteVideo.srcObject
   );
 
@@ -5797,7 +5802,7 @@ async function toggleRecordLocal() {
   const remoteAudio = document.getElementById('remoteAudio');
   const remoteVideo = document.getElementById('remoteVideo');
   const { ctx: aCtx, dest: aDest } = await buildAudioMix(
-    getLocalAudioStreamForRec(),
+    await getLocalAudioStreamForRec(),
     remoteAudio ? remoteAudio.srcObject : (remoteVideo ? remoteVideo.srcObject : null)
   );
 
@@ -5852,7 +5857,7 @@ async function toggleRecordChat() {
   }
 
   const { ctx: aCtx, dest: aDest } = await buildAudioMix(
-    getLocalAudioStreamForRec(),
+    await getLocalAudioStreamForRec(),
     remoteAudio ? remoteAudio.srcObject : (remoteVideo ? remoteVideo.srcObject : null)
   );
 
