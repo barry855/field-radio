@@ -893,10 +893,12 @@
   #speechSaveBtn:hover   { background: var(--btn-hover); border-color: var(--accent2); color: var(--accent2); }
   #speechCopyBtn:hover   { background: var(--btn-hover); border-color: var(--accent2); color: var(--accent2); }
   #speechClearBtn:hover  { background: var(--btn-hover); border-color: var(--danger, #cc2222); color: var(--danger, #cc2222); }
-  #cwSendBtn { border-color: #ff9900; color: #ff9900; background: rgba(255,153,0,0.10); }
-  #cwSendBtn:hover:not(:disabled) { background: rgba(255,153,0,0.25); }
+  #cwSendBtn:hover:not(:disabled) { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
   #cwSendBtn:disabled { opacity: 0.35; cursor: not-allowed; }
-  #cwSendBtn.cw-tx { border-color: #ff3300; color: #ff3300; background: rgba(255,51,0,0.20); box-shadow: 0 0 6px rgba(255,51,0,0.4); }
+  #cwSendBtn.cw-armed { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.12); box-shadow: 0 0 6px rgba(0,212,255,0.25); }
+  #cwSendBtn.cw-clear { border-color: var(--danger, #cc2222); color: var(--danger, #cc2222); background: rgba(204,34,34,0.10); }
+  #cwSendBtn.cw-tx { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.22); box-shadow: 0 0 8px rgba(0,212,255,0.5); animation: cw-pulse 0.5s ease-in-out infinite alternate; }
+  @keyframes cw-pulse { from { box-shadow: 0 0 4px rgba(0,212,255,0.3); } to { box-shadow: 0 0 12px rgba(0,212,255,0.7); } }
   /* drag-over highlight on speech panel */
   .speech-top-bar {
     display: flex; gap: 4px; flex-shrink: 0;
@@ -1822,7 +1824,7 @@
           <button id="speechSaveBtn" onclick="speechSaveText()" title="Save input box text to file">SAVE</button>
           <button id="speechCopyBtn" onclick="speechCopyText()" title="Copy input box text to clipboard">COPY</button>
           <button id="speechClearBtn" onclick="speechClearText()" title="Clear input box">CLEAR</button>
-          <button id="cwSendBtn" onclick="sendMorseSpeech()" title="Send text as Morse code to remote station" disabled>⚫ CW</button>
+          <button id="cwSendBtn" onclick="cwBtnPress()" title="CW: press to send Morse · press again to clear text" data-cw-state="0" disabled>⚫ CW</button>
         </div>
         <div class="speech-btn-row" id="speechBtnRow2">
           <span class="sbr-label">Spoken Language:</span>
@@ -5012,6 +5014,7 @@ function attachDataConn(dc) {
     dataConn = null;
     const sb = document.getElementById('sendBtn'); if (sb) sb.disabled = true;
     const cw = document.getElementById('cwSendBtn'); if (cw) cw.disabled = true;
+    _cwSetState(0);
     entry('Chat channel closed', 'sys');
     // Only reopen if the call is still live — capture linked now and re-check
     // after the setTimeout so a concurrent onDrop() doesn't cause a ghost reconnect
@@ -5048,21 +5051,70 @@ const _MORSE_MAP = {
 };
 let _morseGen = 0;
 let _morseGains = [];
+// CW button 3-state: 0=off, 1=armed (send sent, waiting), 2=clear (press clears text box)
+let _cwState = 0;
+
+function _cwSetState(state) {
+  _cwState = state;
+  const btn = document.getElementById('cwSendBtn');
+  if (!btn) return;
+  btn.classList.remove('cw-armed', 'cw-clear', 'cw-tx');
+  if (state === 0) {
+    btn.textContent = '⚫ CW';
+    btn.title = 'CW: press to send text as Morse code';
+  } else if (state === 1) {
+    btn.classList.add('cw-armed');
+    btn.textContent = '● CW';
+    btn.title = 'CW sent — press again to clear text box';
+  } else if (state === 2) {
+    btn.classList.add('cw-clear');
+    btn.textContent = '✕ CW';
+    btn.title = 'Press to clear text input and reset CW';
+  }
+}
+
+function cwBtnPress() {
+  if (_cwState === 0) {
+    sendMorseSpeech();
+  } else {
+    speechClearText();
+    _cwSetState(0);
+  }
+}
+
+function cwRxArm(durationMs) {
+  const btn = document.getElementById('cwSendBtn');
+  if (!btn || btn.disabled) return;
+  btn.classList.add('cw-tx');
+  btn.textContent = '● CW';
+  btn.title = 'Receiving CW — press again to clear text';
+  clearTimeout(cwRxArm._t);
+  cwRxArm._t = setTimeout(() => {
+    const b = document.getElementById('cwSendBtn');
+    if (b) { b.classList.remove('cw-tx'); }
+    if (_cwState === 0) _cwSetState(2);
+  }, Math.max(durationMs, 200));
+}
+
 function morseStopAll() {
   _morseGen++;
   _morseGains.forEach(g => { try { g.gain.cancelScheduledValues(0); g.gain.setValueAtTime(0, 0); g.disconnect(); } catch(e) {} });
   _morseGains = [];
+  clearTimeout(cwRxArm._t);
   const btn = document.getElementById('cwSendBtn');
-  if (btn) btn.classList.remove('cw-tx');
+  if (btn) { btn.classList.remove('cw-tx'); }
+  if (_cwState === 2) _cwSetState(0);
 }
 function playMorseAudio(text, wpm) {
   morseStopAll();
   const myGen = _morseGen;
+  let totalMs = 0;
   try {
     if (!_actx) _actx = new (window.AudioContext || window.webkitAudioContext)();
     if (_actx.state === 'suspended') _actx.resume();
     const unit = 1200 / (wpm || 20);
     let t = _actx.currentTime + 0.05;
+    const t0 = t;
     text.toUpperCase().split('').forEach(ch => {
       if (ch === ' ') { t += (unit * 7) / 1000; return; }
       const code = _MORSE_MAP[ch]; if (!code) return;
@@ -5081,12 +5133,8 @@ function playMorseAudio(text, wpm) {
       });
       t += (unit * 2) / 1000;
     });
-    const btn = document.getElementById('cwSendBtn');
-    if (btn) {
-      btn.classList.add('cw-tx');
-      const totalMs = (t - (_actx.currentTime + 0.05)) * 1000 + 100;
-      setTimeout(() => { if (_morseGen === myGen) btn.classList.remove('cw-tx'); }, Math.max(totalMs, 200));
-    }
+    totalMs = (t - t0) * 1000 + 100;
+    cwRxArm(Math.max(totalMs, 200));
   } catch(e) { entry('Morse audio error: ' + e.message, 'err'); }
 }
 function sendMorseSpeech() {
@@ -5096,8 +5144,9 @@ function sendMorseSpeech() {
   const wpm = 20;
   dcSend({ __morse: true, text: text, wpm: wpm });
   addBubble('CW: ' + text + ' (' + wpm + ' WPM)', true);
-  playMorseAudio(text, wpm);
+  // No local sidetone at the transmitting station
   entry('Sent CW @ ' + wpm + ' WPM: ' + text, 'sys');
+  _cwSetState(1);
 }
 
 function dcSend(payload) {
