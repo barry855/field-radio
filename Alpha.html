@@ -5685,17 +5685,17 @@ let recRemote = null, recRemoteChunks = [], recRemoteBusy = false;
 let recLocal  = null, recLocalChunks  = [], recLocalBusy  = false;
 
 function preferredMime() {
-  // We intentionally never ask MediaRecorder for video/mp4 here. Chrome's
-  // native MP4 muxer reports isTypeSupported()=true even on systems where
-  // the platform's AAC encoder is missing or broken — this is platform-
-  // dependent and especially common on Windows — which silently produces a
-  // video file with NO audio track. WebM recording is reliable with audio
-  // on every platform, so we always record to WebM and convert to a real
-  // MP4 afterward — see convertToMp4()/saveRec() below. h264 is preferred
-  // (when the platform has a hardware encoder for it) so that conversion
-  // can be an instant stream-copy remux instead of a full video re-encode.
+  // Try native MP4 first. Chrome 121+ (Jan 2024) fixed the Windows audio
+  // bug where the native MP4 muxer silently dropped the audio track.
+  // On all current platforms (Chrome, Edge, Android, ChromeOS, Safari)
+  // video/mp4 with H.264+AAC now works reliably — files save directly as
+  // .mp4 with no conversion step. Firefox falls through to WebM (it has no
+  // native MP4 recording support), which goes through the ffmpeg path.
   return [
-    'video/webm;codecs=h264,opus',
+    'video/mp4;codecs=avc1,mp4a.40.2',  // H.264 + AAC — Chrome/Edge/Android/Safari
+    'video/mp4;codecs=avc1',             // H.264, audio codec chosen by browser
+    'video/mp4',                         // any MP4
+    'video/webm;codecs=h264,opus',       // Firefox fallback (stream-copy remux)
     'video/webm;codecs=vp9,opus',
     'video/webm;codecs=vp8,opus',
     'video/webm'
@@ -5835,15 +5835,22 @@ function downloadBlob(blob, filename) {
 
 async function saveRec(chunks, mimeType, label) {
   if (!chunks.length) { entry('Recording empty — nothing saved', 'sys'); return; }
-  const webmBlob = new Blob(chunks, { type: mimeType });
+  const blob = new Blob(chunks, { type: mimeType });
   const ts = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
+  // If MediaRecorder gave us native MP4, save it directly — no conversion needed.
+  if (/mp4/i.test(mimeType)) {
+    downloadBlob(blob, `alpha-${label}-${ts}.mp4`);
+    entry(`${label} recording saved (mp4)`, 'ok');
+    return;
+  }
+  // WebM path (Firefox / old Chrome) — attempt ffmpeg.wasm conversion.
   try {
-    const mp4Blob = await convertToMp4(webmBlob, mimeType, label);
+    const mp4Blob = await convertToMp4(blob, mimeType, label);
     downloadBlob(mp4Blob, `alpha-${label}-${ts}.mp4`);
     entry(`${label} recording saved (mp4)`, 'ok');
   } catch (e) {
     entry(`MP4 conversion failed (${e.message || e}) — saved original WebM instead`, 'sys');
-    downloadBlob(webmBlob, `alpha-${label}-${ts}.webm`);
+    downloadBlob(blob, `alpha-${label}-${ts}.webm`);
   }
 }
 
