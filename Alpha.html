@@ -5696,14 +5696,14 @@ function preferredMime() {
 }
 
 // Returns a MediaStream containing the real mic track for recording,
-// bypassing the mute state (disabled track = silence in Web Audio).
-function getLocalAudioStreamForRec() {
-  // Always clone + force-enable so mute state on the live track doesn't silence the recording
+// Return the local mic audio tracks for recording — raw, no Web Audio involved.
+// Clone + force-enable so mute state on the live call track doesn't affect the recording.
+function getLocalAudioTracksForRec() {
   const src = realAudioTrack || (localStream && localStream.getAudioTracks()[0]) || null;
-  if (!src) return null;
+  if (!src) return [];
   const clone = src.clone();
   clone.enabled = true;
-  return new MediaStream([clone]);
+  return [clone];
 }
 
 // Mix audio from multiple MediaStreams into one destination track.
@@ -5715,14 +5715,14 @@ async function buildAudioMix(...streams) {
   const dest = ctx.createMediaStreamDestination();
   streams.forEach((s, i) => {
     if (!s) return;
-    const tracks = s.getAudioTracks ? s.getAudioTracks() : [];
+    // Accept either a MediaStream or a raw track array
+    const tracks = Array.isArray(s) ? s : (s.getAudioTracks ? s.getAudioTracks() : []);
     if (!tracks.length) return;
     try {
       const audioOnly = new MediaStream(tracks);
       const src  = ctx.createMediaStreamSource(audioOnly);
       const gain = ctx.createGain();
-      // Boost local mic (stream[0]) — AEC/AGC in Web Audio path suppresses it heavily
-      gain.gain.value = (i === 0) ? 3.0 : 1.0;
+      gain.gain.value = (i === 0) ? 2.0 : 1.0;
       src.connect(gain);
       gain.connect(dest);
     } catch(e) { entry('Audio mix warn: ' + e.message, 'sys'); }
@@ -5799,27 +5799,24 @@ async function toggleRecordRemote() {
   const hasRemote = remoteVideo.srcObject && remoteVideo.srcObject.getVideoTracks().length > 0;
   if (!hasRemote) { entry('No remote video to record', 'err'); return; }
 
-  // Use remoteAudio.srcObject for remote audio (same stream, but this element is
-  // actively playing it so the browser is less likely to throttle the audio tracks)
-  const { ctx: aCtx, dest: aDest } = await buildAudioMix(
-    getLocalAudioStreamForRec(),
-    remoteAudio ? remoteAudio.srcObject : remoteVideo.srcObject
-  );
-
   const mimeType = preferredMime();
-  let stopLoop = null, recStream;
+  let stopLoop = null, recStream, aCtx = null;
   const withMini = !!miniVideoVisible;   // snapshot the flag right now
+  const remoteStream = (remoteAudio && remoteAudio.srcObject) || remoteVideo.srcObject;
 
   if (withMini) {
-    // Composite: remote video + local mini PiP
+    // Composite: remote video + local mini PiP — needs Web Audio for canvas mix
+    const { ctx, dest: aDest } = await buildAudioMix(getLocalAudioTracksForRec(), remoteStream);
+    aCtx = ctx;
     const miniLocalVideo = document.getElementById('miniLocalVideo');
     const comp = buildCompositeStream(remoteVideo, miniLocalVideo, aDest.stream.getAudioTracks());
     recStream = comp.stream; stopLoop = comp.stopLoop;
   } else {
-    // Plain remote video track + mixed audio — no canvas, no PiP
+    // Plain: raw tracks directly — no Web Audio
     recStream = new MediaStream([
       ...remoteVideo.srcObject.getVideoTracks(),
-      ...aDest.stream.getAudioTracks()
+      ...getLocalAudioTracksForRec(),
+      ...(remoteStream ? remoteStream.getAudioTracks() : [])
     ]);
   }
 
@@ -5829,7 +5826,7 @@ async function toggleRecordRemote() {
   recRemote.onstop = () => {
     recRemoteBusy = false;
     if (stopLoop) stopLoop();
-    aCtx.close();
+    if (aCtx) aCtx.close();
     saveRec(recRemoteChunks, mimeType, 'remote');
   };
   recRemote.start(1000);
@@ -5857,26 +5854,27 @@ async function toggleRecordLocal() {
 
   const remoteAudio = document.getElementById('remoteAudio');
   const remoteVideo = document.getElementById('remoteVideo');
-  const { ctx: aCtx, dest: aDest } = await buildAudioMix(
-    getLocalAudioStreamForRec(),
-    remoteAudio ? remoteAudio.srcObject : (remoteVideo ? remoteVideo.srcObject : null)
-  );
-
   const mimeType = preferredMime();
-  let stopLoop = null, recStream;
+  let stopLoop = null, recStream, aCtx = null;
   const withMini = !!miniVideoVisible;   // snapshot the flag right now
 
   if (withMini) {
-    // Composite: local video + remote mini PiP
+    // Composite: local video + remote mini PiP — needs Web Audio for canvas mix
+    const remoteStream = (remoteAudio && remoteAudio.srcObject) || (remoteVideo && remoteVideo.srcObject) || null;
+    const { ctx, dest: aDest } = await buildAudioMix(getLocalAudioTracksForRec(), remoteStream);
+    aCtx = ctx;
     const localVideo      = document.getElementById('localVideo');
     const miniRemoteVideo = document.getElementById('miniRemoteVideo');
     const comp = buildCompositeStream(localVideo, miniRemoteVideo, aDest.stream.getAudioTracks());
     recStream = comp.stream; stopLoop = comp.stopLoop;
   } else {
-    // Plain local video track + mixed audio — no canvas, no PiP
+    // Plain: raw tracks directly — no Web Audio, no WASAPI interference
+    const remoteStream = (remoteAudio && remoteAudio.srcObject) || (remoteVideo && remoteVideo.srcObject) || null;
+    const remoteAudioTracks = remoteStream ? remoteStream.getAudioTracks() : [];
     recStream = new MediaStream([
       ...localStream.getVideoTracks(),
-      ...aDest.stream.getAudioTracks()
+      ...getLocalAudioTracksForRec(),
+      ...remoteAudioTracks
     ]);
   }
 
@@ -5886,7 +5884,7 @@ async function toggleRecordLocal() {
   recLocal.onstop = () => {
     recLocalBusy = false;
     if (stopLoop) stopLoop();
-    aCtx.close();
+    if (aCtx) aCtx.close();
     saveRec(recLocalChunks, mimeType, 'local');
   };
   recLocal.start(1000);
@@ -5921,24 +5919,24 @@ async function toggleRecordChat() {
     entry('No video available to record', 'err'); return;
   }
 
-  const { ctx: aCtx, dest: aDest } = await buildAudioMix(
-    getLocalAudioStreamForRec(),
-    remoteAudio ? remoteAudio.srcObject : (remoteVideo ? remoteVideo.srcObject : null)
-  );
-
   const mimeType = preferredMime();
-  let stopLoop = null, recStream;
+  let stopLoop = null, recStream, aCtx = null;
   const withMini = !!miniChatVisible;  // use chat mini visibility flag
+  const remoteStream = (remoteAudio && remoteAudio.srcObject) || (remoteVideo && remoteVideo.srcObject) || null;
 
   if (withMini) {
-    // PiP: opposite feed as mini overlay
+    // PiP: composite needs Web Audio for canvas mix
+    const { ctx, dest: aDest } = await buildAudioMix(getLocalAudioTracksForRec(), remoteStream);
+    aCtx = ctx;
     const miniChatVideo = document.getElementById('miniChatVideo');
     const comp = buildCompositeStream(mainVideo, miniChatVideo, aDest.stream.getAudioTracks());
     recStream = comp.stream; stopLoop = comp.stopLoop;
   } else {
+    // Plain: raw tracks directly — no Web Audio
     recStream = new MediaStream([
       ...mainVideo.srcObject.getVideoTracks(),
-      ...aDest.stream.getAudioTracks()
+      ...getLocalAudioTracksForRec(),
+      ...(remoteStream ? remoteStream.getAudioTracks() : [])
     ]);
   }
 
@@ -5948,7 +5946,7 @@ async function toggleRecordChat() {
   recChat.onstop = () => {
     recChatBusy = false;
     if (stopLoop) stopLoop();
-    aCtx.close();
+    if (aCtx) aCtx.close();
     saveRec(recChatChunks, mimeType, isLocalMain ? 'chat-local' : 'chat-remote');
   };
   recChat.start(1000);
