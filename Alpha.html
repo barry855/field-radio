@@ -5685,12 +5685,19 @@ let recRemote = null, recRemoteChunks = [], recRemoteBusy = false;
 let recLocal  = null, recLocalChunks  = [], recLocalBusy  = false;
 
 function preferredMime() {
-  // Always specify audio codec explicitly — bare 'video/mp4' or 'video/webm' may omit audio track
+  // We intentionally never ask MediaRecorder for video/mp4 here. Chrome's
+  // native MP4 muxer reports isTypeSupported()=true even on systems where
+  // the platform's AAC encoder is missing or broken — this is platform-
+  // dependent and especially common on Windows — which silently produces a
+  // video file with NO audio track. WebM recording is reliable with audio
+  // on every platform, so we always record to WebM and convert to a real
+  // MP4 afterward — see convertToMp4()/saveRec() below. h264 is preferred
+  // (when the platform has a hardware encoder for it) so that conversion
+  // can be an instant stream-copy remux instead of a full video re-encode.
   return [
-    'video/mp4;codecs=avc1,mp4a.40.2',
+    'video/webm;codecs=h264,opus',
     'video/webm;codecs=vp9,opus',
     'video/webm;codecs=vp8,opus',
-    'video/webm;codecs=h264,opus',
     'video/webm'
   ].find(t => MediaRecorder.isTypeSupported(t)) || 'video/webm';
 }
@@ -5768,17 +5775,74 @@ function buildCompositeStream(mainVideo, overlayVideo, audioTracks) {
   return { stream: combined, stopLoop: () => cancelAnimationFrame(afId) };
 }
 
-function saveRec(chunks, mimeType, label) {
-  if (!chunks.length) { entry('Recording empty — nothing saved', 'sys'); return; }
-  const blob = new Blob(chunks, { type: mimeType });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  const ts   = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
-  const ext  = mimeType.startsWith('video/mp4') ? 'mp4' : 'webm';
-  a.href = url; a.download = `alpha-${label}-${ts}.${ext}`;
+// ── WebM → MP4 conversion (client-side, via ffmpeg.wasm) ───────
+// We always record to WebM (audio is reliable there on every platform —
+// see preferredMime() above) and convert the finished recording to a real
+// H.264/AAC MP4 here, entirely inside the browser. This sidesteps Chrome's
+// native MP4 encoder, whose audio support is inconsistent across platforms.
+let _ffmpegPromise = null;
+function loadFFmpeg() {
+  if (_ffmpegPromise) return _ffmpegPromise;
+  _ffmpegPromise = (async () => {
+    entry('Loading MP4 converter (first time only, ~30MB)…', 'sys');
+    const { FFmpeg } = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/+esm');
+    const { toBlobURL } = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/+esm');
+    const ffmpeg = new FFmpeg();
+    const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd';
+    await ffmpeg.load({
+      coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+      wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+    });
+    return ffmpeg;
+  })();
+  _ffmpegPromise.catch(() => { _ffmpegPromise = null; }); // allow retry on next recording if load failed
+  return _ffmpegPromise;
+}
+
+// Converts a recorded WebM blob to MP4. If the WebM video track is already
+// h264, this is an instant stream-copy remux (no quality loss, no
+// re-encode) — only audio is encoded to AAC. Otherwise (vp9/vp8 fallback)
+// it's a full video re-encode to h264, which takes longer.
+async function convertToMp4(webmBlob, recordedMimeType, label) {
+  const ffmpeg  = await loadFFmpeg();
+  const stamp   = Date.now();
+  const inName  = `in_${stamp}.webm`;
+  const outName = `out_${stamp}.mp4`;
+  await ffmpeg.writeFile(inName, new Uint8Array(await webmBlob.arrayBuffer()));
+
+  const isH264 = /h264/i.test(recordedMimeType);
+  entry(`Converting ${label} to MP4${isH264 ? '' : ' (re-encoding — this can take a while)'}…`, 'sys');
+  const args = isH264
+    ? ['-i', inName, '-map', '0:v:0', '-map', '0:a:0?', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart', outName]
+    : ['-i', inName, '-map', '0:v:0', '-map', '0:a:0?', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23', '-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart', outName];
+  await ffmpeg.exec(args);
+
+  const data = await ffmpeg.readFile(outName);
+  ffmpeg.deleteFile(inName).catch(()=>{});
+  ffmpeg.deleteFile(outName).catch(()=>{});
+  return new Blob([data.buffer], { type: 'video/mp4' });
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a   = document.createElement('a');
+  a.href = url; a.download = filename;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 5000);
-  entry(`${label} recording saved (${ext})`, 'ok');
+}
+
+async function saveRec(chunks, mimeType, label) {
+  if (!chunks.length) { entry('Recording empty — nothing saved', 'sys'); return; }
+  const webmBlob = new Blob(chunks, { type: mimeType });
+  const ts = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
+  try {
+    const mp4Blob = await convertToMp4(webmBlob, mimeType, label);
+    downloadBlob(mp4Blob, `alpha-${label}-${ts}.mp4`);
+    entry(`${label} recording saved (mp4)`, 'ok');
+  } catch (e) {
+    entry(`MP4 conversion failed (${e.message || e}) — saved original WebM instead`, 'sys');
+    downloadBlob(webmBlob, `alpha-${label}-${ts}.webm`);
+  }
 }
 
 // ── Record Remote button ──────────────────────────────────────
@@ -5789,7 +5853,7 @@ async function toggleRecordRemote() {
   if (recRemote && recRemote.state === 'recording') {
     recRemoteBusy = true;
     recRemote.stop();
-    btn.textContent = '➤ RECORD'; btn.classList.remove('recording');
+    btn.textContent = '⏳ SAVING'; btn.classList.remove('recording'); btn.disabled = true;
     return;
   }
   if (recRemote && recRemote.state !== 'inactive') return;
@@ -5823,11 +5887,12 @@ async function toggleRecordRemote() {
   recRemoteChunks = [];
   recRemote = new MediaRecorder(recStream, { mimeType });
   recRemote.ondataavailable = e => { if (e.data.size > 0) recRemoteChunks.push(e.data); };
-  recRemote.onstop = () => {
-    recRemoteBusy = false;
+  recRemote.onstop = async () => {
     if (stopLoop) stopLoop();
     if (aCtx) aCtx.close();
-    saveRec(recRemoteChunks, mimeType, 'remote');
+    await saveRec(recRemoteChunks, mimeType, 'remote');
+    recRemoteBusy = false;
+    btn.disabled = false; btn.textContent = '➤ RECORD';
   };
   recRemote.start(1000);
   btn.textContent = '⏹ Stop'; btn.classList.add('recording');
@@ -5842,7 +5907,7 @@ async function toggleRecordLocal() {
   if (recLocal && recLocal.state === 'recording') {
     recLocalBusy = true;
     recLocal.stop();
-    btn.textContent = '➤ RECORD'; btn.classList.remove('recording');
+    btn.textContent = '⏳ SAVING'; btn.classList.remove('recording'); btn.disabled = true;
     entry('Local recording stopped — saving…', 'sys');
     return;
   }
@@ -5881,11 +5946,12 @@ async function toggleRecordLocal() {
   recLocalChunks = [];
   recLocal = new MediaRecorder(recStream, { mimeType });
   recLocal.ondataavailable = e => { if (e.data.size > 0) recLocalChunks.push(e.data); };
-  recLocal.onstop = () => {
-    recLocalBusy = false;
+  recLocal.onstop = async () => {
     if (stopLoop) stopLoop();
     if (aCtx) aCtx.close();
-    saveRec(recLocalChunks, mimeType, 'local');
+    await saveRec(recLocalChunks, mimeType, 'local');
+    recLocalBusy = false;
+    btn.disabled = false; btn.textContent = '➤ RECORD';
   };
   recLocal.start(1000);
   btn.textContent = '⏹ Stop'; btn.classList.add('recording');
@@ -5902,7 +5968,7 @@ async function toggleRecordChat() {
   if (recChat && recChat.state === 'recording') {
     recChatBusy = true;
     recChat.stop();
-    if (btn) { btn.textContent = '➤ RECORD'; btn.classList.remove('recording'); }
+    if (btn) { btn.textContent = '⏳ SAVING'; btn.classList.remove('recording'); btn.disabled = true; }
     return;
   }
   if (recChat && recChat.state !== 'inactive') return;
@@ -5943,11 +6009,12 @@ async function toggleRecordChat() {
   recChatChunks = [];
   recChat = new MediaRecorder(recStream, { mimeType });
   recChat.ondataavailable = e => { if (e.data.size > 0) recChatChunks.push(e.data); };
-  recChat.onstop = () => {
-    recChatBusy = false;
+  recChat.onstop = async () => {
     if (stopLoop) stopLoop();
     if (aCtx) aCtx.close();
-    saveRec(recChatChunks, mimeType, isLocalMain ? 'chat-local' : 'chat-remote');
+    await saveRec(recChatChunks, mimeType, isLocalMain ? 'chat-local' : 'chat-remote');
+    recChatBusy = false;
+    if (btn) { btn.disabled = false; btn.textContent = '➤ RECORD'; }
   };
   recChat.start(1000);
   if (btn) { btn.textContent = '⏹ Stop'; btn.classList.add('recording'); }
