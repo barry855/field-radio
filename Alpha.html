@@ -5698,30 +5698,33 @@ function preferredMime() {
 // Returns a MediaStream containing the real mic track for recording,
 // bypassing the mute state (disabled track = silence in Web Audio).
 function getLocalAudioStreamForRec() {
-  if (realAudioTrack) return new MediaStream([realAudioTrack]);
-  const tracks = localStream ? localStream.getAudioTracks() : [];
-  if (!tracks.length) return null;
-  // Temporarily clone so we can force-enable without affecting the live call
-  const clone = tracks[0].clone();
+  // Always clone + force-enable so mute state on the live track doesn't silence the recording
+  const src = realAudioTrack || (localStream && localStream.getAudioTracks()[0]) || null;
+  if (!src) return null;
+  const clone = src.clone();
   clone.enabled = true;
   return new MediaStream([clone]);
 }
 
 // Mix audio from multiple MediaStreams into one destination track.
 // Returns { ctx, dest } — caller must call ctx.close() when done.
+// localGain: extra gain on stream[0] (local mic) to compensate for AEC/AGC suppression.
 async function buildAudioMix(...streams) {
   const ctx  = new (window.AudioContext || window.webkitAudioContext)();
   await ctx.resume();                         // ensure context is running
   const dest = ctx.createMediaStreamDestination();
-  streams.forEach(s => {
+  streams.forEach((s, i) => {
     if (!s) return;
     const tracks = s.getAudioTracks ? s.getAudioTracks() : [];
     if (!tracks.length) return;
     try {
-      // Wrap the stream in a new MediaStream containing only its audio tracks
-      // so createMediaStreamSource gets a clean audio-only stream
       const audioOnly = new MediaStream(tracks);
-      ctx.createMediaStreamSource(audioOnly).connect(dest);
+      const src  = ctx.createMediaStreamSource(audioOnly);
+      const gain = ctx.createGain();
+      // Boost local mic (stream[0]) — AEC/AGC in Web Audio path suppresses it heavily
+      gain.gain.value = (i === 0) ? 3.0 : 1.0;
+      src.connect(gain);
+      gain.connect(dest);
     } catch(e) { entry('Audio mix warn: ' + e.message, 'sys'); }
   });
   return { ctx, dest };
