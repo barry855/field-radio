@@ -5685,11 +5685,12 @@ let recRemote = null, recRemoteChunks = [], recRemoteBusy = false;
 let recLocal  = null, recLocalChunks  = [], recLocalBusy  = false;
 
 function preferredMime() {
+  // Always specify audio codec explicitly — bare 'video/mp4' or 'video/webm' may omit audio track
   return [
     'video/mp4;codecs=avc1,mp4a.40.2',
-    'video/mp4',
     'video/webm;codecs=vp9,opus',
     'video/webm;codecs=vp8,opus',
+    'video/webm;codecs=h264,opus',
     'video/webm'
   ].find(t => MediaRecorder.isTypeSupported(t)) || 'video/webm';
 }
@@ -5697,11 +5698,7 @@ function preferredMime() {
 // Returns a MediaStream containing the real mic track for recording,
 // bypassing the mute state (disabled track = silence in Web Audio).
 function getLocalAudioStreamForRec() {
-  if (realAudioTrack) {
-    const clone = realAudioTrack.clone();
-    clone.enabled = true; // force-enable regardless of mute state — recording captures the raw mic
-    return new MediaStream([clone]);
-  }
+  if (realAudioTrack) return new MediaStream([realAudioTrack]);
   const tracks = localStream ? localStream.getAudioTracks() : [];
   if (!tracks.length) return null;
   // Temporarily clone so we can force-enable without affecting the live call
