@@ -827,7 +827,7 @@
   #ttsVoiceSelect:hover { border-color: var(--accent); color: var(--accent); }
   #ttsVoiceSelect option { background: #0d1b2a; color: var(--text); }
   /* ── Shared speech button base ── */
-  #speechSendBtn, #speechListenBtn, #speechAttachBtn, #speechLoadBtn, #speechSaveBtn, #speechCopyBtn, #speechClearBtn, #speechOriginalBtn, #speechTtsBtn {
+  #speechSendBtn, #speechListenBtn, #speechAttachBtn, #speechLoadBtn, #speechSaveBtn, #speechCopyBtn, #speechClearBtn, #speechOriginalBtn, #speechTtsBtn, #cwSendBtn {
     background: var(--btn-bg); border: 1px solid var(--border);
     color: var(--text); padding: 5px 9px; border-radius: 4px;
     font-family: 'Share Tech Mono', monospace; font-size: 11px;
@@ -859,6 +859,12 @@
   #speechSaveBtn:hover   { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
   #speechCopyBtn:hover   { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
   #speechClearBtn:hover  { background: var(--btn-hover); border-color: var(--danger, #cc2222); color: var(--danger, #cc2222); }
+  #cwSendBtn:hover:not(:disabled) { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
+  #cwSendBtn:disabled { opacity: 0.35; cursor: not-allowed; }
+  #cwSendBtn.cw-armed { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.12); box-shadow: 0 0 6px rgba(0,212,255,0.25); }
+  #cwSendBtn.cw-clear { border-color: var(--danger, #cc2222); color: var(--danger, #cc2222); background: rgba(204,34,34,0.10); }
+  #cwSendBtn.cw-tx { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.22); box-shadow: 0 0 8px rgba(0,212,255,0.5); animation: cw-pulse 0.5s ease-in-out infinite alternate; }
+  @keyframes cw-pulse { from { box-shadow: 0 0 4px rgba(0,212,255,0.3); } to { box-shadow: 0 0 12px rgba(0,212,255,0.7); } }
   /* drag-over highlight on speech panel */
   .speech-top-bar {
     display: flex; gap: 4px; flex-shrink: 0;
@@ -1630,7 +1636,7 @@
           <span class="sbr-label">CHAT:</span>
           <button class="speech-top-btn" onclick="saveChatToFile()" id="saveChatBtn" title="Save chat as HTML">💾 SAVE</button>
           <button class="speech-top-btn" onclick="restoreChat()" id="restoreChatBtn" title="Restore previous session chat">↩ RESTORE</button>
-          <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';ttsStopAll();entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR</button>
+          <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';ttsStopAll();morseStopAll();entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR</button>
           <button class="speech-top-btn" id="findChatBtn" title="Find in chat">🔍 FIND</button>
         </div>
         <div id="translateBar">
@@ -1789,6 +1795,7 @@
           <button id="speechSaveBtn" onclick="speechSaveText()" title="Save input box text to file">SAVE</button>
           <button id="speechCopyBtn" onclick="speechCopyText()" title="Copy input box text to clipboard">COPY</button>
           <button id="speechClearBtn" onclick="speechClearText()" title="Clear input box">CLEAR</button>
+          <button id="cwSendBtn" onclick="cwBtnPress()" title="CW: press to send Morse · press again to clear text" data-cw-state="0" disabled>⚫ CW</button>
         </div>
         <div class="speech-btn-row" id="speechBtnRow2">
           <span class="sbr-label">Spoken Language:</span>
@@ -4960,6 +4967,7 @@ function attachDataConn(dc) {
     entry('Chat channel open', 'ok');
     if (!linked) setStatus('reachable');
     const sb = document.getElementById('sendBtn'); if (sb) sb.disabled = false;
+    const cw = document.getElementById('cwSendBtn'); if (cw) cw.disabled = false;
     sendVideoState();
     if (_pendingChatMsg) {
       const queued = _pendingChatMsg; _pendingChatMsg = null;
@@ -4980,6 +4988,7 @@ function attachDataConn(dc) {
       // clearChat control intentionally not handled — CLEAR is local-only on each unit.
       if (f.__control === 'deleteMsg') { deleteBubble(f.ts, false); return; }
       if (f.__control === 'refresh') { entry('Remote refreshed — reloading…', 'sys'); peerRefreshing = true; try { sessionStorage.setItem('fieldRadioRefreshing', '1'); } catch(e) {} setTimeout(() => window.location.reload(), 400); return; }
+      if (f.__morse === true) { addBubble('CW: ' + f.text + ' (' + (f.wpm||20) + ' WPM)', false); playMorseAudio(f.text, f.wpm || 20); return; }
       if (f.__file  === true)      { addMediaBubble(f.name, f.type, f.data, false); return; }
       if (f.__chunk === true)      { receiveChunk(f); return; }
       // Language-learning chat message: translate from sender's lang to our lang
@@ -5018,6 +5027,8 @@ function attachDataConn(dc) {
     pendingDC = false;
     dataConn = null;
     const sb = document.getElementById('sendBtn'); if (sb) sb.disabled = true;
+    const cw = document.getElementById('cwSendBtn'); if (cw) cw.disabled = true;
+    _cwSetState(0);
     entry('Chat channel closed', 'sys');
     // Only reopen if the call is still live — re-check inside the timeout
     // so a concurrent onDrop() doesn't cause a ghost reconnect attempt
@@ -5039,6 +5050,124 @@ function attachDataConn(dc) {
 }
 
 let pendingDC = false;
+
+// ── Morse / CW ───────────────────────────────────────────────────────────
+const _MORSE_MAP = {
+  "A":".-","B":"-...","C":"-.-.","D":"-..","E":".","F":"..-.","G":"--.","H":"....",
+  "I":"..","J":".---","K":"-.-","L":".-..","M":"--","N":"-.","O":"---","P":".--.",
+  "Q":"--.-","R":".-.","S":"...","T":"-","U":"..-","V":"...-","W":".--","X":"-..-",
+  "Y":"-.--","Z":"--..",
+  "0":"-----","1":".----","2":"..---","3":"...--","4":"....-",
+  "5":".....","6":"-....","7":"--...","8":"---..","9":"----.",
+  ".":".-.-.-",",":"--..--","?":"..--..","'":".--.--","!":"-.-.--",
+  "/":"-..-.","(":"-.--.",")":"-.--.-","&":".-...",":":"---...",
+  ";":"-.-.-.","=":"-...-","+":".-.-.","-":"-....-","\"":".-..-.","@":".--.-."
+};
+let _morseGen = 0;
+let _morseGains = []; // active gain nodes for the current transmission
+
+// CW button 3-state: 0=off, 1=armed (send sent, waiting), 2=clear (press clears text box)
+let _cwState = 0;
+
+function _cwSetState(state) {
+  _cwState = state;
+  const btn = document.getElementById('cwSendBtn');
+  if (!btn) return;
+  btn.classList.remove('cw-armed', 'cw-clear', 'cw-tx');
+  if (state === 0) {
+    btn.textContent = '⚫ CW';
+    btn.title = 'CW: press to send text as Morse code';
+  } else if (state === 1) {
+    btn.classList.add('cw-armed');
+    btn.textContent = '● CW';
+    btn.title = 'CW sent — press again to clear text box';
+  } else if (state === 2) {
+    btn.classList.add('cw-clear');
+    btn.textContent = '✕ CW';
+    btn.title = 'Press to clear text input and reset CW';
+  }
+}
+
+function cwBtnPress() {
+  if (_cwState === 0) {
+    // State 0 → send CW, move to state 1
+    sendMorseSpeech();
+  } else {
+    // State 1 or 2 → clear text box, return to state 0
+    speechClearText();
+    _cwSetState(0);
+  }
+}
+
+// Called by receiver when a CW message arrives — arm the button for the
+// duration of playback, then transition to state 2 (clear-text prompt)
+function cwRxArm(durationMs) {
+  const btn = document.getElementById('cwSendBtn');
+  if (!btn || btn.disabled) return;
+  btn.classList.add('cw-tx');
+  btn.textContent = '● CW';
+  btn.title = 'Receiving CW — press again to clear text';
+  clearTimeout(cwRxArm._t);
+  cwRxArm._t = setTimeout(() => {
+    const b = document.getElementById('cwSendBtn');
+    if (b) { b.classList.remove('cw-tx'); }
+    if (_cwState === 0) _cwSetState(2); // transition to clear-prompt state
+  }, Math.max(durationMs, 200));
+}
+
+function morseStopAll() {
+  _morseGen++;                          // orphan any pending flash timeout
+  _morseGains.forEach(g => { try { g.gain.cancelScheduledValues(0); g.gain.setValueAtTime(0, 0); g.disconnect(); } catch(e) {} });
+  _morseGains = [];
+  clearTimeout(cwRxArm._t);
+  const btn = document.getElementById('cwSendBtn');
+  if (btn) { btn.classList.remove('cw-tx'); }
+  // If we were in a receive-armed state, return to state 0
+  if (_cwState === 2) _cwSetState(0);
+}
+function playMorseAudio(text, wpm) {
+  morseStopAll();                       // cancel any previous transmission
+  const myGen = _morseGen;
+  let totalMs = 0;
+  try {
+    if (!_actx) _actx = new (window.AudioContext || window.webkitAudioContext)();
+    if (_actx.state === 'suspended') _actx.resume();
+    const unit = 1200 / (wpm || 20);
+    let t = _actx.currentTime + 0.05;
+    const t0 = t;
+    text.toUpperCase().split('').forEach(ch => {
+      if (ch === ' ') { t += (unit * 7) / 1000; return; }
+      const code = _MORSE_MAP[ch]; if (!code) return;
+      code.split('').forEach(sym => {
+        const dur = (sym === '.' ? unit : unit * 3) / 1000;
+        const osc = _actx.createOscillator(), gain = _actx.createGain();
+        osc.type = 'sine'; osc.frequency.value = 600;
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(0.35, t + 0.005);
+        gain.gain.setValueAtTime(0.35, t + dur - 0.005);
+        gain.gain.linearRampToValueAtTime(0, t + dur);
+        osc.connect(gain); gain.connect(_actx.destination);
+        _morseGains.push(gain);
+        osc.start(t); osc.stop(t + dur);
+        t += dur + (unit / 1000);
+      });
+      t += (unit * 2) / 1000;
+    });
+    totalMs = (t - t0) * 1000 + 100;
+    cwRxArm(Math.max(totalMs, 200)); // arm button for receive duration
+  } catch(e) { entry('Morse audio error: ' + e.message, 'err'); }
+}
+function sendMorseSpeech() {
+  const box = document.getElementById('speechEditBox');
+  const text = (box ? box.value : '').trim();
+  if (!text) return;
+  const wpm = 20;
+  dcSend({ __morse: true, text: text, wpm: wpm });
+  addBubble('CW: ' + text + ' (' + wpm + ' WPM)', true);
+  // No local sidetone at the transmitting station
+  entry('Sent CW @ ' + wpm + ' WPM: ' + text, 'sys');
+  _cwSetState(1); // move to armed state — press again to clear
+}
 
 // dcSend — always sends a UTF-8 string so raw-mode DataChannel works
 // cross-platform (desktop Chrome ↔ Android Chrome/WebView).
@@ -5481,6 +5610,8 @@ function leaveSession() {
 
 function _doLeave() {
   saveRecordingIfActive();
+  ttsStopAll();
+  morseStopAll();
   // Stop system audio capture if active
   if (sysAudioActive) _stopSysAudio();
   // Stop all local media
@@ -5609,9 +5740,17 @@ let recRemote = null, recRemoteChunks = [], recRemoteBusy = false;
 let recLocal  = null, recLocalChunks  = [], recLocalBusy  = false;
 
 function preferredMime() {
+  // Try native MP4 first. Chrome 121+ (Jan 2024) fixed the Windows audio
+  // bug where the native MP4 muxer silently dropped the audio track.
+  // On all current platforms (Chrome, Edge, Android, ChromeOS, Safari)
+  // video/mp4 with H.264+AAC now works reliably — files save directly as
+  // .mp4 with no conversion step. Firefox falls through to WebM (it has no
+  // native MP4 recording support), which goes through the ffmpeg path.
   return [
-    'video/mp4;codecs=avc1,mp4a.40.2',
-    'video/mp4',
+    'video/mp4;codecs=avc1,mp4a.40.2',  // H.264 + AAC — Chrome/Edge/Android/Safari
+    'video/mp4;codecs=avc1',             // H.264, audio codec chosen by browser
+    'video/mp4',                         // any MP4
+    'video/webm;codecs=h264,opus',       // Firefox fallback (stream-copy remux)
     'video/webm;codecs=vp9,opus',
     'video/webm;codecs=vp8,opus',
     'video/webm'
@@ -5619,32 +5758,35 @@ function preferredMime() {
 }
 
 // Returns a MediaStream containing the real mic track for recording,
-// bypassing the mute state (disabled track = silence in Web Audio).
-function getLocalAudioStreamForRec() {
-  if (realAudioTrack) return new MediaStream([realAudioTrack]);
-  const tracks = localStream ? localStream.getAudioTracks() : [];
-  if (!tracks.length) return null;
-  // Temporarily clone so we can force-enable without affecting the live call
-  const clone = tracks[0].clone();
+// Return the local mic audio tracks for recording — raw, no Web Audio involved.
+// Clone + force-enable so mute state on the live call track doesn't affect the recording.
+function getLocalAudioTracksForRec() {
+  const src = realAudioTrack || (localStream && localStream.getAudioTracks()[0]) || null;
+  if (!src) return [];
+  const clone = src.clone();
   clone.enabled = true;
-  return new MediaStream([clone]);
+  return [clone];
 }
 
 // Mix audio from multiple MediaStreams into one destination track.
 // Returns { ctx, dest } — caller must call ctx.close() when done.
+// localGain: extra gain on stream[0] (local mic) to compensate for AEC/AGC suppression.
 async function buildAudioMix(...streams) {
   const ctx  = new (window.AudioContext || window.webkitAudioContext)();
   await ctx.resume();                         // ensure context is running
   const dest = ctx.createMediaStreamDestination();
-  streams.forEach(s => {
+  streams.forEach((s, i) => {
     if (!s) return;
-    const tracks = s.getAudioTracks ? s.getAudioTracks() : [];
+    // Accept either a MediaStream or a raw track array
+    const tracks = Array.isArray(s) ? s : (s.getAudioTracks ? s.getAudioTracks() : []);
     if (!tracks.length) return;
     try {
-      // Wrap the stream in a new MediaStream containing only its audio tracks
-      // so createMediaStreamSource gets a clean audio-only stream
       const audioOnly = new MediaStream(tracks);
-      ctx.createMediaStreamSource(audioOnly).connect(dest);
+      const src  = ctx.createMediaStreamSource(audioOnly);
+      const gain = ctx.createGain();
+      gain.gain.value = (i === 0) ? 2.0 : 1.0;
+      src.connect(gain);
+      gain.connect(dest);
     } catch(e) { entry('Audio mix warn: ' + e.message, 'sys'); }
   });
   return { ctx, dest };
@@ -5688,17 +5830,83 @@ function buildCompositeStream(mainVideo, overlayVideo, audioTracks) {
   return { stream: combined, stopLoop: () => cancelAnimationFrame(afId) };
 }
 
-function saveRec(chunks, mimeType, label) {
-  if (!chunks.length) { entry('Recording empty — nothing saved', 'sys'); return; }
-  const blob = new Blob(chunks, { type: mimeType });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  const ts   = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
-  const ext  = mimeType.startsWith('video/mp4') ? 'mp4' : 'webm';
-  a.href = url; a.download = `alpha-${label}-${ts}.${ext}`;
+// ── WebM → MP4 conversion (client-side, via ffmpeg.wasm) ───────
+// We always record to WebM (audio is reliable there on every platform —
+// see preferredMime() above) and convert the finished recording to a real
+// H.264/AAC MP4 here, entirely inside the browser. This sidesteps Chrome's
+// native MP4 encoder, whose audio support is inconsistent across platforms.
+let _ffmpegPromise = null;
+function loadFFmpeg() {
+  if (_ffmpegPromise) return _ffmpegPromise;
+  _ffmpegPromise = (async () => {
+    entry('Loading MP4 converter (first time only, ~30MB)…', 'sys');
+    const { FFmpeg } = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/+esm');
+    const { toBlobURL } = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/+esm');
+    const ffmpeg = new FFmpeg();
+    const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd';
+    const workerURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/worker.js';
+    await ffmpeg.load({
+      coreURL:   await toBlobURL(`${baseURL}/ffmpeg-core.js`,  'text/javascript'),
+      wasmURL:   await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+      workerURL: await toBlobURL(workerURL,                     'text/javascript'),
+    });
+    return ffmpeg;
+  })();
+  _ffmpegPromise.catch(() => { _ffmpegPromise = null; }); // allow retry on next recording if load failed
+  return _ffmpegPromise;
+}
+
+// Converts a recorded WebM blob to MP4. If the WebM video track is already
+// h264, this is an instant stream-copy remux (no quality loss, no
+// re-encode) — only audio is encoded to AAC. Otherwise (vp9/vp8 fallback)
+// it's a full video re-encode to h264, which takes longer.
+async function convertToMp4(webmBlob, recordedMimeType, label) {
+  const ffmpeg  = await loadFFmpeg();
+  const stamp   = Date.now();
+  const inName  = `in_${stamp}.webm`;
+  const outName = `out_${stamp}.mp4`;
+  await ffmpeg.writeFile(inName, new Uint8Array(await webmBlob.arrayBuffer()));
+
+  const isH264 = /h264/i.test(recordedMimeType);
+  entry(`Converting ${label} to MP4${isH264 ? '' : ' (re-encoding — this can take a while)'}…`, 'sys');
+  const args = isH264
+    ? ['-i', inName, '-map', '0:v:0', '-map', '0:a:0?', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart', outName]
+    : ['-i', inName, '-map', '0:v:0', '-map', '0:a:0?', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23', '-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart', outName];
+  await ffmpeg.exec(args);
+
+  const data = await ffmpeg.readFile(outName);
+  ffmpeg.deleteFile(inName).catch(()=>{});
+  ffmpeg.deleteFile(outName).catch(()=>{});
+  return new Blob([data.buffer], { type: 'video/mp4' });
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a   = document.createElement('a');
+  a.href = url; a.download = filename;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 5000);
-  entry(`${label} recording saved (${ext})`, 'ok');
+}
+
+async function saveRec(chunks, mimeType, label) {
+  if (!chunks.length) { entry('Recording empty — nothing saved', 'sys'); return; }
+  const blob = new Blob(chunks, { type: mimeType });
+  const ts = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
+  // If MediaRecorder gave us native MP4, save it directly — no conversion needed.
+  if (/mp4/i.test(mimeType)) {
+    downloadBlob(blob, `alpha-${label}-${ts}.mp4`);
+    entry(`${label} recording saved (mp4)`, 'ok');
+    return;
+  }
+  // WebM path (Firefox / old Chrome) — attempt ffmpeg.wasm conversion.
+  try {
+    const mp4Blob = await convertToMp4(blob, mimeType, label);
+    downloadBlob(mp4Blob, `alpha-${label}-${ts}.mp4`);
+    entry(`${label} recording saved (mp4)`, 'ok');
+  } catch (e) {
+    entry(`MP4 conversion failed (${e.message || e}) — saved original WebM instead`, 'sys');
+    downloadBlob(blob, `alpha-${label}-${ts}.webm`);
+  }
 }
 
 // ── Record Remote button ──────────────────────────────────────
@@ -5709,7 +5917,7 @@ async function toggleRecordRemote() {
   if (recRemote && recRemote.state === 'recording') {
     recRemoteBusy = true;
     recRemote.stop();
-    btn.textContent = '➤ RECORD'; btn.classList.remove('recording');
+    btn.textContent = '⏳ SAVING'; btn.classList.remove('recording'); btn.disabled = true;
     return;
   }
   if (recRemote && recRemote.state !== 'inactive') return;
@@ -5719,38 +5927,36 @@ async function toggleRecordRemote() {
   const hasRemote = remoteVideo.srcObject && remoteVideo.srcObject.getVideoTracks().length > 0;
   if (!hasRemote) { entry('No remote video to record', 'err'); return; }
 
-  // Use remoteAudio.srcObject for remote audio (same stream, but this element is
-  // actively playing it so the browser is less likely to throttle the audio tracks)
-  const { ctx: aCtx, dest: aDest } = await buildAudioMix(
-    getLocalAudioStreamForRec(),
-    remoteAudio ? remoteAudio.srcObject : remoteVideo.srcObject
-  );
-
   const mimeType = preferredMime();
-  let stopLoop = null, recStream;
+  let stopLoop = null, recStream, aCtx = null;
   const withMini = !!miniVideoVisible;   // snapshot the flag right now
+  const remoteStream = (remoteAudio && remoteAudio.srcObject) || remoteVideo.srcObject;
 
   if (withMini) {
-    // Composite: remote video + local mini PiP
+    // Composite: remote video + local mini PiP — needs Web Audio for canvas mix
+    const { ctx, dest: aDest } = await buildAudioMix(getLocalAudioTracksForRec(), remoteStream);
+    aCtx = ctx;
     const miniLocalVideo = document.getElementById('miniLocalVideo');
     const comp = buildCompositeStream(remoteVideo, miniLocalVideo, aDest.stream.getAudioTracks());
     recStream = comp.stream; stopLoop = comp.stopLoop;
   } else {
-    // Plain remote video track + mixed audio — no canvas, no PiP
+    // Plain: raw tracks directly — no Web Audio
     recStream = new MediaStream([
       ...remoteVideo.srcObject.getVideoTracks(),
-      ...aDest.stream.getAudioTracks()
+      ...getLocalAudioTracksForRec(),
+      ...(remoteStream ? remoteStream.getAudioTracks() : [])
     ]);
   }
 
   recRemoteChunks = [];
   recRemote = new MediaRecorder(recStream, { mimeType });
   recRemote.ondataavailable = e => { if (e.data.size > 0) recRemoteChunks.push(e.data); };
-  recRemote.onstop = () => {
-    recRemoteBusy = false;
+  recRemote.onstop = async () => {
     if (stopLoop) stopLoop();
-    aCtx.close();
-    saveRec(recRemoteChunks, mimeType, 'remote');
+    if (aCtx) aCtx.close();
+    await saveRec(recRemoteChunks, mimeType, 'remote');
+    recRemoteBusy = false;
+    btn.disabled = false; btn.textContent = '➤ RECORD';
   };
   recRemote.start(1000);
   btn.textContent = '⏹ Stop'; btn.classList.add('recording');
@@ -5765,7 +5971,7 @@ async function toggleRecordLocal() {
   if (recLocal && recLocal.state === 'recording') {
     recLocalBusy = true;
     recLocal.stop();
-    btn.textContent = '➤ RECORD'; btn.classList.remove('recording');
+    btn.textContent = '⏳ SAVING'; btn.classList.remove('recording'); btn.disabled = true;
     entry('Local recording stopped — saving…', 'sys');
     return;
   }
@@ -5777,37 +5983,39 @@ async function toggleRecordLocal() {
 
   const remoteAudio = document.getElementById('remoteAudio');
   const remoteVideo = document.getElementById('remoteVideo');
-  const { ctx: aCtx, dest: aDest } = await buildAudioMix(
-    getLocalAudioStreamForRec(),
-    remoteAudio ? remoteAudio.srcObject : (remoteVideo ? remoteVideo.srcObject : null)
-  );
-
   const mimeType = preferredMime();
-  let stopLoop = null, recStream;
+  let stopLoop = null, recStream, aCtx = null;
   const withMini = !!miniVideoVisible;   // snapshot the flag right now
 
   if (withMini) {
-    // Composite: local video + remote mini PiP
+    // Composite: local video + remote mini PiP — needs Web Audio for canvas mix
+    const remoteStream = (remoteAudio && remoteAudio.srcObject) || (remoteVideo && remoteVideo.srcObject) || null;
+    const { ctx, dest: aDest } = await buildAudioMix(getLocalAudioTracksForRec(), remoteStream);
+    aCtx = ctx;
     const localVideo      = document.getElementById('localVideo');
     const miniRemoteVideo = document.getElementById('miniRemoteVideo');
     const comp = buildCompositeStream(localVideo, miniRemoteVideo, aDest.stream.getAudioTracks());
     recStream = comp.stream; stopLoop = comp.stopLoop;
   } else {
-    // Plain local video track + mixed audio — no canvas, no PiP
+    // Plain: raw tracks directly — no Web Audio, no WASAPI interference
+    const remoteStream = (remoteAudio && remoteAudio.srcObject) || (remoteVideo && remoteVideo.srcObject) || null;
+    const remoteAudioTracks = remoteStream ? remoteStream.getAudioTracks() : [];
     recStream = new MediaStream([
       ...localStream.getVideoTracks(),
-      ...aDest.stream.getAudioTracks()
+      ...getLocalAudioTracksForRec(),
+      ...remoteAudioTracks
     ]);
   }
 
   recLocalChunks = [];
   recLocal = new MediaRecorder(recStream, { mimeType });
   recLocal.ondataavailable = e => { if (e.data.size > 0) recLocalChunks.push(e.data); };
-  recLocal.onstop = () => {
-    recLocalBusy = false;
+  recLocal.onstop = async () => {
     if (stopLoop) stopLoop();
-    aCtx.close();
-    saveRec(recLocalChunks, mimeType, 'local');
+    if (aCtx) aCtx.close();
+    await saveRec(recLocalChunks, mimeType, 'local');
+    recLocalBusy = false;
+    btn.disabled = false; btn.textContent = '➤ RECORD';
   };
   recLocal.start(1000);
   btn.textContent = '⏹ Stop'; btn.classList.add('recording');
@@ -5824,7 +6032,7 @@ async function toggleRecordChat() {
   if (recChat && recChat.state === 'recording') {
     recChatBusy = true;
     recChat.stop();
-    if (btn) { btn.textContent = '➤ RECORD'; btn.classList.remove('recording'); }
+    if (btn) { btn.textContent = '⏳ SAVING'; btn.classList.remove('recording'); btn.disabled = true; }
     return;
   }
   if (recChat && recChat.state !== 'inactive') return;
@@ -5841,35 +6049,36 @@ async function toggleRecordChat() {
     entry('No video available to record', 'err'); return;
   }
 
-  const { ctx: aCtx, dest: aDest } = await buildAudioMix(
-    getLocalAudioStreamForRec(),
-    remoteAudio ? remoteAudio.srcObject : (remoteVideo ? remoteVideo.srcObject : null)
-  );
-
   const mimeType = preferredMime();
-  let stopLoop = null, recStream;
+  let stopLoop = null, recStream, aCtx = null;
   const withMini = !!miniChatVisible;  // use chat mini visibility flag
+  const remoteStream = (remoteAudio && remoteAudio.srcObject) || (remoteVideo && remoteVideo.srcObject) || null;
 
   if (withMini) {
-    // PiP: opposite feed as mini overlay
+    // PiP: composite needs Web Audio for canvas mix
+    const { ctx, dest: aDest } = await buildAudioMix(getLocalAudioTracksForRec(), remoteStream);
+    aCtx = ctx;
     const miniChatVideo = document.getElementById('miniChatVideo');
     const comp = buildCompositeStream(mainVideo, miniChatVideo, aDest.stream.getAudioTracks());
     recStream = comp.stream; stopLoop = comp.stopLoop;
   } else {
+    // Plain: raw tracks directly — no Web Audio
     recStream = new MediaStream([
       ...mainVideo.srcObject.getVideoTracks(),
-      ...aDest.stream.getAudioTracks()
+      ...getLocalAudioTracksForRec(),
+      ...(remoteStream ? remoteStream.getAudioTracks() : [])
     ]);
   }
 
   recChatChunks = [];
   recChat = new MediaRecorder(recStream, { mimeType });
   recChat.ondataavailable = e => { if (e.data.size > 0) recChatChunks.push(e.data); };
-  recChat.onstop = () => {
-    recChatBusy = false;
+  recChat.onstop = async () => {
     if (stopLoop) stopLoop();
-    aCtx.close();
-    saveRec(recChatChunks, mimeType, isLocalMain ? 'chat-local' : 'chat-remote');
+    if (aCtx) aCtx.close();
+    await saveRec(recChatChunks, mimeType, isLocalMain ? 'chat-local' : 'chat-remote');
+    recChatBusy = false;
+    if (btn) { btn.disabled = false; btn.textContent = '➤ RECORD'; }
   };
   recChat.start(1000);
   if (btn) { btn.textContent = '⏹ Stop'; btn.classList.add('recording'); }
