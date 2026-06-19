@@ -651,9 +651,9 @@
     color: var(--text);
   }
   .media-btn.video-off-state {
-    border-color: var(--accent);
-    color: var(--accent);
-    box-shadow: 0 0 8px rgba(0,212,255,0.3);
+    background: #000;
+    border-color: #000;
+    color: #fff;
   }
   .media-btn.recording {
     background: rgba(0,212,255,0.15);
@@ -664,11 +664,11 @@
   @keyframes rec-blink { 0%,100%{opacity:1} 50%{opacity:0.5} }
 
   .media-btn.active-on {
-    border-color: var(--accent);
-    color: var(--accent);
-    box-shadow: 0 0 8px rgba(0,212,255,0.3);
+    background: #000;
+    border-color: #000;
+    color: #fff;
   }
-  .media-btn.active-on:hover { background: rgba(0,212,255,0.1); }
+  .media-btn.active-on:hover { background: #222; }
   /* ── Flip Cam dropdown (desktop multi-camera) ─────────────── */
   .flip-cam-select {
     flex: 0 0 auto; height: 36px; padding: 0 8px;
@@ -747,7 +747,7 @@
     flex-shrink: 0;
   }
   .log-action-btn:hover { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
-  .log-action-btn.stopped { border-color: var(--danger); color: var(--danger); }
+  .log-action-btn.stopped { background: #000; border-color: #000; color: #fff; }
   .log {
     flex: 1;
     overflow-y: auto;
@@ -877,16 +877,9 @@
   }
   #speechSendBtn:disabled { opacity: 0.35; cursor: not-allowed; background: var(--btn-bg); border-color: var(--border); color: var(--text); font-weight: normal; }
   #speechOriginalBtn:hover { background: var(--btn-hover); border-color: var(--accent2); color: var(--accent2); }
-  #speechListenBtn {
-    border-color: var(--accent2); color: var(--accent2);
-    background: rgba(0,255,159,0.12);
-    font-weight: bold; letter-spacing: 1.5px;
-    box-shadow: 0 0 6px rgba(0,255,159,0.25);
-  }
-  #speechListenBtn:hover { background: rgba(0,255,159,0.25); border-color: var(--accent2); color: var(--accent2); }
+  #speechListenBtn:hover { background: var(--btn-hover); border-color: var(--accent2); color: var(--accent2); }
   #speechListenBtn.listening {
-    border-color: var(--danger, #cc2222); color: var(--danger, #cc2222);
-    background: rgba(204,34,34,0.08);
+    background: #000; border-color: #000; color: #fff;
   }
   #speechAttachBtn:hover { background: var(--btn-hover); border-color: var(--accent2); color: var(--accent2); }
   #speechLoadBtn:hover   { background: var(--btn-hover); border-color: var(--accent2); color: var(--accent2); }
@@ -895,10 +888,11 @@
   #speechClearBtn:hover  { background: var(--btn-hover); border-color: var(--danger, #cc2222); color: var(--danger, #cc2222); }
   #cwSendBtn:hover:not(:disabled) { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
   #cwSendBtn:disabled { opacity: 0.35; cursor: not-allowed; }
-  #cwSendBtn.cw-armed { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.12); box-shadow: 0 0 6px rgba(0,212,255,0.25); }
-  #cwSendBtn.cw-clear { border-color: var(--danger, #cc2222); color: var(--danger, #cc2222); background: rgba(204,34,34,0.10); }
-  #cwSendBtn.cw-tx { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.22); box-shadow: 0 0 8px rgba(0,212,255,0.5); animation: cw-pulse 0.5s ease-in-out infinite alternate; }
-  @keyframes cw-pulse { from { box-shadow: 0 0 4px rgba(0,212,255,0.3); } to { box-shadow: 0 0 12px rgba(0,212,255,0.7); } }
+  #cwSendBtn.cw-armed, #cwSendBtn.cw-clear, #cwSendBtn.cw-tx {
+    background: #000; border-color: #000; color: #fff;
+  }
+  #cwSendBtn.cw-tx { animation: cw-pulse 0.5s ease-in-out infinite alternate; }
+  @keyframes cw-pulse { from { box-shadow: 0 0 4px rgba(255,255,255,0.15); } to { box-shadow: 0 0 12px rgba(255,255,255,0.45); } }
   /* drag-over highlight on speech panel */
   .speech-top-bar {
     display: flex; gap: 4px; flex-shrink: 0;
@@ -1641,7 +1635,7 @@
         <button class="speech-top-btn" id="miniChatBtn" onclick="toggleMiniChat()" title="Toggle mini video in chat" style="flex-shrink:0;">MINI OFF</button>
       </div>
       <div class="chat-btn-bar-row" style="flex-shrink:0;">
-        <button class="speech-top-btn" id="chatVideoViewBtn" onclick="toggleChatVideoView()" title="Toggle chat video view">SEEING THEM</button>
+        <button class="speech-top-btn" id="chatVideoViewBtn" onclick="toggleChatVideoView()" title="Toggle chat video view">See You</button>
         <button class="speech-top-btn rec-chat-btn" id="recChatBtn" onclick="toggleRecordChat()" title="Record current main feed + mini if visible">➤ RECORD</button>
         <button class="speech-top-btn video-off-state" id="videoOffChatBtn" onclick="toggleVideo()" title="Video on/off">Video Off</button>
         <button class="speech-top-btn" id="audioChatBtn" onclick="toggleAudio()" title="Mute/unmute mic">Mike On</button>
@@ -2712,10 +2706,10 @@ function updateChatVideoViewBtn() {
   const btn = document.getElementById('chatVideoViewBtn');
   if (!btn) return;
   if (chatUnderlayMode === 'local') {
-    btn.textContent = 'SEEING YOU';
+    btn.textContent = 'See me';
     btn.classList.add('active');
   } else {
-    btn.textContent = 'SEEING THEM';
+    btn.textContent = 'See You';
     btn.classList.remove('active');
   }
 }
