@@ -1488,7 +1488,7 @@
         <input type="checkbox" id="loginDisableVideo" onchange="try{localStorage.setItem('bravo_disable_video',this.checked?'1':'0')}catch(e){}"> Disable Video
       </label>
       <label class="session-check-item">
-        <input type="checkbox" id="loginDisableAudio" onchange="try{localStorage.setItem('bravo_disable_audio',this.checked?'1':'0')}catch(e){}"> Disable Audio
+        <input type="checkbox" id="loginDisableAudio" onchange="try{localStorage.setItem('bravo_disable_audio',this.checked?'1':'0')}catch(e){}"> Disable Mike
       </label>
     </div>
     <button class="session-go" onclick="startSession()">CONNECT</button>
@@ -1548,10 +1548,10 @@
         </div>
         <div class="mini-row">
           <button class="media-btn" id="miniBtn" onclick="toggleMiniVideo()">Mini Off</button>
-          <button class="media-btn video-off-state" id="videoBtn" onclick="toggleVideo()">Local Video</button>
+          <button class="media-btn video-off-state" id="videoBtn" onclick="toggleVideo()">See You, See Me</button>
           <button class="media-btn" id="recBtn" onclick="toggleRecordLocal()">➤ RECORD</button>
           <button class="media-btn video-off-state" id="videoBtn_row2" onclick="toggleVideo()">Video Off</button>
-          <button class="media-btn" id="audioBtn" onclick="toggleAudio()">Audio On</button>
+          <button class="media-btn" id="audioBtn" onclick="toggleAudio()">Mike On</button>
           <button class="media-btn" id="sysAudioBtn" onclick="toggleSysAudio()" title="Capture computer output and mix into transmitted audio (use headphones!)">Sys Audio Off</button>          <button class="media-btn" id="ttsBtn" onclick="toggleTts()" title="Toggle auto-speak for incoming messages">TTS Off</button><span id="flipWrap"><button class="media-btn" id="flipBtn" onclick="flipCamera()">⟳ Flip Cam</button></span>
           <button class="media-btn" id="screenBtn" onclick="toggleScreenShare()">Share Off</button>
           <button class="speaker-btn speaker-on" id="speakerBtnLocal" onclick="toggleSpeaker()">🔊 Speaker</button>
@@ -1590,10 +1590,10 @@
         </div>
         <div class="mini-row">
           <button class="media-btn" id="miniBtn2" onclick="toggleMiniVideo()">Mini Off</button>
-          <button class="media-btn video-off-state" id="videoBtn2" onclick="toggleVideo()">Local Video</button>
+          <button class="media-btn video-off-state" id="videoBtn2" onclick="toggleVideo()">See You, See Me</button>
           <button class="media-btn" id="recBtn2" onclick="toggleRecordRemote()">➤ RECORD</button>
           <button class="media-btn video-off-state" id="videoBtn2_row2" onclick="toggleVideo()">Video Off</button>
-          <button class="media-btn" id="audioBtn2" onclick="toggleAudio()">Audio On</button>
+          <button class="media-btn" id="audioBtn2" onclick="toggleAudio()">Mike On</button>
           <button class="media-btn" id="sysAudioBtn2" onclick="toggleSysAudio()" title="Capture computer output and mix into transmitted audio (use headphones!)">Sys Audio Off</button>
           <button class="media-btn" id="ttsBtn2" onclick="toggleTts()" title="Toggle auto-speak for incoming messages">TTS Off</button><span id="flipWrap2"><button class="media-btn" id="flipBtn2" onclick="flipCamera()">⟳ Flip Cam</button></span>
           <button class="media-btn" id="screenBtn2" onclick="toggleScreenShare()">Share Off</button>
@@ -1644,7 +1644,7 @@
         <button class="speech-top-btn" id="chatVideoViewBtn" onclick="toggleChatVideoView()" title="Toggle chat video view">SEEING THEM</button>
         <button class="speech-top-btn rec-chat-btn" id="recChatBtn" onclick="toggleRecordChat()" title="Record current main feed + mini if visible">➤ RECORD</button>
         <button class="speech-top-btn video-off-state" id="videoOffChatBtn" onclick="toggleVideo()" title="Video on/off">Video Off</button>
-        <button class="speech-top-btn" id="audioChatBtn" onclick="toggleAudio()" title="Mute/unmute mic">Audio On</button>
+        <button class="speech-top-btn" id="audioChatBtn" onclick="toggleAudio()" title="Mute/unmute mic">Mike On</button>
         <button class="speech-top-btn" id="sysAudioChatBtn" onclick="toggleSysAudio()" title="Capture computer output and mix into transmitted audio (use headphones!)">Sys Audio Off</button>
         <button class="speech-top-btn" id="screenChatBtn" onclick="toggleScreenShare()" title="Share screen">Share Off</button>
         <button class="syslog-chat-btn" id="syslogToggleBtn" onclick="toggleSysLogView()" title="Toggle SYS LOG" style="margin-left:auto;"><span class="syslog-led"></span></button>
@@ -2120,7 +2120,7 @@ function startSession() {
   // Reset audio button UI to On (applyStreamFlags will re-apply if needed)
   ['audioBtn','audioBtn2'].forEach(id => {
     const b = document.getElementById(id);
-    if (b) { b.textContent = 'Audio On'; b.classList.remove('active-on','disabled-state'); }
+    if (b) { b.textContent = 'Mike On'; b.classList.remove('active-on','disabled-state'); }
   });
   // Reset video button UI to On (applyStreamFlags will re-apply if needed)
   setVideoButtons(true);
@@ -2611,7 +2611,7 @@ function setStatus(state) {
   linkLed.className = 'led';
   if (state === 'standby')        { linkLed.classList.add('on-cyan');   statusEl.textContent = 'STANDBY'; document.title = '🔵 STANDBY — BRAVO — Field Radio v6'; }
   else if (state === 'reachable') { linkLed.classList.add('on-amber');  statusEl.textContent = 'WAITING';  document.title = '🟡 WAITING — BRAVO — Field Radio v6'; }
-  else if (state === 'linked')    { linkLed.classList.add('on-green');  statusEl.textContent = 'LINKED';   document.title = '🟢 LINKED — BRAVO — Field Radio v6'; }
+  else if (state === 'linked')    { linkLed.classList.add('on-green');  statusEl.textContent = 'LIVE';   document.title = '🟢 LIVE — BRAVO — Field Radio v6'; }
   else                            { statusEl.textContent = ''; document.title = 'BRAVO — Field Radio v6'; }
 }
 
@@ -4555,9 +4555,9 @@ async function initMediaOnly() {
     if (loginDisableAudioFlag) {
       const at = stream.getAudioTracks()[0];
       if (at) { realAudioTrack = at; at.enabled = false; audioMuted = true; }
-      const ab = document.getElementById('audioBtn'); if(ab){ab.textContent='Audio Off';ab.classList.remove('disabled-state');ab.classList.add('active-on');}
-      const ab2 = document.getElementById('audioBtn2'); if(ab2){ab2.textContent='Audio Off';ab2.classList.remove('disabled-state');ab2.classList.add('active-on');}
-      const ab3 = document.getElementById('audioChatBtn'); if(ab3){ab3.textContent='Audio Off';ab3.classList.remove('disabled-state');ab3.classList.add('active-on');}
+      const ab = document.getElementById('audioBtn'); if(ab){ab.textContent='Mike Off';ab.classList.remove('disabled-state');ab.classList.add('active-on');}
+      const ab2 = document.getElementById('audioBtn2'); if(ab2){ab2.textContent='Mike Off';ab2.classList.remove('disabled-state');ab2.classList.add('active-on');}
+      const ab3 = document.getElementById('audioChatBtn'); if(ab3){ab3.textContent='Mike Off';ab3.classList.remove('disabled-state');ab3.classList.add('active-on');}
       entry('Audio disabled (login setting)', 'sys');
     }
     // Peer is already open — dial directly if not already connected
@@ -4675,15 +4675,15 @@ async function init() {
       entry('AUDIO FLAG: track=' + (at ? at.label : 'none') + ' enabled=' + (at ? at.enabled : 'n/a'), 'sys');
       if (at) { realAudioTrack = at; at.enabled = false; audioMuted = true; }
       entry('AUDIO FLAG: audioMuted now=' + audioMuted, 'sys');
-      const ab = document.getElementById('audioBtn'); if(ab){ab.textContent='Audio Off';ab.classList.remove('disabled-state');ab.classList.add('active-on');}
-      const ab2 = document.getElementById('audioBtn2'); if(ab2){ab2.textContent='Audio Off';ab2.classList.remove('disabled-state');ab2.classList.add('active-on');}
-      const ab3 = document.getElementById('audioChatBtn'); if(ab3){ab3.textContent='Audio Off';ab3.classList.remove('disabled-state');ab3.classList.add('active-on');}
+      const ab = document.getElementById('audioBtn'); if(ab){ab.textContent='Mike Off';ab.classList.remove('disabled-state');ab.classList.add('active-on');}
+      const ab2 = document.getElementById('audioBtn2'); if(ab2){ab2.textContent='Mike Off';ab2.classList.remove('disabled-state');ab2.classList.add('active-on');}
+      const ab3 = document.getElementById('audioChatBtn'); if(ab3){ab3.textContent='Mike Off';ab3.classList.remove('disabled-state');ab3.classList.add('active-on');}
       entry('Audio disabled (login setting)', 'sys');
     } else {
       // Audio is enabled — ensure buttons reflect the correct On state
-      const ab = document.getElementById('audioBtn'); if(ab){ab.textContent='Audio On';ab.classList.remove('active-on','disabled-state');}
-      const ab2 = document.getElementById('audioBtn2'); if(ab2){ab2.textContent='Audio On';ab2.classList.remove('active-on','disabled-state');}
-      const ab3 = document.getElementById('audioChatBtn'); if(ab3){ab3.textContent='Audio On';ab3.classList.remove('active-on','disabled-state');}
+      const ab = document.getElementById('audioBtn'); if(ab){ab.textContent='Mike On';ab.classList.remove('active-on','disabled-state');}
+      const ab2 = document.getElementById('audioBtn2'); if(ab2){ab2.textContent='Mike On';ab2.classList.remove('active-on','disabled-state');}
+      const ab3 = document.getElementById('audioChatBtn'); if(ab3){ab3.textContent='Mike On';ab3.classList.remove('active-on','disabled-state');}
       entry('AUDIO FLAG: not set, audio stays on', 'sys');
     }
     startPeer();
@@ -5300,7 +5300,7 @@ function setVideoButtons(enabled) {
   // Primary "Local Video" buttons (position 2 in mini-row)
   [document.getElementById('videoBtn'), document.getElementById('videoBtn2'), document.getElementById('videoChatBtn')].forEach(b => {
     if (!b) return;
-    b.textContent = enabled ? 'Local Video' : 'Local Video';
+    b.textContent = enabled ? 'See You, See Me' : 'See You, See Me';
     b.classList.toggle('video-on', enabled);
     b.classList.toggle('disabled-state', !enabled);
     b.classList.toggle('video-off-state', !enabled);
@@ -6342,7 +6342,7 @@ function toggleAudio() {
         if (sender) sender.replaceTrack(getSilentTrack()).catch(() => {});
       } catch(e) {}
     }
-    btns.forEach(b => { if(b){ b.textContent = 'Audio Off'; b.classList.remove('disabled-state'); b.classList.add('active-on'); }});
+    btns.forEach(b => { if(b){ b.textContent = 'Mike Off'; b.classList.remove('disabled-state'); b.classList.add('active-on'); }});
     try { localStorage.setItem('bravo_disable_audio', '1'); document.getElementById('loginDisableAudio').checked = true; } catch(e) {}
     entry('Local audio muted', 'sys');
   } else {
@@ -6358,7 +6358,7 @@ function toggleAudio() {
         if (sender && realAudioTrack) sender.replaceTrack(realAudioTrack).catch(() => {});
       } catch(e) {}
     }
-    btns.forEach(b => { if(b){ b.textContent = 'Audio On'; b.classList.remove('disabled-state'); b.classList.remove('active-on'); }});
+    btns.forEach(b => { if(b){ b.textContent = 'Mike On'; b.classList.remove('disabled-state'); b.classList.remove('active-on'); }});
     try { localStorage.setItem('bravo_disable_audio', '0'); document.getElementById('loginDisableAudio').checked = false; } catch(e) {}
     entry('Local audio unmuted', 'sys');
   }
