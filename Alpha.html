@@ -1509,7 +1509,7 @@
           <span class="mini-row-arrow">▼</span>
         </div>
         <div class="mini-row">
-          <button class="media-btn" id="miniBtn" onclick="toggleMiniVideo()">Mini Off</button>
+          <button class="media-btn" id="miniBtn" onclick="toggleMiniVideo()">Mini Cam Off</button>
           <button class="media-btn video-off-state" id="videoBtn" onclick="toggleVideo()">See You, See Me</button>
           <button class="media-btn" id="recBtn" onclick="toggleRecordLocal()">➤ RECORD</button>
           <button class="media-btn video-off-state" id="videoBtn_row2" onclick="toggleVideo()">Video Off</button>
@@ -1552,7 +1552,7 @@
           <span class="mini-row-arrow">▼</span>
         </div>
         <div class="mini-row">
-          <button class="media-btn" id="miniBtn2" onclick="toggleMiniVideo()">Mini Off</button>
+          <button class="media-btn" id="miniBtn2" onclick="toggleMiniVideo()">Mini Cam Off</button>
           <button class="media-btn video-off-state" id="videoBtn2" onclick="toggleVideo()">See You, See Me</button>
           <button class="media-btn" id="recBtn2" onclick="toggleRecordRemote()">➤ RECORD</button>
           <button class="media-btn video-off-state" id="videoBtn2_row2" onclick="toggleVideo()">Video Off</button>
@@ -1601,7 +1601,7 @@
         <button class="speech-top-btn leave-style" id="leaveChatBtn" onclick="leaveSession()" title="Leave session" style="flex-shrink:0;">✕ Leave</button>
         <span id="flipWrapChat"><button class="speech-top-btn" id="flipChatBtn" onclick="flipCamera()" title="Flip camera" style="flex-shrink:0;">⟳ Flip Cam</button></span>
         <button class="speech-top-btn" id="fsChatBtn" onclick="toggleFullScreen()" title="Full Screen Toggle" style="flex-shrink:0;">FS OFF</button>
-        <button class="speech-top-btn" id="miniChatBtn" onclick="toggleMiniChat()" title="Toggle mini video in chat" style="flex-shrink:0;">MINI OFF</button>
+        <button class="speech-top-btn" id="miniChatBtn" onclick="toggleMiniChat()" title="Toggle mini video in chat" style="flex-shrink:0;">MINI CAM OFF</button>
       </div>
       <div class="chat-btn-bar-row" id="chatBtnRow2" style="flex-shrink:0;">
         <button class="speech-top-btn" id="chatVideoViewBtn" onclick="toggleChatVideoView()" title="Toggle chat video view">See You</button>
@@ -2711,7 +2711,7 @@ function updateMiniVideoVisibility() {
     if (el) el.classList.toggle('hidden', !miniVideoVisible);
   });
   [document.getElementById('miniBtn'), document.getElementById('miniBtn2')].forEach(btn => {
-    if (btn) { btn.textContent = miniVideoVisible ? 'Mini Off' : 'Mini On'; btn.classList.toggle('active-on', !miniVideoVisible); }
+    if (btn) { btn.textContent = miniVideoVisible ? 'Mini Cam Off' : 'Mini Cam On'; btn.classList.toggle('active-on', !miniVideoVisible); }
   });
   syncMiniVideos();
 }
@@ -2736,7 +2736,7 @@ function toggleMiniChat() {
   if (overlay) overlay.classList.toggle('hidden', !miniChatVisible);
   const btn = document.getElementById('miniChatBtn');
   if (btn) {
-    btn.textContent = miniChatVisible ? 'MINI ON' : 'MINI OFF';
+    btn.textContent = miniChatVisible ? 'MINI CAM ON' : 'MINI CAM OFF';
     btn.classList.toggle('active', miniChatVisible);
   }
 }
