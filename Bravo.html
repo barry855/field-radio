@@ -3189,7 +3189,7 @@ function _toggleLock(wrap) {
   }
 }
 
-function addBubble(text, mine, ts, save = true, restoredStatus = null, orig = null) {
+function addBubble(text, mine, ts, save = true, restoredStatus = null, orig = null, isCw = false) {
   if (save) saveMessage(text, mine);
   const now = ts || Date.now();
   const wrap = document.createElement('div');
@@ -3240,7 +3240,7 @@ function addBubble(text, mine, ts, save = true, restoredStatus = null, orig = nu
   }
   const timeText = document.createTextNode(formatTs(now));
   time.appendChild(timeText);
-  wrap.dataset.orig = orig || text;  // orig = pre-translation text for sender bubbles
+  if (!isCw) wrap.dataset.orig = orig || text;  // orig = pre-translation text for sender bubbles; CW bubbles never get a peekable original
   // Copy (+) button
   const copyBtn = document.createElement('button');
   copyBtn.className = 'bubble-copy-btn';
@@ -4967,7 +4967,7 @@ function attachDataConn(dc) {
       // clearChat control intentionally not handled — CLEAR is local-only on each unit.
       if (f.__control === 'deleteMsg') { deleteBubble(f.ts, false); return; }
       if (f.__control === 'refresh') { entry('Remote refreshed — reloading…', 'sys'); peerRefreshing = true; try { sessionStorage.setItem('fieldRadioRefreshing', '1'); } catch(e) {} setTimeout(() => window.location.reload(), 400); return; }
-      if (f.__morse === true) { addBubble(f.text, false); playMorseAudio(f.text, f.wpm || 20); return; }
+      if (f.__morse === true) { addBubble(f.text, false, null, true, null, null, true); playMorseAudio(f.text, f.wpm || 20); return; }
       if (f.__file  === true)      { addMediaBubble(f.name, f.type, f.data, false); return; }
       if (f.__chunk === true)      { receiveChunk(f); return; }
       // Language-learning chat message: translate from sender's lang to our lang
@@ -5136,7 +5136,7 @@ function sendMorseSpeech() {
   if (!text) return;
   const wpm = 20;
   dcSend({ __morse: true, text: text, wpm: wpm });
-  addBubble(text, true);
+  addBubble(text, true, null, true, null, null, true);
   // No local sidetone at the transmitting station
   entry('Sent CW @ ' + wpm + ' WPM: ' + text, 'sys');
   _cwSetState(1);
