@@ -852,12 +852,12 @@
   #speechCopyBtn:hover   { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
   #speechClearBtn:hover  { background: var(--btn-hover); border-color: var(--danger, #cc2222); color: var(--danger, #cc2222); }
   #cwSendBtn:hover:not(:disabled) { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
-  #cwSendBtn:disabled { opacity: 0.35; cursor: not-allowed; }
+  #cwSendBtn:disabled { opacity: 0.55; cursor: not-allowed; }
   #cwSendBtn.cw-armed, #cwSendBtn.cw-clear, #cwSendBtn.cw-tx {
-    background: #000; border-color: #000; color: #fff;
+    background: #000; border-color: #fff; color: #fff;
   }
   #cwSendBtn.cw-tx { animation: cw-pulse 0.5s ease-in-out infinite alternate; }
-  @keyframes cw-pulse { from { box-shadow: 0 0 4px rgba(255,255,255,0.15); } to { box-shadow: 0 0 12px rgba(255,255,255,0.45); } }
+  @keyframes cw-pulse { from { box-shadow: 0 0 4px rgba(255,255,255,0.25); } to { box-shadow: 0 0 14px rgba(255,255,255,0.6); } }
   /* drag-over highlight on speech panel */
   .speech-top-bar {
     display: flex; gap: 4px; flex-shrink: 0;
@@ -1444,7 +1444,6 @@
 <div class="session-overlay" id="sessionOverlay">
   <div class="session-box">
     <span class="session-title" style="color:#00ff9f;text-shadow:0 0 20px rgba(0,255,159,0.5);">ALPHA</span>
-    <label>Unit ID</label>
     <input type="text" id="sessionCode" maxlength="8" placeholder="ENTER CODE" autocomplete="off">
     <div class="session-checks">
       <label class="session-check-item">
@@ -1567,7 +1566,7 @@
         </div>
       </div>
       <div class="gain-row">
-        <div class="gain-label"><span>MIC</span><span>GAIN</span></div>
+        <div class="gain-label"><span>MIKE</span><span>GAIN</span></div>
         <input type="range" id="micGainSlider" min="0" max="3" step="0.05" value="1" oninput="applyMicGain(this.value)">
         <span class="gain-val" id="micGainVal">1.00×</span>
       </div>
@@ -1614,7 +1613,7 @@
         <button class="syslog-chat-btn" id="syslogToggleBtn" onclick="toggleSysLogView()" title="Toggle SYS LOG" style="margin-left:auto;"><span class="syslog-led"></span></button>
       </div>
       <div class="gain-row" style="flex-shrink:0;">
-        <div class="gain-label"><span>MIC</span><span>GAIN</span></div>
+        <div class="gain-label"><span>MIKE</span><span>GAIN</span></div>
         <input type="range" id="micGainSliderChat" min="0" max="3" step="0.05" value="1" oninput="applyMicGain(this.value)" style="flex:1; min-width:0;">
         <span class="gain-val" id="micGainValChat">1.00×</span>
         <button class="speech-top-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input" style="flex-shrink:0; white-space:nowrap;">Talk/Type in Chat</button>
@@ -5613,6 +5612,7 @@ function _doLeave() {
     localStream.getTracks().forEach(t => { try { t.stop(); } catch(e){} });
     localStream = null;
   }
+  teardownMicGain();
   // Clear all video elements immediately — no stale frames
   ['localVideo','remoteVideo','chatUnderlay','miniRemoteVideo','miniLocalVideo'].forEach(id => {
     const el = document.getElementById(id);
@@ -6906,10 +6906,22 @@ async function toggleSpeaker() {
 
 // ── Microphone Gain Control ───────────────────────────────────
 // Web Audio API gain node inserted between mic source and outgoing stream.
-let _micGainCtx = null, _micGainNode = null, _micGainDest = null;
+let _micGainCtx = null, _micGainNode = null, _micGainDest = null, _micRawTrack = null;
 
-function applyMicGain(val) {
-  const v = parseFloat(val);
+function teardownMicGain() {
+  // Stop the raw mic track that was swapped out by setupMicGainNode — without
+  // this, the OS keeps the microphone open even after Leave is pressed, since
+  // localStream's tracks no longer include the original capture track.
+  if (_micRawTrack) { try { _micRawTrack.stop(); } catch(e) {} _micRawTrack = null; }
+  if (_micGainDest) {
+    try { _micGainDest.stream.getTracks().forEach(t => t.stop()); } catch(e) {}
+    _micGainDest = null;
+  }
+  if (_micGainNode) { try { _micGainNode.disconnect(); } catch(e) {} _micGainNode = null; }
+  if (_micGainCtx) { try { _micGainCtx.close(); } catch(e) {} _micGainCtx = null; }
+}
+
+function applyMicGain(val) {  const v = parseFloat(val);
   // Sync all gain labels and sliders (primary + chat-tab copy)
   ['micGainVal', 'micGainValChat'].forEach(id => {
     const lbl = document.getElementById(id);
@@ -6939,7 +6951,13 @@ function setupMicGainNode(stream) {
     const gainedAudio = _micGainDest.stream.getAudioTracks()[0];
     if (gainedAudio) {
       const oldAudio = stream.getAudioTracks()[0];
-      if (oldAudio) stream.removeTrack(oldAudio);
+      if (oldAudio) {
+        stream.removeTrack(oldAudio);
+        // Keep a reference so we can fully release the OS mic on leave/cleanup —
+        // this raw track is no longer on any stream sent over the wire, but it's
+        // still the one actually holding the microphone open until stopped.
+        _micRawTrack = oldAudio;
+      }
       stream.addTrack(gainedAudio);
     }
     // Update slider & label to saved value (primary + chat-tab copy)
