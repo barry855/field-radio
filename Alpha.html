@@ -3243,7 +3243,11 @@ function addBubble(text, mine, ts, save = true, restoredStatus = null, orig = nu
   }
   const timeText = document.createTextNode(formatTs(now));
   time.appendChild(timeText);
-  if (!isCw) wrap.dataset.orig = orig || text;  // orig = pre-translation text for sender bubbles; CW bubbles never get a peekable original
+  // Only attach a peekable "original" when one was explicitly passed in and it
+  // genuinely differs from the displayed text — never derive this from a
+  // string-equality check at hover/copy time, which is fragile (innerText
+  // normalization, trailing whitespace, etc. can cause false positives).
+  if (!isCw && orig && orig !== text) wrap.dataset.orig = orig;
   // Copy (+) button
   const copyBtn = document.createElement('button');
   copyBtn.className = 'bubble-copy-btn';
