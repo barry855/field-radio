@@ -1444,6 +1444,7 @@
 <div class="session-overlay" id="sessionOverlay">
   <div class="session-box">
     <span class="session-title" style="color:#00ff9f;text-shadow:0 0 20px rgba(0,255,159,0.5);">ALPHA</span>
+    <label>Shared Code:</label>
     <input type="text" id="sessionCode" maxlength="8" placeholder="ENTER CODE" autocomplete="off">
     <div class="session-checks">
       <label class="session-check-item">
@@ -1475,10 +1476,6 @@
       <div class="status-item">
         <div class="led" id="linkLed" style="display:none;"></div>
         <span id="statusText"></span>
-      </div>
-      <div class="status-item" id="unitIdDisplay" style="display:none;">
-        <span style="color:var(--text-dim);font-size:10px;letter-spacing:1px;">UNIT ID</span>
-        <span id="unitIdValue" style="color:var(--accent);font-family:&#39;Orbitron&#39;,sans-serif;font-size:11px;letter-spacing:2px;"></span>
       </div>
       <div class="quality-item" id="qualityDisplay" style="display:none;">
         <div class="quality-bars">
@@ -2090,11 +2087,9 @@ function startSession() {
   clearInterval(loginTimeoutInterval);
   document.getElementById('sessionOverlay').style.display = 'none';
   showLoginBox();
-  document.getElementById('unitIdDisplay').style.display = 'flex';
   const _uln = document.getElementById('userLeftNotice'); if (_uln) _uln.classList.remove('visible');
   leftPermanently = false;
   remotePeerLeft = false;
-  document.getElementById('unitIdValue').textContent = code;
   document.getElementById('qualityDisplay').style.display = 'flex';
   if (usingPreReg) {
     entry('Using pre-registered peer — acquiring media only', 'sys');
@@ -2447,7 +2442,6 @@ function cancelReconnect() {
   document.getElementById('reconnectOverlay').classList.remove('active');
   // Fall back to login screen
   document.getElementById('sessionOverlay').style.display = 'flex';
-  document.getElementById('unitIdDisplay').style.display = 'none';
   prefillLogin();
   startLoginTimeout();
 }
@@ -5713,7 +5707,6 @@ function onDrop() {
     if (remotePeerLeft) return; // leave message arrived — handled by handleRemoteLeave
     if (peerRefreshing)  return; // refresh in progress — do not show login
     entry('Link lost — showing reconnect countdown', 'sys');
-    document.getElementById('unitIdDisplay').style.display = 'none';
     showReconnecting(30);
   }, 400);
 }
