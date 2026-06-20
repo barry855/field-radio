@@ -853,10 +853,10 @@
   #speechClearBtn:hover  { background: var(--btn-hover); border-color: var(--danger, #cc2222); color: var(--danger, #cc2222); }
   #cwSendBtn:hover:not(:disabled) { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
   #cwSendBtn:disabled { opacity: 0.55; cursor: not-allowed; }
-  #cwSendBtn.cw-armed, #cwSendBtn.cw-clear, #cwSendBtn.cw-tx {
+  #cwSendBtn.cw-on {
     background: #000; border-color: #fff; color: #fff;
+    animation: cw-pulse 0.5s ease-in-out infinite alternate;
   }
-  #cwSendBtn.cw-tx { animation: cw-pulse 0.5s ease-in-out infinite alternate; }
   @keyframes cw-pulse { from { box-shadow: 0 0 4px rgba(255,255,255,0.25); } to { box-shadow: 0 0 14px rgba(255,255,255,0.6); } }
   /* drag-over highlight on speech panel */
   .speech-top-bar {
@@ -1437,6 +1437,23 @@
     /* keep mini overlay and its close button accessible */
     body.app-fullscreen #miniChatOverlay { z-index: 55; }
   }
+
+  /* ── Button label color: yellow, leaving Record buttons untouched ──────── */
+  .media-btn,
+  .speech-top-btn,
+  .log-action-btn,
+  .leave-btn,
+  .mini-toggle-btn,
+  .tab-btn,
+  #speechSendBtn, #speechListenBtn, #speechAttachBtn, #speechLoadBtn,
+  #speechSaveBtn, #speechCopyBtn, #speechClearBtn, #speechOriginalBtn,
+  #speechTtsBtn, #cwSendBtn {
+    color: #ffe600;
+  }
+  .media-btn:hover, .speech-top-btn:hover, .log-action-btn:hover,
+  .tab-btn:hover { color: #ffe600; }
+  /* Record buttons keep their original (non-yellow) label color — already
+     styled separately above (#recBtn/#recBtn2 orange, #recChatBtn white-on-black) */
 </style>
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js"></script></head>
 <body>
@@ -1784,7 +1801,7 @@
           <button id="speechSaveBtn" onclick="speechSaveText()" title="Save input box text to file">SAVE</button>
           <button id="speechCopyBtn" onclick="speechCopyText()" title="Copy input box text to clipboard">COPY</button>
           <button id="speechClearBtn" onclick="speechClearText()" title="Clear input box">CLEAR</button>
-          <button id="cwSendBtn" onclick="cwBtnPress()" title="CW: press to send Morse · press again to clear text" data-cw-state="0" disabled>⚫ CW</button>
+          <button id="cwSendBtn" onclick="cwBtnPress()" title="Send text as Morse code" disabled>⚫ CW</button>
         </div>
         <div class="speech-btn-row" id="speechBtnRow2">
           <span class="sbr-label">Spoken Language:</span>
@@ -5014,7 +5031,7 @@ function attachDataConn(dc) {
     dataConn = null;
     const sb = document.getElementById('sendBtn'); if (sb) sb.disabled = true;
     const cw = document.getElementById('cwSendBtn'); if (cw) cw.disabled = true;
-    _cwSetState(0);
+    _cwSetOn(false);
     entry('Chat channel closed', 'sys');
     // Only reopen if the call is still live — re-check inside the timeout
     // so a concurrent onDrop() doesn't cause a ghost reconnect attempt
@@ -5052,53 +5069,36 @@ const _MORSE_MAP = {
 let _morseGen = 0;
 let _morseGains = []; // active gain nodes for the current transmission
 
-// CW button 3-state: 0=off, 1=armed (send sent, waiting), 2=clear (press clears text box)
-let _cwState = 0;
+// CW button: simple 2-state on/off. OFF is default; pressing sends the CW
+// buffer and lights the button ON for the duration of the transmission/
+// reception, then it automatically returns to OFF.
+let _cwOn = false;
 
-function _cwSetState(state) {
-  _cwState = state;
+function _cwSetOn(on) {
+  _cwOn = on;
   const btn = document.getElementById('cwSendBtn');
   if (!btn) return;
-  btn.classList.remove('cw-armed', 'cw-clear', 'cw-tx');
-  if (state === 0) {
-    btn.textContent = '⚫ CW';
-    btn.title = 'CW: press to send text as Morse code';
-  } else if (state === 1) {
-    btn.classList.add('cw-armed');
+  if (on) {
+    btn.classList.add('cw-on');
     btn.textContent = '● CW';
-    btn.title = 'CW sent — press again to clear text box';
-  } else if (state === 2) {
-    btn.classList.add('cw-clear');
-    btn.textContent = '✕ CW';
-    btn.title = 'Press to clear text input and reset CW';
+  } else {
+    btn.classList.remove('cw-on');
+    btn.textContent = '⚫ CW';
   }
 }
 
 function cwBtnPress() {
-  if (_cwState === 0) {
-    // State 0 → send CW, move to state 1
-    sendMorseSpeech();
-  } else {
-    // State 1 or 2 → clear text box, return to state 0
-    speechClearText();
-    _cwSetState(0);
-  }
+  sendMorseSpeech();
 }
 
-// Called by receiver when a CW message arrives — arm the button for the
-// duration of playback, then transition to state 2 (clear-text prompt)
+// Called by receiver when a CW message arrives — light the button for the
+// duration of playback, then return to OFF
 function cwRxArm(durationMs) {
   const btn = document.getElementById('cwSendBtn');
   if (!btn || btn.disabled) return;
-  btn.classList.add('cw-tx');
-  btn.textContent = '● CW';
-  btn.title = 'Receiving CW — press again to clear text';
+  _cwSetOn(true);
   clearTimeout(cwRxArm._t);
-  cwRxArm._t = setTimeout(() => {
-    const b = document.getElementById('cwSendBtn');
-    if (b) { b.classList.remove('cw-tx'); }
-    if (_cwState === 0) _cwSetState(2); // transition to clear-prompt state
-  }, Math.max(durationMs, 200));
+  cwRxArm._t = setTimeout(() => { _cwSetOn(false); }, Math.max(durationMs, 200));
 }
 
 function morseStopAll() {
@@ -5106,10 +5106,7 @@ function morseStopAll() {
   _morseGains.forEach(g => { try { g.gain.cancelScheduledValues(0); g.gain.setValueAtTime(0, 0); g.disconnect(); } catch(e) {} });
   _morseGains = [];
   clearTimeout(cwRxArm._t);
-  const btn = document.getElementById('cwSendBtn');
-  if (btn) { btn.classList.remove('cw-tx'); }
-  // If we were in a receive-armed state, return to state 0
-  if (_cwState === 2) _cwSetState(0);
+  _cwSetOn(false);
 }
 function playMorseAudio(text, wpm) {
   morseStopAll();                       // cancel any previous transmission
@@ -5152,7 +5149,10 @@ function sendMorseSpeech() {
   addBubble(text, true, null, true, null, null, true);
   // No local sidetone at the transmitting station
   entry('Sent CW @ ' + wpm + ' WPM: ' + text, 'sys');
-  _cwSetState(1); // move to armed state — press again to clear
+  _cwSetOn(true);
+  clearTimeout(cwRxArm._t);
+  const totalMs = (1200 / wpm) * text.length * 6 + 300; // rough estimate for TX-side lamp duration
+  cwRxArm._t = setTimeout(() => { _cwSetOn(false); }, Math.max(totalMs, 400));
 }
 
 // dcSend — always sends a UTF-8 string so raw-mode DataChannel works
