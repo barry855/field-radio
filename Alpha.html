@@ -4980,7 +4980,7 @@ function attachDataConn(dc) {
       // clearChat control intentionally not handled — CLEAR is local-only on each unit.
       if (f.__control === 'deleteMsg') { deleteBubble(f.ts, false); return; }
       if (f.__control === 'refresh') { entry('Remote refreshed — reloading…', 'sys'); peerRefreshing = true; try { sessionStorage.setItem('fieldRadioRefreshing', '1'); } catch(e) {} setTimeout(() => window.location.reload(), 400); return; }
-      if (f.__morse === true) { addBubble('CW: ' + f.text + ' (' + (f.wpm||20) + ' WPM)', false); playMorseAudio(f.text, f.wpm || 20); return; }
+      if (f.__morse === true) { addBubble(f.text, false); playMorseAudio(f.text, f.wpm || 20); return; }
       if (f.__file  === true)      { addMediaBubble(f.name, f.type, f.data, false); return; }
       if (f.__chunk === true)      { receiveChunk(f); return; }
       // Language-learning chat message: translate from sender's lang to our lang
@@ -5155,7 +5155,7 @@ function sendMorseSpeech() {
   if (!text) return;
   const wpm = 20;
   dcSend({ __morse: true, text: text, wpm: wpm });
-  addBubble('CW: ' + text + ' (' + wpm + ' WPM)', true);
+  addBubble(text, true);
   // No local sidetone at the transmitting station
   entry('Sent CW @ ' + wpm + ' WPM: ' + text, 'sys');
   _cwSetState(1); // move to armed state — press again to clear
