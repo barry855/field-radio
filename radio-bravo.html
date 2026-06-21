@@ -7113,6 +7113,18 @@ function _populateTtsVoices() {
 if (window.speechSynthesis) {
   speechSynthesis.onvoiceschanged = _populateTtsVoices;
   document.addEventListener('DOMContentLoaded', _populateTtsVoices);
+  // Chromium on Linux (e.g. Raspberry Pi) often never fires onvoiceschanged.
+  // Poll until voices appear, then stop.
+  (function _pollVoices(attempts) {
+    const vv = speechSynthesis.getVoices();
+    if (vv.length) {
+      entry('DIAG: TTS voices available (' + vv.length + '): ' + vv.slice(0,3).map(v=>v.name).join(', '), 'sys');
+      _populateTtsVoices(); return;
+    }
+    if (attempts > 0) { setTimeout(() => _pollVoices(attempts - 1), 250); return; }
+    // Exhausted — log what we see so we can diagnose
+    entry('DIAG: TTS getVoices() still empty after 10s — speechSynthesis.speaking=' + speechSynthesis.speaking + ' pending=' + speechSynthesis.pending, 'sys');
+  })(40); // up to 10s in 250ms increments
 }
 
 function toggleTts() {
