@@ -1497,7 +1497,7 @@
     <div class="logo" style="color:#00ff9f;text-shadow:0 0 20px rgba(0,255,159,0.5);">ALPHA</div>
     <div class="statusbar">
       <div class="status-item">
-        <div class="led" id="linkLed" style="display:none;"></div>
+        <div class="led" id="linkLed"></div>
         <span id="statusText"></span>
       </div>
       <div class="quality-item" id="qualityDisplay" style="display:none;">
@@ -2625,6 +2625,7 @@ function scrollToBottom(force) {
 
 
 function setStatus(state) {
+  entry('STATUS: ' + state, 'sys');
   linkLed.className = 'led';
   if (state === 'calling')        { linkLed.classList.add('on-yellow'); statusEl.textContent = 'CALLING…'; document.title = '📡 CALLING… — ALPHA — Field Radio v6'; }
   else if (state === 'reachable') { linkLed.classList.add('on-amber');  statusEl.textContent = 'WAITING';  document.title = '🟡 WAITING — ALPHA — Field Radio v6'; }
