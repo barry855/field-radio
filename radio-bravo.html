@@ -1822,7 +1822,7 @@
           <div id="speechEditMirror" aria-hidden="true"></div>
           <button id="speechFloatSend" onclick="sendSpeechToChat()" disabled title="Send">SEND</button>
         </div>
-        <div id="speechStatus" class="speech-status">IDLE</div>
+        <div id="speechStatus" class="speech-status" style="display:none">IDLE</div>
 
         <div class="speech-btn-row" id="speechBtnRow1">
           <span class="sbr-label">Chat:</span>
@@ -1853,7 +1853,7 @@
           <span class="sbr-label">Text To Speech:</span>
           <select id="ttsVoiceSelect" title="TTS voice for spoken output"></select>
           <button id="speechTtsBtn" onclick="toggleTts()" title="Toggle auto-speak for incoming messages">TTS Off</button>
-          <button id="speechListenBtn" onclick="toggleListening()">TALK</button>
+          <button id="speechListenBtn" onclick="toggleListening()" style="display:none">TALK</button>
         </div>
       </div>
       <div class="log-panel collapsed" id="logPanel">
@@ -7124,6 +7124,13 @@ if (window.speechSynthesis) {
     if (attempts > 0) { setTimeout(() => _pollVoices(attempts - 1), 250); return; }
     // Exhausted — log what we see so we can diagnose
     entry('DIAG: TTS getVoices() still empty after 10s — speechSynthesis.speaking=' + speechSynthesis.speaking + ' pending=' + speechSynthesis.pending, 'sys');
+    // No voices available (e.g. Chromium on Pi OS ARM) — hide TTS controls
+    // so the UI isn't cluttered with non-functional elements.
+    ['ttsBtn','ttsBtn2'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.style.display = 'none';
+    });
+    const row3 = document.getElementById('speechBtnRow3');
+    if (row3) row3.style.display = 'none';
   })(40); // up to 10s in 250ms increments
 }
 
