@@ -785,6 +785,7 @@
   }
   #speechPanel > .speech-status { display: none; }
   body.is-android #speechPanel > .speech-status { display: block; }
+  body.is-pi #speechBtnRow2 { display: none; }
   #speechPanel > .speech-status {
     font-size: 11px; letter-spacing: 1px; padding: 2px 4px;
     color: #ffffff !important; font-family: monospace; word-break: break-all;
@@ -4304,6 +4305,7 @@ function setSpeechStatus(txt) {
 
 document.addEventListener('DOMContentLoaded', () => {
   if (/android/i.test(navigator.userAgent)) document.body.classList.add('is-android');
+  if (/raspberry|armv7l|aarch64/i.test(navigator.userAgent)) document.body.classList.add('is-pi');
   switchTab('chat');
   // Restore controls dropdown states (default open)
   ['miniRowWrapLocal','miniRowWrapRemote'].forEach(id => {
