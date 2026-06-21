@@ -2032,7 +2032,14 @@ const ICE_SERVERS = [
   { urls: 'turn:openrelay.metered.ca:443',             username: 'openrelayproject', credential: 'openrelayproject' },
   { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
   { urls: 'turns:openrelay.metered.ca:443',            username: 'openrelayproject', credential: 'openrelayproject' },
-  { urls: 'turns:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
+  { urls: 'turns:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+  // Personal Metered.ca TURN credentials — independent fallback in case the
+  // shared Open Relay demo credentials above are rate-limited or rejected.
+  { urls: 'stun:stun.relay.metered.ca:80' },
+  { urls: 'turn:global.relay.metered.ca:80',                username: '554e937371f5aaea2f60db1f', credential: 'iz048pNn3xMiESzK' },
+  { urls: 'turn:global.relay.metered.ca:80?transport=tcp',  username: '554e937371f5aaea2f60db1f', credential: 'iz048pNn3xMiESzK' },
+  { urls: 'turn:global.relay.metered.ca:443',               username: '554e937371f5aaea2f60db1f', credential: 'iz048pNn3xMiESzK' },
+  { urls: 'turns:global.relay.metered.ca:443?transport=tcp', username: '554e937371f5aaea2f60db1f', credential: 'iz048pNn3xMiESzK' }
 ];
 
 let MY_ID, REMOTE_ID;
