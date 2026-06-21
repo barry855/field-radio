@@ -7300,6 +7300,12 @@ function _populateTtsVoices() {
 if (window.speechSynthesis) {
   speechSynthesis.onvoiceschanged = _populateTtsVoices;
   document.addEventListener('DOMContentLoaded', _populateTtsVoices);
+  // Chromium on Linux (e.g. Raspberry Pi) often never fires onvoiceschanged.
+  // Poll until voices appear, then stop.
+  (function _pollVoices(attempts) {
+    if (speechSynthesis.getVoices().length) { _populateTtsVoices(); return; }
+    if (attempts > 0) setTimeout(() => _pollVoices(attempts - 1), 250);
+  })(40); // up to 10s in 250ms increments
 }
 
 function toggleTts() {
