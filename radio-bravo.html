@@ -250,7 +250,7 @@
   .chat-input {
     flex: 1;
     background: transparent; border: 1px solid var(--border);
-    color: var(--text, #f1f5f9); padding: 7px 10px; border-radius: 4px;
+    color: #ffffff; padding: 7px 10px; border-radius: 4px;
     font-family: 'Share Tech Mono', monospace; font-size: 16px;
     outline: none; transition: border-color 0.2s;
     resize: none; overflow-y: hidden; line-height: 1.4;
@@ -694,8 +694,8 @@
     white-space: nowrap;
   }
   .leave-btn:hover { background: rgba(0,212,255,0.3); }
-  .speech-top-btn.leave-style { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.15); }
-  .speech-top-btn.leave-style:hover { background: rgba(0,212,255,0.3); }
+  .speech-top-btn.leave-style { border-color: #fff; color: #fff; background: #000; }
+  .speech-top-btn.leave-style:hover { background: #222; }
   .speech-top-btn.rec-chat-btn { border-color: #000; color: #fff; background: #000; }
   .speech-top-btn.rec-chat-btn:hover { border-color: #333; background: #222; color: #fff; }
   .speech-top-btn.rec-chat-btn.recording { border-color: #ff8c00; color: #ff8c00; background: rgba(255,140,0,0.15); animation: rec-blink 1.2s ease-in-out infinite; }
@@ -841,7 +841,7 @@
   #speechBtnRow2 #speechSendBtn { margin-left: auto; }
   #speechListenBtn { min-width: 56px; }
   .speech-btn-row-spacer { height: 6px; min-height: 6px; }
-  .sbr-label { font-size: 0.75rem; font-weight: bold; color: var(--accent, #00d4ff); letter-spacing: 0.05em; white-space: nowrap; padding: 0 4px; }
+  .sbr-label { font-size: 0.75rem; font-weight: bold; color: #ffffff; letter-spacing: 0.05em; white-space: nowrap; padding: 0 4px; }
   #speechLangSelect {
     background: var(--btn-bg); border: 1px solid var(--border);
     color: var(--text); font-family: 'Share Tech Mono', monospace;
@@ -888,10 +888,10 @@
   #speechClearBtn:hover  { background: var(--btn-hover); border-color: var(--danger, #cc2222); color: var(--danger, #cc2222); }
   #cwSendBtn:hover:not(:disabled) { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
   #cwSendBtn:disabled { opacity: 0.55; cursor: not-allowed; }
-  #cwSendBtn.cw-armed, #cwSendBtn.cw-clear, #cwSendBtn.cw-tx {
+  #cwSendBtn.cw-on {
     background: #000; border-color: #fff; color: #fff;
+    animation: cw-pulse 0.5s ease-in-out infinite alternate;
   }
-  #cwSendBtn.cw-tx { animation: cw-pulse 0.5s ease-in-out infinite alternate; }
   @keyframes cw-pulse { from { box-shadow: 0 0 4px rgba(255,255,255,0.25); } to { box-shadow: 0 0 14px rgba(255,255,255,0.6); } }
   /* drag-over highlight on speech panel */
   .speech-top-bar {
@@ -908,7 +908,9 @@
     transition: background 0.15s, border-color 0.15s, color 0.15s;
   }
   .speech-top-btn:hover { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
-  .speech-top-btn.active { border-color: var(--accent2, #00ffaa); color: var(--accent2); }
+  .speech-top-btn.active { background: #000; border-color: #000; color: #fff; }
+  #chatVideoViewBtn { background: #000; border-color: #000; color: #fff; }
+  #chatVideoViewBtn:hover { background: #222; border-color: #222; color: #fff; }
   .speech-top-btn:disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
   #speechPanel.drag-over { border-color: var(--accent2); background: rgba(0,255,159,0.04); }
   /* ── Speech panel file preview strip ─────────────────────── */
@@ -1336,7 +1338,7 @@
   }
   .gain-row .gain-val {
     min-width: 38px; text-align: right;
-    color: var(--accent); font-family: 'Orbitron', sans-serif;
+    color: #ffffff; font-family: 'Orbitron', sans-serif;
     font-size: 10px;
   }
 
@@ -1468,6 +1470,23 @@
     /* keep mini overlay and its close button accessible */
     body.app-fullscreen #miniChatOverlay { z-index: 55; }
   }
+
+  /* ── Button label color: yellow, leaving Record buttons untouched ──────── */
+  .media-btn,
+  .speech-top-btn,
+  .log-action-btn,
+  .leave-btn,
+  .mini-toggle-btn,
+  .tab-btn,
+  #speechSendBtn, #speechListenBtn, #speechAttachBtn, #speechLoadBtn,
+  #speechSaveBtn, #speechCopyBtn, #speechClearBtn, #speechOriginalBtn,
+  #speechTtsBtn, #cwSendBtn {
+    color: #ffe600;
+  }
+  .media-btn:hover, .speech-top-btn:hover, .log-action-btn:hover,
+  .tab-btn:hover { color: #ffe600; }
+  /* Record buttons keep their original (non-yellow) label color — already
+     styled separately above (#recBtn/#recBtn2 orange, #recChatBtn white-on-black) */
 </style>
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js"></script></head>
 <body>
@@ -1817,7 +1836,7 @@
           <button id="cwSendBtn" onclick="cwBtnPress()" title="CW: press to send Morse · press again to clear text" data-cw-state="0" disabled>⚫ CW</button>
         </div>
         <div class="speech-btn-row" id="speechBtnRow2">
-          <span class="sbr-label">Spoken Language:</span>
+          <span class="sbr-label">Your Spoken Language:</span>
           <select id="speechLangSelect" title="Speech recognition language" onchange="setSpeechLang(this.value)">
             <option value="en-US" title="Eng">English (US)</option>
             <option value="en-GB" title="Eng UK">English (UK)</option>
@@ -3234,7 +3253,11 @@ function addBubble(text, mine, ts, save = true, restoredStatus = null, orig = nu
   }
   const timeText = document.createTextNode(formatTs(now));
   time.appendChild(timeText);
-  if (!isCw) wrap.dataset.orig = orig || text;  // orig = pre-translation text for sender bubbles; CW bubbles never get a peekable original
+  // Only attach a peekable "original" when one was explicitly passed in and it
+  // genuinely differs from the displayed text — never derive this from a
+  // string-equality check at hover/copy time, which is fragile (innerText
+  // normalization, trailing whitespace, etc. can cause false positives).
+  if (!isCw && orig && orig !== text) wrap.dataset.orig = orig;
   // Copy (+) button
   const copyBtn = document.createElement('button');
   copyBtn.className = 'bubble-copy-btn';
@@ -5001,7 +5024,7 @@ function attachDataConn(dc) {
     dataConn = null;
     const sb = document.getElementById('sendBtn'); if (sb) sb.disabled = true;
     const cw = document.getElementById('cwSendBtn'); if (cw) cw.disabled = true;
-    _cwSetState(0);
+    _cwSetOn(false);
     entry('Chat channel closed', 'sys');
     // Only reopen if the call is still live — capture linked now and re-check
     // after the setTimeout so a concurrent onDrop() doesn't cause a ghost reconnect
@@ -5038,49 +5061,37 @@ const _MORSE_MAP = {
 };
 let _morseGen = 0;
 let _morseGains = [];
-// CW button 3-state: 0=off, 1=armed (send sent, waiting), 2=clear (press clears text box)
-let _cwState = 0;
 
-function _cwSetState(state) {
-  _cwState = state;
+// CW button: simple 2-state on/off. OFF is default; pressing sends the CW
+// buffer and lights the button ON for the duration of the transmission/
+// reception, then it automatically returns to OFF.
+let _cwOn = false;
+
+function _cwSetOn(on) {
+  _cwOn = on;
   const btn = document.getElementById('cwSendBtn');
   if (!btn) return;
-  btn.classList.remove('cw-armed', 'cw-clear', 'cw-tx');
-  if (state === 0) {
-    btn.textContent = '⚫ CW';
-    btn.title = 'CW: press to send text as Morse code';
-  } else if (state === 1) {
-    btn.classList.add('cw-armed');
+  if (on) {
+    btn.classList.add('cw-on');
     btn.textContent = '● CW';
-    btn.title = 'CW sent — press again to clear text box';
-  } else if (state === 2) {
-    btn.classList.add('cw-clear');
-    btn.textContent = '✕ CW';
-    btn.title = 'Press to clear text input and reset CW';
+  } else {
+    btn.classList.remove('cw-on');
+    btn.textContent = '⚫ CW';
   }
 }
 
 function cwBtnPress() {
-  if (_cwState === 0) {
-    sendMorseSpeech();
-  } else {
-    speechClearText();
-    _cwSetState(0);
-  }
+  sendMorseSpeech();
 }
 
+// Called by receiver when a CW message arrives — light the button for the
+// duration of playback, then return to OFF
 function cwRxArm(durationMs) {
   const btn = document.getElementById('cwSendBtn');
   if (!btn || btn.disabled) return;
-  btn.classList.add('cw-tx');
-  btn.textContent = '● CW';
-  btn.title = 'Receiving CW — press again to clear text';
+  _cwSetOn(true);
   clearTimeout(cwRxArm._t);
-  cwRxArm._t = setTimeout(() => {
-    const b = document.getElementById('cwSendBtn');
-    if (b) { b.classList.remove('cw-tx'); }
-    if (_cwState === 0) _cwSetState(2);
-  }, Math.max(durationMs, 200));
+  cwRxArm._t = setTimeout(() => { _cwSetOn(false); }, Math.max(durationMs, 200));
 }
 
 function morseStopAll() {
@@ -5088,9 +5099,7 @@ function morseStopAll() {
   _morseGains.forEach(g => { try { g.gain.cancelScheduledValues(0); g.gain.setValueAtTime(0, 0); g.disconnect(); } catch(e) {} });
   _morseGains = [];
   clearTimeout(cwRxArm._t);
-  const btn = document.getElementById('cwSendBtn');
-  if (btn) { btn.classList.remove('cw-tx'); }
-  if (_cwState === 2) _cwSetState(0);
+  _cwSetOn(false);
 }
 function playMorseAudio(text, wpm) {
   morseStopAll();
@@ -5133,7 +5142,10 @@ function sendMorseSpeech() {
   addBubble(text, true, null, true, null, null, true);
   // No local sidetone at the transmitting station
   entry('Sent CW @ ' + wpm + ' WPM: ' + text, 'sys');
-  _cwSetState(1);
+  _cwSetOn(true);
+  clearTimeout(cwRxArm._t);
+  const totalMs = (1200 / wpm) * text.length * 6 + 300;
+  cwRxArm._t = setTimeout(() => { _cwSetOn(false); }, Math.max(totalMs, 400));
 }
 
 function dcSend(payload) {
