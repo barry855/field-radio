@@ -5427,8 +5427,11 @@ function attachCall(c) {
         clearTimeout(c._iceRelayTimer);
       }
       if (pc.iceConnectionState === 'failed') {
-        entry('DIAG: ICE FAILED — attempting ICE restart', 'err');
-        try { pc.restartIce(); } catch(e2) { entry('ICE restart unavailable: ' + e2.message, 'sys'); }
+        entry('DIAG: ICE FAILED — forcing TURN relay-only and restarting', 'err');
+        try {
+          pc.setConfiguration({ iceServers: ICE_SERVERS, iceTransportPolicy: 'relay', iceCandidatePoolSize: 10 });
+          pc.restartIce();
+        } catch(e2) { entry('ICE restart unavailable: ' + e2.message, 'sys'); }
       }
       if (pc.iceConnectionState === 'disconnected' && linked && call === c) {
         entry('DIAG: ICE disconnected — starting drop watchdog', 'sys');
