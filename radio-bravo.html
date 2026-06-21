@@ -1528,7 +1528,7 @@
     <div class="logo" style="color:#00d4ff;text-shadow:0 0 20px rgba(0,212,255,0.5);">BRAVO</div>
     <div class="statusbar">
       <div class="status-item">
-        <div class="led" id="linkLed" style="display:none;"></div>
+        <div class="led" id="linkLed"></div>
         <span id="statusText"></span>
       </div>
       <div class="quality-item" id="qualityDisplay" style="display:none;">
@@ -2640,6 +2640,7 @@ function scrollToBottom(force) {
 
 
 function setStatus(state) {
+  entry('STATUS: ' + state, 'sys');
   linkLed.className = 'led';
   if (state === 'standby')        { linkLed.classList.add('on-cyan');   statusEl.textContent = 'STANDBY'; document.title = '🔵 STANDBY — BRAVO — Field Radio v6'; }
   else if (state === 'reachable') { linkLed.classList.add('on-amber');  statusEl.textContent = 'WAITING';  document.title = '🟡 WAITING — BRAVO — Field Radio v6'; }
