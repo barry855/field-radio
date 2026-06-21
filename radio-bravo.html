@@ -1504,6 +1504,9 @@
       <label class="session-check-item">
         <input type="checkbox" id="loginDisableAudio" onchange="try{localStorage.setItem('bravo_disable_audio',this.checked?'1':'0')}catch(e){}"> Disable Mike
       </label>
+      <label class="session-check-item">
+        <input type="checkbox" id="loginPiMode" onchange="setPiMode(this.checked)"> Pi Mode (compact)
+      </label>
     </div>
     <button class="session-go" onclick="startSession()">CONNECT</button>
   </div>
@@ -1836,7 +1839,7 @@
           <button id="speechClearBtn" onclick="speechClearText()" title="Clear input box">CLEAR</button>
           <button id="cwSendBtn" onclick="cwBtnPress()" title="CW: press to send Morse · press again to clear text" data-cw-state="0" disabled>⚫ CW</button>
         </div>
-        <div class="speech-btn-row" id="speechBtnRow2" style="display:none">
+        <div class="speech-btn-row" id="speechBtnRow2">
           <span class="sbr-label">Your Spoken Language:</span>
           <select id="speechLangSelect" title="Speech recognition language" onchange="setSpeechLang(this.value)">
             <option value="en-US" title="Eng">English (US)</option>
@@ -2389,6 +2392,11 @@ document.addEventListener('click', () => {
   document.getElementById('translateDropdownWrap').classList.remove('open');
 });
 
+function setPiMode(on) {
+  try { localStorage.setItem('bravo_pi_mode', on ? '1' : '0'); } catch(e) {}
+  document.body.classList.toggle('is-pi', on);
+}
+
 function prefillLogin() {
   try {
     const disVid = localStorage.getItem('bravo_disable_video') === '1';
@@ -2396,6 +2404,7 @@ function prefillLogin() {
     const last   = localStorage.getItem('bravo_last_code');
     document.getElementById('loginDisableVideo').checked = disVid;
     document.getElementById('loginDisableAudio').checked = disAud;
+    document.getElementById('loginPiMode').checked = localStorage.getItem('bravo_pi_mode') === '1';
     if (last) document.getElementById('sessionCode').value = last;
     setTimeout(() => entry('PREFILL: code=' + last + ' vid=' + disVid + ' aud=' + disAud + ' ls=' + (typeof localStorage !== 'undefined' ? 'ok' : 'blocked'), 'sys'), 500);
     // Start presence polling immediately if code was pre-filled
@@ -4305,7 +4314,7 @@ function setSpeechStatus(txt) {
 
 document.addEventListener('DOMContentLoaded', () => {
   if (/android/i.test(navigator.userAgent)) document.body.classList.add('is-android');
-  if (/raspberry|armv7l|aarch64/i.test(navigator.userAgent)) document.body.classList.add('is-pi');
+  if (localStorage.getItem('bravo_pi_mode') === '1') document.body.classList.add('is-pi');
   entry('UA: ' + navigator.userAgent, 'sys');
   switchTab('chat');
   // Restore controls dropdown states (default open)
