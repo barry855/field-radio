@@ -1792,7 +1792,7 @@
         <div class="speech-top-bar" style="display:none"></div>
         <div class="file-preview-strip" id="speechFilePreviewStrip"></div>
         <div id="speechEditWrap">
-          <textarea id="speechEditBox" placeholder="Tap Talk… or type here." spellcheck="true"></textarea>
+          <textarea id="speechEditBox" placeholder="Tap Talk or Type and Edit Text" spellcheck="true"></textarea>
           <div id="speechEditMirror" aria-hidden="true"></div>
           <button id="speechFloatSend" onclick="sendSpeechToChat()" disabled title="Send">SEND</button>
         </div>
@@ -2373,6 +2373,15 @@ document.addEventListener('click', () => {
 function setPiMode(on) {
   try { localStorage.setItem('alpha_pi_mode', on ? '1' : '0'); } catch(e) {}
   document.body.classList.toggle('is-pi', on);
+  updateSpeechPlaceholder();
+}
+
+function updateSpeechPlaceholder() {
+  const box = document.getElementById('speechEditBox');
+  if (!box) return;
+  box.placeholder = document.body.classList.contains('is-pi')
+    ? 'Type and Edit Text'
+    : 'Tap Talk or Type and Edit Text';
 }
 
 function prefillLogin() {
@@ -4318,6 +4327,7 @@ function setSpeechStatus(txt) {
 document.addEventListener('DOMContentLoaded', () => {
   if (/android/i.test(navigator.userAgent)) document.body.classList.add('is-android');
   if (localStorage.getItem('alpha_pi_mode') === '1') document.body.classList.add('is-pi');
+  updateSpeechPlaceholder();
   entry('UA: ' + navigator.userAgent, 'sys');
   switchTab('chat');
   // Restore controls dropdown states (default open)
