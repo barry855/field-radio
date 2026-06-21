@@ -5457,6 +5457,28 @@ function attachCall(c) {
         clearTimeout(c._connFailDropTimer);
         c._connFailRestartPending = false;
         entry('Connection recovered after ICE restart', 'ok');
+        // After ICE restart the PeerJS 'stream' event does not re-fire, so
+        // remoteAudio.srcObject may still be null. Re-build it from the
+        // RTCPeerConnection's existing receivers so audio resumes immediately.
+        const _ra = document.getElementById('remoteAudio');
+        if (_ra && !_ra.srcObject) {
+          try {
+            const _receivers = pc.getReceivers ? pc.getReceivers() : [];
+            const _tracks = _receivers.map(r => r.track).filter(Boolean);
+            if (_tracks.length) {
+              const _rs = new MediaStream(_tracks);
+              _ra.srcObject = _rs;
+              const _rv = document.getElementById('remoteVideo');
+              if (_rv && !_rv.srcObject) _rv.srcObject = _rs;
+              const _cu = document.getElementById('chatUnderlay');
+              if (_cu && !_cu.srcObject) { _cu.srcObject = _rs; _cu.classList.remove('no-stream'); }
+              entry('DIAG: ICE restart recovery — re-attached ' + _tracks.length + ' track(s) from receivers', 'sys');
+              scheduleRemoteAudioPlay();
+            } else {
+              entry('DIAG: ICE restart recovery — no receiver tracks yet', 'sys');
+            }
+          } catch(e2) { entry('DIAG: ICE restart stream recovery error: ' + e2.message, 'err'); }
+        }
       }
     });
     pc.addEventListener('signalingstatechange', () => {
