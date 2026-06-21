@@ -4920,9 +4920,9 @@ function startPeer() {
     if (e.type === 'unavailable-id') {
       // Stale session holds the ID — wait for PeerJS server to release it, then retry
       // with the SAME ID so REMOTE_ID on the other side stays valid. Do NOT change MY_ID.
-      // Exponential backoff: 10s, 20s, 40s, capped at 60s — hammering resets the server timer.
+      // Single retry (10s), then fall back to a suffixed ID — keeps recovery fast.
       _unavailIdRetries = (_unavailIdRetries || 0) + 1;
-      if (_unavailIdRetries > 3) {
+      if (_unavailIdRetries > 1) {
         // Ghost registration isn't clearing — fall back to a suffixed ID
         // (mirrors BRAVO). presenceWrite publishes the new peerId so BRAVO
         // can pick it up via Firebase and redial.
