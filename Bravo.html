@@ -2032,7 +2032,14 @@ const ICE_SERVERS = [
   { urls: 'turn:openrelay.metered.ca:443',             username: 'openrelayproject', credential: 'openrelayproject' },
   { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
   { urls: 'turns:openrelay.metered.ca:443',            username: 'openrelayproject', credential: 'openrelayproject' },
-  { urls: 'turns:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
+  { urls: 'turns:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+  // Personal Metered.ca TURN credentials — independent fallback in case the
+  // shared Open Relay demo credentials above are rate-limited or rejected.
+  { urls: 'stun:stun.relay.metered.ca:80' },
+  { urls: 'turn:global.relay.metered.ca:80',                username: '554e937371f5aaea2f60db1f', credential: 'iz048pNn3xMiESzK' },
+  { urls: 'turn:global.relay.metered.ca:80?transport=tcp',  username: '554e937371f5aaea2f60db1f', credential: 'iz048pNn3xMiESzK' },
+  { urls: 'turn:global.relay.metered.ca:443',               username: '554e937371f5aaea2f60db1f', credential: 'iz048pNn3xMiESzK' },
+  { urls: 'turns:global.relay.metered.ca:443?transport=tcp', username: '554e937371f5aaea2f60db1f', credential: 'iz048pNn3xMiESzK' }
 ];
 
 let MY_ID, REMOTE_ID;
@@ -5408,8 +5415,11 @@ function attachCall(c) {
         clearTimeout(c._iceRelayTimer);
       }
       if (pc.iceConnectionState === 'failed') {
-        entry('DIAG: ICE FAILED — attempting ICE restart', 'err');
-        try { pc.restartIce(); } catch(e2) { entry('ICE restart unavailable: ' + e2.message, 'sys'); }
+        entry('DIAG: ICE FAILED — forcing TURN relay-only and restarting', 'err');
+        try {
+          pc.setConfiguration({ iceServers: ICE_SERVERS, iceTransportPolicy: 'relay', iceCandidatePoolSize: 10 });
+          pc.restartIce();
+        } catch(e2) { entry('ICE restart unavailable: ' + e2.message, 'sys'); }
       }
       if (pc.iceConnectionState === 'disconnected' && linked && call === c) {
         entry('DIAG: ICE disconnected — starting drop watchdog', 'sys');
