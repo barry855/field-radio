@@ -5457,6 +5457,28 @@ function attachCall(c) {
         clearTimeout(c._connFailDropTimer);
         c._connFailRestartPending = false;
         entry('Connection recovered after ICE restart', 'ok');
+        // After ICE restart the PeerJS 'stream' event does not re-fire, so
+        // remoteAudio.srcObject may still be null. Re-build it from the
+        // RTCPeerConnection's existing receivers so audio resumes immediately.
+        const _ra = document.getElementById('remoteAudio');
+        if (_ra && !_ra.srcObject) {
+          try {
+            const _receivers = pc.getReceivers ? pc.getReceivers() : [];
+            const _tracks = _receivers.map(r => r.track).filter(Boolean);
+            if (_tracks.length) {
+              const _rs = new MediaStream(_tracks);
+              _ra.srcObject = _rs;
+              const _rv = document.getElementById('remoteVideo');
+              if (_rv && !_rv.srcObject) _rv.srcObject = _rs;
+              const _cu = document.getElementById('chatUnderlay');
+              if (_cu && !_cu.srcObject) { _cu.srcObject = _rs; _cu.classList.remove('no-stream'); }
+              entry('DIAG: ICE restart recovery — re-attached ' + _tracks.length + ' track(s) from receivers', 'sys');
+              scheduleRemoteAudioPlay();
+            } else {
+              entry('DIAG: ICE restart recovery — no receiver tracks yet', 'sys');
+            }
+          } catch(e2) { entry('DIAG: ICE restart stream recovery error: ' + e2.message, 'err'); }
+        }
       }
     });
     pc.addEventListener('signalingstatechange', () => {
@@ -5473,10 +5495,15 @@ function attachCall(c) {
           return;
         }
       }
-      // Always attempt audio play on any incoming track — Android often delivers
-      // tracks without ev.streams populated, so we can't gate on that.
-      scheduleRemoteAudioPlay();
-      if (!ev.streams || !ev.streams[0]) return;
+      if (!ev.streams || !ev.streams[0]) {
+        // Android: track arrived without streams — attempt play with whatever
+        // srcObject is already set (the ICE restart receiver-recovery path may
+        // have already set it). Don't call scheduleRemoteAudioPlay if srcObject
+        // is null — it will just log noise and exit.
+        const _ra0 = document.getElementById('remoteAudio');
+        if (_ra0 && _ra0.srcObject) scheduleRemoteAudioPlay();
+        return;
+      }
       const stream = ev.streams[0];
       const _ra = document.getElementById('remoteAudio');
       if (_ra.srcObject !== stream) _ra.srcObject = stream;
@@ -7086,6 +7113,12 @@ function _populateTtsVoices() {
 if (window.speechSynthesis) {
   speechSynthesis.onvoiceschanged = _populateTtsVoices;
   document.addEventListener('DOMContentLoaded', _populateTtsVoices);
+  // Chromium on Linux (e.g. Raspberry Pi) often never fires onvoiceschanged.
+  // Poll until voices appear, then stop.
+  (function _pollVoices(attempts) {
+    if (speechSynthesis.getVoices().length) { _populateTtsVoices(); return; }
+    if (attempts > 0) setTimeout(() => _pollVoices(attempts - 1), 250);
+  })(40); // up to 10s in 250ms increments
 }
 
 function toggleTts() {
