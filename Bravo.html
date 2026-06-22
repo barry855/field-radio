@@ -106,6 +106,7 @@
   .led.on-cyan   { background: var(--accent);  box-shadow: 0 0 6px var(--accent);  }
   .led.on-yellow { background: var(--warn);    box-shadow: 0 0 6px var(--warn);    animation: blink 0.8s step-end infinite; }
   .led.on-amber  { background: #ffaa00;       box-shadow: 0 0 8px #ffaa00; }  /* reachable — solid amber */
+  .led.on-blue   { background: #4499ff;       box-shadow: 0 0 8px #4499ff; animation: blink 0.5s step-end infinite; }  /* connecting */
   @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.35} }
 
   .chat-panel {
@@ -785,6 +786,9 @@
   }
   #speechPanel > .speech-status { display: none; }
   body.is-android #speechPanel > .speech-status { display: block; }
+  body.is-pi #speechBtnRow2 { display: none; }
+  body.is-pi #speechListenBtn { display: none; }
+  body.is-pi #speechStatus { display: none; }
   #speechPanel > .speech-status {
     font-size: 11px; letter-spacing: 1px; padding: 2px 4px;
     color: #ffffff !important; font-family: monospace; word-break: break-all;
@@ -1503,6 +1507,9 @@
       <label class="session-check-item">
         <input type="checkbox" id="loginDisableAudio" onchange="try{localStorage.setItem('bravo_disable_audio',this.checked?'1':'0')}catch(e){}"> Disable Mike
       </label>
+      <label class="session-check-item">
+        <input type="checkbox" id="loginPiMode" onchange="setPiMode(this.checked)"> Pi Mode (compact)
+      </label>
     </div>
     <button class="session-go" onclick="startSession()">CONNECT</button>
   </div>
@@ -1524,7 +1531,7 @@
     <div class="logo" style="color:#00d4ff;text-shadow:0 0 20px rgba(0,212,255,0.5);">BRAVO</div>
     <div class="statusbar">
       <div class="status-item">
-        <div class="led" id="linkLed" style="display:none;"></div>
+        <div class="led" id="linkLed"></div>
         <span id="statusText"></span>
       </div>
       <div class="quality-item" id="qualityDisplay" style="display:none;">
@@ -1818,7 +1825,7 @@
         <div class="speech-top-bar" style="display:none"></div>
         <div class="file-preview-strip" id="speechFilePreviewStrip"></div>
         <div id="speechEditWrap">
-          <textarea id="speechEditBox" placeholder="Tap Talk… or type here." spellcheck="true"></textarea>
+          <textarea id="speechEditBox" placeholder="Tap Talk or Type and Edit Text" spellcheck="true"></textarea>
           <div id="speechEditMirror" aria-hidden="true"></div>
           <button id="speechFloatSend" onclick="sendSpeechToChat()" disabled title="Send">SEND</button>
         </div>
@@ -2177,11 +2184,50 @@ function loginPresenceSetState(state, text) {
   txt.textContent = text;
 }
 
+// ── Presence encryption (AES-GCM, key derived from session code) ─────────
+let _presenceCryptoKey = null;
+let _presenceCode      = null;
+
+async function _getPresenceKey(code) {
+  if (_presenceCryptoKey && _presenceCode === code) return _presenceCryptoKey;
+  const enc  = new TextEncoder();
+  const raw  = await crypto.subtle.importKey('raw', enc.encode(code), 'PBKDF2', false, ['deriveKey']);
+  _presenceCryptoKey = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: enc.encode('fieldradio-presence'), iterations: 100000, hash: 'SHA-256' },
+    raw, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']
+  );
+  _presenceCode = code;
+  return _presenceCryptoKey;
+}
+
+async function _encryptPresence(code, obj) {
+  const key = await _getPresenceKey(code);
+  const iv  = crypto.getRandomValues(new Uint8Array(12));
+  const ct  = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key,
+    new TextEncoder().encode(JSON.stringify(obj)));
+  return {
+    iv: btoa(String.fromCharCode(...iv)),
+    ct: btoa(String.fromCharCode(...new Uint8Array(ct)))
+  };
+}
+
+async function _decryptPresence(code, env) {
+  try {
+    const key = await _getPresenceKey(code);
+    const iv  = Uint8Array.from(atob(env.iv), c => c.charCodeAt(0));
+    const ct  = Uint8Array.from(atob(env.ct), c => c.charCodeAt(0));
+    const pt  = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ct);
+    return JSON.parse(new TextDecoder().decode(pt));
+  } catch(e) { return null; }  // wrong code or tampered
+}
+
 async function presenceWrite(myKey) {
   try {
+    const code = presenceCode || myKey.split('-').slice(1).join('-');
+    const env  = await _encryptPresence(code, { ts: Date.now(), peerId: MY_ID });
     await fetch(FB_URL + '/presence/' + myKey + '.json', {
       method: 'PUT',
-      body: JSON.stringify({ ts: Date.now(), peerId: MY_ID })
+      body: JSON.stringify(env)
     });
   } catch(e) {}
 }
@@ -2189,7 +2235,9 @@ async function presenceWrite(myKey) {
 async function presencePoll(partnerKey, myKey) {
   try {
     const res = await fetch(FB_URL + '/presence/' + partnerKey + '.json');
-    const data = await res.json();
+    const env = await res.json();
+    const code = presenceCode || myKey.split('-').slice(1).join('-');
+    const data = env ? await _decryptPresence(code, env) : null;
     if (data && data.ts && (Date.now() - data.ts) < PRESENCE_STALE_MS) {
       loginPresenceSetState('reachable', 'ALPHA REACHABLE');
     } else {
@@ -2388,6 +2436,20 @@ document.addEventListener('click', () => {
   document.getElementById('translateDropdownWrap').classList.remove('open');
 });
 
+function setPiMode(on) {
+  try { localStorage.setItem('bravo_pi_mode', on ? '1' : '0'); } catch(e) {}
+  document.body.classList.toggle('is-pi', on);
+  updateSpeechPlaceholder();
+}
+
+function updateSpeechPlaceholder() {
+  const box = document.getElementById('speechEditBox');
+  if (!box) return;
+  box.placeholder = document.body.classList.contains('is-pi')
+    ? 'Type and Edit Text'
+    : 'Tap Talk or Type and Edit Text';
+}
+
 function prefillLogin() {
   try {
     const disVid = localStorage.getItem('bravo_disable_video') === '1';
@@ -2395,6 +2457,7 @@ function prefillLogin() {
     const last   = localStorage.getItem('bravo_last_code');
     document.getElementById('loginDisableVideo').checked = disVid;
     document.getElementById('loginDisableAudio').checked = disAud;
+    document.getElementById('loginPiMode').checked = localStorage.getItem('bravo_pi_mode') === '1';
     if (last) document.getElementById('sessionCode').value = last;
     setTimeout(() => entry('PREFILL: code=' + last + ' vid=' + disVid + ' aud=' + disAud + ' ls=' + (typeof localStorage !== 'undefined' ? 'ok' : 'blocked'), 'sys'), 500);
     // Start presence polling immediately if code was pre-filled
@@ -2621,9 +2684,12 @@ function scrollToBottom(force) {
 
 
 function setStatus(state) {
+  entry('STATUS: ' + state, 'sys');
   linkLed.className = 'led';
   if (state === 'standby')        { linkLed.classList.add('on-cyan');   statusEl.textContent = 'STANDBY'; document.title = '🔵 STANDBY — BRAVO — Field Radio v6'; }
+  else if (state === 'connecting')  { linkLed.classList.add('on-blue');   statusEl.textContent = 'CONNECTING…'; document.title = '🔵 CONNECTING… — BRAVO — Field Radio v6'; }
   else if (state === 'reachable') { linkLed.classList.add('on-amber');  statusEl.textContent = 'WAITING';  document.title = '🟡 WAITING — BRAVO — Field Radio v6'; }
+  else if (state === 'calling')   { linkLed.classList.add('on-amber');  statusEl.textContent = 'WAITING';  document.title = '🟡 WAITING — BRAVO — Field Radio v6'; }
   else if (state === 'linked')    { linkLed.classList.add('on-green');  statusEl.textContent = 'LIVE';   document.title = '🟢 LIVE — BRAVO — Field Radio v6'; }
   else                            { statusEl.textContent = ''; document.title = 'BRAVO — Field Radio v6'; }
 }
@@ -2855,7 +2921,34 @@ function linkify(text) {
 }
 
 // ── Chat history (localStorage) ──────────────────────────────
+// ── Chat history — timestamped sessions (keep last 5) ──────────────────
+const HISTORY_SLOT_MAX = 5;
+// Current-session key: written live as messages arrive
 const HISTORY_KEY = () => 'bravo_chat_' + (MY_ID ? MY_ID.replace(/-[0-9a-f]{4}$/, '') : 'unknown');
+// Session-slot key for persisting completed sessions
+function historySlotKey(code, ts) { return 'bravo_sess_' + (code||'unknown') + '_' + ts; }
+function historyIndexKey(code)     { return 'bravo_sess_idx_' + (code||'unknown'); }
+
+function saveSessionSnapshot() {
+  try {
+    const code = presenceCode || 'unknown';
+    const key  = HISTORY_KEY();
+    const msgs = JSON.parse(localStorage.getItem(key) || '[]');
+    if (msgs.length === 0) return;
+    const ts   = Date.now();
+    const slot = historySlotKey(code, ts);
+    localStorage.setItem(slot, JSON.stringify({ ts, msgs }));
+    // Update index
+    let idx = JSON.parse(localStorage.getItem(historyIndexKey(code)) || '[]');
+    idx.push(ts);
+    // Prune oldest beyond HISTORY_SLOT_MAX
+    while (idx.length > HISTORY_SLOT_MAX) {
+      const old = idx.shift();
+      try { localStorage.removeItem(historySlotKey(code, old)); } catch(e) {}
+    }
+    localStorage.setItem(historyIndexKey(code), JSON.stringify(idx));
+  } catch(e) {}
+}
 const HISTORY_MAX = 200;
 
 function saveSpeechDraft() {
@@ -2928,24 +3021,43 @@ function loadHistory() {
 
 function restoreChat() {
   try {
-    const key = HISTORY_KEY();
-    const history = JSON.parse(localStorage.getItem(key) || '[]');
-    if (history.length === 0) { entry('No previous chat history to restore.', 'sys'); return; }
+    const code = presenceCode || 'unknown';
+    const idx  = JSON.parse(localStorage.getItem(historyIndexKey(code)) || '[]');
+    if (idx.length === 0) { entry('No previous session history for this code.', 'sys'); return; }
+    if (idx.length === 1) {
+      _doRestoreSlot(code, idx[0]);
+    } else {
+      // Multiple sessions — let user pick
+      const fmt = ts => new Date(ts).toLocaleString();
+      const choice = window.prompt(
+        'Select session to restore (enter number):\n' +
+        idx.map((ts, i) => (i + 1) + '. ' + fmt(ts)).join('\n')
+      );
+      const n = parseInt(choice, 10);
+      if (!n || n < 1 || n > idx.length) { entry('Restore cancelled.', 'sys'); return; }
+      _doRestoreSlot(code, idx[n - 1]);
+    }
+  } catch(e) { entry('Restore failed: ' + e.message, 'err'); }
+}
+
+function _doRestoreSlot(code, ts) {
+  try {
+    const slot = JSON.parse(localStorage.getItem(historySlotKey(code, ts)) || 'null');
+    if (!slot || !slot.msgs || slot.msgs.length === 0) { entry('Session slot empty.', 'sys'); return; }
     const chatEl = document.getElementById('chat');
     if (!chatEl) return;
-    chatEl.innerHTML = '';
     const divider = document.createElement('div');
     divider.style.cssText = 'text-align:center;font-size:9px;color:#888;letter-spacing:2px;padding:4px 0;';
-    divider.textContent = '— RESTORED SESSION —';
+    divider.textContent = '— RESTORED: ' + new Date(ts).toLocaleString() + ' —';
     chatEl.appendChild(divider);
-    history.forEach(m => addBubble(m.text, m.mine, m.ts, false, m.status || (m.mine ? 'seen' : null)));
+    slot.msgs.forEach(m => addBubble(m.text, m.mine, m.ts, false, m.status || (m.mine ? 'seen' : null)));
     const divider2 = document.createElement('div');
     divider2.style.cssText = 'text-align:center;font-size:9px;color:#888;letter-spacing:2px;padding:4px 0;';
     divider2.textContent = '— NOW —';
     chatEl.appendChild(divider2);
     scrollToBottom();
-    entry('Chat history restored (' + history.length + ' message(s)).', 'ok');
-  } catch(e) { entry('Restore failed: ' + e.message, 'err'); }
+    entry('Restored ' + slot.msgs.length + ' message(s) from ' + new Date(ts).toLocaleString(), 'ok');
+  } catch(e) { entry('Restore slot failed: ' + e.message, 'err'); }
 }
 
 function clearHistory() {
@@ -3878,73 +3990,289 @@ function _positionFloatSend() {
 // Punctuation/symbol vocabulary follows the common Windows Speech
 // Recognition / Voice Access dictation command set.
 
-const VOICE_PUNCT_MAP = [
-  // Sentence-ending / clause punctuation
-  [/\bfull stop\b/gi,         '.'],
-  [/\bstop\b/gi,              '.'],
-  [/\bperiod\b/gi,            '.'],
-  [/\bpoint\b/gi,             '.'],
-  [/\bdot\b/gi,               '.'],
-  [/\bcomma\b/gi,             ','],
-  [/\bquestion[ -]mark\b/gi,     '?'],
-  [/\bkarma\b/gi,             '?'],
-  [/\bexclamation[ -](point|mark)\b/gi, '!'],
-  [/\bexclamation\b/gi,       '!'],
-  [/\bexplanation[ -](point|mark)\b/gi, '!'],
-  [/\bcolon\b/gi,             ':'],
-  [/\bsemicolon\b/gi,         ';'],
-  // Quotes, brackets, dashes
-  [/\bopen quote(s)?\b/gi,    '"'],
-  [/\bclose quote(s)?\b/gi,   '"'],
-  [/\bquotation mark(s)?\b/gi,'"'],
-  [/\bquote(s)?\b/gi,         '"'],
-  [/\bapostrophe\b/gi,        "'"],
-  [/\bopen paren(thes[ie]s)?\b/gi,  '('],
-  [/\bopen parent\b/gi,             '('],
-  [/\bopen pairing(s)?\b/gi,        '('],
-  [/\bclose paren(thes[ie]s)?\b/gi, ')'],
-  [/\bclose pattern\b/gi,           ')'],
-  [/\bclose pairing(s)?\b/gi,       ')'],
-  [/\bparen(thes[ie]s)?\b/gi, ''],
-  [/\bopen bracket\b/gi,      '['],
-  [/\bclose bracket\b/gi,     ']'],
-  [/\bopen brace\b/gi,        '{'],
-  [/\bclose brace\b/gi,       '}'],
-  [/\bclothes brace\b/gi,     '}'],
-  [/\bback ?space\b/gi,       '\x08'],
-  [/\bhyphen\b/gi,            '-'],
-  [/\bdash\b/gi,              '-'],
-  [/\bunderscore\b/gi,        '_'],
-  [/\bellipsis\b/gi,          '...'],
-  // Math / symbols
-  [/\bplus sign\b/gi,         '+'],
-  [/\bolympus\b/gi,           '+'],
-  [/\bminus sign\b/gi,        '-'],
-  [/\bequals sign\b/gi,       '='],
-  [/\bequal sign\b/gi,        '='],
-  [/\bgreater than sine\b/gi, '>'],
-  [/\bless than sine\b/gi,    '<'],
-  [/\bpercent( sign)?\b/gi,   '%'],
-  [/\bampersand\b/gi,         '&'],
-  [/\basterisk\b/gi,          '*'],
-  [/\bat sign\b/gi,           '@'],
-  [/\bhash(tag)?\b/gi,        '#'],
-  [/\bpound sign\b/gi,        '#'],
-  [/\bdollar sign\b/gi,       '$'],
-  [/\bcaret\b/gi,             '^'],
-  [/\btilde\b/gi,             '~'],
-  [/\bbackslash\b/gi,         '\\'],
-  [/\bforward slash\b/gi,     '/'],
-  [/\bslash\b/gi,             '/'],
-  [/\bvertical bar\b/gi,      '|'],
-  [/\bpipe\b/gi,              '|'],
-  [/\bless than( sign)?\b/gi, '<'],
-  [/\bgreater than( sign)?\b/gi, '>'],
-  // Layout commands
-  [/\bnew paragraph\b/gi,     '\n\n'],
-  [/\bnew line\b/gi,          '\n'],
-  [/\btab key\b/gi,           '\t'],
-];
+// ── Voice command maps (per language) ────────────────────────────────────
+// Each entry: [regex, replacement].  The active map is selected by
+// getVoicePunctMap() based on the current speechLangSelect value.
+
+const VOICE_PUNCT_MAPS = {
+
+  // ── English (shared by en-US and en-GB) ──────────────────────────────
+  'en': [
+    [/\bfull stop\b/gi,         '.'],
+    [/\bstop\b/gi,              '.'],
+    [/\bperiod\b/gi,            '.'],
+    [/\bpoint\b/gi,             '.'],
+    [/\bdot\b/gi,               '.'],
+    [/\bcomma\b/gi,             ','],
+    [/\bquestion[ -]mark\b/gi,     '?'],
+    [/\bkarma\b/gi,             '?'],
+    [/\bexclamation[ -](point|mark)\b/gi, '!'],
+    [/\bexclamation\b/gi,       '!'],
+    [/\bexplanation[ -](point|mark)\b/gi, '!'],
+    [/\bcolon\b/gi,             ':'],
+    [/\bsemicolon\b/gi,         ';'],
+    [/\bopen quote(s)?\b/gi,    '"'],
+    [/\bclose quote(s)?\b/gi,   '"'],
+    [/\bquotation mark(s)?\b/gi,'"'],
+    [/\bquote(s)?\b/gi,         '"'],
+    [/\bapostrophe\b/gi,        "'"],
+    [/\bopen paren(thes[ie]s)?\b/gi,  '('],
+    [/\bopen parent\b/gi,             '('],
+    [/\bopen pairing(s)?\b/gi,        '('],
+    [/\bclose paren(thes[ie]s)?\b/gi, ')'],
+    [/\bclose pattern\b/gi,           ')'],
+    [/\bclose pairing(s)?\b/gi,       ')'],
+    [/\bopen bracket\b/gi,      '['],
+    [/\bclose bracket\b/gi,     ']'],
+    [/\bopen brace\b/gi,        '{'],
+    [/\bclose brace\b/gi,       '}'],
+    [/\bclothes brace\b/gi,     '}'],
+    [/\bback ?space\b/gi,       '\x08'],
+    [/\bhyphen\b/gi,            '-'],
+    [/\bdash\b/gi,              '-'],
+    [/\bunderscore\b/gi,        '_'],
+    [/\bellipsis\b/gi,          '...'],
+    [/\bplus sign\b/gi,         '+'],
+    [/\bolympus\b/gi,           '+'],
+    [/\bminus sign\b/gi,        '-'],
+    [/\bequals sign\b/gi,       '='],
+    [/\bequal sign\b/gi,        '='],
+    [/\bpercent( sign)?\b/gi,   '%'],
+    [/\bampersand\b/gi,         '&'],
+    [/\basterisk\b/gi,          '*'],
+    [/\bat sign\b/gi,           '@'],
+    [/\bhash(tag)?\b/gi,        '#'],
+    [/\bpound sign\b/gi,        '#'],
+    [/\bdollar sign\b/gi,       '$'],
+    [/\bcaret\b/gi,             '^'],
+    [/\btilde\b/gi,             '~'],
+    [/\bbackslash\b/gi,         '\\'],
+    [/\bforward slash\b/gi,     '/'],
+    [/\bslash\b/gi,             '/'],
+    [/\bvertical bar\b/gi,      '|'],
+    [/\bpipe\b/gi,              '|'],
+    [/\bless than( sign)?\b/gi, '<'],
+    [/\bgreater than( sign)?\b/gi, '>'],
+    [/\bnew paragraph\b/gi,     '\n\n'],
+    [/\bnew line\b/gi,          '\n'],
+    [/\btab key\b/gi,           '\t'],
+  ],
+
+  // ── Spanish (es-ES) ───────────────────────────────────────────────────
+  'es': [
+    [/\bpunto\b/gi,             '.'],
+    [/\bcoma\b/gi,              ','],
+    [/\bsigno de interrogaci[oó]n\b/gi, '?'],
+    [/\bsigno de exclamaci[oó]n\b/gi,   '!'],
+    [/\bdos puntos\b/gi,        ':'],
+    [/\bpunto y coma\b/gi,      ';'],
+    [/\bcomillas de apertura\b/gi, '"'],
+    [/\bcomillas de cierre\b/gi,   '"'],
+    [/\bcomillas\b/gi,          '"'],
+    [/\bapost[oó]fo\b/gi,       "'"],
+    [/\bpar[eé]ntesis de apertura\b/gi, '('],
+    [/\bpar[eé]ntesis de cierre\b/gi,   ')'],
+    [/\bcorchete de apertura\b/gi, '['],
+    [/\bcorchete de cierre\b/gi,   ']'],
+    [/\bllave de apertura\b/gi,  '{'],
+    [/\bllave de cierre\b/gi,    '}'],
+    [/\bguion\b/gi,             '-'],
+    [/\bguion bajo\b/gi,        '_'],
+    [/\bpuntos suspensivos\b/gi, '...'],
+    [/\bm[aá]s\b/gi,            '+'],
+    [/\bmenos\b/gi,             '-'],
+    [/\bigual\b/gi,             '='],
+    [/\bpor ciento\b/gi,        '%'],
+    [/\barroba\b/gi,            '@'],
+    [/\balmohadilla\b/gi,       '#'],
+    [/\bd[oó]lar\b/gi,          '$'],
+    [/\basterisco\b/gi,         '*'],
+    [/\bbarra invertida\b/gi,   '\\'],
+    [/\bbarra\b/gi,             '/'],
+    [/\bnuevo p[aá]rrafo\b/gi,  '\n\n'],
+    [/\bnueva l[ií]nea\b/gi,    '\n'],
+    [/\btabulador\b/gi,         '\t'],
+    // Delete commands
+    [/\bborra eso\b/gi,         '\x7f'],
+    [/\bdeshacer\b/gi,          '\x7f'],
+    [/\beliminar (una |1 )?palabra(s)?\b/gi, '\x7f1W'],
+    [/\beliminar (dos|2) palabras\b/gi,      '\x7f2W'],
+    [/\beliminar (tres|3) palabras\b/gi,     '\x7f3W'],
+  ],
+
+  // ── French (fr-FR) ────────────────────────────────────────────────────
+  'fr': [
+    [/\bpoint\b/gi,             '.'],
+    [/\bvirgule\b/gi,           ','],
+    [/\bpoint d.interrogation\b/gi, '?'],
+    [/\bpoint d.exclamation\b/gi,   '!'],
+    [/\bdeux points\b/gi,       ':'],
+    [/\bpoint virgule\b/gi,     ';'],
+    [/\bouvrir (les )?guillemets\b/gi, '«'],
+    [/\bfermer (les )?guillemets\b/gi, '»'],
+    [/\bguillemets?\b/gi,       '"'],
+    [/\bapostrophe\b/gi,        "'"],
+    [/\bouvrir (la )?parenth[eè]se\b/gi, '('],
+    [/\bfermer (la )?parenth[eè]se\b/gi, ')'],
+    [/\bouvrir (le )?crochet\b/gi, '['],
+    [/\bfermer (le )?crochet\b/gi, ']'],
+    [/\bouvrir (l.)?accolade\b/gi, '{'],
+    [/\bfermer (l.)?accolade\b/gi, '}'],
+    [/\btiret\b/gi,             '-'],
+    [/\bsoulign[eé]\b/gi,       '_'],
+    [/\bpoints de suspension\b/gi, '...'],
+    [/\bplus\b/gi,              '+'],
+    [/\bmoins\b/gi,             '-'],
+    [/\b[eé]gal\b/gi,           '='],
+    [/\bpour cent\b/gi,         '%'],
+    [/\bet commercial\b/gi,     '&'],
+    [/\cast[eé]risque\b/gi,     '*'],
+    [/\barobase\b/gi,           '@'],
+    [/\bi[eè]se\b/gi,           '#'],
+    [/\bdollar\b/gi,            '$'],
+    [/\banti slash\b/gi,        '\\'],
+    [/\bbarre oblique\b/gi,     '/'],
+    [/\bnouveau paragraphe\b/gi, '\n\n'],
+    [/\bnouvelle ligne\b/gi,    '\n'],
+    [/\btabulation\b/gi,        '\t'],
+    // Delete commands
+    [/\beffacer [çc]a\b/gi,     '\x7f'],
+    [/\bannuler\b/gi,           '\x7f'],
+    [/\bsupprimer (un |1 )?mot(s)?\b/gi, '\x7f1W'],
+    [/\bsupprimer (deux|2) mots\b/gi,    '\x7f2W'],
+    [/\bsupprimer (trois|3) mots\b/gi,   '\x7f3W'],
+  ],
+
+  // ── German (de-DE) ────────────────────────────────────────────────────
+  'de': [
+    [/\bPunkt\b/g,              '.'],
+    [/\bKomma\b/g,              ','],
+    [/\bFragezeichen\b/g,       '?'],
+    [/\bAusrufezeichen\b/g,     '!'],
+    [/\bDoppelpunkt\b/g,        ':'],
+    [/\bSemikolon\b/g,          ';'],
+    [/\bAnf[üu]hrungszeichen auf\b/g, '"'],
+    [/\bAnf[üu]hrungszeichen zu\b/g,  '"'],
+    [/\bAnf[üu]hrungszeichen\b/g,     '"'],
+    [/\bApostroph\b/g,          "'"],
+    [/\bKlammer auf\b/g,        '('],
+    [/\bKlammer zu\b/g,         ')'],
+    [/\becki(ge)? Klammer auf\b/g, '['],
+    [/\becki(ge)? Klammer zu\b/g,  ']'],
+    [/\bgeschweifte Klammer auf\b/g, '{'],
+    [/\bgeschweifte Klammer zu\b/g,  '}'],
+    [/\bBindestrich\b/g,        '-'],
+    [/\bUnterstrich\b/g,        '_'],
+    [/\bAuslassungspunkte\b/g,  '...'],
+    [/\bPlus(zeichen)?\b/g,     '+'],
+    [/\bMinus(zeichen)?\b/g,    '-'],
+    [/\bGleichheitszeichen\b/g, '='],
+    [/\bProzent(zeichen)?\b/g,  '%'],
+    [/\bUnd-Zeichen\b/g,        '&'],
+    [/\bSternchen\b/g,          '*'],
+    [/\bAt-Zeichen\b/g,         '@'],
+    [/\bRautezeichen\b/g,       '#'],
+    [/\bDollarzeichen\b/g,      '$'],
+    [/\bneuer Absatz\b/g,       '\n\n'],
+    [/\bneue Zeile\b/g,         '\n'],
+    [/\bTabulator\b/g,          '\t'],
+    // Delete commands
+    [/\bdas löschen\b/g,        '\x7f'],
+    [/\brückgängig\b/g,         '\x7f'],
+    [/\b(ein|1) Wort löschen\b/g,   '\x7f1W'],
+    [/\b(zwei|2) Wörter löschen\b/g, '\x7f2W'],
+    [/\b(drei|3) Wörter löschen\b/g, '\x7f3W'],
+  ],
+
+  // ── Portuguese / Brazil (pt-BR) ───────────────────────────────────────
+  'pt': [
+    [/\bponto\b/gi,             '.'],
+    [/\bv[ií]rgula\b/gi,        ','],
+    [/\bponto de interroga[cç][aã]o\b/gi, '?'],
+    [/\bponto de exclama[cç][aã]o\b/gi,   '!'],
+    [/\bdois pontos\b/gi,       ':'],
+    [/\bponto e v[ií]rgula\b/gi,';'],
+    [/\babrir aspas\b/gi,       '"'],
+    [/\bfechar aspas\b/gi,      '"'],
+    [/\baspas\b/gi,             '"'],
+    [/\bapost[oó]fo\b/gi,       "'"],
+    [/\babrir par[eê]ntese(s)?\b/gi, '('],
+    [/\bfechar par[eê]ntese(s)?\b/gi,')'],
+    [/\babrir colchete(s)?\b/gi, '['],
+    [/\bfechar colchete(s)?\b/gi,']'],
+    [/\babrir chave(s)?\b/gi,   '{'],
+    [/\bfechar chave(s)?\b/gi,  '}'],
+    [/\bh[ií]fen\b/gi,          '-'],
+    [/\btraço\b/gi,             '-'],
+    [/\bsublinhar\b/gi,         '_'],
+    [/\retic[eê]ncias\b/gi,     '...'],
+    [/\bmais\b/gi,              '+'],
+    [/\bmenos\b/gi,             '-'],
+    [/\bigual\b/gi,             '='],
+    [/\bporcento\b/gi,          '%'],
+    [/\barroba\b/gi,            '@'],
+    [/\bcerquilha\b/gi,         '#'],
+    [/\bcifr[aã]o\b/gi,         '$'],
+    [/\basterisco\b/gi,         '*'],
+    [/\bbarra invertida\b/gi,   '\\'],
+    [/\bbarra\b/gi,             '/'],
+    [/\bnovo par[aá]grafo\b/gi, '\n\n'],
+    [/\bnova linha\b/gi,        '\n'],
+    [/\btabulação\b/gi,         '\t'],
+    // Delete commands
+    [/\bapagar isso\b/gi,       '\x7f'],
+    [/\bdesfazer\b/gi,          '\x7f'],
+    [/\bapagar (uma|1) palavra(s)?\b/gi, '\x7f1W'],
+    [/\bapagar (duas|2) palavras\b/gi,   '\x7f2W'],
+    [/\bapagar (três|3) palavras\b/gi,   '\x7f3W'],
+  ],
+
+  // ── Japanese (ja-JP) ─────────────────────────────────────────────────
+  // STT for Japanese typically inserts punctuation automatically;
+  // we add a small set of spoken command words as a fallback.
+  'ja': [
+    [/句点/g,                    '。'],
+    [/読点/g,                    '、'],
+    [/疑問符/g,                  '？'],
+    [/感嘆符/g,                  '！'],
+    [/コロン/g,                  '：'],
+    [/セミコロン/g,              '；'],
+    [/カッコ開き/g,              '（'],
+    [/カッコ閉じ/g,              '）'],
+    [/改行/g,                    '\n'],
+    [/段落/g,                    '\n\n'],
+    [/それを消して/g,             '\x7f'],
+    [/一語削除/g,                 '\x7f1W'],
+  ],
+
+  // ── Chinese Mandarin (zh-CN) ─────────────────────────────────────────
+  // STT for Chinese also auto-inserts punctuation; minimal command set.
+  'zh': [
+    [/句号/g,                    '。'],
+    [/逗号/g,                    '，'],
+    [/问号/g,                    '？'],
+    [/感叹号/g,                  '！'],
+    [/冒号/g,                    '：'],
+    [/分号/g,                    '；'],
+    [/左括号/g,                  '（'],
+    [/右括号/g,                  '）'],
+    [/换行/g,                    '\n'],
+    [/新段落/g,                  '\n\n'],
+    [/删除那个/g,                 '\x7f'],
+    [/删除一个词/g,               '\x7f1W'],
+  ],
+};
+
+// Resolve the active map from the current speech language selection.
+function getVoicePunctMap() {
+  const sel = document.getElementById('speechLangSelect');
+  const lang = sel ? sel.value : 'en-US';
+  const prefix = lang.split('-')[0].toLowerCase();
+  return VOICE_PUNCT_MAPS[prefix] || VOICE_PUNCT_MAPS['en'];
+}
+
+// Legacy alias — keeps all call-sites unchanged.
+const VOICE_PUNCT_MAP = null; // replaced by getVoicePunctMap()
 
 const VOICE_NUMBER_WORDS = {
   a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5,
@@ -3961,9 +4289,10 @@ function applyVoicePunctuation(text) {
   out = out.replace(/\{([^{}]*)\}/g, '$1');
   // Also strip any leftover unmatched/stray brace characters.
   out = out.replace(/[{}]/g, '');
-  for (const [re, repl] of VOICE_PUNCT_MAP) out = out.replace(re, repl);
+  const _vpm = getVoicePunctMap();
+  for (const [re, repl] of _vpm) out = out.replace(re, repl);
   // Re-run once more in case unwrapping braces revealed additional command words.
-  for (const [re, repl] of VOICE_PUNCT_MAP) out = out.replace(re, repl);
+  for (const [re, repl] of _vpm) out = out.replace(re, repl);
   // Remove space(s) before closing/sentence punctuation: "hello ." -> "hello."
   out = out.replace(/[ \t]+([.,!?:;)\]}"])/g, '$1');
   // Remove space(s) after opening brackets/quotes: "( hello" -> "(hello"
@@ -4280,6 +4609,9 @@ function stopListening() {
   if (_recognition) { try { _recognition.stop(); } catch(e){} _recognition = null; }
   const lb = document.getElementById('speechListenBtn');
   if (lb) { lb.classList.remove('listening'); lb.textContent = 'TALK'; }
+  // Return focus to the edit box so Ctrl+Enter still works after stopping
+  const _eb = document.getElementById('speechEditBox');
+  if (_eb) setTimeout(() => _eb.focus(), 50);
   const ss = document.getElementById('speechStatus');
   if (ss) ss.classList.remove('listening');
   const _isAndroid = /android/i.test(navigator.userAgent);
@@ -4304,6 +4636,9 @@ function setSpeechStatus(txt) {
 
 document.addEventListener('DOMContentLoaded', () => {
   if (/android/i.test(navigator.userAgent)) document.body.classList.add('is-android');
+  if (localStorage.getItem('bravo_pi_mode') === '1') document.body.classList.add('is-pi');
+  updateSpeechPlaceholder();
+  entry('UA: ' + navigator.userAgent, 'sys');
   switchTab('chat');
   // Restore controls dropdown states (default open)
   ['miniRowWrapLocal','miniRowWrapRemote'].forEach(id => {
@@ -5401,6 +5736,7 @@ function attachCall(c) {
       }
       // Relay fallback: if ICE stays in 'checking' for >8s, force TURN-only
       if (pc.iceConnectionState === 'checking') {
+        if (!linked) setStatus('connecting');
         clearTimeout(c._iceRelayTimer);
         c._iceRelayTimer = setTimeout(() => {
           if (pc.iceConnectionState === 'checking' && call === c) {
@@ -5590,6 +5926,7 @@ function exportSysLog() {
 }
 
 function leaveSession() {
+  saveSessionSnapshot();
   leftPermanently = true;
   saveSpeechDraft();
   // Notify remote peer before disconnecting
@@ -7116,8 +7453,23 @@ if (window.speechSynthesis) {
   // Chromium on Linux (e.g. Raspberry Pi) often never fires onvoiceschanged.
   // Poll until voices appear, then stop.
   (function _pollVoices(attempts) {
-    if (speechSynthesis.getVoices().length) { _populateTtsVoices(); return; }
-    if (attempts > 0) setTimeout(() => _pollVoices(attempts - 1), 250);
+    const vv = speechSynthesis.getVoices();
+    if (vv.length) {
+      entry('DIAG: TTS voices available (' + vv.length + '): ' + vv.slice(0,3).map(v=>v.name).join(', '), 'sys');
+      _populateTtsVoices(); return;
+    }
+    if (attempts > 0) { setTimeout(() => _pollVoices(attempts - 1), 250); return; }
+    // Exhausted — log what we see so we can diagnose
+    entry('DIAG: TTS getVoices() still empty after 10s — speechSynthesis.speaking=' + speechSynthesis.speaking + ' pending=' + speechSynthesis.pending, 'sys');
+    // No voices available (e.g. Chromium on Pi OS ARM) — hide TTS controls
+    // so the UI isn't cluttered with non-functional elements.
+    ['ttsBtn','ttsBtn2'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.style.display = 'none';
+    });
+    // Don't hide the whole row — TALK button lives here too; just hide TTS-specific items
+    ['ttsBtn','ttsBtn2','speechTtsBtn'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.style.display = 'none';
+    });
   })(40); // up to 10s in 250ms increments
 }
 
