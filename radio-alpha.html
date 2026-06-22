@@ -751,6 +751,8 @@
   #speechPanel > .speech-status { display: none; }
   body.is-android #speechPanel > .speech-status { display: block; }
   body.is-pi #speechBtnRow2 { display: none; }
+  body.is-pi #speechListenBtn { display: none; }
+  body.is-pi #speechStatus { display: none; }
   #speechPanel > .speech-status {
     font-size: 11px; letter-spacing: 1px; padding: 2px 4px;
     color: #ffffff !important; font-family: monospace; word-break: break-all;
@@ -1796,7 +1798,7 @@
           <div id="speechEditMirror" aria-hidden="true"></div>
           <button id="speechFloatSend" onclick="sendSpeechToChat()" disabled title="Send">SEND</button>
         </div>
-        <div id="speechStatus" class="speech-status" style="display:none">IDLE</div>
+        <div id="speechStatus" class="speech-status">IDLE</div>
 
         <div class="speech-btn-row" id="speechBtnRow1">
           <span class="sbr-label">Chat:</span>
@@ -1827,7 +1829,7 @@
           <span class="sbr-label">Text To Speech:</span>
           <select id="ttsVoiceSelect" title="TTS voice for spoken output"></select>
           <button id="speechTtsBtn" onclick="toggleTts()" title="Toggle auto-speak for incoming messages">TTS Off</button>
-          <button id="speechListenBtn" onclick="toggleListening()" style="display:none">TALK</button>
+          <button id="speechListenBtn" onclick="toggleListening()">TALK</button>
         </div>
       </div>
       <div class="log-panel collapsed" id="logPanel">
