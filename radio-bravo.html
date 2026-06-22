@@ -5736,7 +5736,7 @@ function attachCall(c) {
       }
       // Relay fallback: if ICE stays in 'checking' for >8s, force TURN-only
       if (pc.iceConnectionState === 'checking') {
-        setStatus('connecting');
+        if (!linked) setStatus('connecting');
         clearTimeout(c._iceRelayTimer);
         c._iceRelayTimer = setTimeout(() => {
           if (pc.iceConnectionState === 'checking' && call === c) {
