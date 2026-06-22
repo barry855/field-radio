@@ -4709,7 +4709,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!panel.contains(e.relatedTarget)) panel.classList.remove('drag-over');
     });
     panel.addEventListener('drop', e => {
-      e.preventDefault(); panel.classList.remove('drag-over');
+      e.preventDefault(); e.stopPropagation(); panel.classList.remove('drag-over');
       const files = Array.from(e.dataTransfer.files);
       if (files.length) handleSpeechFiles(files);
     });
