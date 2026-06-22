@@ -3635,7 +3635,7 @@ function addFiles(files) {
 }
 
 function renderFileChip(item, idx) {
-  [filePreviewStrip, document.getElementById('speechFilePreviewStrip')].forEach(strip => {
+  [filePreviewStrip].forEach(strip => {
     if (!strip) return;
     const chip = document.createElement('div');
     chip.className = 'file-chip';
@@ -3668,7 +3668,7 @@ function renderFileChip(item, idx) {
 function removeFile(idx, chip) {
   pendingFiles.splice(idx, 1);
   // Remove chips with this idx from both strips
-  [filePreviewStrip, document.getElementById('speechFilePreviewStrip')].forEach(strip => {
+  [filePreviewStrip].forEach(strip => {
     if (!strip) return;
     const target = [...strip.querySelectorAll('.file-chip')].find(c => c.dataset.idx == chip.dataset.idx);
     if (target) target.remove();
