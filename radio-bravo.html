@@ -4303,6 +4303,9 @@ function stopListening() {
   if (_recognition) { try { _recognition.stop(); } catch(e){} _recognition = null; }
   const lb = document.getElementById('speechListenBtn');
   if (lb) { lb.classList.remove('listening'); lb.textContent = 'TALK'; }
+  // Return focus to the edit box so Ctrl+Enter still works after stopping
+  const _eb = document.getElementById('speechEditBox');
+  if (_eb) setTimeout(() => _eb.focus(), 50);
   const ss = document.getElementById('speechStatus');
   if (ss) ss.classList.remove('listening');
   const _isAndroid = /android/i.test(navigator.userAgent);
@@ -7155,8 +7158,10 @@ if (window.speechSynthesis) {
     ['ttsBtn','ttsBtn2'].forEach(id => {
       const el = document.getElementById(id); if (el) el.style.display = 'none';
     });
-    const row3 = document.getElementById('speechBtnRow3');
-    if (row3) row3.style.display = 'none';
+    // Don't hide the whole row — TALK button lives here too; just hide TTS-specific items
+    ['ttsBtn','ttsBtn2','speechTtsBtn'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.style.display = 'none';
+    });
   })(40); // up to 10s in 250ms increments
 }
 
