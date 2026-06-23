@@ -4354,6 +4354,7 @@ function _removeLastSentences(text, n) {
 function processVoiceChunk(currentText, chunk) {
   let text = chunk.trim();
   if (!text) return currentText;
+  entry('VOICE chunk: ' + JSON.stringify(text), 'sys');
 
   const numPattern = '(' + Object.keys(VOICE_NUMBER_WORDS).join('|') + '|\\d+)';
 
@@ -4718,6 +4719,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     panel.addEventListener('drop', e => {
       e.preventDefault(); e.stopPropagation(); panel.classList.remove('drag-over');
+      dragCounter = 0; dropOverlay.classList.remove('active');
       const files = Array.from(e.dataTransfer.files);
       if (files.length) addFiles(files);
     });
