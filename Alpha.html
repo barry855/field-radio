@@ -1165,6 +1165,11 @@
     transition: opacity 0.12s, transform 0.12s;
   }
   .app-tooltip.visible { opacity: 1; transform: translateY(0); }
+  [data-tooltip] {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
 
   /* new-message badge */
   .msg-badge {
