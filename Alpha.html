@@ -3565,23 +3565,39 @@ function setupTooltips() {
   };
   const hide = () => tip.classList.remove('visible');
 
+  let _autoHideTimer = null;
+  let _activeTipEl = null;
+
+  const hideTouch = () => {
+    tip.classList.remove('visible');
+    _activeTipEl = null;
+    clearTimeout(_autoHideTimer);
+  };
+
+  document.addEventListener('click', e => {
+    if (_activeTipEl && !_activeTipEl.contains(e.target)) hideTouch();
+  });
+
   document.querySelectorAll('[data-tooltip]').forEach(el => {
-    el.addEventListener('mouseenter', () => place(el));
-    el.addEventListener('focus', () => place(el));
-    el.addEventListener('mouseleave', hide);
-    el.addEventListener('blur', hide);
-    el.addEventListener('click', hide);
-    // Long-press for Android / touch devices
-    let _lpTimer = null;
-    el.addEventListener('touchstart', e => {
-      _lpTimer = setTimeout(() => {
-        place(el);
-        e.preventDefault(); // prevent the tap from also firing click
-      }, 500);
-    }, { passive: false });
-    el.addEventListener('touchend',    () => { clearTimeout(_lpTimer); _lpTimer = null; setTimeout(hide, 1200); });
-    el.addEventListener('touchcancel', () => { clearTimeout(_lpTimer); _lpTimer = null; hide(); });
-    el.addEventListener('touchmove',   () => { clearTimeout(_lpTimer); _lpTimer = null; });
+    // Desktop: hover/focus
+    el.addEventListener('mouseenter', () => { if (!_activeTipEl) place(el); });
+    el.addEventListener('focus',      () => { if (!_activeTipEl) place(el); });
+    el.addEventListener('mouseleave', () => { if (!_activeTipEl) hide(); });
+    el.addEventListener('blur',       () => { if (!_activeTipEl) hide(); });
+
+    // Android long-press fires contextmenu — intercept it to show tooltip
+    el.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (_activeTipEl === el) { hideTouch(); return; }
+      if (_activeTipEl) hideTouch();
+      place(el);
+      _activeTipEl = el;
+      clearTimeout(_autoHideTimer);
+      _autoHideTimer = setTimeout(hideTouch, 2500);
+    });
+
+    el.addEventListener('click', () => { if (_activeTipEl) hideTouch(); });
   });
 }
 setupTooltips();
