@@ -4066,6 +4066,21 @@ const VOICE_PUNCT_MAPS = {
     [/\bnew paragraph\b/gi,     '\n\n'],
     [/\bnew line\b/gi,          '\n'],
     [/\btab key\b/gi,           '\t'],
+    // Delete / scratch commands
+    [/\bscratch that\b/gi,                             '\x7f0S'],
+    [/\bundo that\b/gi,                                '\x7f0S'],
+    [/\bdelete word\b/gi,                              '\x7f1W'],
+    [/\bdelete (one|1) words?\b/gi,                    '\x7f1W'],
+    [/\bdelete (two|2) words?\b/gi,                    '\x7f2W'],
+    [/\bdelete (three|3) words?\b/gi,                  '\x7f3W'],
+    [/\bdelete (four|4) words?\b/gi,                   '\x7f4W'],
+    [/\bdelete (five|5) words?\b/gi,                   '\x7f5W'],
+    [/\bdelete sentence\b/gi,                          '\x7f1S'],
+    [/\bdelete (one|1) sentences?\b/gi,                '\x7f1S'],
+    [/\bdelete (two|2) sentences?\b/gi,                '\x7f2S'],
+    [/\bdelete (three|3) sentences?\b/gi,              '\x7f3S'],
+    [/\bdelete message\b/gi,                           '\x7fALL'],
+    [/\bclear (all|message|text|everything)\b/gi,      '\x7fALL'],
   ],
 
   // ── Spanish (es-ES) ───────────────────────────────────────────────────
@@ -4391,6 +4406,36 @@ function processVoiceChunk(currentText, chunk) {
   // Not a recognized edit command — apply punctuation substitutions and append.
   let cleaned = applyVoicePunctuation(text);
   if (!cleaned) return currentText; // e.g. bare "parenthesis" with nothing else said
+
+  // Execute any \x7f delete-tokens produced by the localised maps.
+  // Tokens: \x7fNW = delete N words, \x7fNS = delete N sentences, \x7fALL = clear all.
+  if (cleaned.includes('\x7f')) {
+    let acc = currentText;
+    // Split on tokens, processing each segment then its token
+    const parts = cleaned.split(/(\x7f(?:\d+[WwSs]|ALL))/);
+    let rebuiltPrefix = '';
+    for (let i = 0; i < parts.length; i++) {
+      const seg = parts[i];
+      if (/^\x7f(\d+)[Ww]$/.test(seg)) {
+        const n = parseInt(seg.match(/\d+/)[0], 10);
+        acc = _removeLastWords(rebuiltPrefix + acc, n);
+        rebuiltPrefix = '';
+      } else if (/^\x7f(\d+)[Ss]$/.test(seg)) {
+        const n = parseInt(seg.match(/\d+/)[0], 10);
+        if (n === 0) acc = _removeLastSentences(rebuiltPrefix + acc, 1); // scratch that
+        else         acc = _removeLastSentences(rebuiltPrefix + acc, n);
+        rebuiltPrefix = '';
+      } else if (seg === '\x7fALL') {
+        acc = '';
+        rebuiltPrefix = '';
+      } else {
+        rebuiltPrefix += seg; // plain text segment — accumulate
+      }
+    }
+    // Any remaining plain text after last token gets appended
+    if (rebuiltPrefix) acc += rebuiltPrefix;
+    return acc;
+  }
   // Speech recognition sometimes re-finalizes an overlapping result, producing
   // an immediate duplicate run within a single chunk (e.g. "Five% Five%" or
   // "Five percent Five percent"). Collapse consecutive duplicate single tokens...
