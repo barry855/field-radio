@@ -2039,12 +2039,12 @@ window.addEventListener('orientationchange', function() {
             <option value="pt-BR" title="Portuguese (BR)">Português (BR)</option>
           </select>
           <button id="speechOriginalBtn" onclick="speechOriginalLang()" title="Revert to system language">ORIGINAL</button>
+          <button id="speechListenBtn" onclick="toggleListening()">TALK</button>
         </div>
         <div class="speech-btn-row" id="speechBtnRow3">
           <span class="sbr-label">Text To Speech:</span>
           <select id="ttsVoiceSelect" title="TTS voice for spoken output"></select>
           <button id="speechTtsBtn" onclick="toggleTts()" title="Toggle auto-speak for incoming messages">TTS Off</button>
-          <button id="speechListenBtn" onclick="toggleListening()">TALK</button>
         </div>
       </div>
       <div class="log-panel collapsed" id="logPanel">
