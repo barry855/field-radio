@@ -74,6 +74,7 @@
   }
 
   header {
+    justify-content: space-between;
     display: flex; align-items: center; gap: 16px;
     background: var(--panel); border: 1px solid var(--border);
     border-radius: 8px; border-top: 2px solid var(--accent2);
@@ -1196,11 +1197,17 @@
     transition: opacity 0.12s, transform 0.12s;
   }
   .app-tooltip.visible { opacity: 1; transform: translateY(0); }
-  [data-tooltip] {
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    user-select: none;
-  }
+  #helpTouchBtn { display: none; background: transparent; border: 1px solid var(--accent2); color: var(--accent2); font-family: 'Share Tech Mono', monospace; font-size: 13px; border-radius: 50%; width: 26px; height: 26px; cursor: pointer; flex-shrink: 0; align-items: center; justify-content: center; }
+  @media (hover: none) and (pointer: coarse) { #helpTouchBtn { display: inline-flex; } }
+  #helpPanel { display: none; position: fixed; inset: 0; z-index: 2000; background: rgba(0,0,0,0.82); align-items: flex-start; justify-content: center; padding: 16px; overflow-y: auto; }
+  #helpPanel.open { display: flex; }
+  #helpPanelInner { background: #050f15; border: 1px solid var(--accent2); border-radius: 8px; padding: 16px; width: 100%; max-width: 420px; color: var(--text); font-size: 11px; font-family: 'Share Tech Mono', monospace; }
+  #helpPanel h3 { margin: 0 0 12px; font-size: 13px; letter-spacing: 1px; text-transform: uppercase; color: var(--accent2); }
+  .help-row { display: flex; gap: 10px; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.07); line-height: 1.4; }
+  .help-row:last-child { border-bottom: none; }
+  .help-name { flex: 0 0 110px; font-weight: bold; color: var(--accent2); font-size: 10px; text-transform: uppercase; }
+  .help-desc { flex: 1; color: var(--text-dim); font-size: 10px; }
+  #helpCloseBtn { margin-top: 14px; width: 100%; padding: 8px; background: transparent; border: 1px solid var(--accent2); color: var(--accent2); font-family: inherit; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; border-radius: 4px; cursor: pointer; }
 
   /* new-message badge */
   .msg-badge {
@@ -1497,7 +1504,9 @@
   /* Record buttons keep their original (non-yellow) label color — already
      styled separately above (#recBtn/#recBtn2 orange, #recChatBtn white-on-black) */
 </style>
-<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js"></script></head>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2/dist/umd/popper.min.js"></script>
+</head>
 <body>
 
 <div class="session-overlay" id="sessionOverlay">
@@ -1552,6 +1561,7 @@
         <button class="leave-chat-btn" onclick="leaveSession()">Leave Chat</button>
       </div>
     </div>
+    <button id="helpTouchBtn" onclick="openHelpPanel()" aria-label="Button guide">?</button>
   </header>
   <div class="tab-bar" style="display:none;">
     <button class="tab-btn" id="tabLocalBtn" style="display:none" onclick="switchTab(&#39;local&#39;)">LOCAL</button>
@@ -3554,60 +3564,28 @@ function setupTooltips() {
     el.removeAttribute('title');
   });
 
-  const tip = document.createElement('div');
-  tip.className = 'app-tooltip';
-  document.body.appendChild(tip);
-
-  const place = target => {
-    const rect = target.getBoundingClientRect();
-    tip.textContent = target.dataset.tooltip;
-    tip.classList.add('visible');
-    const tr = tip.getBoundingClientRect();
-    let left = rect.left + rect.width / 2 - tr.width / 2;
-    let top = rect.top - tr.height - 8;
-    if (top < 8) top = rect.bottom + 8;
-    left = Math.max(8, Math.min(left, window.innerWidth - tr.width - 8));
-    tip.style.left = left + 'px';
-    tip.style.top = top + 'px';
-  };
+  const tip = document.createElement('div'); tip.className = 'app-tooltip'; document.body.appendChild(tip);
+  const place = t => { const r=t.getBoundingClientRect(); tip.textContent=t.dataset.tooltip; tip.classList.add('visible'); const tr=tip.getBoundingClientRect(); let l=r.left+r.width/2-tr.width/2,top=r.top-tr.height-8; if(top<8)top=r.bottom+8; tip.style.left=Math.max(8,Math.min(l,innerWidth-tr.width-8))+'px'; tip.style.top=top+'px'; };
   const hide = () => tip.classList.remove('visible');
-
-  let _autoHideTimer = null;
-  let _activeTipEl = null;
-
-  const hideTouch = () => {
-    tip.classList.remove('visible');
-    _activeTipEl = null;
-    clearTimeout(_autoHideTimer);
-  };
-
-  document.addEventListener('click', e => {
-    if (_activeTipEl && !_activeTipEl.contains(e.target)) hideTouch();
-  });
-
   document.querySelectorAll('[data-tooltip]').forEach(el => {
-    // Desktop: hover/focus
-    el.addEventListener('mouseenter', () => { if (!_activeTipEl) place(el); });
-    el.addEventListener('focus',      () => { if (!_activeTipEl) place(el); });
-    el.addEventListener('mouseleave', () => { if (!_activeTipEl) hide(); });
-    el.addEventListener('blur',       () => { if (!_activeTipEl) hide(); });
-
-    // Android long-press fires contextmenu — intercept it to show tooltip
-    el.addEventListener('contextmenu', e => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (_activeTipEl === el) { hideTouch(); return; }
-      if (_activeTipEl) hideTouch();
-      place(el);
-      _activeTipEl = el;
-      clearTimeout(_autoHideTimer);
-      _autoHideTimer = setTimeout(hideTouch, 2500);
-    });
-
-    el.addEventListener('click', () => { if (_activeTipEl) hideTouch(); });
+    el.addEventListener('mouseenter', () => place(el));
+    el.addEventListener('focus',      () => place(el));
+    el.addEventListener('mouseleave', hide);
+    el.addEventListener('blur',       hide);
+    el.addEventListener('click',      hide);
   });
 }
 setupTooltips();
+function openHelpPanel() {
+  const rows = document.getElementById('helpPanelRows');
+  if (rows && !rows.dataset.built) {
+    const items = [['Talk/Type in Chat','Open the speech and text input panel'],['TALK','Dictate via speech-to-text'],['SEND','Send typed or dictated text to chat'],['ATTACH','Attach a file to send'],['LOAD','Load a text file into the input box'],['SAVE','Save the input box text to a file'],['COPY','Copy the input box text to clipboard'],['CLEAR','Clear the input box'],['CW','Send input text as Morse code audio'],['TTS','Toggle auto-speak for incoming messages'],['ORIGINAL','Reset speech language to system default'],['↺','Refresh / reconnect'],['✕ Leave','End the session'],['RECORD','Record the current call'],['MINI CAM','Toggle picture-in-picture camera overlay'],['FS','Toggle full screen'],['SYS LOG','Toggle the system diagnostic log'],['💾 SAVE','Save chat history as an HTML file'],['↩ RESTORE','Restore a previous session chat'],['🗑 CLEAR','Clear chat history'],['🔍 FIND','Find text in the chat'],['Video Off','Toggle your camera on/off'],['Mic On/Off','Mute or unmute your microphone'],['Sys Audio','Mix computer audio into transmitted signal'],['Share Off','Share your screen'],['Pi Mode','Compact mode — hides STT controls']];
+    rows.innerHTML = items.map(([n,d])=>`<div class="help-row"><span class="help-name">${n}</span><span class="help-desc">${d}</span></div>`).join('');
+    rows.dataset.built='1';
+  }
+  document.getElementById('helpPanel').classList.add('open');
+}
+function closeHelpPanel() { document.getElementById('helpPanel').classList.remove('open'); }
 
 // Attach button → open file picker
 if (attachBtn) attachBtn.addEventListener('click', () => fileInput.click());
@@ -6049,6 +6027,7 @@ function _doLeave() {
   // Always show the ended screen — never call window.close() as Android Chrome
   // closes the tab immediately, revealing whatever was behind it before the
   // session ended message can appear.
+  document.title = 'BRAVO — Field Radio';
   document.body.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;height:100vh;background:#0a1520;color:#f1f5f9;font-family:monospace;text-align:center;padding:20px;">'
     + '<div style="font-size:22px;letter-spacing:2px;font-weight:bold;">SESSION ENDED</div>'
     + '<div style="font-size:15px;color:#94a3b8;letter-spacing:1px;">You may now close this tab.</div>'
@@ -7308,6 +7287,11 @@ window.addEventListener('pagehide', (ev) => {
   if (!leftPermanently && !peerRefreshing) {
     try { dcSend({ __control: 'leave' }); } catch(e) {}
   }
+  // Always release camera/mic so the OS indicator clears immediately
+  if (localStream) {
+    localStream.getTracks().forEach(t => { try { t.stop(); } catch(e){} });
+    localStream = null;
+  }
   peer?.destroy();
 });
 
@@ -7673,4 +7657,4 @@ function ttsSpeak(text, lang) {
 </script>
 
 
-</div></body></html>
+<div id="helpPanel" role="dialog" aria-modal="true" onclick="if(event.target===this)closeHelpPanel()"><div id="helpPanelInner"><h3>? Button Guide</h3><div id="helpPanelRows"></div><button id="helpCloseBtn" onclick="closeHelpPanel()">✕ Close</button></div></div></div></body></html>
