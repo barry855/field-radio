@@ -796,8 +796,9 @@
   }
   #speechPanel > .speech-status { display: none; }
   body.is-android #speechPanel > .speech-status { display: block; }
-  body.is-pi #speechBtnRow2 { display: none; }
-  body.is-pi #speechListenBtn { display: none; }
+  body.is-pi #speechBtnRow2 .sbr-label,
+  body.is-pi #speechLangSelect,
+  body.is-pi #speechOriginalBtn { display: none; }
   body.is-pi #speechStatus { display: none; }
   #speechPanel > .speech-status {
     font-size: 11px; letter-spacing: 1px; padding: 2px 4px;
