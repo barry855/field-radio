@@ -3637,7 +3637,11 @@ function addFiles(files) {
 }
 
 function renderFileChip(item, idx) {
-  [filePreviewStrip, document.getElementById('speechFilePreviewStrip')].forEach(strip => {
+  const _activeSpeechStrip = document.getElementById('speechFilePreviewStrip');
+  const _activeStrips = (_activeSpeechStrip && _activeSpeechStrip.closest('.speech-open'))
+    ? [_activeSpeechStrip]
+    : [filePreviewStrip];
+  _activeStrips.forEach(strip => {
     if (!strip) return;
     const chip = document.createElement('div');
     chip.className = 'file-chip';
@@ -3669,7 +3673,11 @@ function renderFileChip(item, idx) {
 
 function removeFile(idx, chip) {
   pendingFiles.splice(idx, 1);
-  [filePreviewStrip, document.getElementById('speechFilePreviewStrip')].forEach(strip => {
+  const _activeSpeechStrip = document.getElementById('speechFilePreviewStrip');
+  const _activeStrips = (_activeSpeechStrip && _activeSpeechStrip.closest('.speech-open'))
+    ? [_activeSpeechStrip]
+    : [filePreviewStrip];
+  _activeStrips.forEach(strip => {
     if (!strip) return;
     const target = [...strip.querySelectorAll('.file-chip')].find(c => c.dataset.idx == chip.dataset.idx);
     if (target) target.remove();
@@ -4709,7 +4717,7 @@ document.addEventListener('DOMContentLoaded', () => {
     panel.addEventListener('drop', e => {
       e.preventDefault(); e.stopPropagation(); panel.classList.remove('drag-over');
       const files = Array.from(e.dataTransfer.files);
-      if (files.length) handleSpeechFiles(files);
+      if (files.length) addFiles(files);
     });
   }
 
