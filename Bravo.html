@@ -4992,7 +4992,7 @@ async function initMediaOnly() {
   }
 
   navigator.mediaDevices.getUserMedia({
-    audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
     video: videoConstraint
   })
   .then(applyAndDial)
@@ -5002,11 +5002,11 @@ async function initMediaOnly() {
       const fallbackConstraint = Object.assign({}, videoConstraint);
       delete fallbackConstraint.deviceId;
       navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
         video: fallbackConstraint
       }).then(applyAndDial).catch(e2 => {
         entry('Media error (' + e2.name + ') — falling back to audio-only', 'sys');
-        navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } })
+        navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false } })
           .then(applyAndDial)
           .catch(e3 => {
             entry('Mic also failed (' + e3.name + ') — data channel only', 'err');
@@ -5024,7 +5024,7 @@ async function initMediaOnly() {
       return;
     }
     entry('Media error (' + e.name + ') — falling back to audio-only', 'sys');
-    navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } })
+    navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false } })
       .then(applyAndDial)
       .catch(e2 => {
         entry('Mic also failed (' + e2.name + ') — data channel only', 'err');
@@ -5148,7 +5148,7 @@ async function init() {
   }
 
   navigator.mediaDevices.getUserMedia({
-    audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
     video: videoConstraint
   })
   .then(applyStreamFlags)
@@ -5158,7 +5158,7 @@ async function init() {
       const fallbackConstraint = Object.assign({}, videoConstraint);
       delete fallbackConstraint.deviceId;
       navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
         video: fallbackConstraint
       }).then(applyStreamFlags).catch(handleMediaError);
       return;
@@ -5167,7 +5167,7 @@ async function init() {
     if (e.name !== 'NotAllowedError' && e.name !== 'PermissionDeniedError' && e.name !== 'SecurityError') {
       entry('Camera unavailable (' + e.name + ') — retrying audio-only', 'sys');
       navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
         video: false
       })
       .then(applyStreamFlags)
