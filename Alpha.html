@@ -4716,9 +4716,11 @@ function startListening() {
     try { _recognition.start(); } catch(e) { setSpeechStatus('ERR: START FAILED: ' + e.message); }
   }
 
-  // Swap WebRTC sender to silence (fire-and-forget), then start immediately
-  // _recognition.start() must be called synchronously in the gesture handler on Android
-  _releaseAndroidMic();
+  // Swap WebRTC sender to silence (fire-and-forget), then start immediately.
+  // Only needed on Android — on desktop/Chromebook the mic is shared, so
+  // call _releaseAndroidMic() here would silence the sender and _restoreAndroidMic()
+  // is never called for non-Android, leaving the sender permanently silent.
+  if (_isAndroid) _releaseAndroidMic();
   _doStart();
 }
 
