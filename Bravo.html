@@ -3573,6 +3573,17 @@ function setupTooltips() {
     el.addEventListener('mouseleave', hide);
     el.addEventListener('blur', hide);
     el.addEventListener('click', hide);
+    // Long-press for Android / touch devices
+    let _lpTimer = null;
+    el.addEventListener('touchstart', e => {
+      _lpTimer = setTimeout(() => {
+        place(el);
+        e.preventDefault(); // prevent the tap from also firing click
+      }, 500);
+    }, { passive: false });
+    el.addEventListener('touchend',    () => { clearTimeout(_lpTimer); _lpTimer = null; setTimeout(hide, 1200); });
+    el.addEventListener('touchcancel', () => { clearTimeout(_lpTimer); _lpTimer = null; hide(); });
+    el.addEventListener('touchmove',   () => { clearTimeout(_lpTimer); _lpTimer = null; });
   });
 }
 setupTooltips();
