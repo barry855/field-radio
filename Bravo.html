@@ -1198,7 +1198,16 @@
   }
   .app-tooltip.visible { opacity: 1; transform: translateY(0); }
   #helpTouchBtn { display: none; background: transparent; border: 1px solid var(--accent2); color: var(--accent2); font-family: 'Share Tech Mono', monospace; font-size: 13px; border-radius: 50%; width: 26px; height: 26px; cursor: pointer; flex-shrink: 0; align-items: center; justify-content: center; }
-  @media (hover: none) and (pointer: coarse) { #helpTouchBtn { display: inline-flex; } }
+  @media (hover: none) and (pointer: coarse) { #helpTouchBtn { display: inline-flex; } #chatHelpBtn { display: inline-flex; } }
+  #chatHelpBtn {
+    display: none; background: transparent;
+    border: 1px solid var(--accent2); color: var(--accent2);
+    font-family: 'Share Tech Mono', monospace; font-size: 13px;
+    border-radius: 50%; width: 26px; height: 26px;
+    cursor: pointer; line-height: 1; flex-shrink: 0;
+    align-items: center; justify-content: center;
+    margin-left: auto;
+  }
   #helpPanel { display: none; position: fixed; inset: 0; z-index: 2000; background: rgba(0,0,0,0.82); align-items: flex-start; justify-content: center; padding: 16px; overflow-y: auto; }
   #helpPanel.open { display: flex; }
   #helpPanelInner { background: #050f15; border: 1px solid var(--accent2); border-radius: 8px; padding: 16px; width: 100%; max-width: 420px; color: var(--text); font-size: 11px; font-family: 'Share Tech Mono', monospace; }
@@ -1670,6 +1679,7 @@
         <span id="flipWrapChat"><button class="speech-top-btn" id="flipChatBtn" onclick="flipCamera()" title="Flip camera" style="flex-shrink:0;">⟳ Flip Cam</button></span>
         <button class="speech-top-btn" id="fsChatBtn" onclick="toggleFullScreen()" title="Full Screen Toggle" style="flex-shrink:0;">FS OFF</button>
         <button class="speech-top-btn" id="miniChatBtn" onclick="toggleMiniChat()" title="Toggle mini video in chat" style="flex-shrink:0;">MINI CAM OFF</button>
+        <button id="chatHelpBtn" onclick="openHelpPanel()" aria-label="Button guide">?</button>
       </div>
       <div class="chat-btn-bar-row" style="flex-shrink:0;">
         <button class="speech-top-btn" id="chatVideoViewBtn" onclick="toggleChatVideoView()" title="Toggle chat video view">See You</button>
