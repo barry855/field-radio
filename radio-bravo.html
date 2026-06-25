@@ -6473,6 +6473,65 @@ function resetLockTimer() { /* inactivity lock disabled */ }
 let recRemote = null, recRemoteChunks = [], recRemoteBusy = false;
 let recLocal  = null, recLocalChunks  = [], recLocalBusy  = false;
 
+// ── Combined-session accumulator ──────────────────────────────
+let _combSession = null;
+function _combStart() {
+  if (!_combSession) _combSession = { segments: [], mimeType: null };
+}
+async function _combAccumulate(blob, mimeType) {
+  if (!_combSession) return false;
+  _combSession.segments.push(blob);
+  if (!_combSession.mimeType) _combSession.mimeType = mimeType;
+  const otherRunning = (recLocal  && recLocal.state  === 'recording') ||
+                       (recRemote && recRemote.state === 'recording');
+  if (otherRunning) return true;
+  const segments = _combSession.segments;
+  _combSession = null;
+  if (segments.length === 1) return false;
+  await _combMergeAndSave(segments, mimeType);
+  return true;
+}
+async function _combMergeAndSave(blobs, mimeType) {
+  const ts = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
+  const isNativeMp4 = /mp4/i.test(mimeType);
+  if (isNativeMp4) {
+    try {
+      entry('Merging recordings into one file…', 'sys');
+      const ffmpeg = await loadFFmpeg();
+      const stamp = Date.now();
+      const segPaths = [];
+      for (let i = 0; i < blobs.length; i++) {
+        const p = `seg_${stamp}_${i}.mp4`;
+        await ffmpeg.writeFile(p, new Uint8Array(await blobs[i].arrayBuffer()));
+        segPaths.push(p);
+      }
+      const listContent = segPaths.map(p => `file '${p}'`).join('\n');
+      const listPath = `concat_${stamp}.txt`;
+      await ffmpeg.writeFile(listPath, listContent);
+      const outPath = `merged_${stamp}.mp4`;
+      await ffmpeg.exec(['-f','concat','-safe','0','-i',listPath,'-c','copy','-movflags','+faststart',outPath]);
+      const data = await ffmpeg.readFile(outPath);
+      for (const p of [...segPaths, listPath, outPath]) ffmpeg.deleteFile(p).catch(()=>{});
+      downloadBlob(new Blob([data.buffer], { type: 'video/mp4' }), `bravo-combined-${ts}.mp4`);
+      entry('Combined recording saved (mp4)', 'ok');
+    } catch(e) {
+      entry(`Merge failed (${e.message||e}) — saving segments separately`, 'sys');
+      blobs.forEach((b, i) => downloadBlob(b, `bravo-seg${i+1}-${ts}.mp4`));
+    }
+    return;
+  }
+  try {
+    entry('Merging WebM segments…', 'sys');
+    const combined = new Blob(blobs, { type: mimeType });
+    const mp4Blob = await convertToMp4(combined, mimeType, 'combined');
+    downloadBlob(mp4Blob, `bravo-combined-${ts}.mp4`);
+    entry('Combined recording saved (mp4)', 'ok');
+  } catch(e) {
+    entry(`Merge failed (${e.message||e}) — saving as WebM`, 'sys');
+    downloadBlob(new Blob(blobs, { type: mimeType }), `bravo-combined-${ts}.webm`);
+  }
+}
+
 function preferredMime() {
   // Try native MP4 first. Chrome 121+ (Jan 2024) fixed the Windows audio
   // bug where the native MP4 muxer silently dropped the audio track.
@@ -6620,13 +6679,14 @@ async function saveRec(chunks, mimeType, label) {
   if (!chunks.length) { entry('Recording empty — nothing saved', 'sys'); return; }
   const blob = new Blob(chunks, { type: mimeType });
   const ts = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
-  // If MediaRecorder gave us native MP4, save it directly — no conversion needed.
+  // Combined-session path: stash segment; merge + download when all done.
+  if (await _combAccumulate(blob, mimeType)) return;
+  // Standalone save.
   if (/mp4/i.test(mimeType)) {
     downloadBlob(blob, `bravo-${label}-${ts}.mp4`);
     entry(`${label} recording saved (mp4)`, 'ok');
     return;
   }
-  // WebM path (Firefox / old Chrome) — attempt ffmpeg.wasm conversion.
   try {
     const mp4Blob = await convertToMp4(blob, mimeType, label);
     downloadBlob(mp4Blob, `bravo-${label}-${ts}.mp4`);
@@ -6649,6 +6709,9 @@ async function toggleRecordRemote() {
     return;
   }
   if (recRemote && recRemote.state !== 'inactive') return;
+
+  // Link into combined session if local is running or a session is already open.
+  if ((recLocal && recLocal.state === 'recording') || _combSession) _combStart();
 
   const remoteVideo = document.getElementById('remoteVideo');
   const remoteAudio = document.getElementById('remoteAudio');
@@ -6688,6 +6751,9 @@ async function toggleRecordLocal() {
     return;
   }
   if (recLocal && recLocal.state !== 'inactive') return;
+
+  // Link into combined session if remote is running or a session is already open.
+  if ((recRemote && recRemote.state === 'recording') || _combSession) _combStart();
 
   if (!localStream || !localStream.getVideoTracks().length) {
     entry('No local video to record', 'err'); return;
