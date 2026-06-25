@@ -1313,15 +1313,24 @@
       background: #fff !important;
       border-color: #999 !important;
     }
-    .speech-top-btn, .media-btn, .leave-btn {
+
+    /* ── All control buttons — white fill, dark outline, black text ── */
+    .speech-top-btn, .media-btn, .leave-btn, .syslog-chat-btn {
       background: #fff !important; color: #000 !important;
       border: 1px solid #555 !important; text-shadow: none !important;
     }
     .speech-top-btn.leave-style, .speech-top-btn.active,
-    #chatVideoViewBtn {
+    .speech-top-btn.rec-chat-btn, #chatVideoViewBtn {
       background: #fff !important; color: #000 !important;
       border: 1px solid #555 !important;
     }
+    /* Row 1: TTS Off | Flip Cam | FS OFF | MINI CAM OFF */
+    #ttsChatBtn, #flipChatBtn, #fsChatBtn, #miniChatBtn { display: inline-flex !important; }
+    /* Row 2: See Remote | RECORD | Video Off | Mike On | Sys Audio Off | Share Off */
+    #chatVideoViewBtn, #recChatBtn, #videoOffChatBtn,
+    #audioChatBtn, #sysAudioChatBtn, #screenChatBtn { display: inline-flex !important; }
+    /* Hide syslog LED button — not useful on print */
+    #syslogToggleBtn { display: none !important; }
 
     /* ── CHAT: label — black ── */
     .sbr-label { color: #000 !important; font-weight: bold !important; }
@@ -1333,7 +1342,7 @@
       border-radius: 4px !important;
     }
 
-    /* ── Gain row — restored, grey label ── */
+    /* ── Gain row — restored, grey label, visible slider ── */
     .gain-row { display: flex !important; background: #fff !important; }
     .gain-row .gain-label {
       background: #e8e8e8 !important;
@@ -1343,7 +1352,9 @@
     }
     .gain-row .gain-label span { color: #000 !important; }
     .gain-row .gain-val { color: #000 !important; }
-    .gain-row input[type=range] { display: block !important; width: 100% !important; border: 1px solid #999 !important; -webkit-appearance: auto !important; appearance: auto !important; }
+    .gain-row input[type=range] { display: block !important; flex: 1 !important; border: 1px solid #999 !important; -webkit-appearance: auto !important; appearance: auto !important; }
+    /* Talk/Type in Chat button in gain row */
+    #speechToggleBtn { display: inline-flex !important; background: #fff !important; color: #000 !important; border: 1px solid #555 !important; }
 
     /* ── My Language row — light grey ── */
     #translateBar {
@@ -2008,12 +2019,13 @@ window.addEventListener('orientationchange', function() {
         <button class="chat-find-close" id="chatFindClose" title="Close">✕</button>
       </div>
       <div class="chat-btn-bar-row" id="chatBtnRow1" style="flex-shrink:0; margin-bottom:4px; flex-wrap:nowrap; overflow:hidden;">
+        <button class="speech-top-btn" id="ttsChatBtn" onclick="toggleTts()" title="Toggle auto-speak for incoming messages" style="flex-shrink:0;">TTS Off</button>
         <span id="flipWrapChat"><button class="speech-top-btn" id="flipChatBtn" onclick="flipCamera()" title="Flip camera" style="flex-shrink:0;">⟳ Flip Cam</button></span>
         <button class="speech-top-btn" id="fsChatBtn" onclick="toggleFullScreen()" title="Full Screen Toggle" style="flex-shrink:0;">FS OFF</button>
         <button class="speech-top-btn" id="miniChatBtn" onclick="toggleMiniChat()" title="Toggle mini video in chat" style="flex-shrink:0;">MINI CAM OFF</button>
       </div>
       <div class="chat-btn-bar-row" id="chatBtnRow2" style="flex-shrink:0;">
-        <button class="speech-top-btn" id="chatVideoViewBtn" onclick="toggleChatVideoView()" title="Toggle chat video view">See You</button>
+        <button class="speech-top-btn" id="chatVideoViewBtn" onclick="toggleChatVideoView()" title="Toggle chat video view">See Remote</button>
         <button class="speech-top-btn rec-chat-btn" id="recChatBtn" onclick="toggleRecordChat()" title="Record current main feed + mini if visible">➤ RECORD</button>
         <button class="speech-top-btn video-off-state" id="videoOffChatBtn" onclick="toggleVideo()" title="Video on/off">Video Off</button>
         <button class="speech-top-btn" id="audioChatBtn" onclick="toggleAudio()" title="Mute/unmute mic">Mike On</button>
@@ -3164,10 +3176,10 @@ function updateChatVideoViewBtn() {
   const btn = document.getElementById('chatVideoViewBtn');
   if (!btn) return;
   if (chatUnderlayMode === 'local') {
-    btn.textContent = 'See me';
+    btn.textContent = 'See Local';
     btn.classList.add('active');
   } else {
-    btn.textContent = 'See You';
+    btn.textContent = 'See Remote';
     btn.classList.remove('active');
   }
 }
@@ -3989,7 +4001,7 @@ function openHelpPanel() {
       ['Mike On',  'Mute or unmute your microphone'],
       ['Sys Audio','Mix computer audio output into transmitted signal'],
       ['Share Off','Share your screen'],
-      ['See You',  'Toggle the incoming video view in chat'],
+      ['SEE REMOTE','Toggle between remote and local video view in chat'],
       ['Pi Mode',  'Compact mode — hides STT controls (for Raspberry Pi)'],
     ];
     rows.innerHTML = items.map(([n,d]) =>
@@ -8133,11 +8145,11 @@ if (window.speechSynthesis) {
     if (vv.length) { _populateTtsVoices(); return; }
     if (attempts > 0) { setTimeout(() => _pollVoices(attempts - 1), 250); return; }
     // No voices available (e.g. Chromium on Pi OS ARM) — hide TTS controls.
-    ['ttsBtn','ttsBtn2'].forEach(id => {
+    ['ttsBtn','ttsBtn2','ttsChatBtn'].forEach(id => {
       const el = document.getElementById(id); if (el) el.style.display = 'none';
     });
     // Don't hide the whole row — TALK button lives here too; just hide TTS-specific items
-    ['ttsBtn','ttsBtn2','speechTtsBtn'].forEach(id => {
+    ['ttsBtn','ttsBtn2','speechTtsBtn','ttsChatBtn'].forEach(id => {
       const el = document.getElementById(id); if (el) el.style.display = 'none';
     });
   })(40); // up to 10s in 250ms increments
@@ -8145,7 +8157,7 @@ if (window.speechSynthesis) {
 
 function toggleTts() {
   _ttsEnabled = !_ttsEnabled;
-  ['ttsBtn','ttsBtn2','speechTtsBtn'].forEach(id => {
+  ['ttsBtn','ttsBtn2','speechTtsBtn','ttsChatBtn'].forEach(id => {
     const b = document.getElementById(id);
     if (!b) return;
     b.textContent = _ttsEnabled ? 'TTS On' : 'TTS Off';
@@ -8246,7 +8258,7 @@ function ttsSpeak(text, lang) {
   // Button labels set after DOM ready
   document.addEventListener('DOMContentLoaded', () => {
     if (_ttsEnabled) {
-      ['ttsBtn','ttsBtn2','speechTtsBtn'].forEach(id => {
+      ['ttsBtn','ttsBtn2','speechTtsBtn','ttsChatBtn'].forEach(id => {
         const b = document.getElementById(id);
         if (b) { b.textContent = 'TTS On'; b.classList.add('active-on'); }
       });
