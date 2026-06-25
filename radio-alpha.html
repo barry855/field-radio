@@ -6626,6 +6626,84 @@ function resetLockTimer() { /* inactivity lock disabled */ }
 let recRemote = null, recRemoteChunks = [], recRemoteBusy = false;
 let recLocal  = null, recLocalChunks  = [], recLocalBusy  = false;
 
+// ── Combined-session accumulator ──────────────────────────────
+// When the user switches between local and remote recording mid-session,
+// we accumulate each segment here and merge them all into one file at the end.
+// _combSession: { segments: [{blob, mimeType}], active: bool }
+let _combSession = null;
+
+// Call when starting any RECORD button press while the other recorder is
+// still active (or was just stopped in the same session).
+function _combStart() {
+  if (!_combSession) _combSession = { segments: [], mimeType: null };
+}
+
+// Called from saveRec when in combined mode.  Returns true if the chunk was
+// stashed (caller must NOT download yet), false if this is a standalone save.
+async function _combAccumulate(blob, mimeType) {
+  if (!_combSession) return false;
+  _combSession.segments.push(blob);
+  if (!_combSession.mimeType) _combSession.mimeType = mimeType;
+  // If the other recorder is still running we just stash — don't download yet.
+  const otherRunning = (recLocal  && recLocal.state  === 'recording') ||
+                       (recRemote && recRemote.state === 'recording');
+  if (otherRunning) return true;   // more segments to come
+  // Both recorders have stopped — merge and download now.
+  const segments = _combSession.segments;
+  _combSession = null;
+  if (segments.length === 1) {
+    // Only one segment ended up being recorded — just save it normally.
+    return false;
+  }
+  await _combMergeAndSave(segments, mimeType);
+  return true;
+}
+
+async function _combMergeAndSave(blobs, mimeType) {
+  const ts = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
+  const isNativeMp4 = /mp4/i.test(mimeType);
+
+  if (isNativeMp4) {
+    // All segments are already MP4 — concatenate via ffmpeg concat demuxer.
+    try {
+      entry('Merging recordings into one file…', 'sys');
+      const ffmpeg = await loadFFmpeg();
+      const stamp = Date.now();
+      const segPaths = [];
+      for (let i = 0; i < blobs.length; i++) {
+        const p = `seg_${stamp}_${i}.mp4`;
+        await ffmpeg.writeFile(p, new Uint8Array(await blobs[i].arrayBuffer()));
+        segPaths.push(p);
+      }
+      const listContent = segPaths.map(p => `file '${p}'`).join('\n');
+      const listPath = `concat_${stamp}.txt`;
+      await ffmpeg.writeFile(listPath, listContent);
+      const outPath = `merged_${stamp}.mp4`;
+      await ffmpeg.exec(['-f','concat','-safe','0','-i',listPath,'-c','copy','-movflags','+faststart',outPath]);
+      const data = await ffmpeg.readFile(outPath);
+      for (const p of [...segPaths, listPath, outPath]) ffmpeg.deleteFile(p).catch(()=>{});
+      downloadBlob(new Blob([data.buffer], { type: 'video/mp4' }), `alpha-combined-${ts}.mp4`);
+      entry('Combined recording saved (mp4)', 'ok');
+    } catch(e) {
+      entry(`Merge failed (${e.message||e}) — saving segments separately`, 'sys');
+      blobs.forEach((b, i) => downloadBlob(b, `alpha-seg${i+1}-${ts}.mp4`));
+    }
+    return;
+  }
+
+  // WebM path — concatenate raw chunks and let convertToMp4 handle it.
+  try {
+    entry('Merging WebM segments…', 'sys');
+    const combined = new Blob(blobs, { type: mimeType });
+    const mp4Blob = await convertToMp4(combined, mimeType, 'combined');
+    downloadBlob(mp4Blob, `alpha-combined-${ts}.mp4`);
+    entry('Combined recording saved (mp4)', 'ok');
+  } catch(e) {
+    entry(`Merge failed (${e.message||e}) — saving as WebM`, 'sys');
+    downloadBlob(new Blob(blobs, { type: mimeType }), `alpha-combined-${ts}.webm`);
+  }
+}
+
 function preferredMime() {
   // Try native MP4 first. Chrome 121+ (Jan 2024) fixed the Windows audio
   // bug where the native MP4 muxer silently dropped the audio track.
@@ -6779,8 +6857,13 @@ async function saveRec(chunks, mimeType, label) {
   if (!chunks.length) { entry('Recording empty — nothing saved', 'sys'); return; }
   const blob = new Blob(chunks, { type: mimeType });
   const ts = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
-  // If MediaRecorder gave us native MP4, save it directly — no conversion needed.
+
+  // Combined-session path: stash segment; merge + download when all done.
+  if (await _combAccumulate(blob, mimeType)) return;
+
+  // Standalone save (no handoff session active).
   if (/mp4/i.test(mimeType)) {
+    // If MediaRecorder gave us native MP4, save it directly — no conversion needed.
     downloadBlob(blob, `alpha-${label}-${ts}.mp4`);
     entry(`${label} recording saved (mp4)`, 'ok');
     return;
@@ -6808,6 +6891,11 @@ async function toggleRecordRemote() {
     return;
   }
   if (recRemote && recRemote.state !== 'inactive') return;
+
+  // If local is currently recording OR a combined session is already in
+  // progress (sequential handoff: local stopped → remote starting), link
+  // this segment into the same merged file.
+  if ((recLocal && recLocal.state === 'recording') || _combSession) _combStart();
 
   const remoteVideo = document.getElementById('remoteVideo');
   const remoteAudio = document.getElementById('remoteAudio');
@@ -6863,6 +6951,11 @@ async function toggleRecordLocal() {
     return;
   }
   if (recLocal && recLocal.state !== 'inactive') return;
+
+  // If remote is currently recording OR a combined session is already in
+  // progress (sequential handoff: remote stopped → local starting), link
+  // this segment into the same merged file.
+  if ((recRemote && recRemote.state === 'recording') || _combSession) _combStart();
 
   if (!localStream || !localStream.getVideoTracks().length) {
     entry('No local video to record', 'err'); return;
