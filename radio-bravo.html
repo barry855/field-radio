@@ -3145,23 +3145,11 @@ function toggleChatVideoView() {
   syncChatUnderlay();
   syncChatMiniOverlay();
   updateChatVideoViewBtn();
-  // Hot-swap video track in active chat recording
-  if (recChat && recChat.state === 'recording') {
-    const isLocalMain = (chatUnderlayMode === 'local');
-    const newMainVid = document.getElementById(isLocalMain ? 'localVideo' : 'remoteVideo');
-    if (newMainVid && newMainVid.srcObject) {
-      const newTrack = newMainVid.srcObject.getVideoTracks()[0];
-      if (newTrack) {
-        const sender = recChat.stream && recChat.stream.getVideoTracks()[0];
-        if (sender) {
-          try {
-            recChat.stream.removeTrack(sender);
-            recChat.stream.addTrack(newTrack);
-          } catch(e) { entry('Could not swap recording track: ' + e.message, 'sys'); }
-        }
-      }
-    }
-    entry('Recording view switched to ' + (isLocalMain ? 'local' : 'remote'), 'sys');
+  // Update live canvas recording source — no recorder restart needed
+  if (_chatRec.active) {
+    const isLocal = (chatUnderlayMode === 'local');
+    _chatRec.main = document.getElementById(isLocal ? 'localVideo' : 'remoteVideo');
+    entry('Recording view switched to ' + (isLocal ? 'local' : 'remote'), 'sys');
   }
 }
 
@@ -3196,6 +3184,7 @@ updateMiniVideoVisibility();
 let miniChatVisible = false;
 function toggleMiniChat() {
   miniChatVisible = !miniChatVisible;
+  _chatRecUpdateMini(); // update live recording PiP if active
   const overlay = document.getElementById('miniChatOverlay');
   if (overlay) overlay.classList.toggle('hidden', !miniChatVisible);
   const btn = document.getElementById('miniChatBtn');
@@ -6785,23 +6774,51 @@ async function toggleRecordLocal() {
 function toggleRecord() {}
 
 // ── Record Chat button — records whichever feed is the chat underlay ─────
+// Uses a persistent canvas as the sole MediaRecorder source.
+// Switching local/remote view or toggling mini-cam during recording only
+// updates mutable pointers read by the draw loop — the MediaRecorder never
+// sees a track change and never restarts, so the output is one seamless file.
+const _chatRec = {
+  active:    false,
+  main:      null,
+  overlay:   null,
+  showPip:   false,
+  canvas:    null,
+  ctx:       null,
+  afId:      null,
+  recorder:  null,
+  chunks:    [],
+  busy:      false,
+  aCtx:      null,
+};
+
+function _chatRecUpdateMini() {
+  if (!_chatRec.active) return;
+  const overlay = document.getElementById('miniChatVideo');
+  _chatRec.showPip  = miniChatVisible && !!overlay;
+  _chatRec.overlay  = _chatRec.showPip ? overlay : null;
+}
+
 let recChat = null, recChatChunks = [], recChatBusy = false;
 
 async function toggleRecordChat() {
   const btn = document.getElementById('recChatBtn');
-  if (recChatBusy) return;
 
-  if (recChat && recChat.state === 'recording') {
-    recChatBusy = true;
-    recChat.stop();
+  // ── STOP ──
+  if (_chatRec.active && _chatRec.recorder && _chatRec.recorder.state === 'recording') {
+    _chatRec.busy = true;
+    recChatBusy   = true;
+    _chatRec.recorder.stop();
     if (btn) { btn.textContent = '⏳ SAVING'; btn.classList.remove('recording'); btn.disabled = true; }
     return;
   }
-  if (recChat && recChat.state !== 'inactive') return;
+  if (_chatRec.busy) return;
 
+  // ── START ──
   const remoteVideo = document.getElementById('remoteVideo');
   const localVid    = document.getElementById('localVideo');
   const remoteAudio = document.getElementById('remoteAudio');
+  const miniChatVid = document.getElementById('miniChatVideo');
 
   const isLocalMain = (chatUnderlayMode === 'local');
   const mainVideo   = isLocalMain ? localVid : remoteVideo;
@@ -6810,25 +6827,81 @@ async function toggleRecordChat() {
     entry('No video available to record', 'err'); return;
   }
 
+  const remoteStream = (remoteAudio && remoteAudio.srcObject) ||
+                       (remoteVideo && remoteVideo.srcObject) || null;
   const mimeType = preferredMime();
-  const remoteStream = (remoteAudio && remoteAudio.srcObject) || (remoteVideo && remoteVideo.srcObject) || null;
+
+  const W = mainVideo.videoWidth  || 1280;
+  const H = mainVideo.videoHeight || 720;
+  if (!_chatRec.canvas) _chatRec.canvas = document.createElement('canvas');
+  _chatRec.canvas.width  = W;
+  _chatRec.canvas.height = H;
+  _chatRec.ctx     = _chatRec.canvas.getContext('2d');
+  _chatRec.main    = mainVideo;
+  _chatRec.showPip = miniChatVisible && !!miniChatVid;
+  _chatRec.overlay = _chatRec.showPip ? miniChatVid : null;
+
+  const pipW = Math.round(W * 0.28);
+  const pipH = Math.round(pipW * 9 / 16);
+  const pipX = W - pipW - 14;
+  const pipY = 14;
+
+  function drawFrame() {
+    const c = _chatRec.ctx;
+    const mv = _chatRec.main;
+    if (mv && mv.readyState >= 2) c.drawImage(mv, 0, 0, W, H);
+    if (_chatRec.showPip && _chatRec.overlay && _chatRec.overlay.readyState >= 2) {
+      c.save();
+      c.beginPath();
+      if (c.roundRect) c.roundRect(pipX, pipY, pipW, pipH, 4);
+      else c.rect(pipX, pipY, pipW, pipH);
+      c.clip();
+      c.drawImage(_chatRec.overlay, pipX, pipY, pipW, pipH);
+      c.restore();
+      c.strokeStyle = '#00d4ff'; c.lineWidth = 2;
+      c.beginPath();
+      if (c.roundRect) c.roundRect(pipX, pipY, pipW, pipH, 4);
+      else c.rect(pipX, pipY, pipW, pipH);
+      c.stroke();
+    }
+    _chatRec.afId = requestAnimationFrame(drawFrame);
+  }
+  _chatRec.afId = requestAnimationFrame(drawFrame);
+
+  const { ctx: aCtx, dest: aDest } = await buildAudioMix(
+    getLocalAudioTracksForRec(), remoteStream
+  );
+  _chatRec.aCtx = aCtx;
+
+  const canvasStream = _chatRec.canvas.captureStream(30);
   const recStream = new MediaStream([
-    ...mainVideo.srcObject.getVideoTracks(),
-    ...getLocalAudioTracksForRec(),
-    ...(remoteStream ? remoteStream.getAudioTracks() : [])
+    ...canvasStream.getVideoTracks(),
+    ...aDest.stream.getAudioTracks(),
   ]);
 
-  recChatChunks = [];
-  recChat = new MediaRecorder(recStream, { mimeType });
-  recChat.ondataavailable = e => { if (e.data.size > 0) recChatChunks.push(e.data); };
-  recChat.onstop = async () => {
-    await saveRec(recChatChunks, mimeType, isLocalMain ? 'chat-local' : 'chat-remote');
-    recChatBusy = false;
+  _chatRec.chunks   = [];
+  _chatRec.active   = true;
+  recChatChunks     = _chatRec.chunks;
+  const mr = new MediaRecorder(recStream, { mimeType });
+  _chatRec.recorder = mr;
+  recChat           = mr;
+
+  mr.ondataavailable = e => { if (e.data.size > 0) _chatRec.chunks.push(e.data); };
+  mr.onstop = async () => {
+    cancelAnimationFrame(_chatRec.afId);
+    _chatRec.aCtx.close();
+    _chatRec.active   = false;
+    _chatRec.busy     = false;
+    recChatBusy       = false;
+    const chunks = _chatRec.chunks;
+    _chatRec.chunks   = [];
+    await saveRec(chunks, mimeType, 'chat-recording');
     if (btn) { btn.disabled = false; btn.textContent = '➤ RECORD'; }
   };
-  recChat.start(1000);
+
+  mr.start(1000);
   if (btn) { btn.textContent = '⏹ Stop'; btn.classList.add('recording'); }
-  entry(`Chat recording started (${isLocalMain ? 'local' : 'remote'} main)…`, 'ok');
+  entry(`Chat recording started (${isLocalMain ? 'local' : 'remote'} main${_chatRec.showPip ? ' + PiP' : ''})…`, 'ok');
 }
 
 function toggleVideo() {
