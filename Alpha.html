@@ -3190,6 +3190,24 @@ function toggleChatVideoView() {
   syncChatUnderlay();
   syncChatMiniOverlay();
   updateChatVideoViewBtn();
+  // Hot-swap video track in active chat recording
+  if (recChat && recChat.state === 'recording') {
+    const isLocalMain = (chatUnderlayMode === 'local');
+    const newMainVid = document.getElementById(isLocalMain ? 'localVideo' : 'remoteVideo');
+    if (newMainVid && newMainVid.srcObject) {
+      const newTrack = newMainVid.srcObject.getVideoTracks()[0];
+      if (newTrack) {
+        const sender = recChat.stream && recChat.stream.getVideoTracks()[0];
+        if (sender) {
+          try {
+            recChat.stream.removeTrack(sender);
+            recChat.stream.addTrack(newTrack);
+          } catch(e) { entry('Could not swap recording track: ' + e.message, 'sys'); }
+        }
+      }
+    }
+    entry('Recording view switched to ' + (isLocalMain ? 'local' : 'remote'), 'sys');
+  }
 }
 
 // init button state on load
