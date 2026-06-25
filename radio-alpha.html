@@ -4,12 +4,16 @@
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<meta name="theme-color" content="#4b5563">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="screen-orientation" content="any">
 <meta name="google" content="notranslate">
 <title>ALPHA — Field Radio v6</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌐</text></svg>">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono:display=swap&family=Orbitron:wght@400;700;900&display=swap');
 
   :root {
     --bg:         #6b7280;
@@ -35,8 +39,11 @@
     color: var(--text);
     font-family: 'Share Tech Mono', monospace;
     font-size: 13px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     height: 100vh;
     height: -webkit-fill-available;
+    height: calc(var(--vh, 1vh) * 100);
     height: 100dvh;
     display: flex;
     flex-direction: column;
@@ -74,11 +81,27 @@
   }
 
   header {
+    justify-content: space-between;
     display: flex; align-items: center; gap: 16px;
     background: var(--panel); border: 1px solid var(--border);
     border-radius: 8px; border-top: 2px solid var(--accent);
     padding: 10px 14px;
     flex-shrink: 0;
+  }
+  .header-action-btn {
+    background: transparent;
+    border: 1px solid var(--accent); color: var(--accent);
+    font-family: 'Share Tech Mono', monospace; font-size: 12px;
+    border-radius: 4px; padding: 3px 8px;
+    cursor: pointer; line-height: 1; flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    white-space: nowrap;
+  }
+  .header-action-btn:hover { background: var(--btn-hover); border-color: var(--accent); }
+  .header-action-btn.leave-style { border-color: #fff; color: #fff; background: #000; }
+  .header-action-btn.leave-style:hover { background: #222; }
+  .header-right-btns {
+    display: flex; align-items: center; gap: 6px; margin-left: auto; flex-shrink: 0;
   }
   .logo {
     font-family: 'Orbitron', sans-serif; font-size: 20px; font-weight: 900;
@@ -126,6 +149,7 @@
   .chat {
     flex: 1;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     display: flex;
     flex-direction: column;
     position: relative; z-index: 1;
@@ -717,6 +741,7 @@
   .log {
     flex: 1;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
     scrollbar-color: #ccc transparent;
     background: #ffffff;
@@ -751,8 +776,9 @@
   }
   #speechPanel > .speech-status { display: none; }
   body.is-android #speechPanel > .speech-status { display: block; }
-  body.is-pi #speechBtnRow2 { display: none; }
-  body.is-pi #speechListenBtn { display: none; }
+  body.is-pi #speechBtnRow2 .sbr-label,
+  body.is-pi #speechLangSelect,
+  body.is-pi #speechOriginalBtn { display: none; }
   body.is-pi #speechStatus { display: none; }
   #speechPanel > .speech-status {
     font-size: 11px; letter-spacing: 1px; padding: 2px 4px;
@@ -968,13 +994,13 @@
     color: var(--text); line-height: 1;
   }
   .reconnect-slider {
-    -webkit-appearance: none; appearance: none;
+    -webkit-appearance: none; -moz-appearance: none; appearance: none;
     width: 100%; height: 6px; border-radius: 3px;
     background: var(--border); outline: none; cursor: default;
     pointer-events: none;
   }
   .reconnect-slider::-webkit-slider-thumb {
-    -webkit-appearance: none; appearance: none;
+    -webkit-appearance: none; -moz-appearance: none; appearance: none;
     width: 18px; height: 18px; border-radius: 50%;
     background: var(--accent);
     box-shadow: 0 0 8px rgba(0,212,255,0.7);
@@ -1022,7 +1048,7 @@
   }
   .video-wrap {
     position: relative; background: #000; border-radius: 4px;
-    overflow: hidden; aspect-ratio: 16/9;
+    overflow: hidden; padding-bottom: 0; aspect-ratio: 16/9;
     width: 100%; max-height: min(34vh, 280px);
   }
   .video-wrap video {
@@ -1101,7 +1127,7 @@
     background: rgba(0,0,0,0.65); border: 1px solid var(--accent, #00d4ff);
     border-radius: 3px; color: var(--accent, #00d4ff);
     font-size: 9px; line-height: 16px; text-align: center;
-    cursor: pointer; user-select: none; font-family: monospace;
+    cursor: pointer; user-select: none; -webkit-user-select: none; font-family: monospace;
     display: flex; align-items: center; justify-content: center;
   }
   .mini-video-overlay .mini-toggle-btn:hover { background: rgba(0,212,255,0.22); }
@@ -1165,6 +1191,230 @@
     transition: opacity 0.12s, transform 0.12s;
   }
   .app-tooltip.visible { opacity: 1; transform: translateY(0); }
+  /* Help button — all devices */
+  #helpTouchBtn {
+    display: inline-flex; background: transparent;
+    border: 1px solid var(--accent); color: var(--accent);
+    font-family: 'Share Tech Mono', monospace; font-size: 13px;
+    border-radius: 50%; width: 26px; height: 26px;
+    cursor: pointer; line-height: 1; flex-shrink: 0;
+    align-items: center; justify-content: center;
+  }
+  #chatHelpBtn {
+    display: inline-flex; background: transparent;
+    border: 1px solid var(--accent); color: var(--accent);
+    font-family: 'Share Tech Mono', monospace; font-size: 13px;
+    border-radius: 50%; width: 26px; height: 26px;
+    cursor: pointer; line-height: 1; flex-shrink: 0;
+    align-items: center; justify-content: center;
+    margin-left: auto;
+  }
+  /* Help panel */
+  #helpPanel {
+    display: none; position: fixed; inset: 0; z-index: 2000;
+    background: rgba(0,0,0,0.75); align-items: flex-start;
+    justify-content: center; padding: 16px;
+    overflow-y: auto;
+  }
+  #helpPanel.open { display: flex; }
+  #helpPanelInner {
+    background: #ffffff; border: 2px solid #333;
+    border-radius: 8px; padding: 14px 16px; width: 100%;
+    max-width: 700px; color: #000; font-size: 12px;
+    font-family: 'Share Tech Mono', monospace;
+  }
+  #helpPanel h3 {
+    margin: 0 0 10px; font-size: 15px; letter-spacing: 2px;
+    text-transform: uppercase; color: #000; font-weight: 900;
+    text-align: center;
+  }
+  .help-btn-bar {
+    display: flex; gap: 8px; margin-bottom: 10px;
+  }
+  .help-btn-bar button {
+    flex: 1; padding: 7px 8px;
+    background: #222; border: 1px solid #222;
+    color: #fff; font-family: 'Share Tech Mono', monospace;
+    font-size: 12px; letter-spacing: 1px;
+    text-transform: uppercase; border-radius: 4px; cursor: pointer;
+    font-weight: bold;
+  }
+  .help-btn-bar button:hover { background: #444; }
+  #helpPanelRows {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 16px;
+  }
+  .help-row {
+    display: flex; gap: 8px; padding: 4px 0;
+    border-bottom: 1px solid #bbb;
+    line-height: 1.3; align-items: baseline;
+  }
+  .help-row:last-child { border-bottom: none; }
+  .help-name {
+    flex: 0 0 100px;
+    background: #1a1a1a; color: #fff;
+    font-weight: 900; font-size: 9px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    padding: 2px 5px; border-radius: 3px;
+    white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis; text-align: center;
+    align-self: center;
+  }
+  .help-desc {
+    flex: 1; color: #000; font-size: 10px;
+    font-weight: 700;
+  }
+  #helpCloseBtn {
+    margin-top: 10px; width: 100%; padding: 7px;
+    background: #222; border: 1px solid #222;
+    color: #fff; font-family: inherit;
+    font-size: 12px; letter-spacing: 1px;
+    text-transform: uppercase; border-radius: 4px; cursor: pointer;
+    font-weight: bold;
+  }
+  #helpCloseBtn:hover { background: #444; }
+  @media print {
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
+    /* ── Overall page ── */
+    body { background: #fff !important; margin: 0 !important; }
+    .shell { gap: 4px !important; padding: 6px !important; }
+
+    /* ── Header / logo bar — light grey ── */
+    header {
+      background: #e8e8e8 !important;
+      border: 1px solid #999 !important;
+      border-top: 1px solid #999 !important;
+      border-radius: 4px !important;
+    }
+    .logo { color: #000 !important; text-shadow: none !important; }
+    .logo span { color: #000 !important; }
+    #statusText, .status-item { color: #000 !important; }
+    .led { background: #000 !important; }
+
+    /* ── Header buttons — dark outline, no fill ── */
+    .header-action-btn {
+      background: #fff !important; color: #000 !important;
+      border: 1px solid #333 !important;
+    }
+    .header-action-btn.leave-style {
+      background: #fff !important; color: #000 !important;
+      border: 1px solid #333 !important;
+    }
+    #helpTouchBtn {
+      background: #fff !important; color: #000 !important;
+      border: 1px solid #333 !important;
+    }
+
+    /* ── Controls box container — white background ── */
+    .tab-content, .tab-pane, .chat-panel, #paneChat,
+    .chat-btn-bar-row, .speech-btn-row, .speech-btn-row-spacer {
+      background: #fff !important;
+      border-color: #999 !important;
+    }
+
+    /* ── All control buttons — white fill, dark outline, black text ── */
+    .speech-top-btn, .media-btn, .leave-btn, .syslog-chat-btn {
+      background: #fff !important; color: #000 !important;
+      border: 1px solid #555 !important; text-shadow: none !important;
+    }
+    .speech-top-btn.leave-style, .speech-top-btn.active,
+    .speech-top-btn.rec-chat-btn, #chatVideoViewBtn {
+      background: #fff !important; color: #000 !important;
+      border: 1px solid #555 !important;
+    }
+    /* Row 1: TTS Off | Flip Cam | FS OFF | MINI CAM OFF */
+    #ttsChatBtn, #flipChatBtn, #fsChatBtn, #miniChatBtn { display: inline-flex !important; }
+    /* Row 2: See Remote | RECORD | Video Off | Mike On | Sys Audio Off | Share Off */
+    #chatVideoViewBtn, #recChatBtn, #videoOffChatBtn,
+    #audioChatBtn, #sysAudioChatBtn, #screenChatBtn { display: inline-flex !important; }
+    /* Hide syslog LED button — not useful on print */
+    #syslogToggleBtn { display: none !important; }
+
+    /* ── CHAT: label — black ── */
+    .sbr-label { color: #000 !important; font-weight: bold !important; }
+
+    /* ── chatToolsWrap — show with white bg, black border ── */
+    #chatToolsWrap {
+      background: #fff !important;
+      border: 1px solid #999 !important;
+      border-radius: 4px !important;
+    }
+
+    /* ── Gain row — restored, grey label, visible slider ── */
+    .gain-row { display: flex !important; background: #fff !important; }
+    .gain-row .gain-label {
+      background: #e8e8e8 !important;
+      border: 1px solid #999 !important;
+      border-radius: 3px !important;
+      padding: 2px 6px !important;
+    }
+    .gain-row .gain-label span { color: #000 !important; }
+    .gain-row .gain-val { color: #000 !important; }
+    .gain-row input[type=range] { display: block !important; flex: 1 !important; border: 1px solid #999 !important; -webkit-appearance: auto !important; appearance: auto !important; }
+    /* Talk/Type in Chat button in gain row */
+    #speechToggleBtn { display: inline-flex !important; background: #fff !important; color: #000 !important; border: 1px solid #555 !important; }
+
+    /* ── My Language row — light grey ── */
+    #translateBar {
+      background: #e8e8e8 !important;
+      border: 1px solid #999 !important;
+      border-radius: 4px !important;
+      margin-bottom: 0 !important;
+      padding: 4px 8px !important;
+    }
+    #translateBar label { color: #000 !important; font-weight: bold !important; }
+    #translateTrigger {
+      background: #fff !important; color: #000 !important;
+      border: 1px solid #555 !important;
+    }
+    #translateResetBtn {
+      background: #fff !important; color: #000 !important;
+      border: 1px solid #555 !important;
+    }
+    #translateDropdownWrap { display: none !important; }
+
+    /* ── Chat message area — hidden, no space ── */
+    #chat { display: none !important; height: 0 !important; overflow: hidden !important; min-height: 0 !important; }
+    .log-panel { display: none !important; }
+    .chat-find-bar { display: none !important; height: 0 !important; overflow: hidden !important; }
+    .mini-video-overlay { display: none !important; }
+    #speechPanel { display: none !important; height: 0 !important; overflow: hidden !important; }
+    .zoom-row { display: none !important; height: 0 !important; overflow: hidden !important; }
+
+    /* ── Button Guide — flush, no gap ── */
+    #helpPanel {
+      position: static !important; background: none !important;
+      padding: 0 !important; margin: 0 !important; display: block !important;
+    }
+    #helpPanelInner {
+      border: 1px solid #999 !important; border-radius: 4px !important;
+      max-width: 100% !important; padding: 8px 10px !important;
+      margin: 0 !important;
+    }
+    .help-btn-bar { display: none !important; }
+    #helpCloseBtn { display: none !important; }
+
+    /* ── Notes area — fills remaining page space ── */
+    #printNotesArea {
+      display: block !important;
+      border: 1px solid #999;
+      border-radius: 4px;
+      margin-top: 8px;
+      padding: 8px 10px;
+      flex: 1 !important;
+      min-height: 200px;
+    }
+    #printNotesArea p {
+      margin: 0 0 6px;
+      font-size: 10px;
+      color: #666;
+      font-family: 'Share Tech Mono', monospace;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+  }
 
   /* new-message badge */
   .msg-badge {
@@ -1461,7 +1711,151 @@
   /* Record buttons keep their original (non-yellow) label color — already
      styled separately above (#recBtn/#recBtn2 orange, #recChatBtn white-on-black) */
 </style>
-<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js"></script></head>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   Cross-browser compatibility shims — inserted for broad support
+   Targets: Safari 14+, Firefox Android, older Android WebViews
+   ═══════════════════════════════════════════════════════════════════ */
+
+// 1. aspect-ratio polyfill for browsers that don't support it natively
+//    (Safari < 15, some older Android WebViews)
+(function() {
+  var el = document.createElement('div');
+  el.style.cssText = 'aspect-ratio:1/1';
+  if (!el.style.aspectRatio) {
+    // Inject padding-bottom fallback for .video-wrap and .mini-video-overlay
+    var style = document.createElement('style');
+    style.textContent = [
+      '.video-wrap { padding-bottom: 56.25% !important; height: 0 !important; }',
+      '.video-wrap video { position: absolute; top:0; left:0; width:100%; height:100%; }',
+      '.mini-video-overlay { padding-bottom: 56.25% !important; height: 0 !important; }',
+      '.mini-video-overlay video { position: absolute; top:0; left:0; width:100%; height:100%; }'
+    ].join('');
+    document.head.appendChild(style);
+  }
+})();
+
+// 2. Promise.allSettled polyfill (not in older WebViews)
+if (!Promise.allSettled) {
+  Promise.allSettled = function(promises) {
+    return Promise.all(promises.map(function(p) {
+      return Promise.resolve(p).then(
+        function(v) { return { status: 'fulfilled', value: v }; },
+        function(e) { return { status: 'rejected', reason: e }; }
+      );
+    }));
+  };
+}
+
+// 3. Element.closest polyfill (missing in some older browsers)
+if (!Element.prototype.closest) {
+  Element.prototype.closest = function(s) {
+    var el = this;
+    do {
+      if (typeof el.matches === 'function' && el.matches(s)) return el;
+      el = el.parentElement || el.parentNode;
+    } while (el !== null && el.nodeType === 1);
+    return null;
+  };
+}
+
+// 4. NodeList.forEach polyfill
+if (typeof NodeList !== 'undefined' && NodeList.prototype && !NodeList.prototype.forEach) {
+  NodeList.prototype.forEach = Array.prototype.forEach;
+}
+
+// 5. String.prototype.replaceAll polyfill
+if (!String.prototype.replaceAll) {
+  String.prototype.replaceAll = function(search, replacement) {
+    if (search instanceof RegExp) return this.replace(search, replacement);
+    return this.split(search).join(replacement);
+  };
+}
+
+// 6. Object.fromEntries polyfill
+if (!Object.fromEntries) {
+  Object.fromEntries = function(entries) {
+    var obj = {};
+    for (var _i = 0, _e = Array.from(entries); _i < _e.length; _i++) {
+      obj[_e[_i][0]] = _e[_i][1];
+    }
+    return obj;
+  };
+}
+
+// 7. Array.prototype.at polyfill
+if (!Array.prototype.at) {
+  Array.prototype.at = function(n) {
+    n = Math.trunc(n) || 0;
+    if (n < 0) n += this.length;
+    return (n < 0 || n >= this.length) ? undefined : this[n];
+  };
+}
+
+// 8. globalThis polyfill
+if (typeof globalThis === 'undefined') {
+  (function() {
+    Object.defineProperty(Object.prototype, '__globalThis__', {
+      get: function() { return this; }, configurable: true
+    });
+    __globalThis__.globalThis = __globalThis__;
+    delete Object.prototype.__globalThis__;
+  })();
+}
+
+// 9. queueMicrotask polyfill
+if (typeof queueMicrotask !== 'function') {
+  window.queueMicrotask = function(fn) { Promise.resolve().then(fn); };
+}
+
+// 10. Touch-action: manipulation on all interactive elements (prevents 300ms tap delay on mobile)
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('button, input, select, a, [onclick]').forEach(function(el) {
+    if (!el.style.touchAction) el.style.touchAction = 'manipulation';
+  });
+});
+
+// 11. Passive event listener feature detection
+var _supportsPassive = false;
+try {
+  var opts = Object.defineProperty({}, 'passive', { get: function() { _supportsPassive = true; } });
+  window.addEventListener('testPassive', null, opts);
+  window.removeEventListener('testPassive', null, opts);
+} catch(e) {}
+window._passiveOpt = _supportsPassive ? { passive: true } : false;
+
+// 12. scroll-behavior smooth polyfill (very basic — just call scrollIntoView)
+// Already handled by try/catch in the app code above
+
+// 13. Fix for iOS Safari audio autoplay: ensure AudioContext is created
+//     only after a user gesture (handled in main code, this just ensures unlock)
+document.addEventListener('touchstart', function() {
+  if (window._actx && window._actx.state === 'suspended') {
+    window._actx.resume().catch(function() {});
+  }
+}, { passive: true });
+
+// 14. Visibility change: resume AudioContext when tab becomes visible
+document.addEventListener('visibilitychange', function() {
+  if (!document.hidden && window._actx && window._actx.state === 'suspended') {
+    window._actx.resume().catch(function() {});
+  }
+});
+
+// 15. Fix body height on iOS Safari where 100vh includes browser chrome
+function _fixViewportHeight() {
+  var vh = window.innerHeight * 0.01;
+  document.documentElement.style.setProperty('--vh', vh + 'px');
+}
+_fixViewportHeight();
+window.addEventListener('resize', _fixViewportHeight, { passive: true });
+window.addEventListener('orientationchange', function() {
+  setTimeout(_fixViewportHeight, 300);
+}, { passive: true });
+</script>
+
+</head>
 <body>
 
 <div class="session-overlay" id="sessionOverlay">
@@ -1516,6 +1910,11 @@
         <button class="leave-chat-btn" onclick="leaveSession()">Leave Chat</button>
       </div>
     </div>
+    <div class="header-right-btns">
+      <button class="header-action-btn" onclick="refreshScreen()" title="Refresh / Reconnect">↺ Refresh</button>
+      <button class="header-action-btn leave-style" id="leaveChatBtn" onclick="leaveSession()" title="Leave session">✕ Leave</button>
+      <button id="helpTouchBtn" onclick="openHelpPanel()" aria-label="Button guide">?</button>
+    </div>
   </header>
   <div class="tab-bar" style="display:none;">
     <button class="tab-btn" id="tabLocalBtn" style="display:none" onclick="switchTab(&#39;local&#39;)">LOCAL</button>
@@ -1554,13 +1953,13 @@
         <div class="panel-label">LOCAL — ALPHA</div>
         <div class="video-grid">
           <div class="video-wrap" id="localWrap">
-            <video id="localVideo" autoplay="" playsinline="" muted=""></video>
+            <video id="localVideo" autoplay="" playsinline="" webkit-playsinline="" muted=""></video>
             <span class="video-label">ALPHA</span>
             <span class="duplex-overlay" id="duplexBar">OFFLINE</span>
           </div>
         </div>
         <div class="mini-video-overlay hidden" id="miniRemoteOverlay">
-          <video id="miniRemoteVideo" autoplay="" playsinline="" muted=""></video>
+          <video id="miniRemoteVideo" autoplay="" playsinline="" webkit-playsinline="" muted=""></video>
           <span class="video-label">BRAVO</span>
           <button class="mini-toggle-btn" title="Hide mini" onclick="toggleMiniVideo();event.stopPropagation()">✕</button>
         </div>
@@ -1597,13 +1996,13 @@
         <div class="panel-label">REMOTE — BRAVO</div>
         <div class="video-grid">
           <div class="video-wrap waiting" id="remoteWrap">
-            <video id="remoteVideo" autoplay="" playsinline="" muted=""></video>
+            <video id="remoteVideo" autoplay="" playsinline="" webkit-playsinline="" muted=""></video>
             <span class="video-label">BRAVO</span>
             <span class="duplex-overlay" id="duplexBar2">OFFLINE</span>
           </div>
         </div>
         <div class="mini-video-overlay hidden" id="miniLocalOverlay">
-          <video id="miniLocalVideo" autoplay="" playsinline="" muted=""></video>
+          <video id="miniLocalVideo" autoplay="" playsinline="" webkit-playsinline="" muted=""></video>
           <span class="video-label">ALPHA</span>
           <button class="mini-toggle-btn" title="Hide mini" onclick="toggleMiniVideo();event.stopPropagation()">✕</button>
         </div>
@@ -1620,14 +2019,13 @@
         <button class="chat-find-close" id="chatFindClose" title="Close">✕</button>
       </div>
       <div class="chat-btn-bar-row" id="chatBtnRow1" style="flex-shrink:0; margin-bottom:4px; flex-wrap:nowrap; overflow:hidden;">
-        <button class="speech-top-btn" onclick="refreshScreen()" title="Refresh / Reconnect" style="flex-shrink:0;">↺</button>
-        <button class="speech-top-btn leave-style" id="leaveChatBtn" onclick="leaveSession()" title="Leave session" style="flex-shrink:0;">✕ Leave</button>
+        <button class="speech-top-btn" id="ttsChatBtn" onclick="toggleTts()" title="Toggle auto-speak for incoming messages" style="flex-shrink:0;">TTS Off</button>
         <span id="flipWrapChat"><button class="speech-top-btn" id="flipChatBtn" onclick="flipCamera()" title="Flip camera" style="flex-shrink:0;">⟳ Flip Cam</button></span>
         <button class="speech-top-btn" id="fsChatBtn" onclick="toggleFullScreen()" title="Full Screen Toggle" style="flex-shrink:0;">FS OFF</button>
         <button class="speech-top-btn" id="miniChatBtn" onclick="toggleMiniChat()" title="Toggle mini video in chat" style="flex-shrink:0;">MINI CAM OFF</button>
       </div>
       <div class="chat-btn-bar-row" id="chatBtnRow2" style="flex-shrink:0;">
-        <button class="speech-top-btn" id="chatVideoViewBtn" onclick="toggleChatVideoView()" title="Toggle chat video view">See You</button>
+        <button class="speech-top-btn" id="chatVideoViewBtn" onclick="toggleChatVideoView()" title="Toggle chat video view">See Remote</button>
         <button class="speech-top-btn rec-chat-btn" id="recChatBtn" onclick="toggleRecordChat()" title="Record current main feed + mini if visible">➤ RECORD</button>
         <button class="speech-top-btn video-off-state" id="videoOffChatBtn" onclick="toggleVideo()" title="Video on/off">Video Off</button>
         <button class="speech-top-btn" id="audioChatBtn" onclick="toggleAudio()" title="Mute/unmute mic">Mike On</button>
@@ -1775,9 +2173,9 @@
       </div>
       <div class="chat-panel" style="flex:1" id="chatPanel">
         <div class="panel-label">COMMS</div>
-        <video id="chatUnderlay" class="no-stream" autoplay playsinline muted></video>
+        <video id="chatUnderlay" class="no-stream" autoplay playsinline webkit-playsinline muted></video>
         <div class="mini-video-overlay hidden" id="miniChatOverlay">
-          <video id="miniChatVideo" autoplay playsinline muted></video>
+          <video id="miniChatVideo" autoplay playsinline webkit-playsinline muted></video>
           <span class="video-label">REMOTE</span>
           <button class="mini-toggle-btn" title="Hide mini" onclick="toggleMiniChat();event.stopPropagation()">✕</button>
         </div>
@@ -1825,12 +2223,12 @@
             <option value="pt-BR" title="Portuguese (BR)">Português (BR)</option>
           </select>
           <button id="speechOriginalBtn" onclick="speechOriginalLang()" title="Revert to system language">ORIGINAL</button>
+          <button id="speechListenBtn" onclick="toggleListening()">TALK</button>
         </div>
         <div class="speech-btn-row" id="speechBtnRow3">
           <span class="sbr-label">Text To Speech:</span>
           <select id="ttsVoiceSelect" title="TTS voice for spoken output"></select>
           <button id="speechTtsBtn" onclick="toggleTts()" title="Toggle auto-speak for incoming messages">TTS Off</button>
-          <button id="speechListenBtn" onclick="toggleListening()">TALK</button>
         </div>
       </div>
       <div class="log-panel collapsed" id="logPanel">
@@ -1847,7 +2245,7 @@
   </div>
 
 <button id="audioUnlockBtn" onclick="unlockRemoteAudio()" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(0,200,120,0.92);color:#000;border:none;border-radius:8px;padding:12px 28px;font-size:15px;font-family:monospace;font-weight:bold;letter-spacing:1px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,0.5);">▶ TAP TO HEAR AUDIO</button>
-<audio id="remoteAudio" autoplay="" playsinline=""></audio>
+<audio id="remoteAudio" autoplay="" playsinline="" webkit-playsinline=""></audio>
 <div id="fsHint">TAP TO SHOW CONTROLS</div>
 <div id="lightbox"><img id="lightboxImg" src="" alt=""></div>
 
@@ -2275,7 +2673,7 @@ function toggleTranslateDrop(e) {
     // Scroll to the currently selected language
     const dd = document.getElementById('translateDropdown');
     const selected = dd.querySelector('li.selected');
-    if (selected) setTimeout(() => selected.scrollIntoView({ block: 'nearest' }), 30);
+    if (selected) setTimeout(() => { try { selected.scrollIntoView({ block: 'nearest' }); } catch(e) { selected.scrollIntoView(false); } }, 30);
     setTimeout(() => search.focus(), 30);
   }
 }
@@ -2778,10 +3176,10 @@ function updateChatVideoViewBtn() {
   const btn = document.getElementById('chatVideoViewBtn');
   if (!btn) return;
   if (chatUnderlayMode === 'local') {
-    btn.textContent = 'See me';
+    btn.textContent = 'See Local';
     btn.classList.add('active');
   } else {
-    btn.textContent = 'See You';
+    btn.textContent = 'See Remote';
     btn.classList.remove('active');
   }
 }
@@ -3228,7 +3626,7 @@ function saveChatToFile() {
     findMatches.forEach((m, i) => m.classList.toggle('current', i === idx));
     findIdx = idx;
     updateCount();
-    if (findMatches[idx]) findMatches[idx].scrollIntoView({ block: 'center', behavior: 'smooth' });
+    if (findMatches[idx]) try { findMatches[idx].scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch(e2) { findMatches[idx].scrollIntoView(true); };
   }
 
   function stepFind(dir) {
@@ -3547,33 +3945,75 @@ function setupTooltips() {
     el.removeAttribute('title');
   });
 
+  // Restore hover tooltips for mouse devices
   const tip = document.createElement('div');
   tip.className = 'app-tooltip';
   document.body.appendChild(tip);
-
   const place = target => {
     const rect = target.getBoundingClientRect();
     tip.textContent = target.dataset.tooltip;
     tip.classList.add('visible');
     const tr = tip.getBoundingClientRect();
     let left = rect.left + rect.width / 2 - tr.width / 2;
-    let top = rect.top - tr.height - 8;
+    let top  = rect.top - tr.height - 8;
     if (top < 8) top = rect.bottom + 8;
     left = Math.max(8, Math.min(left, window.innerWidth - tr.width - 8));
-    tip.style.left = left + 'px';
-    tip.style.top = top + 'px';
+    tip.style.left = left + 'px'; tip.style.top = top + 'px';
   };
   const hide = () => tip.classList.remove('visible');
-
   document.querySelectorAll('[data-tooltip]').forEach(el => {
     el.addEventListener('mouseenter', () => place(el));
-    el.addEventListener('focus', () => place(el));
+    el.addEventListener('focus',      () => place(el));
     el.addEventListener('mouseleave', hide);
-    el.addEventListener('blur', hide);
-    el.addEventListener('click', hide);
+    el.addEventListener('blur',       hide);
+    el.addEventListener('click',      hide);
   });
 }
 setupTooltips();
+
+// ── Help panel (touch devices) ────────────────────────────────────────
+function openHelpPanel() {
+  const rows = document.getElementById('helpPanelRows');
+  if (rows && !rows.dataset.built) {
+    const items = [
+      ['Talk/Type in Chat', 'Open the speech and text input panel'],
+      ['TALK',    'Hold to dictate via speech-to-text'],
+      ['SEND',    'Send typed or dictated text to chat'],
+      ['ATTACH',  'Attach a file to send (drag and drop also works)'],
+      ['LOAD',    'Load a text file into the input box'],
+      ['SAVE',    'Save the input box text to a file'],
+      ['COPY',    'Copy the input box text to clipboard'],
+      ['CLEAR',   'Clear the input box'],
+      ['CW',      'Send input text as Morse code audio'],
+      ['TTS',     'Toggle auto-speak for incoming messages'],
+      ['ORIGINAL','Reset speech language to system default'],
+      ['↺',       'Refresh / reconnect'],
+      ['✕ Leave', 'End the session'],
+      ['RECORD',  'Record the current call'],
+      ['MINI CAM','Toggle picture-in-picture camera overlay'],
+      ['FS',      'Toggle full screen'],
+      ['SYS LOG', 'Toggle the system diagnostic log'],
+      ['💾 SAVE',  'Save chat history as an HTML file'],
+      ['↩ RESTORE','Restore a previous session\'s chat'],
+      ['🗑 CLEAR', 'Clear chat history'],
+      ['🔍 FIND',  'Find text in the chat'],
+      ['Video Off','Toggle your camera on/off'],
+      ['Mike On',  'Mute or unmute your microphone'],
+      ['Sys Audio','Mix computer audio output into transmitted signal'],
+      ['Share Off','Share your screen'],
+      ['SEE REMOTE','Toggle between remote and local video view in chat'],
+      ['Pi Mode',  'Compact mode — hides STT controls (for Raspberry Pi)'],
+    ];
+    rows.innerHTML = items.map(([n,d]) =>
+      `<div class="help-row"><span class="help-name">${n}</span><span class="help-desc">${d}</span></div>`
+    ).join('');
+    rows.dataset.built = '1';
+  }
+  document.getElementById('helpPanel').classList.add('open');
+}
+function closeHelpPanel() {
+  document.getElementById('helpPanel').classList.remove('open');
+}
 
 // Attach button → open file picker
 if (attachBtn) attachBtn.addEventListener('click', () => fileInput.click());
@@ -3606,7 +4046,7 @@ document.addEventListener('drop', e => {
 // ── Also allow paste of images ────────────────────────────────
 document.addEventListener('paste', e => {
   if (activeTab !== 'chat') return;
-  const items = [...(e.clipboardData?.items || [])];
+  const items = [...(e.clipboardData ? Array.from(e.clipboardData.items) : [])];
   const imageItems = items.filter(i => i.type.startsWith('image/'));
   // Only intercept if we actually have images AND focus is not on a text input
   // (so normal text paste into chatInput is never blocked)
@@ -3635,7 +4075,11 @@ function addFiles(files) {
 }
 
 function renderFileChip(item, idx) {
-  [filePreviewStrip].forEach(strip => {
+  const _activeSpeechStrip = document.getElementById('speechFilePreviewStrip');
+  const _activeStrips = (_activeSpeechStrip && _activeSpeechStrip.closest('.speech-open'))
+    ? [_activeSpeechStrip]
+    : [filePreviewStrip];
+  _activeStrips.forEach(strip => {
     if (!strip) return;
     const chip = document.createElement('div');
     chip.className = 'file-chip';
@@ -3668,7 +4112,11 @@ function renderFileChip(item, idx) {
 function removeFile(idx, chip) {
   pendingFiles.splice(idx, 1);
   // Remove chips with this idx from both strips
-  [filePreviewStrip].forEach(strip => {
+  const _activeSpeechStrip = document.getElementById('speechFilePreviewStrip');
+  const _activeStrips = (_activeSpeechStrip && _activeSpeechStrip.closest('.speech-open'))
+    ? [_activeSpeechStrip]
+    : [filePreviewStrip];
+  _activeStrips.forEach(strip => {
     if (!strip) return;
     const target = [...strip.querySelectorAll('.file-chip')].find(c => c.dataset.idx == chip.dataset.idx);
     if (target) target.remove();
@@ -4058,6 +4506,21 @@ const VOICE_PUNCT_MAPS = {
     [/\bnew paragraph\b/gi,     '\n\n'],
     [/\bnew line\b/gi,          '\n'],
     [/\btab key\b/gi,           '\t'],
+    // Delete / scratch commands
+    [/\bscratch that\b/gi,                             '\x7f0S'],
+    [/\bundo that\b/gi,                                '\x7f0S'],
+    [/\bdelete word\b/gi,                              '\x7f1W'],
+    [/\bdelete (one|1) words?\b/gi,                    '\x7f1W'],
+    [/\bdelete (two|2) words?\b/gi,                    '\x7f2W'],
+    [/\bdelete (three|3) words?\b/gi,                  '\x7f3W'],
+    [/\bdelete (four|4) words?\b/gi,                   '\x7f4W'],
+    [/\bdelete (five|5) words?\b/gi,                   '\x7f5W'],
+    [/\bdelete sentence\b/gi,                          '\x7f1S'],
+    [/\bdelete (one|1) sentences?\b/gi,                '\x7f1S'],
+    [/\bdelete (two|2) sentences?\b/gi,                '\x7f2S'],
+    [/\bdelete (three|3) sentences?\b/gi,              '\x7f3S'],
+    [/\bdelete message\b/gi,                           '\x7fALL'],
+    [/\bclear (all|message|text|everything)\b/gi,      '\x7fALL'],
   ],
 
   // ── Spanish (es-ES) ───────────────────────────────────────────────────
@@ -4301,7 +4764,7 @@ function applyVoicePunctuation(text) {
   out = out.replace(/([(\[{"])[ \t]+/g, '$1');
   // Remove space between a symbol (#, @, etc.) and an adjacent number/word
   out = out.replace(/([#^&*+=<>|~@\/\\_-]) (?=\w)/g, '$1');
-  out = out.replace(/(?<=\w) ([#^&*+=<>|~@\/\\_-])/g, '$1');
+  out = out.replace(/(\w) ([#^&*+=<>|~@\/\\_-])/g, '$1$2');  /* compat: removed lookbehind */
   // $ / % only glue to an immediately adjacent NUMBER (not arbitrary words)
   out = out.replace(/\$ (?=\d)/g, '$');
   out = out.replace(/(\d) %/g, '$1%');
@@ -4346,6 +4809,7 @@ function _removeLastSentences(text, n) {
 function processVoiceChunk(currentText, chunk) {
   let text = chunk.trim();
   if (!text) return currentText;
+  entry('VOICE chunk: ' + JSON.stringify(text), 'sys');
 
   const numPattern = '(' + Object.keys(VOICE_NUMBER_WORDS).join('|') + '|\\d+)';
 
@@ -4382,6 +4846,36 @@ function processVoiceChunk(currentText, chunk) {
   // Not a recognized edit command — apply punctuation substitutions and append.
   let cleaned = applyVoicePunctuation(text);
   if (!cleaned) return currentText; // e.g. bare "parenthesis" with nothing else said
+
+  // Execute any \x7f delete-tokens produced by the localised maps.
+  // Tokens: \x7fNW = delete N words, \x7fNS = delete N sentences, \x7fALL = clear all.
+  if (cleaned.includes('\x7f')) {
+    let acc = currentText;
+    // Split on tokens, processing each segment then its token
+    const parts = cleaned.split(/(\x7f(?:\d+[WwSs]|ALL))/);
+    let rebuiltPrefix = '';
+    for (let i = 0; i < parts.length; i++) {
+      const seg = parts[i];
+      if (/^\x7f(\d+)[Ww]$/.test(seg)) {
+        const n = parseInt(seg.match(/\d+/)[0], 10);
+        acc = _removeLastWords(rebuiltPrefix + acc, n);
+        rebuiltPrefix = '';
+      } else if (/^\x7f(\d+)[Ss]$/.test(seg)) {
+        const n = parseInt(seg.match(/\d+/)[0], 10);
+        if (n === 0) acc = _removeLastSentences(rebuiltPrefix + acc, 1); // scratch that
+        else         acc = _removeLastSentences(rebuiltPrefix + acc, n);
+        rebuiltPrefix = '';
+      } else if (seg === '\x7fALL') {
+        acc = '';
+        rebuiltPrefix = '';
+      } else {
+        rebuiltPrefix += seg; // plain text segment — accumulate
+      }
+    }
+    // Any remaining plain text after last token gets appended
+    if (rebuiltPrefix) acc += rebuiltPrefix;
+    return acc;
+  }
   // Speech recognition sometimes re-finalizes an overlapping result, producing
   // an immediate duplicate run within a single chunk (e.g. "Five% Five%" or
   // "Five percent Five percent"). Collapse consecutive duplicate single tokens...
@@ -4710,8 +5204,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     panel.addEventListener('drop', e => {
       e.preventDefault(); e.stopPropagation(); panel.classList.remove('drag-over');
+      dragCounter = 0; dropOverlay.classList.remove('active');
       const files = Array.from(e.dataTransfer.files);
-      if (files.length) handleSpeechFiles(files);
+      if (files.length) addFiles(files);
     });
   }
 
@@ -4752,10 +5247,8 @@ function handleSpeechFiles(files) {
     // Fallback: feed into main fileInput and trigger change
     const fi = document.getElementById('fileInput');
     if (fi) {
-      const dt = new DataTransfer();
-      files.forEach(f => dt.items.add(f));
-      fi.files = dt.files;
-      fi.dispatchEvent(new Event('change', { bubbles: true }));
+      // DataTransfer not universally supported - use addFiles directly
+      addFiles(files);
     }
   }
 }
@@ -6008,6 +6501,10 @@ function _doLeave() {
   // Always show the ended screen — never call window.close() as Android Chrome
   // closes the tab immediately, revealing whatever was behind it before the
   // session ended message can appear.
+  // Exit fullscreen mode before replacing body content
+  document.body.classList.remove('app-fullscreen', 'fs-controls-hidden', 'fs-controls-visible');
+  if (document.fullscreenElement) { try { document.exitFullscreen(); } catch(e){} }
+  document.title = 'ALPHA — Field Radio';
   document.body.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;height:100vh;background:#0a1520;color:#f1f5f9;font-family:monospace;text-align:center;padding:20px;">'
     + '<div style="font-size:22px;letter-spacing:2px;font-weight:bold;">SESSION ENDED</div>'
     + '<div style="font-size:15px;color:#94a3b8;letter-spacing:1px;">You may now close this tab.</div>'
@@ -7398,7 +7895,12 @@ window.addEventListener('pagehide', (ev) => {
   if (!leftPermanently && !peerRefreshing) {
     try { dcSend({ __control: 'leave' }); } catch(e) {}
   }
-  peer?.destroy();
+  // Always release camera/mic so the OS indicator clears immediately
+  if (localStream) {
+    localStream.getTracks().forEach(t => { try { t.stop(); } catch(e){} });
+    localStream = null;
+  }
+  if (peer) peer.destroy();
 });
 
 // ── SYS LOG actions ──────────────────────────────────────────────────────────
@@ -7643,11 +8145,11 @@ if (window.speechSynthesis) {
     if (vv.length) { _populateTtsVoices(); return; }
     if (attempts > 0) { setTimeout(() => _pollVoices(attempts - 1), 250); return; }
     // No voices available (e.g. Chromium on Pi OS ARM) — hide TTS controls.
-    ['ttsBtn','ttsBtn2'].forEach(id => {
+    ['ttsBtn','ttsBtn2','ttsChatBtn'].forEach(id => {
       const el = document.getElementById(id); if (el) el.style.display = 'none';
     });
     // Don't hide the whole row — TALK button lives here too; just hide TTS-specific items
-    ['ttsBtn','ttsBtn2','speechTtsBtn'].forEach(id => {
+    ['ttsBtn','ttsBtn2','speechTtsBtn','ttsChatBtn'].forEach(id => {
       const el = document.getElementById(id); if (el) el.style.display = 'none';
     });
   })(40); // up to 10s in 250ms increments
@@ -7655,7 +8157,7 @@ if (window.speechSynthesis) {
 
 function toggleTts() {
   _ttsEnabled = !_ttsEnabled;
-  ['ttsBtn','ttsBtn2','speechTtsBtn'].forEach(id => {
+  ['ttsBtn','ttsBtn2','speechTtsBtn','ttsChatBtn'].forEach(id => {
     const b = document.getElementById(id);
     if (!b) return;
     b.textContent = _ttsEnabled ? 'TTS On' : 'TTS Off';
@@ -7756,7 +8258,7 @@ function ttsSpeak(text, lang) {
   // Button labels set after DOM ready
   document.addEventListener('DOMContentLoaded', () => {
     if (_ttsEnabled) {
-      ['ttsBtn','ttsBtn2','speechTtsBtn'].forEach(id => {
+      ['ttsBtn','ttsBtn2','speechTtsBtn','ttsChatBtn'].forEach(id => {
         const b = document.getElementById(id);
         if (b) { b.textContent = 'TTS On'; b.classList.add('active-on'); }
       });
@@ -7766,4 +8268,4 @@ function ttsSpeak(text, lang) {
 </script>
 
 
-</div></body></html>
+<div id="helpPanel" role="dialog" aria-modal="true" aria-label="Button guide"><div id="helpPanelInner"><div class="help-btn-bar"><button onclick="closeHelpPanel()">✕ Close</button><button onclick="window.print()">⎙ Print</button></div><h3>Button Guide</h3><div id="helpPanelRows"></div><button id="helpCloseBtn" onclick="closeHelpPanel()">✕ Close</button></div></div><div id="printNotesArea" style="display:none"><p>Notes</p></div></div></body></html>
