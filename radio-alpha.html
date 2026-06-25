@@ -1380,10 +1380,36 @@
     .log-panel { display: none !important; }
     .chat-find-bar { display: none !important; height: 0 !important; overflow: hidden !important; }
     .mini-video-overlay { display: none !important; }
-    #speechPanel { display: none !important; height: 0 !important; overflow: hidden !important; }
     .zoom-row { display: none !important; height: 0 !important; overflow: hidden !important; }
 
-    /* ── Button Guide — flush, no gap ── */
+    /* ── Speech panel — show controls box rows ── */
+    #speechPanel {
+      display: flex !important; flex-direction: column !important;
+      height: auto !important; overflow: visible !important;
+      background: #fff !important; border: 1px solid #999 !important;
+      border-radius: 4px !important; padding: 4px 6px !important;
+      margin-top: 4px !important; gap: 4px !important;
+    }
+    #speechEditWrap { display: none !important; }
+    #speechStatus { display: none !important; }
+    .speech-top-bar { display: none !important; }
+    .file-preview-strip { display: none !important; }
+    .speech-btn-row {
+      display: flex !important; flex-wrap: wrap !important;
+      gap: 4px !important; align-items: center !important;
+    }
+    .speech-btn-row button, .speech-btn-row select {
+      background: #fff !important; color: #000 !important;
+      border: 1px solid #555 !important; font-size: 9px !important;
+      padding: 2px 5px !important;
+    }
+    .speech-btn-row .sbr-label {
+      color: #000 !important; font-weight: bold !important;
+      font-size: 9px !important;
+    }
+    #cwSendBtn { display: none !important; }
+
+    /* ── Button Guide — flush, no gap, allow page break ── */
     #helpPanel {
       position: static !important; background: none !important;
       padding: 0 !important; margin: 0 !important; display: block !important;
@@ -1400,18 +1426,26 @@
       overflow: visible !important; height: auto !important;
       max-height: none !important;
     }
+    .help-row { page-break-inside: avoid !important; break-inside: avoid !important; }
     .help-btn-bar { display: none !important; }
     #helpCloseBtn { display: none !important; }
 
-    /* ── Notes area — fills remaining page space ── */
+    /* ── Notes area — ruled lines ── */
     #printNotesArea {
       display: block !important;
       border: 1px solid #999;
       border-radius: 4px;
       margin-top: 8px;
-      padding: 8px 10px;
-      flex: 1 !important;
+      padding: 8px 10px 0;
       min-height: 200px;
+      background-image: repeating-linear-gradient(
+        to bottom,
+        transparent,
+        transparent 23px,
+        #ccc 23px,
+        #ccc 24px
+      ) !important;
+      background-position: 0 30px !important;
     }
     #printNotesArea p {
       margin: 0 0 6px;
@@ -6491,6 +6525,9 @@ function _doLeave() {
   morseStopAll();
   // Stop system audio capture if active
   if (sysAudioActive) _stopSysAudio();
+  // Stop detached camera/screen tracks (may have been removed from localStream by toggleVideo/flipCamera)
+  if (cameraTrack) { try { cameraTrack.stop(); } catch(e){} cameraTrack = null; }
+  if (screenTrack) { try { screenTrack.stop(); } catch(e){} screenTrack = null; }
   // Stop all local media
   _pendingChatMsg = null;  // discard queued message — session ended
   if (localStream) {
