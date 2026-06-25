@@ -1218,50 +1218,169 @@
   }
   #helpPanel.open { display: flex; }
   #helpPanelInner {
-    background: #ffffff; border: 1px solid #999;
-    border-radius: 8px; padding: 16px; width: 100%;
-    max-width: 420px; color: #111; font-size: 11px;
+    background: #ffffff; border: 2px solid #333;
+    border-radius: 8px; padding: 14px 16px; width: 100%;
+    max-width: 700px; color: #000; font-size: 12px;
     font-family: 'Share Tech Mono', monospace;
   }
   #helpPanel h3 {
-    margin: 0 0 12px; font-size: 13px; letter-spacing: 1px;
-    text-transform: uppercase; color: #000;
+    margin: 0 0 10px; font-size: 15px; letter-spacing: 2px;
+    text-transform: uppercase; color: #000; font-weight: 900;
+    text-align: center;
   }
   .help-btn-bar {
-    display: flex; gap: 8px; margin-bottom: 12px;
+    display: flex; gap: 8px; margin-bottom: 10px;
   }
   .help-btn-bar button {
     flex: 1; padding: 7px 8px;
-    background: #fff; border: 1px solid #555;
-    color: #000; font-family: 'Share Tech Mono', monospace;
-    font-size: 11px; letter-spacing: 1px;
+    background: #222; border: 1px solid #222;
+    color: #fff; font-family: 'Share Tech Mono', monospace;
+    font-size: 12px; letter-spacing: 1px;
     text-transform: uppercase; border-radius: 4px; cursor: pointer;
+    font-weight: bold;
   }
-  .help-btn-bar button:hover { background: #eee; }
+  .help-btn-bar button:hover { background: #444; }
+  #helpPanelRows {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 16px;
+  }
   .help-row {
-    display: flex; gap: 10px; padding: 5px 0;
-    border-bottom: 1px solid #ccc;
-    line-height: 1.4;
+    display: flex; gap: 8px; padding: 4px 0;
+    border-bottom: 1px solid #bbb;
+    line-height: 1.3; align-items: baseline;
   }
   .help-row:last-child { border-bottom: none; }
   .help-name {
-    flex: 0 0 110px; font-weight: bold;
-    color: #000; text-transform: uppercase; font-size: 10px;
+    flex: 0 0 100px;
+    background: #1a1a1a; color: #fff;
+    font-weight: 900; font-size: 9px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    padding: 2px 5px; border-radius: 3px;
+    white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis; text-align: center;
+    align-self: center;
   }
-  .help-desc { flex: 1; color: #333; font-size: 10px; }
+  .help-desc {
+    flex: 1; color: #000; font-size: 10px;
+    font-weight: 700;
+  }
   #helpCloseBtn {
-    margin-top: 14px; width: 100%; padding: 8px;
-    background: #fff; border: 1px solid #555;
-    color: #000; font-family: inherit;
-    font-size: 11px; letter-spacing: 1px;
+    margin-top: 10px; width: 100%; padding: 7px;
+    background: #222; border: 1px solid #222;
+    color: #fff; font-family: inherit;
+    font-size: 12px; letter-spacing: 1px;
     text-transform: uppercase; border-radius: 4px; cursor: pointer;
+    font-weight: bold;
   }
-  #helpCloseBtn:hover { background: #eee; }
+  #helpCloseBtn:hover { background: #444; }
   @media print {
-    #helpPanel { position: static !important; background: none !important; padding: 0 !important; display: block !important; }
-    #helpPanelInner { border: none !important; border-radius: 0 !important; max-width: 100% !important; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
+    /* ── Overall page ── */
+    body { background: #fff !important; margin: 0 !important; }
+    .shell { gap: 4px !important; padding: 6px !important; }
+
+    /* ── Header / logo bar — light grey ── */
+    header {
+      background: #e8e8e8 !important;
+      border: 1px solid #999 !important;
+      border-top: 1px solid #999 !important;
+      border-radius: 4px !important;
+    }
+    .logo { color: #000 !important; text-shadow: none !important; }
+    .logo span { color: #000 !important; }
+    #statusText, .status-item { color: #000 !important; }
+    .led { background: #000 !important; }
+
+    /* ── Header buttons — dark outline, no fill ── */
+    .header-action-btn {
+      background: #fff !important; color: #000 !important;
+      border: 1px solid #333 !important;
+    }
+    .header-action-btn.leave-style {
+      background: #fff !important; color: #000 !important;
+      border: 1px solid #333 !important;
+    }
+    #helpTouchBtn {
+      background: #fff !important; color: #000 !important;
+      border: 1px solid #333 !important;
+    }
+
+    /* ── Controls box container — white background ── */
+    .tab-content, .tab-pane, .chat-panel, #paneChat,
+    .chat-btn-bar-row, .gain-row, .speech-btn-row, .speech-btn-row-spacer {
+      background: #fff !important;
+      border-color: #999 !important;
+    }
+    .speech-top-btn, .media-btn, .leave-btn {
+      background: #fff !important; color: #000 !important;
+      border: 1px solid #555 !important; text-shadow: none !important;
+    }
+    .speech-top-btn.leave-style, .speech-top-btn.active,
+    #chatVideoViewBtn {
+      background: #fff !important; color: #000 !important;
+      border: 1px solid #555 !important;
+    }
+
+    /* ── My Language row — light grey ── */
+    #translateBar {
+      background: #e8e8e8 !important;
+      border: 1px solid #999 !important;
+      border-radius: 4px !important;
+      margin-bottom: 0 !important;
+      padding: 4px 8px !important;
+    }
+    #translateBar label { color: #000 !important; font-weight: bold !important; }
+    #translateTrigger {
+      background: #fff !important; color: #000 !important;
+      border: 1px solid #555 !important;
+    }
+    #translateResetBtn {
+      background: #fff !important; color: #000 !important;
+      border: 1px solid #555 !important;
+    }
+    #translateDropdownWrap { display: none !important; }
+
+    /* ── Chat area, log — hidden ── */
+    #chat { display: none !important; }
+    .log-panel { display: none !important; }
+    .chat-find-bar { display: none !important; }
+    .mini-video-overlay { display: none !important; }
+    #speechPanel { display: none !important; }
+    .zoom-row { display: none !important; }
+    .gain-row { display: none !important; }
+
+    /* ── Button Guide — flush below My Language, no gap ── */
+    #helpPanel {
+      position: static !important; background: none !important;
+      padding: 0 !important; margin: 0 !important; display: block !important;
+    }
+    #helpPanelInner {
+      border: 1px solid #999 !important; border-radius: 4px !important;
+      max-width: 100% !important; padding: 8px 10px !important;
+      margin: 0 !important;
+    }
     .help-btn-bar { display: none !important; }
     #helpCloseBtn { display: none !important; }
+
+    /* ── Notes area — white space below guide ── */
+    #printNotesArea {
+      display: block !important;
+      border: 1px solid #999;
+      border-radius: 4px;
+      margin-top: 8px;
+      padding: 8px 10px;
+      min-height: 120px;
+    }
+    #printNotesArea p {
+      margin: 0 0 6px;
+      font-size: 10px;
+      color: #666;
+      font-family: 'Share Tech Mono', monospace;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
   }
 
   /* new-message badge */
@@ -8112,4 +8231,4 @@ function ttsSpeak(text, lang) {
 </script>
 
 
-<div id="helpPanel" role="dialog" aria-modal="true" aria-label="Button guide"><div id="helpPanelInner"><div class="help-btn-bar"><button onclick="closeHelpPanel()">✕ Close</button><button onclick="window.print()">⎙ Print</button></div><h3>Button Guide</h3><div id="helpPanelRows"></div><button id="helpCloseBtn" onclick="closeHelpPanel()">✕ Close</button></div></div></div></body></html>
+<div id="helpPanel" role="dialog" aria-modal="true" aria-label="Button guide"><div id="helpPanelInner"><div class="help-btn-bar"><button onclick="closeHelpPanel()">✕ Close</button><button onclick="window.print()">⎙ Print</button></div><h3>Button Guide</h3><div id="helpPanelRows"></div><button id="helpCloseBtn" onclick="closeHelpPanel()">✕ Close</button></div></div><div id="printNotesArea" style="display:none"><p>Notes</p></div></div></body></html>
