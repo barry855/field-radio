@@ -4912,16 +4912,11 @@ function startListening() {
     _recognition.onstart = () => {
       _listening = true;
       _interimText = '';
-      setSpeechStatus('#' + _sttStartCount + ' START and=' + _isAndroid + ' lang=' + _recognition.lang);
+      setSpeechStatus('#' + _sttStartCount + ' START lang=' + _recognition.lang);
       const lb = document.getElementById('speechListenBtn');
       if (lb) { lb.classList.add('listening'); lb.textContent = 'STOP'; }
       const ss = document.getElementById('speechStatus');
       if (ss) ss.classList.add('listening');
-      // Non-Android: mute via gain node or track as before
-      if (!_isAndroid && !audioMuted) {
-        if (_mixMicGain) { _preTalkMicGain = _mixMicGain.gain.value; _mixMicGain.gain.value = 0.0; }
-        else if (realAudioTrack) { realAudioTrack.enabled = false; }
-      }
     };
 
     _recognition.onresult = (e) => {
@@ -4983,36 +4978,22 @@ function startListening() {
         }
       }
 
-      // Restore mic on Android
-      if (_isAndroid) {
-        _restoreAndroidMic().then(() => {
-          if (_listening) {
-            setTimeout(() => { if (_listening) try { startListening(); } catch(ex) { stopListening(); } }, 500);
-          }
-        });
-      } else {
-        // Non-Android: restore gain/track — restore both to guard against the case
-        // where _mixMicGain was created after onstart muted via realAudioTrack.enabled.
-        if (!audioMuted) {
-          if (_mixMicGain) { _mixMicGain.gain.value = _preTalkMicGain !== null ? _preTalkMicGain : 1.0; _preTalkMicGain = null; }
-          if (realAudioTrack) { realAudioTrack.enabled = true; }
-        }
+      // Restore WebRTC sender (mic was released before STT started)
+      _restoreAndroidMic().then(() => {
         if (_listening) {
           setTimeout(() => { if (_listening) try { startListening(); } catch(ex) { stopListening(); } }, 250);
         }
-      }
+      });
     };
 
     try { _recognition.start(); } catch(e) { setSpeechStatus('ERR: START FAILED: ' + e.message); }
   }
 
-  // On Android: swap WebRTC sender to silence before STT (mic hardware stays alive for STT).
-  // On non-Android: mic muting is handled inside onstart via gain node / track.enabled — do NOT
-  // call _releaseAndroidMic() here, or the sender gets silenced and _restoreAndroidMic() is
-  // never called in onend (which only runs the restore path for _isAndroid), leaving the mic
-  // muted until reload.
-  if (_isAndroid) _releaseAndroidMic();
-  _doStart();
+  // Always swap the WebRTC sender to silence before STT — on all platforms
+  // (Mac, Android, Chromebook) WebRTC holds the mic hardware, preventing the
+  // Speech API from getting audio. Swap to a silent track first, then restore
+  // in onend via _restoreAndroidMic().
+  _releaseAndroidMic().then(_doStart);
 }
 
 // Swap WebRTC sender to silence during Android STT (mic hardware stays alive for STT)
@@ -5065,10 +5046,10 @@ function stopListening() {
   const ss = document.getElementById('speechStatus');
   if (ss) ss.classList.remove('listening');
   const _isAndroid = /android/i.test(navigator.userAgent);
-  if (_isAndroid) {
-    if (_sttSavedSender) { _restoreAndroidMic().then(() => setSpeechStatus('IDLE')); }
-    else { setSpeechStatus('IDLE'); }
-  } else {
+  if (_sttSavedSender) { _restoreAndroidMic().then(() => setSpeechStatus('IDLE')); }
+  else {
+    // No sender was saved (STT was started before a call connected) — still
+    // restore gain/track in case onstart muted them on an older code path.
     if (!audioMuted) {
       if (_mixMicGain) { _mixMicGain.gain.value = _preTalkMicGain !== null ? _preTalkMicGain : 1.0; _preTalkMicGain = null; }
       if (realAudioTrack) { realAudioTrack.enabled = true; }
