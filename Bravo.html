@@ -90,14 +90,14 @@
   }
   .header-action-btn {
     background: transparent;
-    border: 1px solid var(--accent); color: var(--accent);
+    border: 1px solid var(--accent2); color: var(--accent2);
     font-family: 'Share Tech Mono', monospace; font-size: 12px;
     border-radius: 4px; padding: 3px 8px;
     cursor: pointer; line-height: 1; flex-shrink: 0;
     display: inline-flex; align-items: center; justify-content: center;
     white-space: nowrap;
   }
-  .header-action-btn:hover { background: var(--btn-hover); border-color: var(--accent); }
+  .header-action-btn:hover { background: var(--btn-hover); border-color: var(--accent2); }
   .header-action-btn.leave-style { border-color: #fff; color: #fff; background: #000; }
   .header-action-btn.leave-style:hover { background: #222; }
   .header-right-btns {
@@ -1232,15 +1232,20 @@
     align-items: center; justify-content: center;
     margin-left: auto;
   }
-  #helpPanel { display: none; position: fixed; inset: 0; z-index: 2000; background: rgba(0,0,0,0.82); align-items: flex-start; justify-content: center; padding: 16px; overflow-y: auto; }
+  #helpPanel { display: none; position: fixed; inset: 0; z-index: 2000; background: rgba(0,0,0,0.75); align-items: flex-start; justify-content: center; padding: 16px; overflow-y: auto; }
   #helpPanel.open { display: flex; }
-  #helpPanelInner { background: #050f15; border: 1px solid var(--accent2); border-radius: 8px; padding: 16px; width: 100%; max-width: 420px; color: var(--text); font-size: 11px; font-family: 'Share Tech Mono', monospace; }
-  #helpPanel h3 { margin: 0 0 12px; font-size: 13px; letter-spacing: 1px; text-transform: uppercase; color: var(--accent2); }
+  #helpPanelInner { background: #ffffff; border: 1px solid #999; border-radius: 8px; padding: 16px; width: 100%; max-width: 420px; color: #111; font-size: 11px; font-family: 'Share Tech Mono', monospace; }
+  #helpPanel h3 { margin: 0 0 12px; font-size: 13px; letter-spacing: 1px; text-transform: uppercase; color: #000; }
+  .help-btn-bar { display: flex; gap: 8px; margin-bottom: 12px; }
+  .help-btn-bar button { flex: 1; padding: 7px 8px; background: #fff; border: 1px solid #555; color: #000; font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; border-radius: 4px; cursor: pointer; }
+  .help-btn-bar button:hover { background: #eee; }
   .help-row { display: flex; gap: 10px; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.07); line-height: 1.4; }
   .help-row:last-child { border-bottom: none; }
   .help-name { flex: 0 0 110px; font-weight: bold; color: var(--accent2); font-size: 10px; text-transform: uppercase; }
   .help-desc { flex: 1; color: var(--text-dim); font-size: 10px; }
-  #helpCloseBtn { margin-top: 14px; width: 100%; padding: 8px; background: transparent; border: 1px solid var(--accent2); color: var(--accent2); font-family: inherit; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; border-radius: 4px; cursor: pointer; }
+  #helpCloseBtn { margin-top: 14px; width: 100%; padding: 8px; background: #fff; border: 1px solid #555; color: #000; font-family: inherit; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; border-radius: 4px; cursor: pointer; }
+  #helpCloseBtn:hover { background: #eee; }
+  @media print { #helpPanel { position: static !important; background: none !important; padding: 0 !important; display: block !important; } #helpPanelInner { border: none !important; border-radius: 0 !important; max-width: 100% !important; } .help-btn-bar { display: none !important; } #helpCloseBtn { display: none !important; } }
 
   /* new-message badge */
   .msg-badge {
@@ -7833,4 +7838,4 @@ function ttsSpeak(text, lang) {
 </script>
 
 
-<div id="helpPanel" role="dialog" aria-modal="true" onclick="if(event.target===this)closeHelpPanel()"><div id="helpPanelInner"><h3>? Button Guide</h3><div id="helpPanelRows"></div><button id="helpCloseBtn" onclick="closeHelpPanel()">✕ Close</button></div></div></div></body></html>
+<div id="helpPanel" role="dialog" aria-modal="true" onclick="if(event.target===this)closeHelpPanel()"><div id="helpPanelInner"><div class="help-btn-bar"><button onclick="closeHelpPanel()">✕ Close</button><button onclick="window.print()">⎙ Print</button></div><h3>? Button Guide</h3><div id="helpPanelRows"></div><button id="helpCloseBtn" onclick="closeHelpPanel()">✕ Close</button></div></div></div></body></html>
