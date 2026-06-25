@@ -1281,7 +1281,7 @@
 
     /* ── Controls box container — white background ── */
     .tab-content, .tab-pane, .chat-panel, #paneChat,
-    .chat-btn-bar-row, .gain-row, .speech-btn-row, .speech-btn-row-spacer {
+    .chat-btn-bar-row, .speech-btn-row, .speech-btn-row-spacer {
       background: #fff !important;
       border-color: #999 !important;
     }
@@ -1294,6 +1294,28 @@
       background: #fff !important; color: #000 !important;
       border: 1px solid #555 !important;
     }
+
+    /* ── CHAT: label — black ── */
+    .sbr-label { color: #000 !important; font-weight: bold !important; }
+
+    /* ── chatToolsWrap — show with white bg, black border ── */
+    #chatToolsWrap {
+      background: #fff !important;
+      border: 1px solid #999 !important;
+      border-radius: 4px !important;
+    }
+
+    /* ── Gain row — restored, grey label ── */
+    .gain-row { display: flex !important; background: #fff !important; }
+    .gain-row .gain-label {
+      background: #e8e8e8 !important;
+      border: 1px solid #999 !important;
+      border-radius: 3px !important;
+      padding: 2px 6px !important;
+    }
+    .gain-row .gain-label span { color: #000 !important; }
+    .gain-row .gain-val { color: #000 !important; }
+    .gain-row input[type=range] { display: block !important; width: 100% !important; border: 1px solid #999 !important; -webkit-appearance: auto !important; appearance: auto !important; }
 
     /* ── My Language row — light grey ── */
     #translateBar {
@@ -1314,16 +1336,15 @@
     }
     #translateDropdownWrap { display: none !important; }
 
-    /* ── Chat area, log — hidden ── */
-    #chat { display: none !important; }
+    /* ── Chat message area — hidden, no space ── */
+    #chat { display: none !important; height: 0 !important; overflow: hidden !important; min-height: 0 !important; }
     .log-panel { display: none !important; }
-    .chat-find-bar { display: none !important; }
+    .chat-find-bar { display: none !important; height: 0 !important; overflow: hidden !important; }
     .mini-video-overlay { display: none !important; }
-    #speechPanel { display: none !important; }
-    .zoom-row { display: none !important; }
-    .gain-row { display: none !important; }
+    #speechPanel { display: none !important; height: 0 !important; overflow: hidden !important; }
+    .zoom-row { display: none !important; height: 0 !important; overflow: hidden !important; }
 
-    /* ── Button Guide — flush below My Language, no gap ── */
+    /* ── Button Guide — flush, no gap ── */
     #helpPanel {
       position: static !important; background: none !important;
       padding: 0 !important; margin: 0 !important; display: block !important;
@@ -1336,14 +1357,15 @@
     .help-btn-bar { display: none !important; }
     #helpCloseBtn { display: none !important; }
 
-    /* ── Notes area — white space below guide ── */
+    /* ── Notes area — fills remaining page space ── */
     #printNotesArea {
       display: block !important;
       border: 1px solid #999;
       border-radius: 4px;
       margin-top: 8px;
       padding: 8px 10px;
-      min-height: 120px;
+      flex: 1 !important;
+      min-height: 200px;
     }
     #printNotesArea p {
       margin: 0 0 6px;
@@ -6316,6 +6338,9 @@ function _doLeave() {
   // Always show the ended screen — never call window.close() as Android Chrome
   // closes the tab immediately, revealing whatever was behind it before the
   // session ended message can appear.
+  // Exit fullscreen mode before replacing body content
+  document.body.classList.remove('app-fullscreen', 'fs-controls-hidden', 'fs-controls-visible');
+  if (document.fullscreenElement) { try { document.exitFullscreen(); } catch(e){} }
   document.title = 'BRAVO — Field Radio';
   document.body.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;height:100vh;background:#0a1520;color:#f1f5f9;font-family:monospace;text-align:center;padding:20px;">'
     + '<div style="font-size:22px;letter-spacing:2px;font-weight:bold;">SESSION ENDED</div>'
