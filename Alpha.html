@@ -88,6 +88,21 @@
     padding: 10px 14px;
     flex-shrink: 0;
   }
+  .header-action-btn {
+    background: transparent;
+    border: 1px solid var(--accent); color: var(--accent);
+    font-family: 'Share Tech Mono', monospace; font-size: 12px;
+    border-radius: 4px; padding: 3px 8px;
+    cursor: pointer; line-height: 1; flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    white-space: nowrap;
+  }
+  .header-action-btn:hover { background: var(--btn-hover); border-color: var(--accent); }
+  .header-action-btn.leave-style { border-color: #fff; color: #fff; background: #000; }
+  .header-action-btn.leave-style:hover { background: #222; }
+  .header-right-btns {
+    display: flex; align-items: center; gap: 6px; margin-left: auto; flex-shrink: 0;
+  }
   .logo {
     font-family: 'Orbitron', sans-serif; font-size: 20px; font-weight: 900;
     color: var(--accent); letter-spacing: 4px;
@@ -1176,21 +1191,17 @@
     transition: opacity 0.12s, transform 0.12s;
   }
   .app-tooltip.visible { opacity: 1; transform: translateY(0); }
-  /* Help button — touch screens only */
+  /* Help button — all devices */
   #helpTouchBtn {
-    display: none; background: transparent;
+    display: inline-flex; background: transparent;
     border: 1px solid var(--accent); color: var(--accent);
     font-family: 'Share Tech Mono', monospace; font-size: 13px;
     border-radius: 50%; width: 26px; height: 26px;
     cursor: pointer; line-height: 1; flex-shrink: 0;
     align-items: center; justify-content: center;
   }
-  @media (hover: none) and (pointer: coarse) {
-    #helpTouchBtn { display: inline-flex; }
-    #chatHelpBtn  { display: inline-flex; }
-  }
   #chatHelpBtn {
-    display: none; background: transparent;
+    display: inline-flex; background: transparent;
     border: 1px solid var(--accent); color: var(--accent);
     font-family: 'Share Tech Mono', monospace; font-size: 13px;
     border-radius: 50%; width: 26px; height: 26px;
@@ -1729,7 +1740,11 @@ window.addEventListener('orientationchange', function() {
         <button class="leave-chat-btn" onclick="leaveSession()">Leave Chat</button>
       </div>
     </div>
-    <button id="helpTouchBtn" onclick="openHelpPanel()" aria-label="Button guide">?</button>
+    <div class="header-right-btns">
+      <button class="header-action-btn" onclick="refreshScreen()" title="Refresh / Reconnect">↺ Refresh</button>
+      <button class="header-action-btn leave-style" id="leaveChatBtn" onclick="leaveSession()" title="Leave session">✕ Leave</button>
+      <button id="helpTouchBtn" onclick="openHelpPanel()" aria-label="Button guide">?</button>
+    </div>
   </header>
   <div class="tab-bar" style="display:none;">
     <button class="tab-btn" id="tabLocalBtn" style="display:none" onclick="switchTab(&#39;local&#39;)">LOCAL</button>
@@ -1834,8 +1849,6 @@ window.addEventListener('orientationchange', function() {
         <button class="chat-find-close" id="chatFindClose" title="Close">✕</button>
       </div>
       <div class="chat-btn-bar-row" id="chatBtnRow1" style="flex-shrink:0; margin-bottom:4px; flex-wrap:nowrap; overflow:hidden;">
-        <button class="speech-top-btn" onclick="refreshScreen()" title="Refresh / Reconnect" style="flex-shrink:0;">↺</button>
-        <button class="speech-top-btn leave-style" id="leaveChatBtn" onclick="leaveSession()" title="Leave session" style="flex-shrink:0;">✕ Leave</button>
         <span id="flipWrapChat"><button class="speech-top-btn" id="flipChatBtn" onclick="flipCamera()" title="Flip camera" style="flex-shrink:0;">⟳ Flip Cam</button></span>
         <button class="speech-top-btn" id="fsChatBtn" onclick="toggleFullScreen()" title="Full Screen Toggle" style="flex-shrink:0;">FS OFF</button>
         <button class="speech-top-btn" id="miniChatBtn" onclick="toggleMiniChat()" title="Toggle mini video in chat" style="flex-shrink:0;">MINI CAM OFF</button>
