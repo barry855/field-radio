@@ -1249,9 +1249,21 @@
   @media print {
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 
-    /* ── Overall page ── */
-    body { background: #fff !important; margin: 0 !important; }
-    .shell { gap: 4px !important; padding: 6px !important; }
+    /* ── Overall page — must unclip viewport-height constraints ── */
+    html, body {
+      height: auto !important; min-height: 0 !important;
+      overflow: visible !important;
+      background: #fff !important; margin: 0 !important;
+    }
+    .shell {
+      gap: 4px !important; padding: 6px !important;
+      height: auto !important; overflow: visible !important;
+      max-width: 100% !important;
+    }
+    .tab-content, .tab-pane {
+      height: auto !important; overflow: visible !important;
+      min-height: 0 !important; max-height: none !important;
+    }
 
     /* ── Header / logo bar — light grey ── */
     header {
