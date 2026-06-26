@@ -344,7 +344,7 @@
   /* ── Chat button bar (above message area) ──────────────────── */
   /* ── Chat button bar rows inside mini-row-wrap ─────────────── */
   .chat-btn-bar-row {
-    display: flex; gap: 6px; align-items: center;
+    display: flex; gap: 4px; align-items: center;
     width: 100%; flex-wrap: wrap;
   }
   .chat-btn-bar .mini-chat-wrapper {
@@ -615,22 +615,22 @@
   }
   .media-btn:hover { background: var(--btn-hover); }
   .media-btn.screen-active {
-    background: #000;
-    border-color: #000;
-    color: #fff;
+    background: #1a56db;
+    border-color: #1a56db;
+    color: #ffe600;
   }
-  .media-btn.screen-active:hover { background: #222; }
+  .media-btn.screen-active:hover { background: #1648c2; }
   .media-btn.sys-audio-on {
-    background: rgba(0,255,159,0.15);
-    border-color: var(--accent2);
-    color: var(--accent2);
-    box-shadow: 0 0 10px rgba(0,255,159,0.45);
+    background: #1a56db;
+    border-color: #1a56db;
+    color: #ffe600;
+    box-shadow: 0 0 10px rgba(26,86,219,0.55);
     animation: sysaudio-pulse 1.8s ease-in-out infinite;
   }
-  .media-btn.sys-audio-on:hover { background: rgba(0,255,159,0.28); }
+  .media-btn.sys-audio-on:hover { background: #1648c2; }
   @keyframes sysaudio-pulse {
-    0%,100% { box-shadow: 0 0 6px rgba(0,255,159,0.35); }
-    50%      { box-shadow: 0 0 16px rgba(0,255,159,0.7); }
+    0%,100% { box-shadow: 0 0 6px rgba(26,86,219,0.45); }
+    50%      { box-shadow: 0 0 16px rgba(26,86,219,0.8); }
   }
   .media-btn.disabled-state {
     background: var(--btn-bg);
@@ -643,9 +643,9 @@
     color: var(--text);
   }
   .media-btn.video-off-state {
-    background: #000;
-    border-color: #000;
-    color: #fff;
+    background: #1a56db;
+    border-color: #1a56db;
+    color: #ffe600;
   }
   .media-btn.recording {
     background: rgba(0,212,255,0.15);
@@ -654,11 +654,11 @@
     animation: rec-blink 1.2s ease-in-out infinite;
   }
   .media-btn.active-on {
-    background: #000;
-    border-color: #000;
-    color: #fff;
+    background: #1a56db;
+    border-color: #1a56db;
+    color: #ffe600;
   }
-  .media-btn.active-on:hover { background: #222; }
+  .media-btn.active-on:hover { background: #1648c2; }
   /* ── Flip Cam dropdown (desktop multi-camera) ─────────────── */
   .flip-cam-select {
     flex: 0 0 auto; height: 36px; padding: 0 8px;
@@ -897,13 +897,25 @@
   }
   .speech-top-btn {
     background: var(--btn-bg); border: 1px solid var(--border);
-    color: var(--text); padding: 4px 8px; border-radius: 4px;
+    color: var(--text); padding: 4px 6px; border-radius: 4px;
     font-family: 'Share Tech Mono', monospace; font-size: 11px;
-    cursor: pointer; letter-spacing: 0.5px; white-space: nowrap;
+    cursor: pointer; letter-spacing: 0; white-space: nowrap;
     transition: background 0.15s, border-color 0.15s, color 0.15s;
   }
   .speech-top-btn:hover { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
-  .speech-top-btn.active { background: #000; border-color: #000; color: #fff; }
+  .speech-top-btn.active { background: #1a56db; border-color: #1a56db; color: #ffe600; }
+  .speech-top-btn.active-on,
+  .speech-top-btn.video-off-state,
+  .speech-top-btn.screen-active,
+  .speech-top-btn.sys-audio-on {
+    background: #1a56db;
+    border-color: #1a56db;
+    color: #ffe600;
+  }
+  .speech-top-btn.active-on:hover,
+  .speech-top-btn.video-off-state:hover,
+  .speech-top-btn.screen-active:hover,
+  .speech-top-btn.sys-audio-on:hover { background: #1648c2; }
   #chatVideoViewBtn { background: #000; border-color: #000; color: #fff; }
   #chatVideoViewBtn:hover { background: #222; border-color: #222; color: #fff; }
   .speech-top-btn:disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
@@ -1233,13 +1245,13 @@
   }
   .help-btn-bar button {
     flex: 1; padding: 7px 8px;
-    background: #222; border: 1px solid #222;
-    color: #fff; font-family: 'Share Tech Mono', monospace;
+    background: #fff; border: 1px solid #333;
+    color: #000; font-family: 'Share Tech Mono', monospace;
     font-size: 12px; letter-spacing: 1px;
     text-transform: uppercase; border-radius: 4px; cursor: pointer;
     font-weight: bold;
   }
-  .help-btn-bar button:hover { background: #444; }
+  .help-btn-bar button:hover { background: #f0f0f0; }
   #helpPanelRows {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -1253,7 +1265,7 @@
   .help-row:last-child { border-bottom: none; }
   .help-name {
     flex: 0 0 100px;
-    background: #1a1a1a; color: #fff;
+    background: #fff; color: #000; border: 1px solid #333;
     font-weight: 900; font-size: 9px;
     text-transform: uppercase; letter-spacing: 0.5px;
     padding: 2px 5px; border-radius: 3px;
@@ -1263,23 +1275,36 @@
   }
   .help-desc {
     flex: 1; color: #000; font-size: 10px;
-    font-weight: 700;
+    font-weight: 400;
   }
   #helpCloseBtn {
     margin-top: 10px; width: 100%; padding: 7px;
-    background: #222; border: 1px solid #222;
-    color: #fff; font-family: inherit;
+    background: #fff; border: 1px solid #333;
+    color: #000; font-family: inherit;
     font-size: 12px; letter-spacing: 1px;
     text-transform: uppercase; border-radius: 4px; cursor: pointer;
     font-weight: bold;
   }
-  #helpCloseBtn:hover { background: #444; }
+  #helpCloseBtn:hover { background: #f0f0f0; }
   @media print {
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 
-    /* ── Overall page ── */
-    body { background: #fff !important; margin: 0 !important; }
-    .shell { gap: 4px !important; padding: 6px !important; }
+    /* ── Overall page — must unclip viewport-height constraints ── */
+    html, body {
+      height: auto !important; min-height: 0 !important;
+      overflow: visible !important;
+      background: #fff !important; margin: 0 !important;
+    }
+    .shell {
+      gap: 4px !important; padding: 6px !important;
+      height: auto !important; overflow: visible !important;
+      max-width: 100% !important;
+      display: flex !important; flex-direction: column !important;
+    }
+    .tab-content, .tab-pane {
+      height: auto !important; overflow: visible !important;
+      min-height: 0 !important; max-height: none !important;
+    }
 
     /* ── Header / logo bar — light grey ── */
     header {
@@ -1341,6 +1366,8 @@
       border: 1px solid #999 !important;
       border-radius: 4px !important;
     }
+    /* ── Hide speechBtnRow1 (Chat: ATTACH/LOAD/SAVE) — duplicates chatToolsWrap on Safari ── */
+    #speechBtnRow1, .chat-panel > .panel-label { display: none !important; }
 
     /* ── Gain row — restored, grey label, visible slider ── */
     .gain-row { display: flex !important; background: #fff !important; }
@@ -1380,31 +1407,83 @@
     .log-panel { display: none !important; }
     .chat-find-bar { display: none !important; height: 0 !important; overflow: hidden !important; }
     .mini-video-overlay { display: none !important; }
-    #speechPanel { display: none !important; height: 0 !important; overflow: hidden !important; }
     .zoom-row { display: none !important; height: 0 !important; overflow: hidden !important; }
 
-    /* ── Button Guide — flush, no gap ── */
+    /* ── Speech panel — show controls box rows ── */
+    #speechPanel {
+      display: flex !important; flex-direction: column !important;
+      height: auto !important; overflow: visible !important;
+      background: #fff !important; border: 1px solid #999 !important;
+      border-radius: 4px !important; padding: 4px 6px !important;
+      margin-top: 4px !important; gap: 4px !important;
+    }
+    #speechEditWrap { display: none !important; }
+    #speechStatus { display: none !important; }
+    .speech-top-bar { display: none !important; }
+    .file-preview-strip { display: none !important; }
+    .speech-btn-row {
+      display: flex !important; flex-wrap: wrap !important;
+      gap: 4px !important; align-items: center !important;
+    }
+    .speech-btn-row button, .speech-btn-row select {
+      background: #fff !important; color: #000 !important;
+      border: 1px solid #555 !important; font-size: 9px !important;
+      padding: 2px 5px !important;
+    }
+    .speech-btn-row .sbr-label {
+      color: #000 !important; font-weight: bold !important;
+      font-size: 9px !important;
+    }
+    #cwSendBtn { display: none !important; }
+
+    /* ── Button Guide — flush, no gap, allow page break ── */
     #helpPanel {
       position: static !important; background: none !important;
       padding: 0 !important; margin: 0 !important; display: block !important;
+      overflow: visible !important; height: auto !important;
+      max-height: none !important; inset: auto !important;
     }
     #helpPanelInner {
       border: 1px solid #999 !important; border-radius: 4px !important;
       max-width: 100% !important; padding: 8px 10px !important;
-      margin: 0 !important;
+      margin: 0 !important; overflow: visible !important;
+      height: auto !important; max-height: none !important;
+    }
+    #helpPanelRows {
+      overflow: visible !important; height: auto !important;
+      max-height: none !important;
+    }
+    .help-row { page-break-inside: avoid !important; break-inside: avoid !important; }
+    .help-name {
+      background: #fff !important; color: #000 !important;
+      border: 1px solid #333 !important;
+    }
+    .flip-cam-select, .flip-cam-select-chat {
+      background: #fff !important; color: #000 !important;
+      border: 1px solid #333 !important;
     }
     .help-btn-bar { display: none !important; }
     #helpCloseBtn { display: none !important; }
 
-    /* ── Notes area — fills remaining page space ── */
+    /* ── Notes area — ruled lines, fills remaining page space ── */
     #printNotesArea {
       display: block !important;
       border: 1px solid #999;
       border-radius: 4px;
       margin-top: 8px;
-      padding: 8px 10px;
-      flex: 1 !important;
-      min-height: 200px;
+      padding: 8px 10px 0;
+      min-height: 120px;
+      flex: 1 1 auto;
+      page-break-inside: avoid;
+      break-inside: avoid;
+      background-image: repeating-linear-gradient(
+        to bottom,
+        transparent,
+        transparent 23px,
+        #ccc 23px,
+        #ccc 24px
+      ) !important;
+      background-position: 0 30px !important;
     }
     #printNotesArea p {
       margin: 0 0 6px;
@@ -2024,7 +2103,7 @@ window.addEventListener('orientationchange', function() {
         <button class="speech-top-btn" id="fsChatBtn" onclick="toggleFullScreen()" title="Full Screen Toggle" style="flex-shrink:0;">FS OFF</button>
         <button class="speech-top-btn" id="miniChatBtn" onclick="toggleMiniChat()" title="Toggle mini video in chat" style="flex-shrink:0;">MINI CAM OFF</button>
       </div>
-      <div class="chat-btn-bar-row" id="chatBtnRow2" style="flex-shrink:0;">
+      <div class="chat-btn-bar-row" id="chatBtnRow2" style="flex-shrink:0; flex-wrap:nowrap; overflow:hidden;">
         <button class="speech-top-btn" id="chatVideoViewBtn" onclick="toggleChatVideoView()" title="Toggle chat video view">See Remote</button>
         <button class="speech-top-btn rec-chat-btn" id="recChatBtn" onclick="toggleRecordChat()" title="Record current main feed + mini if visible">➤ RECORD</button>
         <button class="speech-top-btn video-off-state" id="videoOffChatBtn" onclick="toggleVideo()" title="Video on/off">Video Off</button>
@@ -3190,23 +3269,9 @@ function toggleChatVideoView() {
   syncChatUnderlay();
   syncChatMiniOverlay();
   updateChatVideoViewBtn();
-  // Hot-swap video track in active chat recording
-  if (recChat && recChat.state === 'recording') {
-    const isLocalMain = (chatUnderlayMode === 'local');
-    const newMainVid = document.getElementById(isLocalMain ? 'localVideo' : 'remoteVideo');
-    if (newMainVid && newMainVid.srcObject) {
-      const newTrack = newMainVid.srcObject.getVideoTracks()[0];
-      if (newTrack) {
-        const sender = recChat.stream && recChat.stream.getVideoTracks()[0];
-        if (sender) {
-          try {
-            recChat.stream.removeTrack(sender);
-            recChat.stream.addTrack(newTrack);
-          } catch(e) { entry('Could not swap recording track: ' + e.message, 'sys'); }
-        }
-      }
-    }
-    entry('Recording view switched to ' + (isLocalMain ? 'local' : 'remote'), 'sys');
+  // _chatRec.main already points at chatUnderlay which syncChatUnderlay just updated
+  if (_chatRec.active) {
+    entry('Recording view switched to ' + (chatUnderlayMode === 'local' ? 'local' : 'remote'), 'sys');
   }
 }
 
@@ -3240,6 +3305,7 @@ updateMiniVideoVisibility();
 let miniChatVisible = false;
 function toggleMiniChat() {
   miniChatVisible = !miniChatVisible;
+  _chatRecUpdateMini(); // update live recording PiP if active
   const overlay = document.getElementById('miniChatOverlay');
   if (overlay) overlay.classList.toggle('hidden', !miniChatVisible);
   const btn = document.getElementById('miniChatBtn');
@@ -4976,16 +5042,11 @@ function startListening() {
     _recognition.onstart = () => {
       _listening = true;
       _interimText = '';
-      setSpeechStatus('#' + _sttStartCount + ' START and=' + _isAndroid + ' lang=' + _recognition.lang);
+      setSpeechStatus('#' + _sttStartCount + ' START lang=' + _recognition.lang);
       const lb = document.getElementById('speechListenBtn');
       if (lb) { lb.classList.add('listening'); lb.textContent = 'STOP'; }
       const ss = document.getElementById('speechStatus');
       if (ss) ss.classList.add('listening');
-      // Non-Android: mute via gain node or track as before
-      if (!_isAndroid && !audioMuted) {
-        if (_mixMicGain) { _preTalkMicGain = _mixMicGain.gain.value; _mixMicGain.gain.value = 0.0; }
-        else if (realAudioTrack) { realAudioTrack.enabled = false; }
-      }
     };
 
     _recognition.onresult = (e) => {
@@ -5047,33 +5108,22 @@ function startListening() {
         }
       }
 
-      // Restore mic on Android
-      if (_isAndroid) {
-        _restoreAndroidMic().then(() => {
-          if (_listening) {
-            setTimeout(() => { if (_listening) try { startListening(); } catch(ex) { stopListening(); } }, 500);
-          }
-        });
-      } else {
-        // Non-Android: restore gain/track — restore both to guard against the case
-        // where _mixMicGain was created after onstart muted via realAudioTrack.enabled.
-        if (!audioMuted) {
-          if (_mixMicGain) { _mixMicGain.gain.value = _preTalkMicGain !== null ? _preTalkMicGain : 1.0; _preTalkMicGain = null; }
-          if (realAudioTrack) { realAudioTrack.enabled = true; }
-        }
+      // Restore WebRTC sender (mic was released before STT started)
+      _restoreAndroidMic().then(() => {
         if (_listening) {
           setTimeout(() => { if (_listening) try { startListening(); } catch(ex) { stopListening(); } }, 250);
         }
-      }
+      });
     };
 
     try { _recognition.start(); } catch(e) { setSpeechStatus('ERR: START FAILED: ' + e.message); }
   }
 
-  // Swap WebRTC sender to silence (fire-and-forget), then start immediately
-  // _recognition.start() must be called synchronously in the gesture handler on Android
-  _releaseAndroidMic();
-  _doStart();
+  // Always swap the WebRTC sender to silence before STT — on all platforms
+  // (Mac, Android, Chromebook) WebRTC holds the mic hardware, preventing the
+  // Speech API from getting audio. Swap to a silent track first, then restore
+  // in onend via _restoreAndroidMic().
+  _releaseAndroidMic().then(_doStart);
 }
 
 // Swap WebRTC sender to silence during Android STT (mic hardware stays alive for STT)
@@ -5126,12 +5176,10 @@ function stopListening() {
   const ss = document.getElementById('speechStatus');
   if (ss) ss.classList.remove('listening');
   const _isAndroid = /android/i.test(navigator.userAgent);
-  if (_isAndroid) {
-    // onend will fire and call _restoreAndroidMic — but if we stopped manually
-    // before onend, restore here too (guard: _restoreAndroidMic is idempotent)
-    if (_sttSavedSender) { _restoreAndroidMic().then(() => setSpeechStatus('IDLE')); }
-    else { setSpeechStatus('IDLE'); }
-  } else {
+  if (_sttSavedSender) { _restoreAndroidMic().then(() => setSpeechStatus('IDLE')); }
+  else {
+    // No sender was saved (STT started before call connected) — still restore
+    // gain/track in case onstart muted them on an older code path.
     if (!audioMuted) {
       if (_mixMicGain) { _mixMicGain.gain.value = _preTalkMicGain !== null ? _preTalkMicGain : 1.0; _preTalkMicGain = null; }
       if (realAudioTrack) { realAudioTrack.enabled = true; }
@@ -6497,6 +6545,9 @@ function _doLeave() {
   morseStopAll();
   // Stop system audio capture if active
   if (sysAudioActive) _stopSysAudio();
+  // Stop detached camera/screen tracks (may have been removed from localStream by toggleVideo/flipCamera)
+  if (cameraTrack) { try { cameraTrack.stop(); } catch(e){} cameraTrack = null; }
+  if (screenTrack) { try { screenTrack.stop(); } catch(e){} screenTrack = null; }
   // Stop all local media
   _pendingChatMsg = null;  // discard queued message — session ended
   if (localStream) {
@@ -6625,6 +6676,84 @@ function resetLockTimer() { /* inactivity lock disabled */ }
 // ── Video+Mixed Audio Recording ───────────────────────────────
 let recRemote = null, recRemoteChunks = [], recRemoteBusy = false;
 let recLocal  = null, recLocalChunks  = [], recLocalBusy  = false;
+
+// ── Combined-session accumulator ──────────────────────────────
+// When the user switches between local and remote recording mid-session,
+// we accumulate each segment here and merge them all into one file at the end.
+// _combSession: { segments: [{blob, mimeType}], active: bool }
+let _combSession = null;
+
+// Call when starting any RECORD button press while the other recorder is
+// still active (or was just stopped in the same session).
+function _combStart() {
+  if (!_combSession) _combSession = { segments: [], mimeType: null };
+}
+
+// Called from saveRec when in combined mode.  Returns true if the chunk was
+// stashed (caller must NOT download yet), false if this is a standalone save.
+async function _combAccumulate(blob, mimeType) {
+  if (!_combSession) return false;
+  _combSession.segments.push(blob);
+  if (!_combSession.mimeType) _combSession.mimeType = mimeType;
+  // If the other recorder is still running we just stash — don't download yet.
+  const otherRunning = (recLocal  && recLocal.state  === 'recording') ||
+                       (recRemote && recRemote.state === 'recording');
+  if (otherRunning) return true;   // more segments to come
+  // Both recorders have stopped — merge and download now.
+  const segments = _combSession.segments;
+  _combSession = null;
+  if (segments.length === 1) {
+    // Only one segment ended up being recorded — just save it normally.
+    return false;
+  }
+  await _combMergeAndSave(segments, mimeType);
+  return true;
+}
+
+async function _combMergeAndSave(blobs, mimeType) {
+  const ts = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
+  const isNativeMp4 = /mp4/i.test(mimeType);
+
+  if (isNativeMp4) {
+    // All segments are already MP4 — concatenate via ffmpeg concat demuxer.
+    try {
+      entry('Merging recordings into one file…', 'sys');
+      const ffmpeg = await loadFFmpeg();
+      const stamp = Date.now();
+      const segPaths = [];
+      for (let i = 0; i < blobs.length; i++) {
+        const p = `seg_${stamp}_${i}.mp4`;
+        await ffmpeg.writeFile(p, new Uint8Array(await blobs[i].arrayBuffer()));
+        segPaths.push(p);
+      }
+      const listContent = segPaths.map(p => `file '${p}'`).join('\n');
+      const listPath = `concat_${stamp}.txt`;
+      await ffmpeg.writeFile(listPath, listContent);
+      const outPath = `merged_${stamp}.mp4`;
+      await ffmpeg.exec(['-f','concat','-safe','0','-i',listPath,'-c','copy','-movflags','+faststart',outPath]);
+      const data = await ffmpeg.readFile(outPath);
+      for (const p of [...segPaths, listPath, outPath]) ffmpeg.deleteFile(p).catch(()=>{});
+      downloadBlob(new Blob([data.buffer], { type: 'video/mp4' }), `alpha-combined-${ts}.mp4`);
+      entry('Combined recording saved (mp4)', 'ok');
+    } catch(e) {
+      entry(`Merge failed (${e.message||e}) — saving segments separately`, 'sys');
+      blobs.forEach((b, i) => downloadBlob(b, `alpha-seg${i+1}-${ts}.mp4`));
+    }
+    return;
+  }
+
+  // WebM path — concatenate raw chunks and let convertToMp4 handle it.
+  try {
+    entry('Merging WebM segments…', 'sys');
+    const combined = new Blob(blobs, { type: mimeType });
+    const mp4Blob = await convertToMp4(combined, mimeType, 'combined');
+    downloadBlob(mp4Blob, `alpha-combined-${ts}.mp4`);
+    entry('Combined recording saved (mp4)', 'ok');
+  } catch(e) {
+    entry(`Merge failed (${e.message||e}) — saving as WebM`, 'sys');
+    downloadBlob(new Blob(blobs, { type: mimeType }), `alpha-combined-${ts}.webm`);
+  }
+}
 
 function preferredMime() {
   // Try native MP4 first. Chrome 121+ (Jan 2024) fixed the Windows audio
@@ -6779,8 +6908,13 @@ async function saveRec(chunks, mimeType, label) {
   if (!chunks.length) { entry('Recording empty — nothing saved', 'sys'); return; }
   const blob = new Blob(chunks, { type: mimeType });
   const ts = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
-  // If MediaRecorder gave us native MP4, save it directly — no conversion needed.
+
+  // Combined-session path: stash segment; merge + download when all done.
+  if (await _combAccumulate(blob, mimeType)) return;
+
+  // Standalone save (no handoff session active).
   if (/mp4/i.test(mimeType)) {
+    // If MediaRecorder gave us native MP4, save it directly — no conversion needed.
     downloadBlob(blob, `alpha-${label}-${ts}.mp4`);
     entry(`${label} recording saved (mp4)`, 'ok');
     return;
@@ -6808,6 +6942,11 @@ async function toggleRecordRemote() {
     return;
   }
   if (recRemote && recRemote.state !== 'inactive') return;
+
+  // If local is currently recording OR a combined session is already in
+  // progress (sequential handoff: local stopped → remote starting), link
+  // this segment into the same merged file.
+  if ((recLocal && recLocal.state === 'recording') || _combSession) _combStart();
 
   const remoteVideo = document.getElementById('remoteVideo');
   const remoteAudio = document.getElementById('remoteAudio');
@@ -6864,6 +7003,11 @@ async function toggleRecordLocal() {
   }
   if (recLocal && recLocal.state !== 'inactive') return;
 
+  // If remote is currently recording OR a combined session is already in
+  // progress (sequential handoff: remote stopped → local starting), link
+  // this segment into the same merged file.
+  if ((recRemote && recRemote.state === 'recording') || _combSession) _combStart();
+
   if (!localStream || !localStream.getVideoTracks().length) {
     entry('No local video to record', 'err'); return;
   }
@@ -6909,26 +7053,62 @@ async function toggleRecordLocal() {
   entry(`Local recording started${withMini ? ' (with remote mini overlay)' : ''}…`, 'ok');
 }
 
-// ── Record Chat button — records whichever feed is the chat underlay ─────
-let recChat = null, recChatChunks = [], recChatBusy = false;
+// ── Record Chat button ─────────────────────────────────────────────────────
+// Uses a persistent canvas as the sole MediaRecorder source.
+// Switching local/remote view or toggling mini-cam during recording only
+// updates mutable pointers read by the draw loop — the MediaRecorder never
+// sees a track change and never restarts, so the output is one seamless file.
+const _chatRec = {
+  active:    false,
+  canvas:    null,
+  ctx:       null,
+  afId:      null,
+  recorder:  null,
+  chunks:    [],
+  busy:      false,
+  aCtx:      null,
+  // Offscreen video elements — never in DOM, always playing, immune to throttling
+  offLocal:  null,
+  offRemote: null,
+};
+
+// Create an offscreen video element fed from a MediaStream, call play().
+function _makeOffscreenVideo(stream) {
+  const v = document.createElement('video');
+  v.srcObject = stream;
+  v.muted = true;
+  v.playsInline = true;
+  v.autoplay = true;
+  v.play().catch(() => {});
+  return v;
+}
+
+// Call this when mini-cam is toggled during a chat recording
+function _chatRecUpdateMini() {
+  if (!_chatRec.active) return;
+  // miniChatVideo.srcObject is kept current by syncChatMiniOverlay — just toggle showPip
+  _chatRec.showPip = miniChatVisible;
+}
+
+let recChat = null, recChatChunks = [], recChatBusy = false; // kept for saveRecordingIfActive compat
 
 async function toggleRecordChat() {
   const btn = document.getElementById('recChatBtn');
-  if (recChatBusy) return;
 
-  if (recChat && recChat.state === 'recording') {
-    recChatBusy = true;
-    recChat.stop();
+  // ── STOP ──
+  if (_chatRec.active && _chatRec.recorder && _chatRec.recorder.state === 'recording') {
+    _chatRec.busy = true;
+    recChatBusy   = true;
+    _chatRec.recorder.stop();
     if (btn) { btn.textContent = '⏳ SAVING'; btn.classList.remove('recording'); btn.disabled = true; }
     return;
   }
-  if (recChat && recChat.state !== 'inactive') return;
+  if (_chatRec.busy) return;
 
+  // ── START ──
   const remoteVideo = document.getElementById('remoteVideo');
   const localVid    = document.getElementById('localVideo');
   const remoteAudio = document.getElementById('remoteAudio');
-
-  // Determine main feed based on current chat underlay mode
   const isLocalMain = (chatUnderlayMode === 'local');
   const mainVideo   = isLocalMain ? localVid : remoteVideo;
 
@@ -6936,40 +7116,125 @@ async function toggleRecordChat() {
     entry('No video available to record', 'err'); return;
   }
 
+  const remoteStream = (remoteAudio && remoteAudio.srcObject) ||
+                       (remoteVideo && remoteVideo.srcObject) || null;
   const mimeType = preferredMime();
-  let stopLoop = null, recStream, aCtx = null;
-  const withMini = !!miniChatVisible;  // use chat mini visibility flag
-  const remoteStream = (remoteAudio && remoteAudio.srcObject) || (remoteVideo && remoteVideo.srcObject) || null;
 
-  if (withMini) {
-    // PiP: composite needs Web Audio for canvas mix
-    const { ctx, dest: aDest } = await buildAudioMix(getLocalAudioTracksForRec(), remoteStream);
-    aCtx = ctx;
-    const miniChatVideo = document.getElementById('miniChatVideo');
-    const comp = buildCompositeStream(mainVideo, miniChatVideo, aDest.stream.getAudioTracks());
-    recStream = comp.stream; stopLoop = comp.stopLoop;
-  } else {
-    // Plain: raw tracks directly — no Web Audio
-    recStream = new MediaStream([
-      ...mainVideo.srcObject.getVideoTracks(),
-      ...getLocalAudioTracksForRec(),
-      ...(remoteStream ? remoteStream.getAudioTracks() : [])
-    ]);
+  // Build / reuse persistent canvas
+  const W = mainVideo.videoWidth  || 1280;
+  const H = mainVideo.videoHeight || 720;
+  if (!_chatRec.canvas) {
+    _chatRec.canvas = document.createElement('canvas');
+  }
+  _chatRec.canvas.width  = W;
+  _chatRec.canvas.height = H;
+  _chatRec.ctx = _chatRec.canvas.getContext('2d');
+
+  // PiP layout constants
+  const pipW = Math.round(W * 0.28);
+  const pipH = Math.round(pipW * 9 / 16);
+  const pipX = W - pipW - 14;
+  const pipY = 14;
+
+  // Draw loop — resolves source video elements fresh each frame so that
+  // switching local/remote or toggling mini-cam mid-recording is captured
+  // correctly without any pointer updates outside the loop.
+  // We draw directly from localVideo/remoteVideo (always-live source elements)
+  // rather than chatUnderlay/miniChatVideo (display elements that can be
+  // throttled/hidden by the browser and may not yield canvas frames reliably).
+  // Offscreen video elements — never in DOM, fed from raw streams, always playing.
+  // We re-check srcObject each frame so mid-call stream replacements are handled.
+  function _syncOffscreen(off, srcStream) {
+    if (!off) return null;
+    if (off.srcObject !== srcStream) {
+      off.srcObject = srcStream;
+      off.play().catch(() => {});
+    }
+    return off;
+  }
+  _chatRec.offLocal  = _makeOffscreenVideo(localVid.srcObject);
+  const remoteEl     = document.getElementById('remoteVideo');
+  _chatRec.offRemote = _makeOffscreenVideo(remoteEl.srcObject || new MediaStream());
+
+  function drawPip(c, el) {
+    c.save();
+    c.beginPath();
+    if (c.roundRect) c.roundRect(pipX, pipY, pipW, pipH, 4);
+    else c.rect(pipX, pipY, pipW, pipH);
+    c.clip();
+    c.drawImage(el, pipX, pipY, pipW, pipH);
+    c.restore();
+    c.strokeStyle = '#00d4ff'; c.lineWidth = 2;
+    c.beginPath();
+    if (c.roundRect) c.roundRect(pipX, pipY, pipW, pipH, 4);
+    else c.rect(pipX, pipY, pipW, pipH);
+    c.stroke();
   }
 
-  recChatChunks = [];
-  recChat = new MediaRecorder(recStream, { mimeType });
-  recChat.ondataavailable = e => { if (e.data.size > 0) recChatChunks.push(e.data); };
-  recChat.onstop = async () => {
-    if (stopLoop) stopLoop();
-    if (aCtx) aCtx.close();
-    await saveRec(recChatChunks, mimeType, isLocalMain ? 'chat-local' : 'chat-remote');
-    recChatBusy = false;
+  function drawFrame() {
+    const c = _chatRec.ctx;
+    // Re-sync srcObjects each frame in case streams were replaced mid-call
+    const rv = document.getElementById('remoteVideo');
+    _syncOffscreen(_chatRec.offLocal,  localVid.srcObject);
+    _syncOffscreen(_chatRec.offRemote, rv ? rv.srcObject : null);
+
+    const isLocal = (chatUnderlayMode === 'local');
+    const mainOff = isLocal ? _chatRec.offLocal : _chatRec.offRemote;
+    const miniOff = isLocal ? _chatRec.offRemote : _chatRec.offLocal;
+
+    if (mainOff && mainOff.readyState >= 2) {
+      c.drawImage(mainOff, 0, 0, W, H);
+    } else {
+      // Fill black while waiting for video to be ready
+      c.fillStyle = '#000';
+      c.fillRect(0, 0, W, H);
+    }
+    if (miniChatVisible && miniOff && miniOff.readyState >= 2) {
+      drawPip(c, miniOff);
+    }
+    _chatRec.afId = requestAnimationFrame(drawFrame);
+  }
+  _chatRec.afId = requestAnimationFrame(drawFrame);
+
+  // Build audio mix (always use Web Audio so we can blend both sides)
+  const { ctx: aCtx, dest: aDest } = await buildAudioMix(
+    getLocalAudioTracksForRec(), remoteStream
+  );
+  _chatRec.aCtx = aCtx;
+
+  // Combine canvas video + mixed audio into one stream for the recorder
+  const canvasStream = _chatRec.canvas.captureStream(30);
+  const recStream = new MediaStream([
+    ...canvasStream.getVideoTracks(),
+    ...aDest.stream.getAudioTracks(),
+  ]);
+
+  _chatRec.chunks   = [];
+  _chatRec.active   = true;
+  recChatChunks     = _chatRec.chunks; // alias for saveRecordingIfActive compat
+  const mr = new MediaRecorder(recStream, { mimeType });
+  _chatRec.recorder = mr;
+  recChat           = mr; // alias for saveRecordingIfActive compat
+
+  mr.ondataavailable = e => { if (e.data.size > 0) _chatRec.chunks.push(e.data); };
+  mr.onstop = async () => {
+    cancelAnimationFrame(_chatRec.afId);
+    _chatRec.aCtx.close();
+    // Release offscreen video elements
+    if (_chatRec.offLocal)  { _chatRec.offLocal.srcObject  = null; _chatRec.offLocal  = null; }
+    if (_chatRec.offRemote) { _chatRec.offRemote.srcObject = null; _chatRec.offRemote = null; }
+    _chatRec.active   = false;
+    _chatRec.busy     = false;
+    recChatBusy       = false;
+    const chunks  = _chatRec.chunks;
+    _chatRec.chunks   = [];
+    await saveRec(chunks, mimeType, 'chat-recording');
     if (btn) { btn.disabled = false; btn.textContent = '➤ RECORD'; }
   };
-  recChat.start(1000);
+
+  mr.start(1000);
   if (btn) { btn.textContent = '⏹ Stop'; btn.classList.add('recording'); }
-  entry(`Chat recording started (${isLocalMain ? 'local' : 'remote'} main${withMini ? ' + mini' : ''})…`, 'ok');
+  entry(`Chat recording started (${isLocalMain ? 'local' : 'remote'} main${_chatRec.showPip ? ' + PiP' : ''})…`, 'ok');
 }
 
 // Legacy no-op — buttons now call specific functions directly
