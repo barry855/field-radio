@@ -1385,6 +1385,7 @@
     .chat-find-bar { display: none !important; height: 0 !important; overflow: hidden !important; }
     .mini-video-overlay { display: none !important; }
     .zoom-row { display: none !important; height: 0 !important; overflow: hidden !important; }
+    #chatUnderlay, #miniChatOverlay, .drop-overlay { display: none !important; height: 0 !important; }
 
     /* ── Speech panel — hide entirely in print (controls shown via chatBtnRows) ── */
     #speechPanel { display: none !important; }
@@ -2260,7 +2261,7 @@ window.addEventListener('orientationchange', function() {
         <div class="speech-btn-row" id="speechBtnRow3">
           <span class="sbr-label">Text To Speech:</span>
           <select id="ttsVoiceSelect" title="TTS voice for spoken output"></select>
-          <button id="speechTtsBtn" onclick="toggleTts()" title="Toggle auto-speak for incoming messages">TTS Off</button>
+          <button class="speech-top-btn" id="speechTtsBtn" onclick="toggleTts()" title="Toggle auto-speak for incoming messages">TTS Off</button>
         </div>
       </div>
       <div class="log-panel collapsed" id="logPanel">
