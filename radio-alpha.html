@@ -757,7 +757,7 @@
   /* ── Speech overlay panel ──────────────────────────────────── */
   #speechPanel {
     display: none;
-    position: absolute; top: 0; bottom: 0; left: 0; right: 0;
+    position: fixed; top: 0; bottom: 0; left: 0; right: 0;
     z-index: 300;
     background: rgba(75,85,99,0.55); border: 1px solid var(--border);
     border-radius: 8px; padding: 10px 14px;
@@ -873,8 +873,6 @@
   #speechSendBtn:disabled { opacity: 0.35; cursor: not-allowed; background: var(--btn-bg); border-color: var(--border); color: var(--text); font-weight: normal; }
   #speechOriginalBtn:hover { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
   #speechListenBtn:hover { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
-  #speechTtsBtn.active-on { background: #1a56db !important; border-color: #1a56db !important; color: #ffe600 !important; }
-  #speechTtsBtn.active-on:hover { background: #1648c2 !important; border-color: #1648c2 !important; }
   #speechListenBtn.listening {
     background: #000; border-color: #000; color: #fff;
   }
@@ -1415,10 +1413,32 @@
     .chat-find-bar { display: none !important; height: 0 !important; overflow: hidden !important; }
     .mini-video-overlay { display: none !important; }
     .zoom-row { display: none !important; height: 0 !important; overflow: hidden !important; }
-    #chatUnderlay, #miniChatOverlay, .drop-overlay { display: none !important; height: 0 !important; }
 
-    /* ── Speech panel — hide entirely in print (controls shown via chatBtnRows) ── */
-    #speechPanel { display: none !important; }
+    /* ── Speech panel — shown in print after helpPanel ── */
+    #speechPanel {
+      position: static !important;
+      display: flex !important; flex-direction: column !important;
+      background: none !important;
+      border: 1px solid #999 !important; border-radius: 4px !important;
+      padding: 8px 10px !important; margin-top: 6px !important;
+      overflow: visible !important; height: auto !important;
+      max-height: none !important; gap: 6px !important;
+      flex-shrink: 0 !important;
+    }
+    #speechEditWrap { display: none !important; }
+    #speechStatus { display: none !important; }
+    #speechFilePreviewStrip { display: none !important; }
+    .speech-top-bar { display: none !important; }
+    #speechPanel .speech-btn-row {
+      display: flex !important; flex-wrap: wrap !important;
+      align-items: center !important; gap: 4px !important;
+      background: #fff !important;
+    }
+    #speechPanel .sbr-label { color: #000 !important; font-weight: bold !important; }
+    #speechPanel button, #speechPanel select {
+      background: #fff !important; color: #000 !important;
+      border: 1px solid #555 !important; text-shadow: none !important;
+    }
 
     /* ── Button Guide — flush, no gap, allow page break ── */
     #helpPanel {
@@ -2251,49 +2271,7 @@ window.addEventListener('orientationchange', function() {
       <!-- hidden shims kept for JS compatibility -->
       <textarea id="chatInput" style="display:none"></textarea>
       <input type="file" id="fileInput" multiple="" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx" style="display:none">
-      <!-- ── Speech overlay panel ──────────────────────────────── -->
-      <div id="speechPanel">
-        <div class="speech-top-bar" style="display:none"></div>
-        <div class="file-preview-strip" id="speechFilePreviewStrip"></div>
-        <div id="speechEditWrap">
-          <textarea id="speechEditBox" placeholder="Tap Talk or Type and Edit Text" spellcheck="true"></textarea>
-          <div id="speechEditMirror" aria-hidden="true"></div>
-          <button id="speechFloatSend" onclick="sendSpeechToChat()" disabled title="Send">SEND</button>
-        </div>
-        <div id="speechStatus" class="speech-status">IDLE</div>
 
-        <div class="speech-btn-row" id="speechBtnRow1">
-          <span class="sbr-label">Chat:</span>
-          <button id="speechAttachBtn" onclick="speechAttachClick()" title="Attach file or drag &amp; drop">ATTACH</button>
-          <input type="file" id="speechFileInput" multiple style="display:none" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx">
-          <input type="file" id="speechTextFileInput" style="display:none" accept=".txt,.md,.text">
-          <button id="speechLoadBtn" onclick="speechLoadText()" title="Load text file into input box">LOAD</button>
-          <button id="speechSaveBtn" onclick="speechSaveText()" title="Save input box text to file">SAVE</button>
-          <button id="speechCopyBtn" onclick="speechCopyText()" title="Copy input box text to clipboard">COPY</button>
-          <button id="speechClearBtn" onclick="speechClearText()" title="Clear input box">CLEAR</button>
-          <button id="cwSendBtn" onclick="cwBtnPress()" title="Send text as Morse code" disabled>⚫ CW</button>
-        </div>
-        <div class="speech-btn-row" id="speechBtnRow2">
-          <span class="sbr-label">Your Spoken Language:</span>
-          <select id="speechLangSelect" title="Speech recognition language" onchange="setSpeechLang(this.value)">
-            <option value="en-US" title="Eng">English (US)</option>
-            <option value="en-GB" title="Eng UK">English (UK)</option>
-            <option value="es-ES" title="Spanish">Español</option>
-            <option value="fr-FR" title="French">Français</option>
-            <option value="de-DE" title="German">Deutsch</option>
-            <option value="ja-JP" title="Japan">日本語</option>
-            <option value="zh-CN" title="Chinese">中文 (普通话)</option>
-            <option value="pt-BR" title="Portuguese (BR)">Português (BR)</option>
-          </select>
-          <button id="speechOriginalBtn" onclick="speechOriginalLang()" title="Revert to system language">ORIGINAL</button>
-          <button id="speechListenBtn" onclick="toggleListening()">TALK</button>
-        </div>
-        <div class="speech-btn-row" id="speechBtnRow3">
-          <span class="sbr-label">Text To Speech:</span>
-          <select id="ttsVoiceSelect" title="TTS voice for spoken output"></select>
-          <button class="speech-top-btn" id="speechTtsBtn" onclick="toggleTts()" title="Toggle auto-speak for incoming messages">TTS Off</button>
-        </div>
-      </div>
       <div class="log-panel collapsed" id="logPanel">
         <div class="panel-label" onclick="toggleLogPanel()">SYS LOG<span class="log-toggle-arrow" id="logToggleArrow">▾</span>
           <button class="log-action-btn" onclick="event.stopPropagation();saveLog()" title="Save log to file">SAVE</button>
@@ -8535,4 +8513,46 @@ function ttsSpeak(text, lang) {
 </script>
 
 
-<div id="helpPanel" role="dialog" aria-modal="true" aria-label="Button guide"><div id="helpPanelInner"><div class="help-btn-bar"><button onclick="closeHelpPanel()">✕ Close</button><button onclick="window.print()">⎙ Print</button></div><h3>Button Guide</h3><div id="helpPanelRows"></div><button id="helpCloseBtn" onclick="closeHelpPanel()">✕ Close</button></div></div><div id="printNotesArea" style="display:none"><p>Notes</p></div></div></body></html>
+<div id="helpPanel" role="dialog" aria-modal="true" aria-label="Button guide"><div id="helpPanelInner"><div class="help-btn-bar"><button onclick="closeHelpPanel()">✕ Close</button><button onclick="window.print()">⎙ Print</button></div><h3>Button Guide</h3><div id="helpPanelRows"></div><button id="helpCloseBtn" onclick="closeHelpPanel()">✕ Close</button></div></div><!-- ── Speech overlay panel ──────────────────────────────── -->
+<div id="speechPanel">
+  <div class="speech-top-bar" style="display:none"></div>
+  <div class="file-preview-strip" id="speechFilePreviewStrip"></div>
+  <div id="speechEditWrap">
+    <textarea id="speechEditBox" placeholder="Tap Talk or Type and Edit Text" spellcheck="true"></textarea>
+    <div id="speechEditMirror" aria-hidden="true"></div>
+    <button id="speechFloatSend" onclick="sendSpeechToChat()" disabled title="Send">SEND</button>
+  </div>
+  <div id="speechStatus" class="speech-status">IDLE</div>
+
+  <div class="speech-btn-row" id="speechBtnRow1">
+    <span class="sbr-label">Chat:</span>
+    <button id="speechAttachBtn" onclick="speechAttachClick()" title="Attach file or drag &amp; drop">ATTACH</button>
+    <input type="file" id="speechFileInput" multiple style="display:none" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx">
+    <input type="file" id="speechTextFileInput" style="display:none" accept=".txt,.md,.text">
+    <button id="speechLoadBtn" onclick="speechLoadText()" title="Load text file into input box">LOAD</button>
+    <button id="speechSaveBtn" onclick="speechSaveText()" title="Save input box text to file">SAVE</button>
+    <button id="speechCopyBtn" onclick="speechCopyText()" title="Copy input box text to clipboard">COPY</button>
+    <button id="speechClearBtn" onclick="speechClearText()" title="Clear input box">CLEAR</button>
+    <button id="cwSendBtn" onclick="cwBtnPress()" title="Send text as Morse code" disabled>⚫ CW</button>
+  </div>
+  <div class="speech-btn-row" id="speechBtnRow2">
+    <span class="sbr-label">Your Spoken Language:</span>
+    <select id="speechLangSelect" title="Speech recognition language" onchange="setSpeechLang(this.value)">
+      <option value="en-US" title="Eng">English (US)</option>
+      <option value="en-GB" title="Eng UK">English (UK)</option>
+      <option value="es-ES" title="Spanish">Español</option>
+      <option value="fr-FR" title="French">Français</option>
+      <option value="de-DE" title="German">Deutsch</option>
+      <option value="ja-JP" title="Japan">日本語</option>
+      <option value="zh-CN" title="Chinese">中文 (普通话)</option>
+      <option value="pt-BR" title="Portuguese (BR)">Português (BR)</option>
+    </select>
+    <button id="speechOriginalBtn" onclick="speechOriginalLang()" title="Revert to system language">ORIGINAL</button>
+    <button id="speechListenBtn" onclick="toggleListening()">TALK</button>
+  </div>
+  <div class="speech-btn-row" id="speechBtnRow3">
+    <span class="sbr-label">Text To Speech:</span>
+    <select id="ttsVoiceSelect" title="TTS voice for spoken output"></select>
+    <button id="speechTtsBtn" onclick="toggleTts()" title="Toggle auto-speak for incoming messages">TTS Off</button>
+  </div>
+</div><div id="printNotesArea" style="display:none"><p>Notes</p></div></div></body></html>
