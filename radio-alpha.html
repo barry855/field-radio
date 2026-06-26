@@ -1289,17 +1289,22 @@
   @media print {
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 
-    /* ── Overall page — must unclip viewport-height constraints ── */
-    html, body {
-      height: auto !important; min-height: 0 !important;
+    /* ── Overall page — flex column so notes fills remaining space ── */
+    html {
+      height: 100% !important;
+    }
+    body {
+      height: 100% !important; min-height: 0 !important;
       overflow: visible !important;
       background: #fff !important; margin: 0 !important;
+      display: flex !important; flex-direction: column !important;
     }
     .shell {
       gap: 4px !important; padding: 6px !important;
       height: auto !important; overflow: visible !important;
       max-width: 100% !important;
       display: flex !important; flex-direction: column !important;
+      flex-shrink: 0 !important;
     }
     .tab-content, .tab-pane {
       height: auto !important; overflow: visible !important;
@@ -1409,32 +1414,8 @@
     .mini-video-overlay { display: none !important; }
     .zoom-row { display: none !important; height: 0 !important; overflow: hidden !important; }
 
-    /* ── Speech panel — show controls box rows ── */
-    #speechPanel {
-      display: flex !important; flex-direction: column !important;
-      height: auto !important; overflow: visible !important;
-      background: #fff !important; border: 1px solid #999 !important;
-      border-radius: 4px !important; padding: 4px 6px !important;
-      margin-top: 4px !important; gap: 4px !important;
-    }
-    #speechEditWrap { display: none !important; }
-    #speechStatus { display: none !important; }
-    .speech-top-bar { display: none !important; }
-    .file-preview-strip { display: none !important; }
-    .speech-btn-row {
-      display: flex !important; flex-wrap: wrap !important;
-      gap: 4px !important; align-items: center !important;
-    }
-    .speech-btn-row button, .speech-btn-row select {
-      background: #fff !important; color: #000 !important;
-      border: 1px solid #555 !important; font-size: 9px !important;
-      padding: 2px 5px !important;
-    }
-    .speech-btn-row .sbr-label {
-      color: #000 !important; font-weight: bold !important;
-      font-size: 9px !important;
-    }
-    #cwSendBtn { display: none !important; }
+    /* ── Speech panel — hide entirely in print (controls shown via chatBtnRows) ── */
+    #speechPanel { display: none !important; }
 
     /* ── Button Guide — flush, no gap, allow page break ── */
     #helpPanel {
