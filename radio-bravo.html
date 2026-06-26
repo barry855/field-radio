@@ -1255,7 +1255,7 @@
   .help-row { display: flex; gap: 8px; padding: 4px 0; border-bottom: 1px solid #bbb; line-height: 1.3; align-items: baseline; }
   .help-row:last-child { border-bottom: none; }
   .help-name { flex: 0 0 100px; background: #fff; color: #000; border: 1px solid #333; font-weight: 900; font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 5px; border-radius: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; align-self: center; }
-  .help-desc { flex: 1; color: #000; font-size: 10px; font-weight: 700; }
+  .help-desc { flex: 1; color: #000; font-size: 10px; font-weight: 400; }
   #helpCloseBtn { margin-top: 10px; width: 100%; padding: 7px; background: #fff; border: 1px solid #333; color: #000; font-family: inherit; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; border-radius: 4px; cursor: pointer; font-weight: bold; }
   #helpCloseBtn:hover { background: #f0f0f0; }
   @media print {
@@ -1271,6 +1271,7 @@
       gap: 4px !important; padding: 6px !important;
       height: auto !important; overflow: visible !important;
       max-width: 100% !important;
+      display: flex !important; flex-direction: column !important;
     }
     .tab-content, .tab-pane {
       height: auto !important; overflow: visible !important;
@@ -1337,6 +1338,8 @@
       border: 1px solid #999 !important;
       border-radius: 4px !important;
     }
+    /* ── Hide speechBtnRow1 (Chat: ATTACH/LOAD/SAVE) — duplicates chatToolsWrap on Safari ── */
+    #speechBtnRow1, .chat-panel > .panel-label { display: none !important; }
 
     /* ── Gain row — restored, grey label, visible slider ── */
     .gain-row { display: flex !important; background: #fff !important; }
@@ -1434,15 +1437,15 @@
     .help-btn-bar { display: none !important; }
     #helpCloseBtn { display: none !important; }
 
-    /* ── Notes area — ruled lines ── */
+    /* ── Notes area — ruled lines, fills remaining page space ── */
     #printNotesArea {
       display: block !important;
       border: 1px solid #999;
       border-radius: 4px;
       margin-top: 8px;
       padding: 8px 10px 0;
-      min-height: 96px;
-      max-height: 120px;
+      min-height: 120px;
+      flex: 1 1 auto;
       page-break-inside: avoid;
       break-inside: avoid;
       background-image: repeating-linear-gradient(
