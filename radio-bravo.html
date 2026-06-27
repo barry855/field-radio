@@ -6610,6 +6610,7 @@ function _vmNotice(text) {
 function _startRing() {
   _stopRing();
   _ringing = true;
+  entry('📞 Ringing…', 'sys');
   _playRingTone();
   _ringTimer = setInterval(_playRingTone, 2000);
 }
@@ -6618,36 +6619,45 @@ function _stopRing() {
   _ringing = false;
 }
 function _playRingTone() {
-  // Use _mixCtx if available (already gesture-unlocked by getUserMedia setup),
-  // fall back to _actx. Ring at full volume so it's audible on unattended device.
+  // Ensure _mixCtx exists (created lazily — may not exist yet at first ring)
+  _ensureMixContext();
   const ctx = _mixCtx || _actx;
-  if (!ctx || ctx.state === 'suspended') return;
-  try {
-    const freqs = [880, 880, 880], durs = [0.08, 0.05, 0.13], vol = 0.8;
-    let when = ctx.currentTime + 0.015;
-    freqs.forEach((hz, i) => {
-      const osc  = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = 'square';
-      osc.frequency.value = hz;
-      gain.gain.setValueAtTime(0, when);
-      gain.gain.linearRampToValueAtTime(vol, when + 0.008);
-      gain.gain.setValueAtTime(vol, when + durs[i] - 0.012);
-      gain.gain.linearRampToValueAtTime(0, when + durs[i]);
-      osc.start(when);
-      osc.stop(when + durs[i] + 0.05);
-      when += durs[i];
-    });
-  } catch(e) { console.warn('_playRingTone:', e); }
+  if (!ctx) return;
+  const doPlay = () => {
+    try {
+      const freqs = [880, 880, 880], durs = [0.08, 0.05, 0.13], vol = 0.8;
+      let when = ctx.currentTime + 0.015;
+      freqs.forEach((hz, i) => {
+        const osc  = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'square';
+        osc.frequency.value = hz;
+        gain.gain.setValueAtTime(0, when);
+        gain.gain.linearRampToValueAtTime(vol, when + 0.008);
+        gain.gain.setValueAtTime(vol, when + durs[i] - 0.012);
+        gain.gain.linearRampToValueAtTime(0, when + durs[i]);
+        osc.start(when);
+        osc.stop(when + durs[i] + 0.05);
+        when += durs[i];
+      });
+    } catch(e) { console.warn('_playRingTone:', e); }
+  };
+  if (ctx.state === 'suspended') { ctx.resume().then(doPlay).catch(() => {}); }
+  else { doPlay(); }
 }
 
 function _markAttended() {
   if (_attended) return;
   _attended = true;
   clearTimeout(_vmTimer); _vmTimer = null;
-  entry('Call attended — voicemail suppressed', 'sys');
+  if (_vmActive) {
+    entry('Call attended — stopping voicemail recording', 'sys');
+    _stopVoicemail();
+  } else {
+    entry('Call attended — voicemail suppressed', 'sys');
+  }
 }
 
 function _startVoicemail() {
