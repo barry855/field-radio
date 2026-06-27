@@ -1423,25 +1423,10 @@
     /* ── Button Guide — flush, no gap, allow page break ── */
     /* ── helpPanel: hide the fixed overlay wrapper entirely on Mac/any browser ── */
     /* Use [data-printing] attr set by JS beforePrint for higher specificity than .open */
-    #helpPanel[data-printing] {
-      position: static !important; background: none !important;
-      padding: 0 !important; margin: 0 !important; display: block !important;
-      overflow: visible !important; height: auto !important;
-      max-height: none !important; inset: auto !important;
-      z-index: auto !important;
-    }
-    /* Fallback for browsers where attr trick doesn't fire in time */
-    #helpPanel {
-      position: static !important; background: none !important;
-      padding: 0 !important; margin: 0 !important; display: block !important;
-      overflow: visible !important; height: auto !important;
-      max-height: none !important; inset: auto !important;
-      z-index: auto !important;
-    }
-    #helpPanel.open {
-      position: static !important; background: none !important;
-      display: block !important; inset: auto !important;
-      z-index: auto !important;
+    /* ── helpPanel: always hide the fixed overlay wrapper in print ── */
+    /* JS (beforePrint) extracts #helpPanelInner and inserts it directly into flow */
+    #helpPanel, #helpPanel[data-printing], #helpPanel.open {
+      display: none !important;
     }
     #helpPanelInner {
       border: 1px solid #999 !important; border-radius: 4px !important;
