@@ -5716,6 +5716,7 @@ function startPeer() {
 
   peer.on('call', incoming => {
     entry('Inbound call from Alpha', 'info');
+    _startRing();                    // audible ring until ICE connects
     _pollCancelled = true;           // stop the outbound dial-poll loop — Alpha reached us first
     clearTimeout(retryTimer); // cancel any pending dial/retry — Alpha reached us first
     if (!localStream) {
@@ -6186,6 +6187,8 @@ function sendVideoState() {
 function markLinked() {
   if (linked) return;
   linked = true;
+  _stopRing();           // stop ringing — call connected
+  _onCallConnected();    // start 15s attendance watch
   restoreSpeechDraft();
   clearTimeout(retryTimer);  // cancel any pending retry/watchdog
   clearTimeout(dropTimer);   // cancel onDrop grace-period before reconnect screen shows
@@ -6520,6 +6523,7 @@ function handleRemoteLeave() {
 }
 
 function onDrop() {
+  _onCallEnded();        // log call, stop ring/voicemail, clear timers
   saveSpeechDraft();
   clearTimeout(retryTimer);
   clearTimeout(_raPlayTimer); _raPlayTimer = null;  // cancel any pending audio play attempt
@@ -6582,6 +6586,125 @@ function resetLockTimer() { /* inactivity lock disabled */ }
 // ── Video+Mixed Audio Recording ───────────────────────────────
 let recRemote = null, recRemoteChunks = [], recRemoteBusy = false;
 let recLocal  = null, recLocalChunks  = [], recLocalBusy  = false;
+
+// ── Answering machine ─────────────────────────────────────────
+let _vmTimer     = null;   // 15s unattended timeout
+let _vmActive    = false;  // voicemail recorder running
+let _vmRec       = null;   // MediaRecorder for voicemail
+let _vmChunks    = [];
+let _attended    = false;  // user interacted during this call
+let _ringTimer   = null;   // repeating ring interval
+let _ringing     = false;  // ring was triggered this call cycle
+let _vmCallStart = 0;      // Date.now() at markLinked
+
+function _vmNotice(text) {
+  const chatEl = document.getElementById('chat');
+  if (!chatEl) return;
+  const d = document.createElement('div');
+  d.style.cssText = 'text-align:center;font-size:9px;color:#888;letter-spacing:2px;padding:4px 0;';
+  d.textContent = text;
+  chatEl.appendChild(d);
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+
+function _startRing() {
+  _stopRing();
+  _ringing = true;
+  playTone('call_in');
+  _ringTimer = setInterval(() => playTone('call_in'), 2000);
+}
+function _stopRing() {
+  clearInterval(_ringTimer); _ringTimer = null;
+  _ringing = false;
+}
+
+function _markAttended() {
+  if (_attended) return;
+  _attended = true;
+  clearTimeout(_vmTimer); _vmTimer = null;
+  entry('Call attended — voicemail suppressed', 'sys');
+}
+
+function _startVoicemail() {
+  if (_vmActive) return;
+  const remoteAudio = document.getElementById('remoteAudio');
+  const remoteVideo = document.getElementById('remoteVideo');
+  const remoteStream = (remoteAudio && remoteAudio.srcObject)
+                    || (remoteVideo && remoteVideo.srcObject)
+                    || null;
+  const audioTracks = remoteStream ? remoteStream.getAudioTracks() : [];
+  if (!audioTracks.length) {
+    entry('Voicemail: no remote audio track — cannot record', 'err');
+    return;
+  }
+  // Audio-only voicemail: remote mic + local mic mixed
+  const vmStream = new MediaStream([
+    ...audioTracks.map(t => t.clone()),
+    ...getLocalAudioTracksForRec()
+  ]);
+  const mimeType = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm']
+    .find(t => MediaRecorder.isTypeSupported(t)) || 'audio/webm';
+  _vmChunks = [];
+  _vmRec = new MediaRecorder(vmStream, { mimeType });
+  _vmRec.ondataavailable = e => { if (e.data.size > 0) _vmChunks.push(e.data); };
+  _vmRec.onstop = async () => {
+    _vmActive = false;
+    if (!_vmChunks.length) { entry('Voicemail empty — nothing saved', 'sys'); return; }
+    const blob = new Blob(_vmChunks, { type: mimeType });
+    const ts   = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const ext  = /mp4/.test(mimeType) ? 'mp4' : 'webm';
+    downloadBlob(blob, `bravo-voicemail-${ts}.${ext}`);
+    entry('📼 Voicemail saved', 'ok');
+    _vmNotice('— 📼 VOICEMAIL RECORDED —');
+  };
+  _vmRec.start(1000);
+  _vmActive = true;
+  entry('📼 Unattended — voicemail recording started', 'sys');
+  _vmNotice('— 📼 RECORDING VOICEMAIL… —');
+}
+
+function _stopVoicemail() {
+  clearTimeout(_vmTimer); _vmTimer = null;
+  if (_vmRec && _vmRec.state === 'recording') {
+    _vmRec.stop();
+  }
+}
+
+function _onCallConnected() {
+  _attended = false;
+  _vmCallStart = Date.now();
+  _vmTimer = setTimeout(_startVoicemail, 15000);
+  ['keydown', 'pointerdown', 'touchstart'].forEach(ev =>
+    window.addEventListener(ev, _markAttended, { once: true, passive: true })
+  );
+}
+
+function _onCallEnded() {
+  const wasRinging = _ringing || (_vmCallStart > 0);
+  _stopRing();
+  _stopVoicemail();
+  clearTimeout(_vmTimer); _vmTimer = null;
+  ['keydown', 'pointerdown', 'touchstart'].forEach(ev =>
+    window.removeEventListener(ev, _markAttended)
+  );
+  if (wasRinging) {
+    const timeStr = new Date().toTimeString().slice(0, 5);
+    if (!_vmCallStart) {
+      _vmNotice('— 📞 MISSED CALL — ' + timeStr + ' —');
+    } else {
+      const dur = Math.round((Date.now() - _vmCallStart) / 1000);
+      if (dur < 3) {
+        _vmNotice('— 📞 MISSED CALL — ' + timeStr + ' —');
+      } else {
+        const mins = Math.floor(dur / 60), secs = dur % 60;
+        const durStr = mins > 0 ? mins + 'm ' + secs + 's' : secs + 's';
+        _vmNotice('— 📞 CALL ENDED — ' + timeStr + ' — ' + durStr + ' —');
+      }
+    }
+  }
+  _attended = false;
+  _vmCallStart = 0;
+}
 
 // ── Combined-session accumulator ──────────────────────────────
 let _combSession = null;
