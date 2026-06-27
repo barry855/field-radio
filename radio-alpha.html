@@ -6591,6 +6591,7 @@ function leaveSession() {
 
 function _doLeave() {
   saveRecordingIfActive();
+  clearTimeout(_raPlayTimer); _raPlayTimer = null;  // cancel any pending audio play attempt
   ttsStopAll();
   morseStopAll();
   // Stop system audio capture if active
@@ -6671,6 +6672,7 @@ function handleRemoteLeave() {
 function onDrop() {
   saveSpeechDraft();
   clearTimeout(retryTimer);
+  clearTimeout(_raPlayTimer); _raPlayTimer = null;  // cancel any pending audio play attempt
   if (call && call._iceDropTimer) { clearTimeout(call._iceDropTimer); call._iceDropTimer = null; }
   saveRecordingIfActive();
   linked = false;
