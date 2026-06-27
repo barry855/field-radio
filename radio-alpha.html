@@ -3419,12 +3419,14 @@ function makeDraggable(el) {
 
 function linkify(text) {
   const frag = document.createDocumentFragment();
-  const re = /(https?:\/\/[^\s]+)/g;
+  const re = /(https?:\/\/[^\s]+|www\.[^\s]+\.[^\s]+)/g;
   let last = 0, m;
   while ((m = re.exec(text)) !== null) {
     if (m.index > last) frag.appendChild(document.createTextNode(text.slice(last, m.index)));
     const a = document.createElement('a');
-    a.href = m[1]; a.textContent = m[1];
+    const url = m[1];
+    a.href = /^https?:\/\//i.test(url) ? url : 'https://' + url;
+    a.textContent = url;
     a.target = '_blank'; a.rel = 'noopener noreferrer';
     a.style.cssText = 'color:inherit;text-decoration:underline;word-break:break-all;';
     frag.appendChild(a);
