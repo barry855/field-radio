@@ -393,7 +393,7 @@
 
   /* ── Chat button bar rows inside mini-row-wrap ─────────────── */
   .chat-btn-bar-row {
-    display: flex; gap: 6px; align-items: center;
+    display: flex; gap: 4px; align-items: center;
     width: 100%; flex-wrap: wrap;
   }
   .chat-btn-bar .mini-chat-wrapper {\n    margin-bottom: 0; margin-left: auto;\n    flex-direction: row; align-items: center; gap: 6px;\n  }
@@ -654,16 +654,16 @@
   }
   .media-btn.screen-active:hover { background: rgba(0,255,159,0.25); }
   .media-btn.sys-audio-on {
-    background: rgba(0,255,159,0.15);
-    border-color: var(--accent2);
-    color: var(--accent2);
-    box-shadow: 0 0 10px rgba(0,255,159,0.45);
+    background: #1a56db;
+    border-color: #1a56db;
+    color: #ffe600;
+    box-shadow: 0 0 10px rgba(26,86,219,0.55);
     animation: sysaudio-pulse 1.8s ease-in-out infinite;
   }
-  .media-btn.sys-audio-on:hover { background: rgba(0,255,159,0.28); }
+  .media-btn.sys-audio-on:hover { background: #1648c2; }
   @keyframes sysaudio-pulse {
-    0%,100% { box-shadow: 0 0 6px rgba(0,255,159,0.35); }
-    50%      { box-shadow: 0 0 16px rgba(0,255,159,0.7); }
+    0%,100% { box-shadow: 0 0 6px rgba(26,86,219,0.45); }
+    50%      { box-shadow: 0 0 16px rgba(26,86,219,0.8); }
   }
   .media-btn.disabled-state {
     background: var(--btn-bg);
@@ -676,9 +676,9 @@
     color: var(--text);
   }
   .media-btn.video-off-state {
-    background: #000;
-    border-color: #000;
-    color: #fff;
+    background: #1a56db;
+    border-color: #1a56db;
+    color: #ffe600;
   }
   .media-btn.recording {
     background: rgba(0,212,255,0.15);
@@ -689,11 +689,11 @@
   @keyframes rec-blink { 0%,100%{opacity:1} 50%{opacity:0.5} }
 
   .media-btn.active-on {
-    background: #000;
-    border-color: #000;
-    color: #fff;
+    background: #1a56db;
+    border-color: #1a56db;
+    color: #ffe600;
   }
-  .media-btn.active-on:hover { background: #222; }
+  .media-btn.active-on:hover { background: #1648c2; }
   /* ── Flip Cam dropdown (desktop multi-camera) ─────────────── */
   .flip-cam-select {
     flex: 0 0 auto; height: 36px; padding: 0 8px;
@@ -907,6 +907,8 @@
   }
   #speechSendBtn:disabled { opacity: 0.35; cursor: not-allowed; background: var(--btn-bg); border-color: var(--border); color: var(--text); font-weight: normal; }
   #speechOriginalBtn:hover { background: var(--btn-hover); border-color: var(--accent2); color: var(--accent2); }
+  #speechTtsBtn.active-on { background: #1a56db; border-color: #1a56db; color: #ffe600; }
+  #speechTtsBtn.active-on:hover { background: #1648c2; border-color: #1648c2; color: #ffe600; }
   #speechListenBtn:hover { background: var(--btn-hover); border-color: var(--accent2); color: var(--accent2); }
   #speechListenBtn.listening {
     background: #000; border-color: #000; color: #fff;
@@ -932,13 +934,25 @@
   }
   .speech-top-btn {
     background: var(--btn-bg); border: 1px solid var(--border);
-    color: var(--text); padding: 4px 8px; border-radius: 4px;
+    color: var(--text); padding: 4px 6px; border-radius: 4px;
     font-family: 'Share Tech Mono', monospace; font-size: 11px;
-    cursor: pointer; letter-spacing: 0.5px; white-space: nowrap;
+    cursor: pointer; letter-spacing: 0; white-space: nowrap;
     transition: background 0.15s, border-color 0.15s, color 0.15s;
   }
   .speech-top-btn:hover { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
-  .speech-top-btn.active { background: #000; border-color: #000; color: #fff; }
+  .speech-top-btn.active { background: #1a56db; border-color: #1a56db; color: #ffe600; }
+  .speech-top-btn.active-on,
+  .speech-top-btn.video-off-state,
+  .speech-top-btn.screen-active,
+  .speech-top-btn.sys-audio-on {
+    background: #1a56db;
+    border-color: #1a56db;
+    color: #ffe600;
+  }
+  .speech-top-btn.active-on:hover,
+  .speech-top-btn.video-off-state:hover,
+  .speech-top-btn.screen-active:hover,
+  .speech-top-btn.sys-audio-on:hover { background: #1648c2; }
   #chatVideoViewBtn { background: #000; border-color: #000; color: #fff; }
   #chatVideoViewBtn:hover { background: #222; border-color: #222; color: #fff; }
   .speech-top-btn:disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
@@ -1237,21 +1251,39 @@
   #helpPanelInner { background: #ffffff; border: 2px solid #333; border-radius: 8px; padding: 14px 16px; width: 100%; max-width: 700px; color: #000; font-size: 12px; font-family: 'Share Tech Mono', monospace; }
   #helpPanel h3 { margin: 0 0 10px; font-size: 15px; letter-spacing: 2px; text-transform: uppercase; color: #000; font-weight: 900; text-align: center; }
   .help-btn-bar { display: flex; gap: 8px; margin-bottom: 10px; }
-  .help-btn-bar button { flex: 1; padding: 7px 8px; background: #222; border: 1px solid #222; color: #fff; font-family: 'Share Tech Mono', monospace; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; border-radius: 4px; cursor: pointer; font-weight: bold; }
+  .help-btn-bar button { flex: 1; padding: 7px 8px; background: #fff; border: 1px solid #333; color: #000; font-family: 'Share Tech Mono', monospace; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; border-radius: 4px; cursor: pointer; font-weight: bold; }
   #helpPanelRows { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
-  .help-btn-bar button:hover { background: #444; }
+  .help-btn-bar button:hover { background: #f0f0f0; }
   .help-row { display: flex; gap: 8px; padding: 4px 0; border-bottom: 1px solid #bbb; line-height: 1.3; align-items: baseline; }
   .help-row:last-child { border-bottom: none; }
-  .help-name { flex: 0 0 100px; background: #1a1a1a; color: #fff; font-weight: 900; font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 5px; border-radius: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; align-self: center; }
-  .help-desc { flex: 1; color: #000; font-size: 10px; font-weight: 700; }
-  #helpCloseBtn { margin-top: 10px; width: 100%; padding: 7px; background: #222; border: 1px solid #222; color: #fff; font-family: inherit; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; border-radius: 4px; cursor: pointer; font-weight: bold; }
-  #helpCloseBtn:hover { background: #444; }
+  .help-name { flex: 0 0 100px; background: #fff; color: #000; border: 1px solid #333; font-weight: 900; font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 5px; border-radius: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; align-self: center; }
+  .help-desc { flex: 1; color: #000; font-size: 10px; font-weight: 400; }
+  #helpCloseBtn { margin-top: 10px; width: 100%; padding: 7px; background: #fff; border: 1px solid #333; color: #000; font-family: inherit; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; border-radius: 4px; cursor: pointer; font-weight: bold; }
+  #helpCloseBtn:hover { background: #f0f0f0; }
   @media print {
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 
-    /* ── Overall page ── */
-    body { background: #fff !important; margin: 0 !important; }
-    .shell { gap: 4px !important; padding: 6px !important; }
+    /* ── Overall page — flex column so notes fills remaining space ── */
+    html {
+      height: 100% !important;
+    }
+    body {
+      height: 100% !important; min-height: 0 !important;
+      overflow: visible !important;
+      background: #fff !important; margin: 0 !important;
+      display: flex !important; flex-direction: column !important;
+    }
+    .shell {
+      gap: 4px !important; padding: 6px !important;
+      height: auto !important; overflow: visible !important;
+      max-width: 100% !important;
+      display: flex !important; flex-direction: column !important;
+      flex-shrink: 0 !important;
+    }
+    .tab-content, .tab-pane {
+      height: auto !important; overflow: visible !important;
+      min-height: 0 !important; max-height: none !important;
+    }
 
     /* ── Header / logo bar — light grey ── */
     header {
@@ -1313,6 +1345,8 @@
       border: 1px solid #999 !important;
       border-radius: 4px !important;
     }
+    /* ── Hide speechBtnRow1 (Chat: ATTACH/LOAD/SAVE) — duplicates chatToolsWrap on Safari ── */
+    #speechBtnRow1, .chat-panel > .panel-label { display: none !important; }
 
     /* ── Gain row — restored, grey label, visible slider ── */
     .gain-row { display: flex !important; background: #fff !important; }
@@ -1352,31 +1386,82 @@
     .log-panel { display: none !important; }
     .chat-find-bar { display: none !important; height: 0 !important; overflow: hidden !important; }
     .mini-video-overlay { display: none !important; }
-    #speechPanel { display: none !important; height: 0 !important; overflow: hidden !important; }
     .zoom-row { display: none !important; height: 0 !important; overflow: hidden !important; }
 
-    /* ── Button Guide — flush, no gap ── */
+    /* ── Speech panel — shown in print after helpPanel (JS moves it before printing) ── */
+    #speechPanel {
+      position: static !important;
+      display: flex !important; flex-direction: column !important;
+      background: none !important;
+      border: 1px solid #999 !important; border-radius: 4px !important;
+      padding: 8px 10px !important; margin-top: 6px !important;
+      overflow: visible !important; height: auto !important;
+      max-height: none !important; gap: 6px !important;
+      flex-shrink: 0 !important;
+    }
+    #speechEditWrap { display: none !important; }
+    #speechStatus { display: none !important; }
+    #speechFilePreviewStrip { display: none !important; }
+    .speech-top-bar { display: none !important; }
+    #speechPanel .speech-btn-row {
+      display: flex !important; flex-wrap: wrap !important;
+      align-items: center !important; gap: 4px !important;
+      background: #fff !important;
+    }
+    #speechPanel .sbr-label { color: #000 !important; font-weight: bold !important; }
+    #speechPanel button, #speechPanel select {
+      background: #fff !important; color: #000 !important;
+      border: 1px solid #555 !important; text-shadow: none !important;
+    }
+
+    /* ── Button Guide — flush, no gap, allow page break ── */
     #helpPanel {
       position: static !important; background: none !important;
       padding: 0 !important; margin: 0 !important; display: block !important;
+      overflow: visible !important; height: auto !important;
+      max-height: none !important; inset: auto !important;
     }
     #helpPanelInner {
       border: 1px solid #999 !important; border-radius: 4px !important;
       max-width: 100% !important; padding: 8px 10px !important;
-      margin: 0 !important;
+      margin: 0 !important; overflow: visible !important;
+      height: auto !important; max-height: none !important;
+    }
+    #helpPanelRows {
+      overflow: visible !important; height: auto !important;
+      max-height: none !important;
+    }
+    .help-row { page-break-inside: avoid !important; break-inside: avoid !important; }
+    .help-name {
+      background: #fff !important; color: #000 !important;
+      border: 1px solid #333 !important;
+    }
+    .flip-cam-select, .flip-cam-select-chat {
+      background: #fff !important; color: #000 !important;
+      border: 1px solid #333 !important;
     }
     .help-btn-bar { display: none !important; }
     #helpCloseBtn { display: none !important; }
 
-    /* ── Notes area — fills remaining page space ── */
+    /* ── Notes area — ruled lines, fills remaining page space ── */
     #printNotesArea {
       display: block !important;
       border: 1px solid #999;
       border-radius: 4px;
       margin-top: 8px;
-      padding: 8px 10px;
-      flex: 1 !important;
-      min-height: 200px;
+      padding: 8px 10px 0;
+      min-height: 0;
+      flex: 1 1 auto;
+      page-break-inside: auto;
+      break-inside: auto;
+      background-image: repeating-linear-gradient(
+        to bottom,
+        transparent,
+        transparent 23px,
+        #ccc 23px,
+        #ccc 24px
+      ) !important;
+      background-position: 0 30px !important;
     }
     #printNotesArea p {
       margin: 0 0 6px;
@@ -2160,48 +2245,49 @@ window.addEventListener('orientationchange', function() {
       <!-- hidden shims kept for JS compatibility -->
       <textarea id="chatInput" style="display:none"></textarea>
       <input type="file" id="fileInput" multiple="" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx" style="display:none">
+
       <!-- ── Speech overlay panel ──────────────────────────────── -->
       <div id="speechPanel">
-        <div class="speech-top-bar" style="display:none"></div>
-        <div class="file-preview-strip" id="speechFilePreviewStrip"></div>
-        <div id="speechEditWrap">
-          <textarea id="speechEditBox" placeholder="Tap Talk or Type and Edit Text" spellcheck="true"></textarea>
-          <div id="speechEditMirror" aria-hidden="true"></div>
-          <button id="speechFloatSend" onclick="sendSpeechToChat()" disabled title="Send">SEND</button>
-        </div>
-        <div id="speechStatus" class="speech-status">IDLE</div>
+      <div class="speech-top-bar" style="display:none"></div>
+      <div class="file-preview-strip" id="speechFilePreviewStrip"></div>
+      <div id="speechEditWrap">
+      <textarea id="speechEditBox" placeholder="Tap Talk or Type and Edit Text" spellcheck="true"></textarea>
+      <div id="speechEditMirror" aria-hidden="true"></div>
+      <button id="speechFloatSend" onclick="sendSpeechToChat()" disabled title="Send">SEND</button>
+      </div>
+      <div id="speechStatus" class="speech-status">IDLE</div>
 
-        <div class="speech-btn-row" id="speechBtnRow1">
-          <span class="sbr-label">Chat:</span>
-          <button id="speechAttachBtn" onclick="speechAttachClick()" title="Attach file or drag &amp; drop">ATTACH</button>
-          <input type="file" id="speechFileInput" multiple style="display:none" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx">
-          <input type="file" id="speechTextFileInput" style="display:none" accept=".txt,.md,.text">
-          <button id="speechLoadBtn" onclick="speechLoadText()" title="Load text file into input box">LOAD</button>
-          <button id="speechSaveBtn" onclick="speechSaveText()" title="Save input box text to file">SAVE</button>
-          <button id="speechCopyBtn" onclick="speechCopyText()" title="Copy input box text to clipboard">COPY</button>
-          <button id="speechClearBtn" onclick="speechClearText()" title="Clear input box">CLEAR</button>
-          <button id="cwSendBtn" onclick="cwBtnPress()" title="CW: press to send Morse · press again to clear text" data-cw-state="0" disabled>⚫ CW</button>
-        </div>
-        <div class="speech-btn-row" id="speechBtnRow2">
-          <span class="sbr-label">Your Spoken Language:</span>
-          <select id="speechLangSelect" title="Speech recognition language" onchange="setSpeechLang(this.value)">
-            <option value="en-US" title="Eng">English (US)</option>
-            <option value="en-GB" title="Eng UK">English (UK)</option>
-            <option value="es-ES" title="Spanish">Español</option>
-            <option value="fr-FR" title="French">Français</option>
-            <option value="de-DE" title="German">Deutsch</option>
-            <option value="ja-JP" title="Japan">日本語</option>
-            <option value="zh-CN" title="Chinese">中文 (普通话)</option>
-            <option value="pt-BR" title="Portuguese (BR)">Português (BR)</option>
-          </select>
-          <button id="speechOriginalBtn" onclick="speechOriginalLang()" title="Revert to system language">ORIGINAL</button>
-          <button id="speechListenBtn" onclick="toggleListening()">TALK</button>
-        </div>
-        <div class="speech-btn-row" id="speechBtnRow3">
-          <span class="sbr-label">Text To Speech:</span>
-          <select id="ttsVoiceSelect" title="TTS voice for spoken output"></select>
-          <button id="speechTtsBtn" onclick="toggleTts()" title="Toggle auto-speak for incoming messages">TTS Off</button>
-        </div>
+      <div class="speech-btn-row" id="speechBtnRow1">
+      <span class="sbr-label">Chat:</span>
+      <button id="speechAttachBtn" onclick="speechAttachClick()" title="Attach file or drag &amp; drop">ATTACH</button>
+      <input type="file" id="speechFileInput" multiple style="display:none" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx">
+      <input type="file" id="speechTextFileInput" style="display:none" accept=".txt,.md,.text">
+      <button id="speechLoadBtn" onclick="speechLoadText()" title="Load text file into input box">LOAD</button>
+      <button id="speechSaveBtn" onclick="speechSaveText()" title="Save input box text to file">SAVE</button>
+      <button id="speechCopyBtn" onclick="speechCopyText()" title="Copy input box text to clipboard">COPY</button>
+      <button id="speechClearBtn" onclick="speechClearText()" title="Clear input box">CLEAR</button>
+      <button id="cwSendBtn" onclick="cwBtnPress()" title="CW: press to send Morse · press again to clear text" data-cw-state="0" disabled>⚫ CW</button>
+      </div>
+      <div class="speech-btn-row" id="speechBtnRow2">
+      <span class="sbr-label">Your Spoken Language:</span>
+      <select id="speechLangSelect" title="Speech recognition language" onchange="setSpeechLang(this.value)">
+      <option value="en-US" title="Eng">English (US)</option>
+      <option value="en-GB" title="Eng UK">English (UK)</option>
+      <option value="es-ES" title="Spanish">Español</option>
+      <option value="fr-FR" title="French">Français</option>
+      <option value="de-DE" title="German">Deutsch</option>
+      <option value="ja-JP" title="Japan">日本語</option>
+      <option value="zh-CN" title="Chinese">中文 (普通话)</option>
+      <option value="pt-BR" title="Portuguese (BR)">Português (BR)</option>
+      </select>
+      <button id="speechOriginalBtn" onclick="speechOriginalLang()" title="Revert to system language">ORIGINAL</button>
+      <button id="speechListenBtn" onclick="toggleListening()">TALK</button>
+      </div>
+      <div class="speech-btn-row" id="speechBtnRow3">
+      <span class="sbr-label">Text To Speech:</span>
+      <select id="ttsVoiceSelect" title="TTS voice for spoken output"></select>
+      <button id="speechTtsBtn" onclick="toggleTts()" title="Toggle auto-speak for incoming messages">TTS Off</button>
+      </div>
       </div>
       <div class="log-panel collapsed" id="logPanel">
         <div class="panel-label" onclick="toggleLogPanel()">SYS LOG<span class="log-toggle-arrow" id="logToggleArrow">▾</span>
@@ -2313,8 +2399,25 @@ function scheduleRemoteAudioPlay() {
         const btn = document.getElementById('audioUnlockBtn');
         if (btn) btn.style.display = 'none';
       }).catch(e => {
-        entry('⚠ Remote audio blocked (' + e.name + ': ' + e.message + ') — tap the green button to hear audio', 'err');
-        showAudioUnlockBtn();
+        entry('⚠ Remote audio blocked (' + e.name + ': ' + e.message + ') — retrying in 2s', 'err');
+        // Retry once after 2s — covers AudioContext autoplay suspension resolving
+        // after a user gesture that arrives shortly after the stream event.
+        _raPlayTimer = setTimeout(() => {
+          const ra2 = document.getElementById('remoteAudio');
+          if (ra2 && ra2.srcObject) {
+            ra2.play().then(() => {
+              entry('DIAG: remoteAudio playing ok (retry)', 'sys');
+              const btn = document.getElementById('audioUnlockBtn');
+              if (btn) btn.style.display = 'none';
+            }).catch(e2 => {
+              entry('⚠ Remote audio still blocked (' + e2.name + ') — tap the green button to hear audio', 'err');
+              showAudioUnlockBtn();
+            });
+          } else {
+            entry('⚠ Remote audio: srcObject lost during retry — stream may have ended', 'err');
+            showAudioUnlockBtn();
+          }
+        }, 2000);
       });
     } else {
       // srcObject not yet set — stream event hasn't fired yet. Retry once.
@@ -2398,6 +2501,9 @@ let silentCtx = null;
 let silentTrack = null;
 
 let peer, call, dataConn, localStream, linked = false, retryTimer;
+let _iceReady = false;   // ICE connected but stream not yet confirmed — not truly LIVE yet
+let _streamArrived = false; // at least one remote track/stream has arrived
+let _noMediaMode = false;   // true when we're running without real mic/camera
 let _preRegistered = false;   // true once preRegister() has opened the peer
 let _preRegCode    = '';      // the code that was pre-registered
 
@@ -2452,6 +2558,7 @@ function cancelPreRegister() {
   if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e){} }
   peer = null;
   linked = false;
+  _iceReady = false; _streamArrived = false;
   pendingDC = false;
 }
 
@@ -3145,23 +3252,9 @@ function toggleChatVideoView() {
   syncChatUnderlay();
   syncChatMiniOverlay();
   updateChatVideoViewBtn();
-  // Hot-swap video track in active chat recording
-  if (recChat && recChat.state === 'recording') {
-    const isLocalMain = (chatUnderlayMode === 'local');
-    const newMainVid = document.getElementById(isLocalMain ? 'localVideo' : 'remoteVideo');
-    if (newMainVid && newMainVid.srcObject) {
-      const newTrack = newMainVid.srcObject.getVideoTracks()[0];
-      if (newTrack) {
-        const sender = recChat.stream && recChat.stream.getVideoTracks()[0];
-        if (sender) {
-          try {
-            recChat.stream.removeTrack(sender);
-            recChat.stream.addTrack(newTrack);
-          } catch(e) { entry('Could not swap recording track: ' + e.message, 'sys'); }
-        }
-      }
-    }
-    entry('Recording view switched to ' + (isLocalMain ? 'local' : 'remote'), 'sys');
+  // _chatRec.main already points at chatUnderlay which syncChatUnderlay just updated
+  if (_chatRec.active) {
+    entry('Recording view switched to ' + (chatUnderlayMode === 'local' ? 'local' : 'remote'), 'sys');
   }
 }
 
@@ -3196,6 +3289,7 @@ updateMiniVideoVisibility();
 let miniChatVisible = false;
 function toggleMiniChat() {
   miniChatVisible = !miniChatVisible;
+  _chatRecUpdateMini(); // update live recording PiP if active
   const overlay = document.getElementById('miniChatOverlay');
   if (overlay) overlay.classList.toggle('hidden', !miniChatVisible);
   const btn = document.getElementById('miniChatBtn');
@@ -4869,16 +4963,11 @@ function startListening() {
     _recognition.onstart = () => {
       _listening = true;
       _interimText = '';
-      setSpeechStatus('#' + _sttStartCount + ' START and=' + _isAndroid + ' lang=' + _recognition.lang);
+      setSpeechStatus('#' + _sttStartCount + ' START lang=' + _recognition.lang);
       const lb = document.getElementById('speechListenBtn');
       if (lb) { lb.classList.add('listening'); lb.textContent = 'STOP'; }
       const ss = document.getElementById('speechStatus');
       if (ss) ss.classList.add('listening');
-      // Non-Android: mute via gain node or track as before
-      if (!_isAndroid && !audioMuted) {
-        if (_mixMicGain) { _preTalkMicGain = _mixMicGain.gain.value; _mixMicGain.gain.value = 0.0; }
-        else if (realAudioTrack) { realAudioTrack.enabled = false; }
-      }
     };
 
     _recognition.onresult = (e) => {
@@ -4940,36 +5029,22 @@ function startListening() {
         }
       }
 
-      // Restore mic on Android
-      if (_isAndroid) {
-        _restoreAndroidMic().then(() => {
-          if (_listening) {
-            setTimeout(() => { if (_listening) try { startListening(); } catch(ex) { stopListening(); } }, 500);
-          }
-        });
-      } else {
-        // Non-Android: restore gain/track — restore both to guard against the case
-        // where _mixMicGain was created after onstart muted via realAudioTrack.enabled.
-        if (!audioMuted) {
-          if (_mixMicGain) { _mixMicGain.gain.value = _preTalkMicGain !== null ? _preTalkMicGain : 1.0; _preTalkMicGain = null; }
-          if (realAudioTrack) { realAudioTrack.enabled = true; }
-        }
+      // Restore WebRTC sender (mic was released before STT started)
+      _restoreAndroidMic().then(() => {
         if (_listening) {
           setTimeout(() => { if (_listening) try { startListening(); } catch(ex) { stopListening(); } }, 250);
         }
-      }
+      });
     };
 
     try { _recognition.start(); } catch(e) { setSpeechStatus('ERR: START FAILED: ' + e.message); }
   }
 
-  // On Android: swap WebRTC sender to silence before STT (mic hardware stays alive for STT).
-  // On non-Android: mic muting is handled inside onstart via gain node / track.enabled — do NOT
-  // call _releaseAndroidMic() here, or the sender gets silenced and _restoreAndroidMic() is
-  // never called in onend (which only runs the restore path for _isAndroid), leaving the mic
-  // muted until reload.
-  if (_isAndroid) _releaseAndroidMic();
-  _doStart();
+  // Always swap the WebRTC sender to silence before STT — on all platforms
+  // (Mac, Android, Chromebook) WebRTC holds the mic hardware, preventing the
+  // Speech API from getting audio. Swap to a silent track first, then restore
+  // in onend via _restoreAndroidMic().
+  _releaseAndroidMic().then(_doStart);
 }
 
 // Swap WebRTC sender to silence during Android STT (mic hardware stays alive for STT)
@@ -5022,10 +5097,10 @@ function stopListening() {
   const ss = document.getElementById('speechStatus');
   if (ss) ss.classList.remove('listening');
   const _isAndroid = /android/i.test(navigator.userAgent);
-  if (_isAndroid) {
-    if (_sttSavedSender) { _restoreAndroidMic().then(() => setSpeechStatus('IDLE')); }
-    else { setSpeechStatus('IDLE'); }
-  } else {
+  if (_sttSavedSender) { _restoreAndroidMic().then(() => setSpeechStatus('IDLE')); }
+  else {
+    // No sender was saved (STT was started before a call connected) — still
+    // restore gain/track in case onstart muted them on an older code path.
     if (!audioMuted) {
       if (_mixMicGain) { _mixMicGain.gain.value = _preTalkMicGain !== null ? _preTalkMicGain : 1.0; _preTalkMicGain = null; }
       if (realAudioTrack) { realAudioTrack.enabled = true; }
@@ -5279,6 +5354,7 @@ function _saveCameraLabel(label) {
 async function initMediaOnly() {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     entry('Mic/camera API not available — data channel only', 'sys');
+    _noMediaMode = true;
     try {
       const sCtx = new (window.AudioContext || window.webkitAudioContext)();
       const sDest = sCtx.createMediaStreamDestination();
@@ -5341,6 +5417,7 @@ async function initMediaOnly() {
           .then(applyAndDial)
           .catch(e3 => {
             entry('Mic also failed (' + e3.name + ') — data channel only', 'err');
+            _noMediaMode = true;
             try {
               const sCtx = new (window.AudioContext || window.webkitAudioContext)();
               const sDest = sCtx.createMediaStreamDestination();
@@ -5359,6 +5436,7 @@ async function initMediaOnly() {
       .then(applyAndDial)
       .catch(e2 => {
         entry('Mic also failed (' + e2.name + ') — data channel only', 'err');
+        _noMediaMode = true;
         try {
           const sCtx = new (window.AudioContext || window.webkitAudioContext)();
           const sDest = sCtx.createMediaStreamDestination();
@@ -5395,6 +5473,7 @@ async function init() {
       entry('Try Chrome or Firefox over HTTPS', 'err');
     }
     entry('Starting in audio-unavailable mode — data channel only', 'sys');
+    _noMediaMode = true;
     try {
       const sCtx = new (window.AudioContext || window.webkitAudioContext)();
       const sDest = sCtx.createMediaStreamDestination();
@@ -5465,6 +5544,7 @@ async function init() {
     // Even without real media, register with the signalling server using a silent
     // stream so Bravo can still be reached over the data channel (chat/text mode).
     entry('Starting in audio-unavailable mode — data channel only', 'sys');
+    _noMediaMode = true;
     try {
       const sCtx = new (window.AudioContext || window.webkitAudioContext)();
       const sDest = sCtx.createMediaStreamDestination();
@@ -5577,6 +5657,7 @@ function startPeer() {
   // Close any stale data connection from a previous peer instance
   if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
   linked = false;
+  _iceReady = false; _streamArrived = false;
   pendingDC = false;
 
   peer = new Peer(MY_ID, {
@@ -5646,6 +5727,7 @@ function startPeer() {
     // Keep linked=true if we were already linked so the UI stays live
     const wasLinked = linked;
     linked = false; // will be re-set by markLinked() once ICE connects on new call
+    _iceReady = false; _streamArrived = false;
     if (wasLinked) entry('Re-answering call from Alpha (reconnect)…', 'sys');
     const _as = getCallStream();
     entry('DIAG: answering with ' + _as.getTracks().length + ' tracks (audio=' + _as.getAudioTracks().length + ' video=' + _as.getVideoTracks().length + ')', 'sys');
@@ -6105,8 +6187,13 @@ function markLinked() {
   const _ro = document.getElementById('reconnectOverlay');
   if (_ro) _ro.classList.remove('active');
   setStatus('linked');
-  entry('Linked to Alpha — full duplex active', 'ok');
-  duplexBar.textContent = '● LIVE';
+  if (_noMediaMode) {
+    entry('Linked to Alpha — data channel only (no mic/camera)', 'ok');
+    duplexBar.textContent = '● LIVE (data only)';
+  } else {
+    entry('Linked to Alpha — full duplex active', 'ok');
+    duplexBar.textContent = '● LIVE';
+  }
   duplexBar.className = 'duplex-overlay live';
   syncControls();
   startQualityPolling();
@@ -6137,8 +6224,12 @@ function attachCall(c) {
     pc.addEventListener('iceconnectionstatechange', () => {
       entry('DIAG: ICE → ' + pc.iceConnectionState, 'sys');
       if ((pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') && !linked) {
-        entry('ICE connected — marking linked', 'sys');
-        markLinked();
+        _iceReady = true;
+        entry('ICE connected — waiting for media stream before marking LIVE', 'sys');
+        if (_streamArrived || _noMediaMode) {
+          entry((_noMediaMode ? 'No-media mode' : 'Stream already arrived') + ' — marking linked', 'sys');
+          markLinked();
+        }
       }
       // Relay fallback: if ICE stays in 'checking' for >8s, force TURN-only
       if (pc.iceConnectionState === 'checking') {
@@ -6244,6 +6335,8 @@ function attachCall(c) {
         // is null — it will just log noise and exit.
         const _ra0 = document.getElementById('remoteAudio');
         if (_ra0 && _ra0.srcObject) scheduleRemoteAudioPlay();
+        _streamArrived = true;
+        if (_iceReady && !linked) markLinked();
         return;
       }
       const stream = ev.streams[0];
@@ -6256,7 +6349,8 @@ function attachCall(c) {
       syncMiniVideos();
       document.getElementById('remoteWrap').classList.remove('waiting', 'stale');
       updateRemoteVideoState(true, stream.getVideoTracks().length > 0);
-      markLinked();
+      _streamArrived = true;
+      if (_iceReady && !linked) markLinked();
       scheduleRemoteAudioPlay();
     });
   };
@@ -6279,8 +6373,10 @@ function attachCall(c) {
       track.addEventListener('ended', () => updateRemoteVideoState(false, false));
     });
     scheduleRemoteAudioPlay();  // always call — not just on first link
+    _streamArrived = true;
     if (linked) return;
-    markLinked();
+    if (_iceReady) markLinked();
+    // else: ICE not yet connected — markLinked() will fire from iceconnectionstatechange
   });
   c.on('close', () => { if (call === c) onDrop(); });
   c.on('error', e => { entry('Call error: ' + e.message, 'err'); if (call === c) onDrop(); });
@@ -6347,6 +6443,9 @@ function _doLeave() {
   morseStopAll();
   // Stop system audio capture if active
   if (sysAudioActive) _stopSysAudio();
+  // Stop detached camera/screen tracks (may have been removed from localStream by toggleVideo/flipCamera)
+  if (cameraTrack) { try { cameraTrack.stop(); } catch(e){} cameraTrack = null; }
+  if (screenTrack) { try { screenTrack.stop(); } catch(e){} screenTrack = null; }
   // Stop all local media
   if (localStream) {
     localStream.getTracks().forEach(t => { try { t.stop(); } catch(e){} });
@@ -6365,6 +6464,7 @@ function _doLeave() {
   if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
   if (peer)  { try { peer.destroy(); } catch(e){} peer = null; }
   linked = false;
+  _iceReady = false; _streamArrived = false;
   // Always show the ended screen — never call window.close() as Android Chrome
   // closes the tab immediately, revealing whatever was behind it before the
   // session ended message can appear.
@@ -6418,6 +6518,7 @@ function onDrop() {
   saveRecordingIfActive();
   _pendingChatMsg = null;  // discard any queued message — it belongs to the dropped session
   linked = false;
+  _iceReady = false; _streamArrived = false;
   call = null;
   // Reset data channel state so it re-opens cleanly on reconnect
   if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
@@ -6472,6 +6573,65 @@ function resetLockTimer() { /* inactivity lock disabled */ }
 // ── Video+Mixed Audio Recording ───────────────────────────────
 let recRemote = null, recRemoteChunks = [], recRemoteBusy = false;
 let recLocal  = null, recLocalChunks  = [], recLocalBusy  = false;
+
+// ── Combined-session accumulator ──────────────────────────────
+let _combSession = null;
+function _combStart() {
+  if (!_combSession) _combSession = { segments: [], mimeType: null };
+}
+async function _combAccumulate(blob, mimeType) {
+  if (!_combSession) return false;
+  _combSession.segments.push(blob);
+  if (!_combSession.mimeType) _combSession.mimeType = mimeType;
+  const otherRunning = (recLocal  && recLocal.state  === 'recording') ||
+                       (recRemote && recRemote.state === 'recording');
+  if (otherRunning) return true;
+  const segments = _combSession.segments;
+  _combSession = null;
+  if (segments.length === 1) return false;
+  await _combMergeAndSave(segments, mimeType);
+  return true;
+}
+async function _combMergeAndSave(blobs, mimeType) {
+  const ts = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
+  const isNativeMp4 = /mp4/i.test(mimeType);
+  if (isNativeMp4) {
+    try {
+      entry('Merging recordings into one file…', 'sys');
+      const ffmpeg = await loadFFmpeg();
+      const stamp = Date.now();
+      const segPaths = [];
+      for (let i = 0; i < blobs.length; i++) {
+        const p = `seg_${stamp}_${i}.mp4`;
+        await ffmpeg.writeFile(p, new Uint8Array(await blobs[i].arrayBuffer()));
+        segPaths.push(p);
+      }
+      const listContent = segPaths.map(p => `file '${p}'`).join('\n');
+      const listPath = `concat_${stamp}.txt`;
+      await ffmpeg.writeFile(listPath, listContent);
+      const outPath = `merged_${stamp}.mp4`;
+      await ffmpeg.exec(['-f','concat','-safe','0','-i',listPath,'-c','copy','-movflags','+faststart',outPath]);
+      const data = await ffmpeg.readFile(outPath);
+      for (const p of [...segPaths, listPath, outPath]) ffmpeg.deleteFile(p).catch(()=>{});
+      downloadBlob(new Blob([data.buffer], { type: 'video/mp4' }), `bravo-combined-${ts}.mp4`);
+      entry('Combined recording saved (mp4)', 'ok');
+    } catch(e) {
+      entry(`Merge failed (${e.message||e}) — saving segments separately`, 'sys');
+      blobs.forEach((b, i) => downloadBlob(b, `bravo-seg${i+1}-${ts}.mp4`));
+    }
+    return;
+  }
+  try {
+    entry('Merging WebM segments…', 'sys');
+    const combined = new Blob(blobs, { type: mimeType });
+    const mp4Blob = await convertToMp4(combined, mimeType, 'combined');
+    downloadBlob(mp4Blob, `bravo-combined-${ts}.mp4`);
+    entry('Combined recording saved (mp4)', 'ok');
+  } catch(e) {
+    entry(`Merge failed (${e.message||e}) — saving as WebM`, 'sys');
+    downloadBlob(new Blob(blobs, { type: mimeType }), `bravo-combined-${ts}.webm`);
+  }
+}
 
 function preferredMime() {
   // Try native MP4 first. Chrome 121+ (Jan 2024) fixed the Windows audio
@@ -6620,13 +6780,14 @@ async function saveRec(chunks, mimeType, label) {
   if (!chunks.length) { entry('Recording empty — nothing saved', 'sys'); return; }
   const blob = new Blob(chunks, { type: mimeType });
   const ts = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
-  // If MediaRecorder gave us native MP4, save it directly — no conversion needed.
+  // Combined-session path: stash segment; merge + download when all done.
+  if (await _combAccumulate(blob, mimeType)) return;
+  // Standalone save.
   if (/mp4/i.test(mimeType)) {
     downloadBlob(blob, `bravo-${label}-${ts}.mp4`);
     entry(`${label} recording saved (mp4)`, 'ok');
     return;
   }
-  // WebM path (Firefox / old Chrome) — attempt ffmpeg.wasm conversion.
   try {
     const mp4Blob = await convertToMp4(blob, mimeType, label);
     downloadBlob(mp4Blob, `bravo-${label}-${ts}.mp4`);
@@ -6649,6 +6810,9 @@ async function toggleRecordRemote() {
     return;
   }
   if (recRemote && recRemote.state !== 'inactive') return;
+
+  // Link into combined session if local is running or a session is already open.
+  if ((recLocal && recLocal.state === 'recording') || _combSession) _combStart();
 
   const remoteVideo = document.getElementById('remoteVideo');
   const remoteAudio = document.getElementById('remoteAudio');
@@ -6689,6 +6853,9 @@ async function toggleRecordLocal() {
   }
   if (recLocal && recLocal.state !== 'inactive') return;
 
+  // Link into combined session if remote is running or a session is already open.
+  if ((recRemote && recRemote.state === 'recording') || _combSession) _combStart();
+
   if (!localStream || !localStream.getVideoTracks().length) {
     entry('No local video to record', 'err'); return;
   }
@@ -6719,24 +6886,56 @@ async function toggleRecordLocal() {
 function toggleRecord() {}
 
 // ── Record Chat button — records whichever feed is the chat underlay ─────
+// Uses a persistent canvas as the sole MediaRecorder source.
+// Switching local/remote view or toggling mini-cam during recording only
+// updates mutable pointers read by the draw loop — the MediaRecorder never
+// sees a track change and never restarts, so the output is one seamless file.
+const _chatRec = {
+  active:    false,
+  canvas:    null,
+  ctx:       null,
+  afId:      null,
+  recorder:  null,
+  chunks:    [],
+  busy:      false,
+  aCtx:      null,
+  offLocal:  null,
+  offRemote: null,
+};
+
+function _makeOffscreenVideo(stream) {
+  const v = document.createElement('video');
+  v.srcObject = stream;
+  v.muted = true;
+  v.playsInline = true;
+  v.autoplay = true;
+  v.play().catch(() => {});
+  return v;
+}
+
+function _chatRecUpdateMini() {
+  // miniChatVisible is read live in drawFrame — nothing to do here
+}
+
 let recChat = null, recChatChunks = [], recChatBusy = false;
 
 async function toggleRecordChat() {
   const btn = document.getElementById('recChatBtn');
-  if (recChatBusy) return;
 
-  if (recChat && recChat.state === 'recording') {
-    recChatBusy = true;
-    recChat.stop();
+  // ── STOP ──
+  if (_chatRec.active && _chatRec.recorder && _chatRec.recorder.state === 'recording') {
+    _chatRec.busy = true;
+    recChatBusy   = true;
+    _chatRec.recorder.stop();
     if (btn) { btn.textContent = '⏳ SAVING'; btn.classList.remove('recording'); btn.disabled = true; }
     return;
   }
-  if (recChat && recChat.state !== 'inactive') return;
+  if (_chatRec.busy) return;
 
+  // ── START ──
   const remoteVideo = document.getElementById('remoteVideo');
   const localVid    = document.getElementById('localVideo');
   const remoteAudio = document.getElementById('remoteAudio');
-
   const isLocalMain = (chatUnderlayMode === 'local');
   const mainVideo   = isLocalMain ? localVid : remoteVideo;
 
@@ -6744,25 +6943,108 @@ async function toggleRecordChat() {
     entry('No video available to record', 'err'); return;
   }
 
+  const remoteStream = (remoteAudio && remoteAudio.srcObject) ||
+                       (remoteVideo && remoteVideo.srcObject) || null;
   const mimeType = preferredMime();
-  const remoteStream = (remoteAudio && remoteAudio.srcObject) || (remoteVideo && remoteVideo.srcObject) || null;
+
+  const W = mainVideo.videoWidth  || 1280;
+  const H = mainVideo.videoHeight || 720;
+  if (!_chatRec.canvas) _chatRec.canvas = document.createElement('canvas');
+  _chatRec.canvas.width  = W;
+  _chatRec.canvas.height = H;
+  _chatRec.ctx = _chatRec.canvas.getContext('2d');
+
+  const pipW = Math.round(W * 0.28);
+  const pipH = Math.round(pipW * 9 / 16);
+  const pipX = W - pipW - 14;
+  const pipY = 14;
+
+  function _syncOffscreen(off, srcStream) {
+    if (!off) return null;
+    if (off.srcObject !== srcStream) {
+      off.srcObject = srcStream;
+      off.play().catch(() => {});
+    }
+    return off;
+  }
+  _chatRec.offLocal  = _makeOffscreenVideo(localVid.srcObject);
+  const remoteEl     = document.getElementById('remoteVideo');
+  _chatRec.offRemote = _makeOffscreenVideo(remoteEl.srcObject || new MediaStream());
+
+  function drawPip(c, el) {
+    c.save();
+    c.beginPath();
+    if (c.roundRect) c.roundRect(pipX, pipY, pipW, pipH, 4);
+    else c.rect(pipX, pipY, pipW, pipH);
+    c.clip();
+    c.drawImage(el, pipX, pipY, pipW, pipH);
+    c.restore();
+    c.strokeStyle = '#00d4ff'; c.lineWidth = 2;
+    c.beginPath();
+    if (c.roundRect) c.roundRect(pipX, pipY, pipW, pipH, 4);
+    else c.rect(pipX, pipY, pipW, pipH);
+    c.stroke();
+  }
+
+  function drawFrame() {
+    const c = _chatRec.ctx;
+    const rv = document.getElementById('remoteVideo');
+    _syncOffscreen(_chatRec.offLocal,  localVid.srcObject);
+    _syncOffscreen(_chatRec.offRemote, rv ? rv.srcObject : null);
+
+    const isLocal = (chatUnderlayMode === 'local');
+    const mainOff = isLocal ? _chatRec.offLocal : _chatRec.offRemote;
+    const miniOff = isLocal ? _chatRec.offRemote : _chatRec.offLocal;
+
+    if (mainOff && mainOff.readyState >= 2) {
+      c.drawImage(mainOff, 0, 0, W, H);
+    } else {
+      c.fillStyle = '#000';
+      c.fillRect(0, 0, W, H);
+    }
+    if (miniChatVisible && miniOff && miniOff.readyState >= 2) {
+      drawPip(c, miniOff);
+    }
+    _chatRec.afId = requestAnimationFrame(drawFrame);
+  }
+  _chatRec.afId = requestAnimationFrame(drawFrame);
+
+  const { ctx: aCtx, dest: aDest } = await buildAudioMix(
+    getLocalAudioTracksForRec(), remoteStream
+  );
+  _chatRec.aCtx = aCtx;
+
+  const canvasStream = _chatRec.canvas.captureStream(30);
   const recStream = new MediaStream([
-    ...mainVideo.srcObject.getVideoTracks(),
-    ...getLocalAudioTracksForRec(),
-    ...(remoteStream ? remoteStream.getAudioTracks() : [])
+    ...canvasStream.getVideoTracks(),
+    ...aDest.stream.getAudioTracks(),
   ]);
 
-  recChatChunks = [];
-  recChat = new MediaRecorder(recStream, { mimeType });
-  recChat.ondataavailable = e => { if (e.data.size > 0) recChatChunks.push(e.data); };
-  recChat.onstop = async () => {
-    await saveRec(recChatChunks, mimeType, isLocalMain ? 'chat-local' : 'chat-remote');
-    recChatBusy = false;
+  _chatRec.chunks   = [];
+  _chatRec.active   = true;
+  recChatChunks     = _chatRec.chunks;
+  const mr = new MediaRecorder(recStream, { mimeType });
+  _chatRec.recorder = mr;
+  recChat           = mr;
+
+  mr.ondataavailable = e => { if (e.data.size > 0) _chatRec.chunks.push(e.data); };
+  mr.onstop = async () => {
+    cancelAnimationFrame(_chatRec.afId);
+    _chatRec.aCtx.close();
+    if (_chatRec.offLocal)  { _chatRec.offLocal.srcObject  = null; _chatRec.offLocal  = null; }
+    if (_chatRec.offRemote) { _chatRec.offRemote.srcObject = null; _chatRec.offRemote = null; }
+    _chatRec.active   = false;
+    _chatRec.busy     = false;
+    recChatBusy       = false;
+    const chunks = _chatRec.chunks;
+    _chatRec.chunks   = [];
+    await saveRec(chunks, mimeType, 'chat-recording');
     if (btn) { btn.disabled = false; btn.textContent = '➤ RECORD'; }
   };
-  recChat.start(1000);
+
+  mr.start(1000);
   if (btn) { btn.textContent = '⏹ Stop'; btn.classList.add('recording'); }
-  entry(`Chat recording started (${isLocalMain ? 'local' : 'remote'} main)…`, 'ok');
+  entry(`Chat recording started (${isLocalMain ? 'local' : 'remote'} main${_chatRec.showPip ? ' + PiP' : ''})…`, 'ok');
 }
 
 function toggleVideo() {
@@ -7998,7 +8280,34 @@ function ttsSpeak(text, lang) {
     }
   });
 })();
+
+// ── Print: temporarily relocate #speechPanel after #helpPanel ────────────────
+(function() {
+  var _spOrigParent = null, _spOrigNext = null;
+  function beforePrint() {
+    var sp = document.getElementById('speechPanel');
+    var hp = document.getElementById('helpPanel');
+    if (!sp || !hp) return;
+    _spOrigParent = sp.parentNode;
+    _spOrigNext   = sp.nextSibling;
+    hp.parentNode.insertBefore(sp, hp.nextSibling);
+    // Mac Safari/Chrome ignore position:static !important on fixed elements in @media print.
+    // Force via inline style (highest specificity) so the panel renders in-flow.
+    hp.style.cssText = 'position:static !important;display:block !important;padding:0 !important;margin:0 !important;background:none !important;inset:auto !important;overflow:visible !important;height:auto !important;max-height:none !important;';
+  }
+  function afterPrint() {
+    var sp = document.getElementById('speechPanel');
+    var hp = document.getElementById('helpPanel');
+    if (!sp || !_spOrigParent) return;
+    _spOrigParent.insertBefore(sp, _spOrigNext);
+    _spOrigParent = null; _spOrigNext = null;
+    if (hp) hp.style.cssText = '';
+  }
+  window.addEventListener('beforeprint', beforePrint);
+  window.addEventListener('afterprint',  afterPrint);
+})();
 </script>
 
 
-<div id="helpPanel" role="dialog" aria-modal="true" onclick="if(event.target===this)closeHelpPanel()"><div id="helpPanelInner"><div class="help-btn-bar"><button onclick="closeHelpPanel()">✕ Close</button><button onclick="window.print()">⎙ Print</button></div><h3>? Button Guide</h3><div id="helpPanelRows"></div><button id="helpCloseBtn" onclick="closeHelpPanel()">✕ Close</button></div></div><div id="printNotesArea" style="display:none"><p>Notes</p></div></div></body></html>
+<div id="helpPanel" role="dialog" aria-modal="true" onclick="if(event.target===this)closeHelpPanel()"><div id="helpPanelInner"><div class="help-btn-bar"><button onclick="closeHelpPanel()">✕ Close</button><button onclick="window.print()">⎙ Print</button></div><h3>? Button Guide</h3><div id="helpPanelRows"></div><button id="helpCloseBtn" onclick="closeHelpPanel()">✕ Close</button></div></div></div>
+<div id="printNotesArea" style="display:none"><p>Notes</p></div></div></body></html>
