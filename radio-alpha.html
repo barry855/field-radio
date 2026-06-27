@@ -2428,8 +2428,25 @@ function scheduleRemoteAudioPlay() {
         const btn = document.getElementById('audioUnlockBtn');
         if (btn) btn.style.display = 'none';
       }).catch(e => {
-        entry('⚠ Remote audio blocked (' + e.name + ': ' + e.message + ') — tap the green button to hear audio', 'err');
-        showAudioUnlockBtn();
+        entry('⚠ Remote audio blocked (' + e.name + ': ' + e.message + ') — retrying in 2s', 'err');
+        // Retry once after 2s — covers AudioContext autoplay suspension resolving
+        // after a user gesture that arrives shortly after the stream event.
+        _raPlayTimer = setTimeout(() => {
+          const ra2 = document.getElementById('remoteAudio');
+          if (ra2 && ra2.srcObject) {
+            ra2.play().then(() => {
+              entry('DIAG: remoteAudio playing ok (retry)', 'sys');
+              const btn = document.getElementById('audioUnlockBtn');
+              if (btn) btn.style.display = 'none';
+            }).catch(e2 => {
+              entry('⚠ Remote audio still blocked (' + e2.name + ') — tap the green button to hear audio', 'err');
+              showAudioUnlockBtn();
+            });
+          } else {
+            entry('⚠ Remote audio: srcObject lost during retry — stream may have ended', 'err');
+            showAudioUnlockBtn();
+          }
+        }, 2000);
       });
     } else {
       // srcObject not yet set — stream event hasn't fired yet. Retry once.
@@ -2513,6 +2530,9 @@ let silentCtx = null;
 let silentTrack = null;
 
 let peer, call, dataConn, localStream, linked = false, retryTimer;
+let _iceReady = false;   // ICE connected but stream not yet confirmed — not truly LIVE yet
+let _streamArrived = false; // at least one remote track/stream has arrived
+let _noMediaMode = false;   // true when we're running without real mic/camera
 let _preRegistered = false;   // true once preRegister() has opened the peer
 let _preRegCode    = '';      // the code that was pre-registered
 
@@ -2558,6 +2578,7 @@ function cancelPreRegister() {
   if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e){} }
   peer = null;
   linked = false;
+  _iceReady = false; _streamArrived = false;
   pendingDC = false;
 }
 
@@ -5449,6 +5470,7 @@ function _saveCameraLabel(label) {
 async function initMediaOnly() {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     entry('Mic/camera API not available — data channel only', 'sys');
+    _noMediaMode = true;
     try {
       const sCtx = new (window.AudioContext || window.webkitAudioContext)();
       const sDest = sCtx.createMediaStreamDestination();
@@ -5512,6 +5534,7 @@ async function initMediaOnly() {
           .then(applyAndDial)
           .catch(e3 => {
             entry('Mic also failed (' + e3.name + ') — data channel only', 'err');
+            _noMediaMode = true;
             try {
               const sCtx = new (window.AudioContext || window.webkitAudioContext)();
               const sDest = sCtx.createMediaStreamDestination();
@@ -5530,6 +5553,7 @@ async function initMediaOnly() {
       .then(applyAndDial)
       .catch(e2 => {
         entry('Mic also failed (' + e2.name + ') — data channel only', 'err');
+        _noMediaMode = true;
         try {
           const sCtx = new (window.AudioContext || window.webkitAudioContext)();
           const sDest = sCtx.createMediaStreamDestination();
@@ -5566,6 +5590,7 @@ async function init() {
       entry('Try Chrome or Firefox over HTTPS', 'err');
     }
     entry('Starting in audio-unavailable mode — data channel only', 'sys');
+    _noMediaMode = true;
     try {
       const sCtx = new (window.AudioContext || window.webkitAudioContext)();
       const sDest = sCtx.createMediaStreamDestination();
@@ -5636,6 +5661,7 @@ async function init() {
     // Even without real media, register with the signalling server using a silent
     // stream so Alpha can still reach Bravo over the data channel (chat/text mode).
     entry('Starting in audio-unavailable mode — data channel only', 'sys');
+    _noMediaMode = true;
     try {
       const sCtx = new (window.AudioContext || window.webkitAudioContext)();
       const sDest = sCtx.createMediaStreamDestination();
@@ -5721,6 +5747,7 @@ function startPeer() {
   if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
   pendingDC = false;
   linked = false;
+  _iceReady = false; _streamArrived = false;
 
   peer = new Peer(MY_ID, {
     host: '0.peerjs.com', port: 443, path: '/', secure: true, pingInterval: 5000,
@@ -6289,8 +6316,13 @@ function markLinked() {
   const _ro = document.getElementById('reconnectOverlay');
   if (_ro) _ro.classList.remove('active');
   setStatus('linked');
-  entry('Linked to Bravo — full duplex active', 'ok');
-  duplexBar.textContent = '● LIVE';
+  if (_noMediaMode) {
+    entry('Linked to Bravo — data channel only (no mic/camera)', 'ok');
+    duplexBar.textContent = '● LIVE (data only)';
+  } else {
+    entry('Linked to Bravo — full duplex active', 'ok');
+    duplexBar.textContent = '● LIVE';
+  }
   duplexBar.className = 'duplex-overlay live';
   syncControls();
   startQualityPolling();
@@ -6322,8 +6354,14 @@ function attachCall(c) {
     pc.addEventListener('iceconnectionstatechange', () => {
       entry('DIAG: ICE → ' + pc.iceConnectionState, 'sys');
       if ((pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') && !linked) {
-        entry('ICE connected — marking linked', 'sys');
-        markLinked();
+        _iceReady = true;
+        entry('ICE connected — waiting for media stream before marking LIVE', 'sys');
+        // If the stream already arrived before ICE completed (race), mark linked now.
+        // In no-media mode there is no stream to wait for, so mark immediately.
+        if (_streamArrived || _noMediaMode) {
+          entry((_noMediaMode ? 'No-media mode' : 'Stream already arrived') + ' — marking linked', 'sys');
+          markLinked();
+        }
       }
       // Relay fallback: if ICE stays in 'checking' for >8s, force TURN-only
       if (pc.iceConnectionState === 'checking') {
@@ -6429,6 +6467,8 @@ function attachCall(c) {
         // is null — it will just log noise and exit.
         const _ra0 = document.getElementById('remoteAudio');
         if (_ra0 && _ra0.srcObject) scheduleRemoteAudioPlay();
+        _streamArrived = true;
+        if (_iceReady && !linked) markLinked();
         return;
       }
       const stream = ev.streams[0];
@@ -6441,7 +6481,8 @@ function attachCall(c) {
       syncMiniVideos();
       document.getElementById('remoteWrap').classList.remove('waiting', 'stale');
       updateRemoteVideoState(true, stream.getVideoTracks().length > 0);
-      markLinked();
+      _streamArrived = true;
+      if (_iceReady && !linked) markLinked();
       scheduleRemoteAudioPlay();
     });
   };
@@ -6469,8 +6510,10 @@ function attachCall(c) {
       track.addEventListener('ended', () => updateRemoteVideoState(false, false));
     });
     scheduleRemoteAudioPlay();  // always call — not just on first link
+    _streamArrived = true;
     if (linked) return;
-    markLinked();
+    if (_iceReady) markLinked();
+    // else: ICE not yet connected — markLinked() will fire from iceconnectionstatechange
   });
   // Only trigger onDrop if this is still the active call (guards against stale calls
   // from a previous dial attempt closing and racing with the current one)
@@ -6574,6 +6617,7 @@ function _doLeave() {
   if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
   if (peer)  { try { peer.destroy(); } catch(e){} peer = null; }
   linked = false;
+  _iceReady = false; _streamArrived = false;
   // Always show the ended screen — never call window.close() as Android Chrome
   // closes the tab immediately, revealing whatever was behind it before the
   // session ended message can appear.
@@ -6630,6 +6674,7 @@ function onDrop() {
   if (call && call._iceDropTimer) { clearTimeout(call._iceDropTimer); call._iceDropTimer = null; }
   saveRecordingIfActive();
   linked = false;
+  _iceReady = false; _streamArrived = false;
   call = null;
   // Reset data channel state so it re-opens cleanly on next dial
   if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
