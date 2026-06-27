@@ -872,6 +872,8 @@
   }
   #speechSendBtn:disabled { opacity: 0.35; cursor: not-allowed; background: var(--btn-bg); border-color: var(--border); color: var(--text); font-weight: normal; }
   #speechOriginalBtn:hover { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
+  #speechTtsBtn.active-on { background: #1a56db; border-color: #1a56db; color: #ffe600; }
+  #speechTtsBtn.active-on:hover { background: #1648c2; border-color: #1648c2; color: #ffe600; }
   #speechListenBtn:hover { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
   #speechListenBtn.listening {
     background: #000; border-color: #000; color: #fff;
@@ -1289,17 +1291,22 @@
   @media print {
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 
-    /* ── Overall page — must unclip viewport-height constraints ── */
-    html, body {
-      height: auto !important; min-height: 0 !important;
+    /* ── Overall page — flex column so notes fills remaining space ── */
+    html {
+      height: 100% !important;
+    }
+    body {
+      height: 100% !important; min-height: 0 !important;
       overflow: visible !important;
       background: #fff !important; margin: 0 !important;
+      display: flex !important; flex-direction: column !important;
     }
     .shell {
       gap: 4px !important; padding: 6px !important;
       height: auto !important; overflow: visible !important;
       max-width: 100% !important;
       display: flex !important; flex-direction: column !important;
+      flex-shrink: 0 !important;
     }
     .tab-content, .tab-pane {
       height: auto !important; overflow: visible !important;
@@ -1409,32 +1416,31 @@
     .mini-video-overlay { display: none !important; }
     .zoom-row { display: none !important; height: 0 !important; overflow: hidden !important; }
 
-    /* ── Speech panel — show controls box rows ── */
+    /* ── Speech panel — shown in print after helpPanel (JS moves it before printing) ── */
     #speechPanel {
+      position: static !important;
       display: flex !important; flex-direction: column !important;
-      height: auto !important; overflow: visible !important;
-      background: #fff !important; border: 1px solid #999 !important;
-      border-radius: 4px !important; padding: 4px 6px !important;
-      margin-top: 4px !important; gap: 4px !important;
+      background: none !important;
+      border: 1px solid #999 !important; border-radius: 4px !important;
+      padding: 8px 10px !important; margin-top: 6px !important;
+      overflow: visible !important; height: auto !important;
+      max-height: none !important; gap: 6px !important;
+      flex-shrink: 0 !important;
     }
     #speechEditWrap { display: none !important; }
     #speechStatus { display: none !important; }
+    #speechFilePreviewStrip { display: none !important; }
     .speech-top-bar { display: none !important; }
-    .file-preview-strip { display: none !important; }
-    .speech-btn-row {
+    #speechPanel .speech-btn-row {
       display: flex !important; flex-wrap: wrap !important;
-      gap: 4px !important; align-items: center !important;
+      align-items: center !important; gap: 4px !important;
+      background: #fff !important;
     }
-    .speech-btn-row button, .speech-btn-row select {
+    #speechPanel .sbr-label { color: #000 !important; font-weight: bold !important; }
+    #speechPanel button, #speechPanel select {
       background: #fff !important; color: #000 !important;
-      border: 1px solid #555 !important; font-size: 9px !important;
-      padding: 2px 5px !important;
+      border: 1px solid #555 !important; text-shadow: none !important;
     }
-    .speech-btn-row .sbr-label {
-      color: #000 !important; font-weight: bold !important;
-      font-size: 9px !important;
-    }
-    #cwSendBtn { display: none !important; }
 
     /* ── Button Guide — flush, no gap, allow page break ── */
     #helpPanel {
@@ -1472,10 +1478,10 @@
       border-radius: 4px;
       margin-top: 8px;
       padding: 8px 10px 0;
-      min-height: 120px;
+      min-height: 0;
       flex: 1 1 auto;
-      page-break-inside: avoid;
-      break-inside: avoid;
+      page-break-inside: auto;
+      break-inside: auto;
       background-image: repeating-linear-gradient(
         to bottom,
         transparent,
@@ -2267,48 +2273,49 @@ window.addEventListener('orientationchange', function() {
       <!-- hidden shims kept for JS compatibility -->
       <textarea id="chatInput" style="display:none"></textarea>
       <input type="file" id="fileInput" multiple="" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx" style="display:none">
+
       <!-- ── Speech overlay panel ──────────────────────────────── -->
       <div id="speechPanel">
-        <div class="speech-top-bar" style="display:none"></div>
-        <div class="file-preview-strip" id="speechFilePreviewStrip"></div>
-        <div id="speechEditWrap">
-          <textarea id="speechEditBox" placeholder="Tap Talk or Type and Edit Text" spellcheck="true"></textarea>
-          <div id="speechEditMirror" aria-hidden="true"></div>
-          <button id="speechFloatSend" onclick="sendSpeechToChat()" disabled title="Send">SEND</button>
-        </div>
-        <div id="speechStatus" class="speech-status">IDLE</div>
+      <div class="speech-top-bar" style="display:none"></div>
+      <div class="file-preview-strip" id="speechFilePreviewStrip"></div>
+      <div id="speechEditWrap">
+      <textarea id="speechEditBox" placeholder="Tap Talk or Type and Edit Text" spellcheck="true"></textarea>
+      <div id="speechEditMirror" aria-hidden="true"></div>
+      <button id="speechFloatSend" onclick="sendSpeechToChat()" disabled title="Send">SEND</button>
+      </div>
+      <div id="speechStatus" class="speech-status">IDLE</div>
 
-        <div class="speech-btn-row" id="speechBtnRow1">
-          <span class="sbr-label">Chat:</span>
-          <button id="speechAttachBtn" onclick="speechAttachClick()" title="Attach file or drag &amp; drop">ATTACH</button>
-          <input type="file" id="speechFileInput" multiple style="display:none" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx">
-          <input type="file" id="speechTextFileInput" style="display:none" accept=".txt,.md,.text">
-          <button id="speechLoadBtn" onclick="speechLoadText()" title="Load text file into input box">LOAD</button>
-          <button id="speechSaveBtn" onclick="speechSaveText()" title="Save input box text to file">SAVE</button>
-          <button id="speechCopyBtn" onclick="speechCopyText()" title="Copy input box text to clipboard">COPY</button>
-          <button id="speechClearBtn" onclick="speechClearText()" title="Clear input box">CLEAR</button>
-          <button id="cwSendBtn" onclick="cwBtnPress()" title="Send text as Morse code" disabled>⚫ CW</button>
-        </div>
-        <div class="speech-btn-row" id="speechBtnRow2">
-          <span class="sbr-label">Your Spoken Language:</span>
-          <select id="speechLangSelect" title="Speech recognition language" onchange="setSpeechLang(this.value)">
-            <option value="en-US" title="Eng">English (US)</option>
-            <option value="en-GB" title="Eng UK">English (UK)</option>
-            <option value="es-ES" title="Spanish">Español</option>
-            <option value="fr-FR" title="French">Français</option>
-            <option value="de-DE" title="German">Deutsch</option>
-            <option value="ja-JP" title="Japan">日本語</option>
-            <option value="zh-CN" title="Chinese">中文 (普通话)</option>
-            <option value="pt-BR" title="Portuguese (BR)">Português (BR)</option>
-          </select>
-          <button id="speechOriginalBtn" onclick="speechOriginalLang()" title="Revert to system language">ORIGINAL</button>
-          <button id="speechListenBtn" onclick="toggleListening()">TALK</button>
-        </div>
-        <div class="speech-btn-row" id="speechBtnRow3">
-          <span class="sbr-label">Text To Speech:</span>
-          <select id="ttsVoiceSelect" title="TTS voice for spoken output"></select>
-          <button id="speechTtsBtn" onclick="toggleTts()" title="Toggle auto-speak for incoming messages">TTS Off</button>
-        </div>
+      <div class="speech-btn-row" id="speechBtnRow1">
+      <span class="sbr-label">Chat:</span>
+      <button id="speechAttachBtn" onclick="speechAttachClick()" title="Attach file or drag &amp; drop">ATTACH</button>
+      <input type="file" id="speechFileInput" multiple style="display:none" accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx">
+      <input type="file" id="speechTextFileInput" style="display:none" accept=".txt,.md,.text">
+      <button id="speechLoadBtn" onclick="speechLoadText()" title="Load text file into input box">LOAD</button>
+      <button id="speechSaveBtn" onclick="speechSaveText()" title="Save input box text to file">SAVE</button>
+      <button id="speechCopyBtn" onclick="speechCopyText()" title="Copy input box text to clipboard">COPY</button>
+      <button id="speechClearBtn" onclick="speechClearText()" title="Clear input box">CLEAR</button>
+      <button id="cwSendBtn" onclick="cwBtnPress()" title="Send text as Morse code" disabled>⚫ CW</button>
+      </div>
+      <div class="speech-btn-row" id="speechBtnRow2">
+      <span class="sbr-label">Your Spoken Language:</span>
+      <select id="speechLangSelect" title="Speech recognition language" onchange="setSpeechLang(this.value)">
+      <option value="en-US" title="Eng">English (US)</option>
+      <option value="en-GB" title="Eng UK">English (UK)</option>
+      <option value="es-ES" title="Spanish">Español</option>
+      <option value="fr-FR" title="French">Français</option>
+      <option value="de-DE" title="German">Deutsch</option>
+      <option value="ja-JP" title="Japan">日本語</option>
+      <option value="zh-CN" title="Chinese">中文 (普通话)</option>
+      <option value="pt-BR" title="Portuguese (BR)">Português (BR)</option>
+      </select>
+      <button id="speechOriginalBtn" onclick="speechOriginalLang()" title="Revert to system language">ORIGINAL</button>
+      <button id="speechListenBtn" onclick="toggleListening()">TALK</button>
+      </div>
+      <div class="speech-btn-row" id="speechBtnRow3">
+      <span class="sbr-label">Text To Speech:</span>
+      <select id="ttsVoiceSelect" title="TTS voice for spoken output"></select>
+      <button id="speechTtsBtn" onclick="toggleTts()" title="Toggle auto-speak for incoming messages">TTS Off</button>
+      </div>
       </div>
       <div class="log-panel collapsed" id="logPanel">
         <div class="panel-label" onclick="toggleLogPanel()">SYS LOG<span class="log-toggle-arrow" id="logToggleArrow">▾</span>
@@ -2421,8 +2428,25 @@ function scheduleRemoteAudioPlay() {
         const btn = document.getElementById('audioUnlockBtn');
         if (btn) btn.style.display = 'none';
       }).catch(e => {
-        entry('⚠ Remote audio blocked (' + e.name + ': ' + e.message + ') — tap the green button to hear audio', 'err');
-        showAudioUnlockBtn();
+        entry('⚠ Remote audio blocked (' + e.name + ': ' + e.message + ') — retrying in 2s', 'err');
+        // Retry once after 2s — covers AudioContext autoplay suspension resolving
+        // after a user gesture that arrives shortly after the stream event.
+        _raPlayTimer = setTimeout(() => {
+          const ra2 = document.getElementById('remoteAudio');
+          if (ra2 && ra2.srcObject) {
+            ra2.play().then(() => {
+              entry('DIAG: remoteAudio playing ok (retry)', 'sys');
+              const btn = document.getElementById('audioUnlockBtn');
+              if (btn) btn.style.display = 'none';
+            }).catch(e2 => {
+              entry('⚠ Remote audio still blocked (' + e2.name + ') — tap the green button to hear audio', 'err');
+              showAudioUnlockBtn();
+            });
+          } else {
+            entry('⚠ Remote audio: srcObject lost during retry — stream may have ended', 'err');
+            showAudioUnlockBtn();
+          }
+        }, 2000);
       });
     } else {
       // srcObject not yet set — stream event hasn't fired yet. Retry once.
@@ -2506,6 +2530,9 @@ let silentCtx = null;
 let silentTrack = null;
 
 let peer, call, dataConn, localStream, linked = false, retryTimer;
+let _iceReady = false;   // ICE connected but stream not yet confirmed — not truly LIVE yet
+let _streamArrived = false; // at least one remote track/stream has arrived
+let _noMediaMode = false;   // true when we're running without real mic/camera
 let _preRegistered = false;   // true once preRegister() has opened the peer
 let _preRegCode    = '';      // the code that was pre-registered
 
@@ -2551,6 +2578,7 @@ function cancelPreRegister() {
   if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e){} }
   peer = null;
   linked = false;
+  _iceReady = false; _streamArrived = false;
   pendingDC = false;
 }
 
@@ -5442,6 +5470,7 @@ function _saveCameraLabel(label) {
 async function initMediaOnly() {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     entry('Mic/camera API not available — data channel only', 'sys');
+    _noMediaMode = true;
     try {
       const sCtx = new (window.AudioContext || window.webkitAudioContext)();
       const sDest = sCtx.createMediaStreamDestination();
@@ -5505,6 +5534,7 @@ async function initMediaOnly() {
           .then(applyAndDial)
           .catch(e3 => {
             entry('Mic also failed (' + e3.name + ') — data channel only', 'err');
+            _noMediaMode = true;
             try {
               const sCtx = new (window.AudioContext || window.webkitAudioContext)();
               const sDest = sCtx.createMediaStreamDestination();
@@ -5523,6 +5553,7 @@ async function initMediaOnly() {
       .then(applyAndDial)
       .catch(e2 => {
         entry('Mic also failed (' + e2.name + ') — data channel only', 'err');
+        _noMediaMode = true;
         try {
           const sCtx = new (window.AudioContext || window.webkitAudioContext)();
           const sDest = sCtx.createMediaStreamDestination();
@@ -5559,6 +5590,7 @@ async function init() {
       entry('Try Chrome or Firefox over HTTPS', 'err');
     }
     entry('Starting in audio-unavailable mode — data channel only', 'sys');
+    _noMediaMode = true;
     try {
       const sCtx = new (window.AudioContext || window.webkitAudioContext)();
       const sDest = sCtx.createMediaStreamDestination();
@@ -5629,6 +5661,7 @@ async function init() {
     // Even without real media, register with the signalling server using a silent
     // stream so Alpha can still reach Bravo over the data channel (chat/text mode).
     entry('Starting in audio-unavailable mode — data channel only', 'sys');
+    _noMediaMode = true;
     try {
       const sCtx = new (window.AudioContext || window.webkitAudioContext)();
       const sDest = sCtx.createMediaStreamDestination();
@@ -5714,6 +5747,7 @@ function startPeer() {
   if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
   pendingDC = false;
   linked = false;
+  _iceReady = false; _streamArrived = false;
 
   peer = new Peer(MY_ID, {
     host: '0.peerjs.com', port: 443, path: '/', secure: true, pingInterval: 5000,
@@ -6282,8 +6316,13 @@ function markLinked() {
   const _ro = document.getElementById('reconnectOverlay');
   if (_ro) _ro.classList.remove('active');
   setStatus('linked');
-  entry('Linked to Bravo — full duplex active', 'ok');
-  duplexBar.textContent = '● LIVE';
+  if (_noMediaMode) {
+    entry('Linked to Bravo — data channel only (no mic/camera)', 'ok');
+    duplexBar.textContent = '● LIVE (data only)';
+  } else {
+    entry('Linked to Bravo — full duplex active', 'ok');
+    duplexBar.textContent = '● LIVE';
+  }
   duplexBar.className = 'duplex-overlay live';
   syncControls();
   startQualityPolling();
@@ -6315,8 +6354,14 @@ function attachCall(c) {
     pc.addEventListener('iceconnectionstatechange', () => {
       entry('DIAG: ICE → ' + pc.iceConnectionState, 'sys');
       if ((pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') && !linked) {
-        entry('ICE connected — marking linked', 'sys');
-        markLinked();
+        _iceReady = true;
+        entry('ICE connected — waiting for media stream before marking LIVE', 'sys');
+        // If the stream already arrived before ICE completed (race), mark linked now.
+        // In no-media mode there is no stream to wait for, so mark immediately.
+        if (_streamArrived || _noMediaMode) {
+          entry((_noMediaMode ? 'No-media mode' : 'Stream already arrived') + ' — marking linked', 'sys');
+          markLinked();
+        }
       }
       // Relay fallback: if ICE stays in 'checking' for >8s, force TURN-only
       if (pc.iceConnectionState === 'checking') {
@@ -6422,6 +6467,8 @@ function attachCall(c) {
         // is null — it will just log noise and exit.
         const _ra0 = document.getElementById('remoteAudio');
         if (_ra0 && _ra0.srcObject) scheduleRemoteAudioPlay();
+        _streamArrived = true;
+        if (_iceReady && !linked) markLinked();
         return;
       }
       const stream = ev.streams[0];
@@ -6434,7 +6481,8 @@ function attachCall(c) {
       syncMiniVideos();
       document.getElementById('remoteWrap').classList.remove('waiting', 'stale');
       updateRemoteVideoState(true, stream.getVideoTracks().length > 0);
-      markLinked();
+      _streamArrived = true;
+      if (_iceReady && !linked) markLinked();
       scheduleRemoteAudioPlay();
     });
   };
@@ -6462,8 +6510,10 @@ function attachCall(c) {
       track.addEventListener('ended', () => updateRemoteVideoState(false, false));
     });
     scheduleRemoteAudioPlay();  // always call — not just on first link
+    _streamArrived = true;
     if (linked) return;
-    markLinked();
+    if (_iceReady) markLinked();
+    // else: ICE not yet connected — markLinked() will fire from iceconnectionstatechange
   });
   // Only trigger onDrop if this is still the active call (guards against stale calls
   // from a previous dial attempt closing and racing with the current one)
@@ -6567,6 +6617,7 @@ function _doLeave() {
   if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
   if (peer)  { try { peer.destroy(); } catch(e){} peer = null; }
   linked = false;
+  _iceReady = false; _streamArrived = false;
   // Always show the ended screen — never call window.close() as Android Chrome
   // closes the tab immediately, revealing whatever was behind it before the
   // session ended message can appear.
@@ -6623,6 +6674,7 @@ function onDrop() {
   if (call && call._iceDropTimer) { clearTimeout(call._iceDropTimer); call._iceDropTimer = null; }
   saveRecordingIfActive();
   linked = false;
+  _iceReady = false; _streamArrived = false;
   call = null;
   // Reset data channel state so it re-opens cleanly on next dial
   if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
@@ -8548,7 +8600,34 @@ function ttsSpeak(text, lang) {
     }
   });
 })();
+
+// ── Print: temporarily relocate #speechPanel after #helpPanel ────────────────
+(function() {
+  var _spOrigParent = null, _spOrigNext = null;
+  function beforePrint() {
+    var sp = document.getElementById('speechPanel');
+    var hp = document.getElementById('helpPanel');
+    if (!sp || !hp) return;
+    _spOrigParent = sp.parentNode;
+    _spOrigNext   = sp.nextSibling;
+    hp.parentNode.insertBefore(sp, hp.nextSibling);
+    // Mac Safari/Chrome ignore position:static !important on fixed elements in @media print.
+    // Force via inline style (highest specificity) so the panel renders in-flow.
+    hp.style.cssText = 'position:static !important;display:block !important;padding:0 !important;margin:0 !important;background:none !important;inset:auto !important;overflow:visible !important;height:auto !important;max-height:none !important;';
+  }
+  function afterPrint() {
+    var sp = document.getElementById('speechPanel');
+    var hp = document.getElementById('helpPanel');
+    if (!sp || !_spOrigParent) return;
+    _spOrigParent.insertBefore(sp, _spOrigNext);
+    _spOrigParent = null; _spOrigNext = null;
+    if (hp) hp.style.cssText = '';
+  }
+  window.addEventListener('beforeprint', beforePrint);
+  window.addEventListener('afterprint',  afterPrint);
+})();
 </script>
 
 
-<div id="helpPanel" role="dialog" aria-modal="true" aria-label="Button guide"><div id="helpPanelInner"><div class="help-btn-bar"><button onclick="closeHelpPanel()">✕ Close</button><button onclick="window.print()">⎙ Print</button></div><h3>Button Guide</h3><div id="helpPanelRows"></div><button id="helpCloseBtn" onclick="closeHelpPanel()">✕ Close</button></div></div><div id="printNotesArea" style="display:none"><p>Notes</p></div></div></body></html>
+<div id="helpPanel" role="dialog" aria-modal="true" aria-label="Button guide"><div id="helpPanelInner"><div class="help-btn-bar"><button onclick="closeHelpPanel()">✕ Close</button><button onclick="window.print()">⎙ Print</button></div><h3>Button Guide</h3><div id="helpPanelRows"></div><button id="helpCloseBtn" onclick="closeHelpPanel()">✕ Close</button></div></div>
+<div id="printNotesArea" style="display:none"><p>Notes</p></div></div></body></html>
