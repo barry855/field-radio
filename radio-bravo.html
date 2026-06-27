@@ -1415,11 +1415,27 @@
     }
 
     /* ── Button Guide — flush, no gap, allow page break ── */
+    /* ── helpPanel: hide the fixed overlay wrapper entirely on Mac/any browser ── */
+    /* Use [data-printing] attr set by JS beforePrint for higher specificity than .open */
+    #helpPanel[data-printing] {
+      position: static !important; background: none !important;
+      padding: 0 !important; margin: 0 !important; display: block !important;
+      overflow: visible !important; height: auto !important;
+      max-height: none !important; inset: auto !important;
+      z-index: auto !important;
+    }
+    /* Fallback for browsers where attr trick doesn't fire in time */
     #helpPanel {
       position: static !important; background: none !important;
       padding: 0 !important; margin: 0 !important; display: block !important;
       overflow: visible !important; height: auto !important;
       max-height: none !important; inset: auto !important;
+      z-index: auto !important;
+    }
+    #helpPanel.open {
+      position: static !important; background: none !important;
+      display: block !important; inset: auto !important;
+      z-index: auto !important;
     }
     #helpPanelInner {
       border: 1px solid #999 !important; border-radius: 4px !important;
@@ -8283,33 +8299,73 @@ function ttsSpeak(text, lang) {
   });
 })();
 
-// ── Print: temporarily relocate #speechPanel after #helpPanel ────────────────
+// ── Print: temporarily relocate #speechPanel and #helpPanelInner into flow ───
 (function() {
   var _spOrigParent = null, _spOrigNext = null;
+  var _hpiOrigParent = null, _hpiOrigNext = null;
+  var _hpWasOpen = false;
+
   function beforePrint() {
-    var sp = document.getElementById('speechPanel');
-    var hp = document.getElementById('helpPanel');
-    if (!sp || !hp) return;
+    var sp  = document.getElementById('speechPanel');
+    var hp  = document.getElementById('helpPanel');
+    var hpi = document.getElementById('helpPanelInner');
+    var shell = document.querySelector('.shell') || document.body;
+    if (!sp || !hp || !hpi) return;
+
+    // Remember speechPanel's original position
     _spOrigParent = sp.parentNode;
     _spOrigNext   = sp.nextSibling;
-    hp.parentNode.insertBefore(sp, hp.nextSibling);
-    // Mac Safari/Chrome ignore position:static !important on fixed elements in @media print.
-    // Force via inline style (highest specificity) so the panel renders in-flow.
-    // Also strip the 'open' class so helpPanel loses display:flex/position:fixed
-    // (which Mac ignores from @media print) and switches to our print layout.
-    hp.classList.remove('open');
-    hp.style.cssText = 'position:static !important;display:block !important;padding:0 !important;margin:0 !important;background:none !important;inset:auto !important;overflow:visible !important;height:auto !important;max-height:none !important;z-index:auto !important;';
-    sp.style.cssText = 'position:static !important;display:flex !important;flex-direction:column !important;background:none !important;border:1px solid #999 !important;border-radius:4px !important;padding:8px 10px !important;margin-top:6px !important;overflow:visible !important;height:auto !important;max-height:none !important;gap:6px !important;flex-shrink:0 !important;';
+
+    // Remember helpPanelInner's original position (inside #helpPanel overlay)
+    _hpiOrigParent = hpi.parentNode;
+    _hpiOrigNext   = hpi.nextSibling;
+
+    // Track whether help panel was open
+    _hpWasOpen = hp.classList.contains('open');
+
+    // Hide the overlay wrapper entirely — it's position:fixed and Mac won't
+    // obey @media print overrides on it when .open is set
+    hp.setAttribute('data-printing', '1');
+    hp.style.cssText = 'display:none !important;';
+
+    // Move helpPanelInner directly into .shell so it renders in normal flow
+    shell.appendChild(hpi);
+
+    // Move speechPanel after helpPanelInner
+    _spOrigParent = sp.parentNode; // re-read in case it changed
+    hpi.parentNode.insertBefore(sp, hpi.nextSibling);
+
+    // Force both into flow with inline styles (Mac ignores @media print on fixed els)
+    hpi.style.cssText = 'position:static !important;display:block !important;border:1px solid #999 !important;border-radius:4px !important;max-width:100% !important;padding:8px 10px !important;margin:0 !important;overflow:visible !important;height:auto !important;max-height:none !important;background:#fff !important;color:#000 !important;';
+    sp.style.cssText  = 'position:static !important;display:flex !important;flex-direction:column !important;background:none !important;border:1px solid #999 !important;border-radius:4px !important;padding:8px 10px !important;margin-top:6px !important;overflow:visible !important;height:auto !important;max-height:none !important;gap:6px !important;flex-shrink:0 !important;';
   }
+
   function afterPrint() {
-    var sp = document.getElementById('speechPanel');
-    var hp = document.getElementById('helpPanel');
-    if (!sp || !_spOrigParent) return;
-    _spOrigParent.insertBefore(sp, _spOrigNext);
+    var sp  = document.getElementById('speechPanel');
+    var hp  = document.getElementById('helpPanel');
+    var hpi = document.getElementById('helpPanelInner');
+    if (!hpi || !_hpiOrigParent) return;
+
+    // Restore speechPanel
+    if (sp && _spOrigParent) {
+      _spOrigParent.insertBefore(sp, _spOrigNext);
+      sp.style.cssText = '';
+    }
+
+    // Restore helpPanelInner back inside #helpPanel
+    _hpiOrigParent.insertBefore(hpi, _hpiOrigNext);
+    hpi.style.cssText = '';
+
+    // Restore helpPanel overlay
+    hp.removeAttribute('data-printing');
+    hp.style.cssText = '';
+    if (_hpWasOpen) hp.classList.add('open');
+
     _spOrigParent = null; _spOrigNext = null;
-    if (hp) hp.style.cssText = '';
-    if (sp) sp.style.cssText = '';
+    _hpiOrigParent = null; _hpiOrigNext = null;
+    _hpWasOpen = false;
   }
+
   window.addEventListener('beforeprint', beforePrint);
   window.addEventListener('afterprint',  afterPrint);
 })();
