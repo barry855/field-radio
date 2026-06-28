@@ -6655,6 +6655,7 @@ let _vmActive       = false;  // voicemail recorder running
 let _vmResetPending = false;  // reset deferred until voicemail onstop completes
 let _vmRec       = null;   // MediaRecorder for voicemail
 let _vmChunks    = [];
+let _vmCapturedStream = null;  // remote stream snapshot taken at call-connect time
 let _attended    = false;  // user interacted during this call
 let _ringTimer   = null;   // repeating ring interval
 let _ringing     = false;  // ring was triggered this call cycle
@@ -6669,11 +6670,28 @@ function _vmNotice(text, blobUrl, filename) {
     const span = document.createElement('span');
     span.textContent = text + ' ';
     const a = document.createElement('a');
-    a.href = blobUrl;
-    a.target = '_blank';
-    a.rel = 'noopener';
+    a.href = '#';
     a.textContent = '▶ play';
     a.style.cssText = 'color:var(--accent2,#00ffcc);text-decoration:underline;cursor:pointer;';
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      const w = window.open('', '_blank');
+      if (w) {
+        w.document.write(
+          '<!DOCTYPE html><html><head><title>' + (filename || 'voicemail') + '</title></head>' +
+          '<body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;height:100vh;">' +
+          '<audio controls autoplay src="' + blobUrl + '" style="width:90%;max-width:480px;"></audio>' +
+          '</body></html>'
+        );
+        w.document.close();
+      } else {
+        // Fallback: force-download if popup blocked
+        const dl = document.createElement('a');
+        dl.href = blobUrl;
+        dl.download = filename || 'voicemail';
+        dl.click();
+      }
+    });
     d.appendChild(span);
     d.appendChild(a);
   } else {
@@ -6746,12 +6764,15 @@ function _markAttended() {
 
 function _startVoicemail() {
   if (_vmActive) return;
+  // Prefer the stream snapshot taken at call-connect time; fall back to live srcObject
+  // in case something re-assigned it (e.g. ICE restart).
   const remoteAudio = document.getElementById('remoteAudio');
   const remoteVideo = document.getElementById('remoteVideo');
-  const remoteStream = (remoteAudio && remoteAudio.srcObject)
+  const remoteStream = _vmCapturedStream
+                    || (remoteAudio && remoteAudio.srcObject)
                     || (remoteVideo && remoteVideo.srcObject)
                     || null;
-  const audioTracks = remoteStream ? remoteStream.getAudioTracks() : [];
+  const audioTracks = remoteStream ? remoteStream.getAudioTracks().filter(t => t.readyState !== 'ended') : [];
   entry('DIAG: _startVoicemail — remoteStream=' + (remoteStream ? 'yes' : 'null') + ' audioTracks=' + audioTracks.length, 'sys');
   if (!audioTracks.length) {
     entry('Voicemail: no remote audio track — cannot record', 'err');
@@ -6824,6 +6845,15 @@ function _stopVoicemail() {
 function _onCallConnected() {
   _attended = false;
   _vmCallStart = Date.now();
+  // Capture the remote stream NOW while srcObject is guaranteed to be set.
+  // By the time the 15s timer fires, srcObject may have been cleared (e.g. if
+  // Alpha left early), so we snapshot the tracks here instead.
+  const remoteAudio = document.getElementById('remoteAudio');
+  const remoteVideo = document.getElementById('remoteVideo');
+  const rs = (remoteAudio && remoteAudio.srcObject)
+           || (remoteVideo && remoteVideo.srcObject)
+           || null;
+  _vmCapturedStream = rs;
   _vmTimer = setTimeout(_startVoicemail, 15000);
   ['keydown', 'pointerdown', 'touchstart'].forEach(ev =>
     window.addEventListener(ev, _markAttended, { once: true, passive: true })
@@ -6836,6 +6866,7 @@ function _onCallEnded() {
   _stopRing();
   _stopVoicemail();
   clearTimeout(_vmTimer); _vmTimer = null;
+  _vmCapturedStream = null;
   ['keydown', 'pointerdown', 'touchstart'].forEach(ev =>
     window.removeEventListener(ev, _markAttended)
   );
