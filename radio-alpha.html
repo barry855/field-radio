@@ -5744,7 +5744,7 @@ async function init() {
 // Must be module-level so startPeer's peer.on('open') closure can reference it.
 async function _refreshRemoteId() {
   try {
-    const _bravoPollKey = 'bravo-' + (MY_ID ? MY_ID.replace(/^alpha-/, '') : '');
+    const _bravoPollKey = 'bravo-' + (MY_ID ? MY_ID.replace(/^alpha-/, '').replace(/-[0-9a-f]{4}$/, '') : '');
     if (!_bravoPollKey || _bravoPollKey === 'bravo-') return;
     const _r = await fetch(FB_URL + '/presence/' + _bravoPollKey + '.json');
     const _d = await _r.json();
@@ -5763,6 +5763,7 @@ function _setupRemoteIdPoll(bravoPollKey) {
 
 let _unavailIdRetries = 0;
 let _peerDestroyPending = false;
+let _peerGeneration = 0;  // incremented each startPeer() — cancels stale _pollAndDial loops
 function startPeer() {
   // Guard: PeerJS CDN may still be loading on slow mobile connections
   if (typeof Peer === 'undefined') {
@@ -5771,6 +5772,7 @@ function startPeer() {
     return;
   }
   _peerDestroyPending = false;
+  _peerGeneration++;           // invalidate any _pollAndDial loop from the previous peer
   // Destroy any existing peer before creating a new one.
   // Without this the old peer's event handlers (especially 'disconnected' → peer.reconnect())
   // keep firing against the replaced reference, causing a permanent reconnect loop.
@@ -5795,13 +5797,17 @@ function startPeer() {
     entry('Radio online', 'ok');
     setStatus('calling');
     // Poll Firebase until BRAVO's suffixed peer ID appears, then dial.
+    // _thisGen captures the generation at the time this peer was created; if
+    // startPeer() runs again (unavailable-id restart) _peerGeneration changes
+    // and this loop self-terminates, preventing duplicate poll instances.
     // Never fall back to the base ID — dialling 'bravo-CODE' when BRAVO has
-    // registered as 'bravo-CODE-xxxx' returns peer-unavailable immediately and
-    // wastes the entire session.  The peer-unavailable retry loop handles the
-    // case where BRAVO comes online after we've already dialled.
+    // registered as 'bravo-CODE-xxxx' returns peer-unavailable immediately.
+    const _thisGen = _peerGeneration;
     let _dialPollCount = 0;
     function _pollAndDial() {
+      if (_peerGeneration !== _thisGen || linked) return; // stale or already linked
       _refreshRemoteId().then(() => {
+        if (_peerGeneration !== _thisGen || linked) return;
         _dialPollCount++;
         const hasSuffix = REMOTE_ID && /-[0-9a-f]{4}$/.test(REMOTE_ID);
         if (hasSuffix) {
