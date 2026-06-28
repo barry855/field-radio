@@ -5627,7 +5627,8 @@ async function _refreshRemoteId() {
     const _code = MY_ID ? MY_ID.replace(/^bravo-/, '').replace(/-[0-9a-f]{4}$/, '') : '';
     if (!_code) return;
     const _r = await fetch(FB_URL + '/presence/alpha-' + _code + '.json');
-    const _d = await _r.json();
+    const _env = await _r.json();
+    const _d = _env ? await _decryptPresence(_code, _env) : null;
     if (_d && _d.peerId && _d.peerId !== REMOTE_ID) {
       entry('ALPHA peer ID: ' + _d.peerId, 'sys');
       REMOTE_ID = _d.peerId;
