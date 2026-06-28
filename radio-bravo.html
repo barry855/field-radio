@@ -6670,8 +6670,9 @@ function _vmNotice(text, blobUrl, filename) {
     span.textContent = text + ' ';
     const a = document.createElement('a');
     a.href = blobUrl;
-    a.download = filename || 'voicemail';
-    a.textContent = '\u2b07 download';
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.textContent = '▶ play';
     a.style.cssText = 'color:var(--accent2,#00ffcc);text-decoration:underline;cursor:pointer;';
     d.appendChild(span);
     d.appendChild(a);
@@ -6782,13 +6783,11 @@ function _startVoicemail() {
     const ts   = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     const ext  = /mp4/.test(mimeType) ? 'mp4' : 'webm';
     const _vmFilename = `bravo-voicemail-${ts}.${ext}`;
-    downloadBlob(blob, _vmFilename);
     entry('📼 Voicemail saved', 'ok');
     // 2 beeps to signal recording complete
     playTone('vm_end');
     setTimeout(() => playTone('vm_end'), 450);
     try { dcSend({ __control: 'voicemail', active: false }); } catch(e) {}
-    // Keep a persistent object URL for the in-chat download link
     const _vmBlobUrl = URL.createObjectURL(blob);
     _vmNotice('— 📼 VOICEMAIL RECORDED —', _vmBlobUrl, _vmFilename);
     // If Alpha left while we were recording, do the reset now that the save is done.
@@ -6840,8 +6839,6 @@ function _onCallEnded() {
   ['keydown', 'pointerdown', 'touchstart'].forEach(ev =>
     window.removeEventListener(ev, _markAttended)
   );
-  // If handleRemoteLeave already set _vmResetPending, onstop owns the reset — don't duplicate it
-  if (_vmResetPending) { _attended = false; _vmCallStart = 0; return; }
   if (wasRinging) {
     const timeStr = new Date().toTimeString().slice(0, 5);
     if (!_vmCallStart) {
@@ -6856,6 +6853,10 @@ function _onCallEnded() {
         _vmNotice('— 📞 CALL ENDED — ' + timeStr + ' — ' + durStr + ' —');
       }
     }
+  }
+  // If handleRemoteLeave already set _vmResetPending, onstop owns the reset — don't duplicate it
+  if (_vmResetPending) { _attended = false; _vmCallStart = 0; return; }
+  if (wasRinging) {
     // Answering machine: skip reconnect screen, go straight back to waiting.
     // If voicemail was recording when Alpha left, defer the reset until onstop
     // has finished saving the file — _vmResetPending tells onstop to do it.
