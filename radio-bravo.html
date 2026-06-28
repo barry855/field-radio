@@ -3509,7 +3509,19 @@ function loadHistory() {
       if (!m.vmNotice) return;
       const d = document.createElement('div');
       d.className = 'bubble vm-notice';
-      d.textContent = m.text;
+      if (m.filename) {
+        // Recording bubble — blob is gone but show filename so user knows what was saved
+        d.classList.add('vm-has-recording');
+        const span = document.createElement('span');
+        span.textContent = m.text;
+        const note = document.createElement('div');
+        note.style.cssText = 'font-size:0.8em;opacity:0.7;margin-top:4px;letter-spacing:0.5px;font-weight:normal;';
+        note.textContent = '💾 ' + m.filename;
+        d.appendChild(span);
+        d.appendChild(note);
+      } else {
+        d.textContent = m.text;
+      }
       chatEl.appendChild(d);
     });
     if (chatEl.children.length) chatEl.scrollTop = chatEl.scrollHeight;
@@ -6691,11 +6703,11 @@ function _vmNotice(text, blobUrl, filename) {
   }
   chatEl.appendChild(d);
   chatEl.scrollTop = chatEl.scrollHeight;
-  // Persist so notices survive a refresh (link omitted — blob URLs don't survive page unload)
+  // Persist so notices survive a refresh (blob URLs don't survive page unload, but filename does)
   try {
     const key = HISTORY_KEY();
     const history = JSON.parse(localStorage.getItem(key) || '[]');
-    history.push({ text, vmNotice: true, ts: Date.now() });
+    history.push({ text, vmNotice: true, ts: Date.now(), filename: filename || null });
     if (history.length > HISTORY_MAX) history.splice(0, history.length - HISTORY_MAX);
     localStorage.setItem(key, JSON.stringify(history));
   } catch(e) {}
@@ -6754,7 +6766,7 @@ function _markAttended() {
   }
 }
 
-function _startVoicemail() {
+async function _startVoicemail() {
   if (_vmActive) return;
   // Get remote audio tracks directly from WebRTC receivers — this works even on
   // Android where ontrack fires without ev.streams and srcObject may be null.
@@ -6782,18 +6794,46 @@ function _startVoicemail() {
     entry('Voicemail: no remote audio track — cannot record', 'err');
     return;
   }
-  // Audio-only voicemail: remote mic + local mic mixed
-  const vmStream = new MediaStream([
-    ...audioTracks.map(t => t.clone()),
-    ...getLocalAudioTracksForRec()
-  ]);
+  // Audio-only voicemail: mix remote + local through Web Audio for a unified
+  // clock — raw track combination causes timestamp fragmentation on ChromeOS.
+  const remoteTracksStream = new MediaStream(audioTracks.map(t => t.clone()));
+  const localTracksForMix  = getLocalAudioTracksForRec();
+  const localStream_vm     = localTracksForMix.length ? new MediaStream(localTracksForMix) : null;
+  let _vmACtx = null;
+  let _vmRecStream;
+  try {
+    const mix = await (async () => {
+      const ctx  = new (window.AudioContext || window.webkitAudioContext)();
+      await ctx.resume();
+      const dest = ctx.createMediaStreamDestination();
+      [remoteTracksStream, localStream_vm].forEach((s, i) => {
+        if (!s) return;
+        try {
+          const src  = ctx.createMediaStreamSource(s);
+          const gain = ctx.createGain();
+          gain.gain.value = (i === 1) ? 2.0 : 1.0;  // boost local mic
+          src.connect(gain); gain.connect(dest);
+        } catch(e) { entry('VM mix warn: ' + e.message, 'sys'); }
+      });
+      return { ctx, dest };
+    })();
+    _vmACtx = mix.ctx;
+    _vmRecStream = mix.dest.stream;
+  } catch(e) {
+    entry('VM audio mix failed, using raw tracks: ' + e.message, 'sys');
+    _vmRecStream = new MediaStream([
+      ...audioTracks.map(t => t.clone()),
+      ...getLocalAudioTracksForRec()
+    ]);
+  }
   const mimeType = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm']
     .find(t => MediaRecorder.isTypeSupported(t)) || 'audio/webm';
   _vmChunks = [];
-  _vmRec = new MediaRecorder(vmStream, { mimeType });
+  _vmRec = new MediaRecorder(_vmRecStream, { mimeType });
   _vmRec.ondataavailable = e => { if (e.data.size > 0) _vmChunks.push(e.data); };
   _vmRec.onstop = async () => {
     _vmActive = false;
+    if (_vmACtx) { try { _vmACtx.close(); } catch(e) {} _vmACtx = null; }
     if (!_vmChunks.length) {
       entry('Voicemail empty — nothing saved', 'sys');
       if (_vmResetPending) {
