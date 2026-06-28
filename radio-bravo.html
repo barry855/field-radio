@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <!-- Field Radio v6 — BRAVO -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -6659,15 +6660,27 @@ let _ringTimer   = null;   // repeating ring interval
 let _ringing     = false;  // ring was triggered this call cycle
 let _vmCallStart = 0;      // Date.now() at markLinked
 
-function _vmNotice(text) {
+function _vmNotice(text, blobUrl, filename) {
   const chatEl = document.getElementById('chat');
   if (!chatEl) return;
   const d = document.createElement('div');
   d.className = 'bubble vm-notice';
-  d.textContent = text;
+  if (blobUrl) {
+    const span = document.createElement('span');
+    span.textContent = text + ' ';
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filename || 'voicemail';
+    a.textContent = '\u2b07 download';
+    a.style.cssText = 'color:var(--accent2,#00ffcc);text-decoration:underline;cursor:pointer;';
+    d.appendChild(span);
+    d.appendChild(a);
+  } else {
+    d.textContent = text;
+  }
   chatEl.appendChild(d);
   chatEl.scrollTop = chatEl.scrollHeight;
-  // Persist so notices survive a refresh
+  // Persist so notices survive a refresh (link omitted — blob URLs don't survive page unload)
   try {
     const key = HISTORY_KEY();
     const history = JSON.parse(localStorage.getItem(key) || '[]');
@@ -6767,13 +6780,16 @@ function _startVoicemail() {
     const blob = new Blob(_vmChunks, { type: mimeType });
     const ts   = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     const ext  = /mp4/.test(mimeType) ? 'mp4' : 'webm';
-    downloadBlob(blob, `bravo-voicemail-${ts}.${ext}`);
+    const _vmFilename = `bravo-voicemail-${ts}.${ext}`;
+    downloadBlob(blob, _vmFilename);
     entry('📼 Voicemail saved', 'ok');
     // 2 beeps to signal recording complete
     playTone('vm_end');
     setTimeout(() => playTone('vm_end'), 450);
     try { dcSend({ __control: 'voicemail', active: false }); } catch(e) {}
-    _vmNotice('— 📼 VOICEMAIL RECORDED —');
+    // Keep a persistent object URL for the in-chat download link
+    const _vmBlobUrl = URL.createObjectURL(blob);
+    _vmNotice('— 📼 VOICEMAIL RECORDED —', _vmBlobUrl, _vmFilename);
     // If Alpha left while we were recording, do the reset now that the save is done.
     // onDrop has already run teardown — just re-register for the next caller.
     if (_vmResetPending) {
