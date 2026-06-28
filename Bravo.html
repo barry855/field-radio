@@ -6660,15 +6660,28 @@ let _ringTimer   = null;   // repeating ring interval
 let _ringing     = false;  // ring was triggered this call cycle
 let _vmCallStart = 0;      // Date.now() at markLinked
 
-function _vmNotice(text) {
+function _vmNotice(text, blobUrl, filename) {
   const chatEl = document.getElementById('chat');
   if (!chatEl) return;
   const d = document.createElement('div');
   d.className = 'bubble vm-notice';
-  d.textContent = text;
+  if (blobUrl) {
+    const span = document.createElement('span');
+    span.textContent = text + ' ';
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.textContent = '▶ play';
+    a.style.cssText = 'color:var(--accent2,#00ffcc);text-decoration:underline;cursor:pointer;';
+    d.appendChild(span);
+    d.appendChild(a);
+  } else {
+    d.textContent = text;
+  }
   chatEl.appendChild(d);
   chatEl.scrollTop = chatEl.scrollHeight;
-  // Persist so notices survive a refresh
+  // Persist so notices survive a refresh (link omitted — blob URLs don't survive page unload)
   try {
     const key = HISTORY_KEY();
     const history = JSON.parse(localStorage.getItem(key) || '[]');
@@ -6739,6 +6752,7 @@ function _startVoicemail() {
                     || (remoteVideo && remoteVideo.srcObject)
                     || null;
   const audioTracks = remoteStream ? remoteStream.getAudioTracks() : [];
+  entry('DIAG: _startVoicemail — remoteStream=' + (remoteStream ? 'yes' : 'null') + ' audioTracks=' + audioTracks.length, 'sys');
   if (!audioTracks.length) {
     entry('Voicemail: no remote audio track — cannot record', 'err');
     return;
@@ -6768,13 +6782,14 @@ function _startVoicemail() {
     const blob = new Blob(_vmChunks, { type: mimeType });
     const ts   = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     const ext  = /mp4/.test(mimeType) ? 'mp4' : 'webm';
-    downloadBlob(blob, `bravo-voicemail-${ts}.${ext}`);
+    const _vmFilename = `bravo-voicemail-${ts}.${ext}`;
     entry('📼 Voicemail saved', 'ok');
     // 2 beeps to signal recording complete
     playTone('vm_end');
     setTimeout(() => playTone('vm_end'), 450);
     try { dcSend({ __control: 'voicemail', active: false }); } catch(e) {}
-    _vmNotice('— 📼 VOICEMAIL RECORDED —');
+    const _vmBlobUrl = URL.createObjectURL(blob);
+    _vmNotice('— 📼 VOICEMAIL RECORDED —', _vmBlobUrl, _vmFilename);
     // If Alpha left while we were recording, do the reset now that the save is done.
     // onDrop has already run teardown — just re-register for the next caller.
     if (_vmResetPending) {
@@ -6824,8 +6839,6 @@ function _onCallEnded() {
   ['keydown', 'pointerdown', 'touchstart'].forEach(ev =>
     window.removeEventListener(ev, _markAttended)
   );
-  // If handleRemoteLeave already set _vmResetPending, onstop owns the reset — don't duplicate it
-  if (_vmResetPending) { _attended = false; _vmCallStart = 0; return; }
   if (wasRinging) {
     const timeStr = new Date().toTimeString().slice(0, 5);
     if (!_vmCallStart) {
@@ -6840,6 +6853,10 @@ function _onCallEnded() {
         _vmNotice('— 📞 CALL ENDED — ' + timeStr + ' — ' + durStr + ' —');
       }
     }
+  }
+  // If handleRemoteLeave already set _vmResetPending, onstop owns the reset — don't duplicate it
+  if (_vmResetPending) { _attended = false; _vmCallStart = 0; return; }
+  if (wasRinging) {
     // Answering machine: skip reconnect screen, go straight back to waiting.
     // If voicemail was recording when Alpha left, defer the reset until onstop
     // has finished saving the file — _vmResetPending tells onstop to do it.
