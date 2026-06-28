@@ -2363,6 +2363,7 @@ const _tones = {
   call_in:      { freqs:[880,880,880],    durs:[0.08,0.05,0.13],  wave:'square',   vol:0.10 },
   file_in:      { freqs:[660,880],        durs:[0.08,0.14],       wave:'triangle', vol:0.14 },
   error:        { freqs:[300,250],        durs:[0.12,0.18],       wave:'sawtooth', vol:0.14 },
+  vm_end:       { freqs:[660,660],        durs:[0.14,0.14],       wave:'sine',     vol:0.30 },
 };
 var _actx = null;
 function playTone(name) {
@@ -6595,6 +6596,7 @@ let recLocal  = null, recLocalChunks  = [], recLocalBusy  = false;
 
 // ── Answering machine ─────────────────────────────────────────
 let _vmTimer     = null;   // 15s unattended timeout
+let _vmMaxTimer  = null;   // 2-min hard recording limit
 let _vmActive    = false;  // voicemail recorder running
 let _vmRec       = null;   // MediaRecorder for voicemail
 let _vmChunks    = [];
@@ -6696,11 +6698,21 @@ function _startVoicemail() {
     const ext  = /mp4/.test(mimeType) ? 'mp4' : 'webm';
     downloadBlob(blob, `bravo-voicemail-${ts}.${ext}`);
     entry('📼 Voicemail saved', 'ok');
+    // 2 beeps to signal recording complete
+    playTone('vm_end');
+    setTimeout(() => playTone('vm_end'), 450);
     try { dcSend({ __control: 'voicemail', active: false }); } catch(e) {}
     _vmNotice('— 📼 VOICEMAIL RECORDED —');
   };
   _vmRec.start(1000);
   _vmActive = true;
+  // Hard 2-minute recording limit
+  _vmMaxTimer = setTimeout(() => {
+    if (_vmActive) {
+      entry('📼 Voicemail: 2-minute limit reached — stopping', 'sys');
+      _stopVoicemail();
+    }
+  }, 120000);
   try { dcSend({ __control: 'voicemail', active: true }); } catch(e) {}
   entry('📼 Unattended — voicemail recording started', 'sys');
   _vmNotice('— 📼 RECORDING VOICEMAIL… —');
@@ -6708,6 +6720,7 @@ function _startVoicemail() {
 
 function _stopVoicemail() {
   clearTimeout(_vmTimer); _vmTimer = null;
+  clearTimeout(_vmMaxTimer); _vmMaxTimer = null;
   if (_vmRec && _vmRec.state === 'recording') {
     _vmRec.stop();
   }
