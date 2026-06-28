@@ -2388,6 +2388,7 @@ const _tones = {
   call_in:      { freqs:[880,880,880],    durs:[0.08,0.05,0.13],  wave:'square',   vol:0.10 },
   file_in:      { freqs:[660,880],        durs:[0.08,0.14],       wave:'triangle', vol:0.14 },
   error:        { freqs:[300,250],        durs:[0.12,0.18],       wave:'sawtooth', vol:0.14 },
+  vm_start:     { freqs:[880,880,880],    durs:[0.10,0.10,0.10],  wave:'sine',     vol:0.30 },
 };
 var _actx = null;
 function playTone(name) {
@@ -5959,6 +5960,10 @@ function attachDataConn(dc) {
         if (f.active) {
           setStatus('voicemail');
           _vmNotice('— 📼 BRAVO RECORDING VOICEMAIL —');
+          // 3 beeps to alert Alpha they are now in voicemail
+          playTone('vm_start');
+          setTimeout(() => playTone('vm_start'), 400);
+          setTimeout(() => playTone('vm_start'), 800);
         } else {
           setStatus('linked');
           _vmNotice('— 📼 VOICEMAIL SAVED —');
