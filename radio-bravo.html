@@ -5619,6 +5619,7 @@ async function init() {
 
 let _unavailIdRetries = 0;
 let _peerDestroyPending = false;
+let _peerGeneration = 0;  // incremented each startPeer() — cancels stale _pollAndDial loops
 
 // ── Remote ID refresh (reads Alpha's published peerId from Firebase) ──────────
 async function _refreshRemoteId() {
@@ -5677,6 +5678,7 @@ function startPeer() {
     return;
   }
   _peerDestroyPending = false;
+  _peerGeneration++;           // invalidate any _pollAndDial loop from the previous peer
   // Destroy any existing peer before creating a new one.
   // Without this the old peer's event handlers (especially 'disconnected' → peer.reconnect())
   // keep firing against the replaced reference, causing a permanent reconnect loop.
@@ -5696,27 +5698,27 @@ function startPeer() {
     // escalation in attachCall), avoiding unnecessary TURN load on every dial.
   });
 
-  let _pollCancelled = false; // reset each time startPeer() builds a fresh peer
-
   peer.on('open', id => {
     _unavailIdRetries = 0; // ID claimed — reset backoff
     entry('Radio online [' + id + ']', 'ok');
     setStatus('calling');
     // Poll Firebase until Alpha's suffixed peer ID appears, then dial.
     // Also listen for inbound calls from Alpha — whichever arrives first wins.
-    // _pollCancelled is set true by peer.on('call') so the loop stops if Alpha reaches us first.
+    // _thisGen captures the generation at the time this peer was created; if
+    // startPeer() runs again (unavailable-id restart) _peerGeneration changes
+    // and this loop self-terminates, preventing duplicate poll instances.
     // Never fall back to the base ID — dialling 'alpha-CODE' when ALPHA has
-    // registered as 'alpha-CODE-xxxx' returns peer-unavailable immediately and
-    // wastes the entire session.
+    // registered as 'alpha-CODE-xxxx' returns peer-unavailable immediately.
+    const _thisGen = _peerGeneration;
     let _dialPollCount = 0;
     function _pollAndDial() {
-      if (_pollCancelled) return; // Alpha already called us — stop polling
+      if (_peerGeneration !== _thisGen || linked) return; // stale or already linked
       _refreshRemoteId().then(() => {
-        if (_pollCancelled) return; // check again after async
+        if (_peerGeneration !== _thisGen || linked) return;
         _dialPollCount++;
         const hasSuffix = REMOTE_ID && /-[0-9a-f]{4}$/.test(REMOTE_ID);
         if (hasSuffix) {
-          if (!linked && !_pollCancelled) dial();
+          if (!linked) dial();
         } else {
           if (_dialPollCount % 20 === 0) {
             entry('Waiting for ALPHA peerId… (' + _dialPollCount + ')', 'sys');
@@ -5744,7 +5746,7 @@ function startPeer() {
   peer.on('call', incoming => {
     entry('Inbound call from Alpha', 'info');
     _startRing();                    // audible ring until ICE connects
-    _pollCancelled = true;           // stop the outbound dial-poll loop — Alpha reached us first
+    _peerGeneration++;               // stop the outbound _pollAndDial loop — Alpha reached us first
     clearTimeout(retryTimer); // cancel any pending dial/retry — Alpha reached us first
     if (!localStream) {
       entry('ERROR: no local stream — cannot answer', 'err');
