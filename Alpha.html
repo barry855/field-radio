@@ -247,6 +247,20 @@
   .bubble.show-orig .orig-peek { display: block; }
   .bubble.peek-locked { outline: 2px solid rgba(255,200,0,0.55); outline-offset: 2px; }
   .bubble.peek-locked .orig-peek { opacity: 1; }
+  .bubble.vm-notice {
+    align-self: center;
+    background: rgba(255,255,255,0.07);
+    border-color: rgba(255,255,255,0.18);
+    color: #94a3b8;
+    font-size: 11px;
+    font-weight: normal;
+    letter-spacing: 2px;
+    padding: 6px 16px;
+    border-radius: 20px;
+    text-align: center;
+    max-width: 90%;
+    pointer-events: none;
+  }
 
   /* connection quality */
   .quality-item {
@@ -2388,6 +2402,7 @@ const _tones = {
   call_in:      { freqs:[880,880,880],    durs:[0.08,0.05,0.13],  wave:'square',   vol:0.10 },
   file_in:      { freqs:[660,880],        durs:[0.08,0.14],       wave:'triangle', vol:0.14 },
   error:        { freqs:[300,250],        durs:[0.12,0.18],       wave:'sawtooth', vol:0.14 },
+  vm_start:     { freqs:[880,880,880],    durs:[0.10,0.10,0.10],  wave:'sine',     vol:0.30 },
 };
 var _actx = null;
 function playTone(name) {
@@ -3178,13 +3193,24 @@ function scrollToBottom(force) {
 
 
 
+function _vmNotice(text) {
+  const chatEl = document.getElementById('chat');
+  if (!chatEl) return;
+  const d = document.createElement('div');
+  d.className = 'bubble vm-notice';
+  d.textContent = text;
+  chatEl.appendChild(d);
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+
 function setStatus(state) {
   entry('STATUS: ' + state, 'sys');
   linkLed.className = 'led';
-  if (state === 'calling')        { linkLed.classList.add('on-yellow'); statusEl.textContent = 'CALLING…'; document.title = '📡 CALLING… — ALPHA — Field Radio v6'; }
+  if (state === 'calling')        { linkLed.classList.add('on-yellow'); statusEl.textContent = 'CALLING…';     document.title = '📡 CALLING… — ALPHA — Field Radio v6'; }
   else if (state === 'connecting')  { linkLed.classList.add('on-blue');   statusEl.textContent = 'CONNECTING…'; document.title = '🔵 CONNECTING… — ALPHA — Field Radio v6'; }
-  else if (state === 'reachable') { linkLed.classList.add('on-amber');  statusEl.textContent = 'WAITING';  document.title = '🟡 WAITING — ALPHA — Field Radio v6'; }
-  else if (state === 'linked')    { linkLed.classList.add('on-green');  statusEl.textContent = 'LIVE';   document.title = '🟢 LIVE — ALPHA — Field Radio v6'; }
+  else if (state === 'reachable') { linkLed.classList.add('on-amber');  statusEl.textContent = 'WAITING';      document.title = '🟡 WAITING — ALPHA — Field Radio v6'; }
+  else if (state === 'linked')    { linkLed.classList.add('on-green');  statusEl.textContent = 'LIVE';         document.title = '🟢 LIVE — ALPHA — Field Radio v6'; }
+  else if (state === 'voicemail') { linkLed.classList.add('on-amber');  statusEl.textContent = '📼 VOICEMAIL'; document.title = '📼 VOICEMAIL — ALPHA — Field Radio v6'; }
   else                            { statusEl.textContent = ''; document.title = 'ALPHA — Field Radio v6'; }
 }
 
@@ -3408,12 +3434,14 @@ function makeDraggable(el) {
 
 function linkify(text) {
   const frag = document.createDocumentFragment();
-  const re = /(https?:\/\/[^\s]+)/g;
+  const re = /(https?:\/\/[^\s]+|www\.[^\s]+\.[^\s]+)/g;
   let last = 0, m;
   while ((m = re.exec(text)) !== null) {
     if (m.index > last) frag.appendChild(document.createTextNode(text.slice(last, m.index)));
     const a = document.createElement('a');
-    a.href = m[1]; a.textContent = m[1];
+    const url = m[1];
+    a.href = /^https?:\/\//i.test(url) ? url : 'https://' + url;
+    a.textContent = url;
     a.target = '_blank'; a.rel = 'noopener noreferrer';
     a.style.cssText = 'color:inherit;text-decoration:underline;word-break:break-all;';
     frag.appendChild(a);
@@ -5942,6 +5970,20 @@ function attachDataConn(dc) {
       if (f.__control === 'leave') { handleRemoteLeave(); return; }
       // clearChat control intentionally not handled — CLEAR is local-only on each unit.
       if (f.__control === 'deleteMsg') { deleteBubble(f.ts, false); return; }
+      if (f.__control === 'voicemail') {
+        if (f.active) {
+          setStatus('voicemail');
+          _vmNotice('— 📼 BRAVO RECORDING VOICEMAIL —');
+          // 3 beeps to alert Alpha they are now in voicemail
+          playTone('vm_start');
+          setTimeout(() => playTone('vm_start'), 400);
+          setTimeout(() => playTone('vm_start'), 800);
+        } else {
+          setStatus('linked');
+          _vmNotice('— 📼 VOICEMAIL SAVED —');
+        }
+        return;
+      }
       if (f.__control === 'refresh') { entry('Remote refreshed — reloading…', 'sys'); peerRefreshing = true; try { sessionStorage.setItem('fieldRadioRefreshing', '1'); } catch(e) {} setTimeout(() => window.location.reload(), 400); return; }
       if (f.__morse === true) { addBubble(f.text, false, null, true, null, null, true); playMorseAudio(f.text, f.wpm || 20); return; }
       if (f.__file  === true)      { addMediaBubble(f.name, f.type, f.data, false); return; }
