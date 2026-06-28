@@ -6525,6 +6525,13 @@ function handleRemoteLeave() {
   stopQualityPolling();
   stopAudioWatchdog();
   entry('Remote user left the session', 'sys');
+  // If voicemail is mid-recording, let onstop finish saving before we reset.
+  // _vmResetPending tells onstop to call _doLeave() + startPeer() once done.
+  if (_vmActive) {
+    _vmResetPending = true;
+    _stopVoicemail();
+    return;
+  }
   // End this session immediately so both sides close at the same time
   _doLeave();
 }
@@ -6698,8 +6705,8 @@ function _startVoicemail() {
       if (_vmResetPending) {
         _vmResetPending = false;
         entry('Answering machine: resetting for next caller…', 'sys');
-        remotePeerLeft = true;
-        setTimeout(() => { remotePeerLeft = false; if (!leftPermanently) startPeer(); }, 1200);
+        _doLeave();
+        setTimeout(() => { if (!leftPermanently) startPeer(); }, 1200);
       }
       return;
     }
@@ -6717,8 +6724,8 @@ function _startVoicemail() {
     if (_vmResetPending) {
       _vmResetPending = false;
       entry('Answering machine: resetting for next caller…', 'sys');
-      remotePeerLeft = true;
-      setTimeout(() => { remotePeerLeft = false; if (!leftPermanently) startPeer(); }, 1200);
+      _doLeave();
+      setTimeout(() => { if (!leftPermanently) startPeer(); }, 1200);
     }
   };
   _vmRec.start(1000);
@@ -6761,6 +6768,8 @@ function _onCallEnded() {
   ['keydown', 'pointerdown', 'touchstart'].forEach(ev =>
     window.removeEventListener(ev, _markAttended)
   );
+  // If handleRemoteLeave already set _vmResetPending, onstop owns the reset — don't duplicate it
+  if (_vmResetPending) { _attended = false; _vmCallStart = 0; return; }
   if (wasRinging) {
     const timeStr = new Date().toTimeString().slice(0, 5);
     if (!_vmCallStart) {
