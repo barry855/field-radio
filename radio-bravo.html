@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <!-- Field Radio v6 — BRAVO -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -6668,31 +6669,18 @@ function _vmNotice(text, blobUrl, filename) {
   if (blobUrl) {
     const span = document.createElement('span');
     span.textContent = text + ' ';
-    const a = document.createElement('a');
-    a.href = '#';
-    a.textContent = '▶ play';
-    a.style.cssText = 'color:var(--accent2,#00ffcc);text-decoration:underline;cursor:pointer;';
-    a.addEventListener('click', e => {
-      e.preventDefault();
-      const w = window.open('', '_blank');
-      if (w) {
-        w.document.write(
-          '<!DOCTYPE html><html><head><title>' + (filename || 'voicemail') + '</title></head>' +
-          '<body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;height:100vh;">' +
-          '<audio controls autoplay src="' + blobUrl + '" style="width:90%;max-width:480px;"></audio>' +
-          '</body></html>'
-        );
-        w.document.close();
-      } else {
-        // Fallback: force-download if popup blocked
-        const dl = document.createElement('a');
-        dl.href = blobUrl;
-        dl.download = filename || 'voicemail';
-        dl.click();
-      }
-    });
+    const audio = document.createElement('audio');
+    audio.controls = true;
+    audio.src = blobUrl;
+    audio.style.cssText = 'display:block;margin-top:6px;width:100%;max-width:320px;';
+    const dl = document.createElement('a');
+    dl.href = blobUrl;
+    dl.download = filename || 'voicemail';
+    dl.textContent = '⬇ save';
+    dl.style.cssText = 'color:var(--accent2,#00ffcc);text-decoration:underline;cursor:pointer;font-size:0.85em;margin-top:4px;display:inline-block;';
     d.appendChild(span);
-    d.appendChild(a);
+    d.appendChild(audio);
+    d.appendChild(dl);
   } else {
     d.textContent = text;
   }
@@ -6763,16 +6751,28 @@ function _markAttended() {
 
 function _startVoicemail() {
   if (_vmActive) return;
-  // Prefer the stream snapshot taken at call-connect time; fall back to live srcObject
-  // in case something re-assigned it (e.g. ICE restart).
-  const remoteAudio = document.getElementById('remoteAudio');
-  const remoteVideo = document.getElementById('remoteVideo');
-  const remoteStream = _vmCapturedStream
-                    || (remoteAudio && remoteAudio.srcObject)
-                    || (remoteVideo && remoteVideo.srcObject)
-                    || null;
-  const audioTracks = remoteStream ? remoteStream.getAudioTracks().filter(t => t.readyState !== 'ended') : [];
-  entry('DIAG: _startVoicemail — remoteStream=' + (remoteStream ? 'yes' : 'null') + ' audioTracks=' + audioTracks.length, 'sys');
+  // Get remote audio tracks directly from WebRTC receivers — this works even on
+  // Android where ontrack fires without ev.streams and srcObject may be null.
+  let audioTracks = [];
+  const pc = call && (call.peerConnection || call._pc);
+  if (pc) {
+    try {
+      audioTracks = pc.getReceivers()
+        .map(r => r.track)
+        .filter(t => t && t.kind === 'audio' && t.readyState !== 'ended');
+    } catch(e) {}
+  }
+  // Fallback: captured stream snapshot or live srcObject
+  if (!audioTracks.length) {
+    const remoteAudio = document.getElementById('remoteAudio');
+    const remoteVideo = document.getElementById('remoteVideo');
+    const remoteStream = _vmCapturedStream
+                      || (remoteAudio && remoteAudio.srcObject)
+                      || (remoteVideo && remoteVideo.srcObject)
+                      || null;
+    audioTracks = remoteStream ? remoteStream.getAudioTracks().filter(t => t.readyState !== 'ended') : [];
+  }
+  entry('DIAG: _startVoicemail — audioTracks=' + audioTracks.length + ' (via receivers+fallback)', 'sys');
   if (!audioTracks.length) {
     entry('Voicemail: no remote audio track — cannot record', 'err');
     return;
