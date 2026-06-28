@@ -5702,22 +5702,25 @@ function startPeer() {
     _unavailIdRetries = 0; // ID claimed — reset backoff
     entry('Radio online [' + id + ']', 'ok');
     setStatus('calling');
-    // Poll Firebase for Alpha's peerId, then dial.
-    // Also listen for inbound calls from Alpha in parallel — whichever arrives first wins.
+    // Poll Firebase until Alpha's suffixed peer ID appears, then dial.
+    // Also listen for inbound calls from Alpha — whichever arrives first wins.
     // _pollCancelled is set true by peer.on('call') so the loop stops if Alpha reaches us first.
+    // Never fall back to the base ID — dialling 'alpha-CODE' when ALPHA has
+    // registered as 'alpha-CODE-xxxx' returns peer-unavailable immediately and
+    // wastes the entire session.
     let _dialPollCount = 0;
-    const _dialPollMax = 60; // 60 × 500ms = 30s max wait
     function _pollAndDial() {
       if (_pollCancelled) return; // Alpha already called us — stop polling
       _refreshRemoteId().then(() => {
         if (_pollCancelled) return; // check again after async
         _dialPollCount++;
         const hasSuffix = REMOTE_ID && /-[0-9a-f]{4}$/.test(REMOTE_ID);
-        if (hasSuffix || _dialPollCount >= _dialPollMax) {
-          if (!hasSuffix) entry('ALPHA peerId not found after 30s — dialling base ID', 'sys');
+        if (hasSuffix) {
           if (!linked && !_pollCancelled) dial();
         } else {
-          entry('Waiting for ALPHA peerId… (' + _dialPollCount + ')', 'sys');
+          if (_dialPollCount % 20 === 0) {
+            entry('Waiting for ALPHA peerId… (' + _dialPollCount + ')', 'sys');
+          }
           setTimeout(_pollAndDial, 500);
         }
       });
