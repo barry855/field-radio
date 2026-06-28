@@ -6524,49 +6524,8 @@ function handleRemoteLeave() {
   stopQualityPolling();
   stopAudioWatchdog();
   entry('Remote user left the session', 'sys');
-  if (_attended) {
-    // Bravo was active in the call — leave normally with Alpha.
-    if (_vmActive && _vmRec) {
-      _vmRec.onstop = async () => {
-        _vmActive = false;
-        if (_vmChunks.length) {
-          const mimeType = _vmRec.mimeType || 'audio/webm';
-          const blob = new Blob(_vmChunks, { type: mimeType });
-          const ts   = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-          const ext  = /mp4/.test(mimeType) ? 'mp4' : 'webm';
-          downloadBlob(blob, `bravo-voicemail-${ts}.${ext}`);
-          entry('📼 Voicemail saved', 'ok');
-          _vmNotice('— 📼 VOICEMAIL RECORDED —');
-        }
-        _doLeave();
-      };
-      _stopVoicemail();
-    } else {
-      _doLeave();
-    }
-  } else {
-    // Bravo was unattended — answering machine mode. Save voicemail if recording,
-    // then reset and wait for the next caller without leaving.
-    if (_vmActive && _vmRec) {
-      entry('Answering machine: saving voicemail, then resetting for next caller\u2026', 'sys');
-      _vmRec.onstop = async () => {
-        _vmActive = false;
-        if (_vmChunks.length) {
-          const mimeType = _vmRec.mimeType || 'audio/webm';
-          const blob = new Blob(_vmChunks, { type: mimeType });
-          const ts   = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-          const ext  = /mp4/.test(mimeType) ? 'mp4' : 'webm';
-          downloadBlob(blob, `bravo-voicemail-${ts}.${ext}`);
-          entry('📼 Voicemail saved', 'ok');
-          _vmNotice('— 📼 VOICEMAIL RECORDED —');
-        }
-        _resetForNextCaller();
-      };
-      _stopVoicemail();
-    } else {
-      _resetForNextCaller();
-    }
-  }
+  // End this session immediately so both sides close at the same time
+  _doLeave();
 }
 
 function onDrop() {
@@ -6602,9 +6561,7 @@ function onDrop() {
   
   setStatus('standby');
   if (leftPermanently) return; // permanent leave handled by leaveSession()
-  if (remotePeerLeft) return;  // remote sent leave signal — handled by handleRemoteLeave
-  // If Bravo was unattended (answering machine mode), reset silently for next caller.
-  if (!_attended) { _resetForNextCaller(); return; }
+  if (remotePeerLeft) return;  // remote sent leave signal — stay on leave screen
   // Check sessionStorage in case the refresh control message raced with the drop
   try { if (sessionStorage.getItem('fieldRadioRefreshing') === '1') peerRefreshing = true; } catch(e) {}
   if (peerRefreshing) return;  // a refresh-reload is in progress — do not show login
@@ -6756,30 +6713,6 @@ function _stopVoicemail() {
   }
 }
 
-function _resetForNextCaller() {
-  // Tear down the finished call without destroying the peer, so the existing
-  // peer.on('call') listener keeps listening for the next inbound call.
-  _onCallEnded();
-  remotePeerLeft = false;
-  leftPermanently = false;
-  clearTimeout(dropTimer);
-  if (call)     { try { call.off('close'); call.off('error'); call.close(); } catch(e){} call = null; }
-  if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
-  linked = false; _iceReady = false; _streamArrived = false; pendingDC = false;
-  const _ra = document.getElementById('remoteAudio');
-  if (_ra) { try { _ra.pause(); _ra.srcObject = null; } catch(e){} }
-  ['remoteVideo','miniRemoteVideo','chatUnderlay'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) { try { el.pause(); el.srcObject = null; el.load(); } catch(e){} }
-  });
-  duplexBar.textContent = 'STANDBY';
-  duplexBar.className = 'duplex-overlay';
-  syncControls();
-  setStatus('calling');
-  entry('Answering machine: ready for next caller', 'ok');
-  _vmNotice('— \uD83D\uDCDE READY FOR NEXT CALLER —');
-}
-
 function _onCallConnected() {
   _attended = false;
   _vmCallStart = Date.now();
@@ -6811,6 +6744,15 @@ function _onCallEnded() {
         _vmNotice('— 📞 CALL ENDED — ' + timeStr + ' — ' + durStr + ' —');
       }
     }
+    // Answering machine: skip reconnect screen, go straight back to waiting
+    // Set remotePeerLeft so onDrop doesn't show the reconnect countdown
+    entry('Answering machine: resetting for next caller…', 'sys');
+    remotePeerLeft = true;
+    // Re-register with a fresh peer ID so Alpha's presence poll sees us immediately
+    setTimeout(() => {
+      remotePeerLeft = false;
+      if (!leftPermanently) startPeer();
+    }, 1200);
   }
   _attended = false;
   _vmCallStart = 0;
