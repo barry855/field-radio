@@ -246,6 +246,20 @@
   .bubble.show-orig .orig-peek { display: block; }
   .bubble.peek-locked { outline: 2px solid rgba(255,200,0,0.55); outline-offset: 2px; }
   .bubble.peek-locked .orig-peek { opacity: 1; }
+  .bubble.vm-notice {
+    align-self: center;
+    background: rgba(255,255,255,0.07);
+    border-color: rgba(255,255,255,0.18);
+    color: #94a3b8;
+    font-size: 11px;
+    font-weight: normal;
+    letter-spacing: 2px;
+    padding: 6px 16px;
+    border-radius: 20px;
+    text-align: center;
+    max-width: 90%;
+    pointer-events: none;
+  }
 
   /* connection quality */
   .quality-item {
@@ -2363,6 +2377,7 @@ const _tones = {
   call_in:      { freqs:[880,880,880],    durs:[0.08,0.05,0.13],  wave:'square',   vol:0.10 },
   file_in:      { freqs:[660,880],        durs:[0.08,0.14],       wave:'triangle', vol:0.14 },
   error:        { freqs:[300,250],        durs:[0.12,0.18],       wave:'sawtooth', vol:0.14 },
+  vm_end:       { freqs:[660,660],        durs:[0.14,0.14],       wave:'sine',     vol:0.30 },
 };
 var _actx = null;
 function playTone(name) {
@@ -2573,6 +2588,10 @@ function startSession() {
   stopPresencePolling();
   const code = document.getElementById('sessionCode').value.trim().toUpperCase().replace(/\s+/g,'');
   if (!code) { document.getElementById('sessionCode').focus(); return; }
+  // Pre-warm AudioContext on this user gesture so ring tone fires on Chromebook
+  // without requiring any further interaction after Alpha calls in.
+  if (!_actx) _actx = new (window.AudioContext || window.webkitAudioContext)();
+  if (_actx.state === 'suspended') _actx.resume().catch(() => {});
   const usingPreReg = _preRegistered && _preRegCode === code;
   if (!usingPreReg) {
     // Normal path: assign IDs fresh (pre-registration didn't fire or used a different code)
@@ -3364,12 +3383,14 @@ function makeDraggable(el) {
 
 function linkify(text) {
   const frag = document.createDocumentFragment();
-  const re = /(https?:\/\/[^\s]+)/g;
+  const re = /(https?:\/\/[^\s]+|www\.[^\s]+\.[^\s]+)/g;
   let last = 0, m;
   while ((m = re.exec(text)) !== null) {
     if (m.index > last) frag.appendChild(document.createTextNode(text.slice(last, m.index)));
     const a = document.createElement('a');
-    a.href = m[1]; a.textContent = m[1];
+    const url = m[1];
+    a.href = /^https?:\/\//i.test(url) ? url : 'https://' + url;
+    a.textContent = url;
     a.target = '_blank'; a.rel = 'noopener noreferrer';
     a.style.cssText = 'color:inherit;text-decoration:underline;word-break:break-all;';
     frag.appendChild(a);
@@ -6518,6 +6539,13 @@ function handleRemoteLeave() {
   stopQualityPolling();
   stopAudioWatchdog();
   entry('Remote user left the session', 'sys');
+  // If voicemail is mid-recording, let onstop finish saving before we reset.
+  // _vmResetPending tells onstop to call _doLeave() + startPeer() once done.
+  if (_vmActive) {
+    _vmResetPending = true;
+    _stopVoicemail();
+    return;
+  }
   // End this session immediately so both sides close at the same time
   _doLeave();
 }
@@ -6588,8 +6616,10 @@ let recRemote = null, recRemoteChunks = [], recRemoteBusy = false;
 let recLocal  = null, recLocalChunks  = [], recLocalBusy  = false;
 
 // ── Answering machine ─────────────────────────────────────────
-let _vmTimer     = null;   // 15s unattended timeout
-let _vmActive    = false;  // voicemail recorder running
+let _vmTimer        = null;   // 15s unattended timeout
+let _vmMaxTimer     = null;   // 2-min hard recording limit
+let _vmActive       = false;  // voicemail recorder running
+let _vmResetPending = false;  // reset deferred until voicemail onstop completes
 let _vmRec       = null;   // MediaRecorder for voicemail
 let _vmChunks    = [];
 let _attended    = false;  // user interacted during this call
@@ -6601,7 +6631,7 @@ function _vmNotice(text) {
   const chatEl = document.getElementById('chat');
   if (!chatEl) return;
   const d = document.createElement('div');
-  d.style.cssText = 'text-align:center;font-size:9px;color:#888;letter-spacing:2px;padding:4px 0;';
+  d.className = 'bubble vm-notice';
   d.textContent = text;
   chatEl.appendChild(d);
   chatEl.scrollTop = chatEl.scrollHeight;
@@ -6610,19 +6640,54 @@ function _vmNotice(text) {
 function _startRing() {
   _stopRing();
   _ringing = true;
-  playTone('call_in');
-  _ringTimer = setInterval(() => playTone('call_in'), 2000);
+  entry('📞 Ringing…', 'sys');
+  _playRingTone();
+  _ringTimer = setInterval(_playRingTone, 2000);
 }
 function _stopRing() {
   clearInterval(_ringTimer); _ringTimer = null;
   _ringing = false;
+}
+function _playRingTone() {
+  // Ensure _mixCtx exists (created lazily — may not exist yet at first ring)
+  _ensureMixContext();
+  const ctx = _mixCtx || _actx;
+  if (!ctx) return;
+  const doPlay = () => {
+    try {
+      const freqs = [880, 880, 880], durs = [0.08, 0.05, 0.13], vol = 0.8;
+      let when = ctx.currentTime + 0.015;
+      freqs.forEach((hz, i) => {
+        const osc  = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'square';
+        osc.frequency.value = hz;
+        gain.gain.setValueAtTime(0, when);
+        gain.gain.linearRampToValueAtTime(vol, when + 0.008);
+        gain.gain.setValueAtTime(vol, when + durs[i] - 0.012);
+        gain.gain.linearRampToValueAtTime(0, when + durs[i]);
+        osc.start(when);
+        osc.stop(when + durs[i] + 0.05);
+        when += durs[i];
+      });
+    } catch(e) { console.warn('_playRingTone:', e); }
+  };
+  if (ctx.state === 'suspended') { ctx.resume().then(doPlay).catch(() => {}); }
+  else { doPlay(); }
 }
 
 function _markAttended() {
   if (_attended) return;
   _attended = true;
   clearTimeout(_vmTimer); _vmTimer = null;
-  entry('Call attended — voicemail suppressed', 'sys');
+  if (_vmActive) {
+    entry('Call attended — stopping voicemail recording', 'sys');
+    _stopVoicemail();
+  } else {
+    entry('Call attended — voicemail suppressed', 'sys');
+  }
 }
 
 function _startVoicemail() {
@@ -6649,22 +6714,52 @@ function _startVoicemail() {
   _vmRec.ondataavailable = e => { if (e.data.size > 0) _vmChunks.push(e.data); };
   _vmRec.onstop = async () => {
     _vmActive = false;
-    if (!_vmChunks.length) { entry('Voicemail empty — nothing saved', 'sys'); return; }
+    if (!_vmChunks.length) {
+      entry('Voicemail empty — nothing saved', 'sys');
+      if (_vmResetPending) {
+        _vmResetPending = false;
+        entry('Answering machine: resetting for next caller…', 'sys');
+        remotePeerLeft = false;
+        if (!leftPermanently) startPeer();
+      }
+      return;
+    }
     const blob = new Blob(_vmChunks, { type: mimeType });
     const ts   = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     const ext  = /mp4/.test(mimeType) ? 'mp4' : 'webm';
     downloadBlob(blob, `bravo-voicemail-${ts}.${ext}`);
     entry('📼 Voicemail saved', 'ok');
+    // 2 beeps to signal recording complete
+    playTone('vm_end');
+    setTimeout(() => playTone('vm_end'), 450);
+    try { dcSend({ __control: 'voicemail', active: false }); } catch(e) {}
     _vmNotice('— 📼 VOICEMAIL RECORDED —');
+    // If Alpha left while we were recording, do the reset now that the save is done.
+    // onDrop has already run teardown — just re-register for the next caller.
+    if (_vmResetPending) {
+      _vmResetPending = false;
+      entry('Answering machine: resetting for next caller…', 'sys');
+      remotePeerLeft = false;
+      if (!leftPermanently) startPeer();
+    }
   };
   _vmRec.start(1000);
   _vmActive = true;
+  // Hard 2-minute recording limit
+  _vmMaxTimer = setTimeout(() => {
+    if (_vmActive) {
+      entry('📼 Voicemail: 2-minute limit reached — stopping', 'sys');
+      _stopVoicemail();
+    }
+  }, 120000);
+  try { dcSend({ __control: 'voicemail', active: true }); } catch(e) {}
   entry('📼 Unattended — voicemail recording started', 'sys');
   _vmNotice('— 📼 RECORDING VOICEMAIL… —');
 }
 
 function _stopVoicemail() {
   clearTimeout(_vmTimer); _vmTimer = null;
+  clearTimeout(_vmMaxTimer); _vmMaxTimer = null;
   if (_vmRec && _vmRec.state === 'recording') {
     _vmRec.stop();
   }
@@ -6681,12 +6776,15 @@ function _onCallConnected() {
 
 function _onCallEnded() {
   const wasRinging = _ringing || (_vmCallStart > 0);
+  const wasVmRecording = _vmActive;  // capture before _stopVoicemail clears it
   _stopRing();
   _stopVoicemail();
   clearTimeout(_vmTimer); _vmTimer = null;
   ['keydown', 'pointerdown', 'touchstart'].forEach(ev =>
     window.removeEventListener(ev, _markAttended)
   );
+  // If handleRemoteLeave already set _vmResetPending, onstop owns the reset — don't duplicate it
+  if (_vmResetPending) { _attended = false; _vmCallStart = 0; return; }
   if (wasRinging) {
     const timeStr = new Date().toTimeString().slice(0, 5);
     if (!_vmCallStart) {
@@ -6700,6 +6798,18 @@ function _onCallEnded() {
         const durStr = mins > 0 ? mins + 'm ' + secs + 's' : secs + 's';
         _vmNotice('— 📞 CALL ENDED — ' + timeStr + ' — ' + durStr + ' —');
       }
+    }
+    // Answering machine: skip reconnect screen, go straight back to waiting.
+    // If voicemail was recording when Alpha left, defer the reset until onstop
+    // has finished saving the file — _vmResetPending tells onstop to do it.
+    if (wasVmRecording) {
+      _vmResetPending = true;
+      entry('Voicemail still saving — reset deferred until file written', 'sys');
+    } else {
+      entry('Answering machine: resetting for next caller…', 'sys');
+      remotePeerLeft = true;
+      // Re-register with a fresh peer ID so Alpha's presence poll sees us immediately
+      setTimeout(() => { remotePeerLeft = false; if (!leftPermanently) startPeer(); }, 1200);
     }
   }
   _attended = false;
