@@ -6751,6 +6751,7 @@ function _startVoicemail() {
                     || (remoteVideo && remoteVideo.srcObject)
                     || null;
   const audioTracks = remoteStream ? remoteStream.getAudioTracks() : [];
+  entry('DIAG: _startVoicemail — remoteStream=' + (remoteStream ? 'yes' : 'null') + ' audioTracks=' + audioTracks.length, 'sys');
   if (!audioTracks.length) {
     entry('Voicemail: no remote audio track — cannot record', 'err');
     return;
