@@ -260,6 +260,10 @@
     max-width: 90%;
     pointer-events: none;
   }
+  .bubble.vm-notice.vm-has-recording {
+    pointer-events: auto;
+    letter-spacing: 1px;
+  }
 
   /* connection quality */
   .quality-item {
@@ -6667,6 +6671,7 @@ function _vmNotice(text, blobUrl, filename) {
   const d = document.createElement('div');
   d.className = 'bubble vm-notice';
   if (blobUrl) {
+    d.classList.add('vm-has-recording');
     const span = document.createElement('span');
     span.textContent = text + ' ';
     const audio = document.createElement('audio');
@@ -6810,6 +6815,7 @@ function _startVoicemail() {
     try { dcSend({ __control: 'voicemail', active: false }); } catch(e) {}
     const _vmBlobUrl = URL.createObjectURL(blob);
     _vmNotice('— 📼 VOICEMAIL RECORDED —', _vmBlobUrl, _vmFilename);
+    downloadBlob(blob, _vmFilename);  // auto-download immediately
     // If Alpha left while we were recording, do the reset now that the save is done.
     // onDrop has already run teardown — just re-register for the next caller.
     if (_vmResetPending) {
