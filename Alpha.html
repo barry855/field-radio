@@ -249,11 +249,11 @@
   .bubble.peek-locked .orig-peek { opacity: 1; }
   .bubble.vm-notice {
     align-self: center;
-    background: rgba(255,255,255,0.07);
-    border-color: rgba(255,255,255,0.18);
-    color: #94a3b8;
+    background: #000;
+    border-color: #000;
+    color: #fff;
     font-size: 11px;
-    font-weight: normal;
+    font-weight: bold;
     letter-spacing: 2px;
     padding: 6px 16px;
     border-radius: 20px;
@@ -5744,7 +5744,7 @@ async function init() {
 // Must be module-level so startPeer's peer.on('open') closure can reference it.
 async function _refreshRemoteId() {
   try {
-    const _bravoPollKey = 'bravo-' + (MY_ID ? MY_ID.replace(/^alpha-/, '') : '');
+    const _bravoPollKey = 'bravo-' + (MY_ID ? MY_ID.replace(/^alpha-/, '').replace(/-[0-9a-f]{4}$/, '') : '');
     if (!_bravoPollKey || _bravoPollKey === 'bravo-') return;
     const _r = await fetch(FB_URL + '/presence/' + _bravoPollKey + '.json');
     const _d = await _r.json();
@@ -5763,6 +5763,7 @@ function _setupRemoteIdPoll(bravoPollKey) {
 
 let _unavailIdRetries = 0;
 let _peerDestroyPending = false;
+let _peerGeneration = 0;  // incremented each startPeer() — cancels stale _pollAndDial loops
 function startPeer() {
   // Guard: PeerJS CDN may still be loading on slow mobile connections
   if (typeof Peer === 'undefined') {
@@ -5771,6 +5772,7 @@ function startPeer() {
     return;
   }
   _peerDestroyPending = false;
+  _peerGeneration++;           // invalidate any _pollAndDial loop from the previous peer
   // Destroy any existing peer before creating a new one.
   // Without this the old peer's event handlers (especially 'disconnected' → peer.reconnect())
   // keep firing against the replaced reference, causing a permanent reconnect loop.
@@ -5784,28 +5786,36 @@ function startPeer() {
 
   peer = new Peer(MY_ID, {
     host: '0.peerjs.com', port: 443, path: '/', secure: true, pingInterval: 5000,
-    config: { iceServers: ICE_SERVERS, iceCandidatePoolSize: 10 }
+    config: { iceServers: ICE_SERVERS, iceCandidatePoolSize: 0 }
+    // iceCandidatePoolSize: 0 — TURN servers are NOT contacted speculatively.
+    // Relay candidates are only gathered after a direct path fails (see relay
+    // escalation in attachCall), avoiding unnecessary TURN load on every dial.
   });
 
   peer.on('open', () => {
     _unavailIdRetries = 0; // ID claimed — reset backoff
     entry('Radio online', 'ok');
     setStatus('calling');
-    // Poll Firebase until BRAVO's suffixed peer ID is known, then dial.
-    // On Android, BRAVO may take >4s to publish its peerId after a fresh open.
-    // We poll every 1.5s for up to 30s; if still not found we dial anyway with
-    // the base ID (works if BRAVO is also on the old non-suffix build).
+    // Poll Firebase until BRAVO's suffixed peer ID appears, then dial.
+    // _thisGen captures the generation at the time this peer was created; if
+    // startPeer() runs again (unavailable-id restart) _peerGeneration changes
+    // and this loop self-terminates, preventing duplicate poll instances.
+    // Never fall back to the base ID — dialling 'bravo-CODE' when BRAVO has
+    // registered as 'bravo-CODE-xxxx' returns peer-unavailable immediately.
+    const _thisGen = _peerGeneration;
     let _dialPollCount = 0;
-    const _dialPollMax = 60; // 60 x 500ms = 30s max wait
     function _pollAndDial() {
+      if (_peerGeneration !== _thisGen || linked) return; // stale or already linked
       _refreshRemoteId().then(() => {
+        if (_peerGeneration !== _thisGen || linked) return;
         _dialPollCount++;
         const hasSuffix = REMOTE_ID && /-[0-9a-f]{4}$/.test(REMOTE_ID);
-        if (hasSuffix || _dialPollCount >= _dialPollMax) {
-          if (!hasSuffix) entry('BRAVO peerId not found after 30s — dialling base ID', 'sys');
+        if (hasSuffix) {
           dial();
         } else {
-          entry('Waiting for BRAVO peerId... (' + _dialPollCount + ')', 'sys');
+          if (_dialPollCount % 20 === 0) {
+            entry('Waiting for BRAVO peerId... (' + _dialPollCount + ')', 'sys');
+          }
           setTimeout(_pollAndDial, 500);
         }
       });
@@ -6410,28 +6420,39 @@ function attachCall(c) {
           markLinked();
         }
       }
-      // Relay fallback: if ICE stays in 'checking' for >8s, force TURN-only
+      // Relay fallback: if ICE stays in 'checking' for >8s without ever having
+      // connected, escalate to TURN-only.  The guard (!c._relayEscalated) ensures
+      // we only do one speculative TURN escalation per call object — a transient
+      // mid-call 'checking' flap does NOT trigger a second TURN round-trip.
       if (pc.iceConnectionState === 'checking') {
         if (!linked) setStatus('connecting');
-        clearTimeout(c._iceRelayTimer);
-        c._iceRelayTimer = setTimeout(() => {
-          if (pc.iceConnectionState === 'checking' && call === c) {
-            entry('ICE checking timeout — forcing relay-only (TURN) fallback', 'sys');
-            try {
-              pc.setConfiguration({ iceServers: ICE_SERVERS, iceTransportPolicy: 'relay', iceCandidatePoolSize: 10 });
-              pc.restartIce();
-            } catch(e2) { entry('Relay fallback failed: ' + e2.message, 'sys'); }
-          }
-        }, 8000);
+        if (!c._relayEscalated) {
+          clearTimeout(c._iceRelayTimer);
+          c._iceRelayTimer = setTimeout(() => {
+            if (pc.iceConnectionState === 'checking' && call === c && !c._relayEscalated) {
+              c._relayEscalated = true;
+              entry('ICE checking timeout — direct path failed, escalating to TURN relay-only', 'sys');
+              try {
+                pc.setConfiguration({ iceServers: ICE_SERVERS, iceTransportPolicy: 'relay', iceCandidatePoolSize: 4 });
+                pc.restartIce();
+              } catch(e2) { entry('Relay fallback failed: ' + e2.message, 'sys'); }
+            }
+          }, 8000);
+        }
       } else {
         clearTimeout(c._iceRelayTimer);
       }
       if (pc.iceConnectionState === 'failed') {
-        entry('DIAG: ICE FAILED — forcing TURN relay-only and restarting', 'err');
-        try {
-          pc.setConfiguration({ iceServers: ICE_SERVERS, iceTransportPolicy: 'relay', iceCandidatePoolSize: 10 });
-          pc.restartIce();
-        } catch(e2) { entry('ICE restart unavailable: ' + e2.message, 'sys'); }
+        if (!c._relayEscalated) {
+          c._relayEscalated = true;
+          entry('DIAG: ICE FAILED — direct path failed, escalating to TURN relay-only', 'err');
+          try {
+            pc.setConfiguration({ iceServers: ICE_SERVERS, iceTransportPolicy: 'relay', iceCandidatePoolSize: 4 });
+            pc.restartIce();
+          } catch(e2) { entry('ICE restart unavailable: ' + e2.message, 'sys'); }
+        } else {
+          entry('DIAG: ICE FAILED after relay escalation — dropping', 'err');
+        }
       }
       if (pc.iceConnectionState === 'disconnected' && linked && call === c) {
         entry('DIAG: ICE disconnected — starting drop watchdog', 'sys');
