@@ -6705,8 +6705,8 @@ function _startVoicemail() {
       if (_vmResetPending) {
         _vmResetPending = false;
         entry('Answering machine: resetting for next caller…', 'sys');
-        _doLeave();
-        setTimeout(() => { if (!leftPermanently) startPeer(); }, 1200);
+        remotePeerLeft = false;
+        if (!leftPermanently) startPeer();
       }
       return;
     }
@@ -6720,12 +6720,13 @@ function _startVoicemail() {
     setTimeout(() => playTone('vm_end'), 450);
     try { dcSend({ __control: 'voicemail', active: false }); } catch(e) {}
     _vmNotice('— 📼 VOICEMAIL RECORDED —');
-    // If Alpha left while we were recording, do the reset now that the save is done
+    // If Alpha left while we were recording, do the reset now that the save is done.
+    // onDrop has already run teardown — just re-register for the next caller.
     if (_vmResetPending) {
       _vmResetPending = false;
       entry('Answering machine: resetting for next caller…', 'sys');
-      _doLeave();
-      setTimeout(() => { if (!leftPermanently) startPeer(); }, 1200);
+      remotePeerLeft = false;
+      if (!leftPermanently) startPeer();
     }
   };
   _vmRec.start(1000);
