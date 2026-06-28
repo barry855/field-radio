@@ -6595,9 +6595,10 @@ let recRemote = null, recRemoteChunks = [], recRemoteBusy = false;
 let recLocal  = null, recLocalChunks  = [], recLocalBusy  = false;
 
 // ── Answering machine ─────────────────────────────────────────
-let _vmTimer     = null;   // 15s unattended timeout
-let _vmMaxTimer  = null;   // 2-min hard recording limit
-let _vmActive    = false;  // voicemail recorder running
+let _vmTimer        = null;   // 15s unattended timeout
+let _vmMaxTimer     = null;   // 2-min hard recording limit
+let _vmActive       = false;  // voicemail recorder running
+let _vmResetPending = false;  // reset deferred until voicemail onstop completes
 let _vmRec       = null;   // MediaRecorder for voicemail
 let _vmChunks    = [];
 let _attended    = false;  // user interacted during this call
@@ -6692,7 +6693,16 @@ function _startVoicemail() {
   _vmRec.ondataavailable = e => { if (e.data.size > 0) _vmChunks.push(e.data); };
   _vmRec.onstop = async () => {
     _vmActive = false;
-    if (!_vmChunks.length) { entry('Voicemail empty — nothing saved', 'sys'); return; }
+    if (!_vmChunks.length) {
+      entry('Voicemail empty — nothing saved', 'sys');
+      if (_vmResetPending) {
+        _vmResetPending = false;
+        entry('Answering machine: resetting for next caller…', 'sys');
+        remotePeerLeft = true;
+        setTimeout(() => { remotePeerLeft = false; if (!leftPermanently) startPeer(); }, 1200);
+      }
+      return;
+    }
     const blob = new Blob(_vmChunks, { type: mimeType });
     const ts   = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     const ext  = /mp4/.test(mimeType) ? 'mp4' : 'webm';
@@ -6703,6 +6713,13 @@ function _startVoicemail() {
     setTimeout(() => playTone('vm_end'), 450);
     try { dcSend({ __control: 'voicemail', active: false }); } catch(e) {}
     _vmNotice('— 📼 VOICEMAIL RECORDED —');
+    // If Alpha left while we were recording, do the reset now that the save is done
+    if (_vmResetPending) {
+      _vmResetPending = false;
+      entry('Answering machine: resetting for next caller…', 'sys');
+      remotePeerLeft = true;
+      setTimeout(() => { remotePeerLeft = false; if (!leftPermanently) startPeer(); }, 1200);
+    }
   };
   _vmRec.start(1000);
   _vmActive = true;
@@ -6737,6 +6754,7 @@ function _onCallConnected() {
 
 function _onCallEnded() {
   const wasRinging = _ringing || (_vmCallStart > 0);
+  const wasVmRecording = _vmActive;  // capture before _stopVoicemail clears it
   _stopRing();
   _stopVoicemail();
   clearTimeout(_vmTimer); _vmTimer = null;
@@ -6757,15 +6775,18 @@ function _onCallEnded() {
         _vmNotice('— 📞 CALL ENDED — ' + timeStr + ' — ' + durStr + ' —');
       }
     }
-    // Answering machine: skip reconnect screen, go straight back to waiting
-    // Set remotePeerLeft so onDrop doesn't show the reconnect countdown
-    entry('Answering machine: resetting for next caller…', 'sys');
-    remotePeerLeft = true;
-    // Re-register with a fresh peer ID so Alpha's presence poll sees us immediately
-    setTimeout(() => {
-      remotePeerLeft = false;
-      if (!leftPermanently) startPeer();
-    }, 1200);
+    // Answering machine: skip reconnect screen, go straight back to waiting.
+    // If voicemail was recording when Alpha left, defer the reset until onstop
+    // has finished saving the file — _vmResetPending tells onstop to do it.
+    if (wasVmRecording) {
+      _vmResetPending = true;
+      entry('Voicemail still saving — reset deferred until file written', 'sys');
+    } else {
+      entry('Answering machine: resetting for next caller…', 'sys');
+      remotePeerLeft = true;
+      // Re-register with a fresh peer ID so Alpha's presence poll sees us immediately
+      setTimeout(() => { remotePeerLeft = false; if (!leftPermanently) startPeer(); }, 1200);
+    }
   }
   _attended = false;
   _vmCallStart = 0;
