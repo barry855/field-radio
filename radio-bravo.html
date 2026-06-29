@@ -8732,10 +8732,9 @@ function ttsSpeak(text, lang) {
   }
 
   function afterPrint() {
+    // Guard against double-firing (afterprint event + matchMedia both fire)
+    if (!_prepared) return;
     _prepared = false;
-
-    var sp  = document.getElementById('speechPanel');
-    var hpi = document.getElementById('helpPanelInner');
 
     // Remove injected print style
     if (_printStyleEl && _printStyleEl.parentNode) {
@@ -8744,11 +8743,13 @@ function ttsSpeak(text, lang) {
     _printStyleEl = null;
 
     // Always restore sp regardless of hpi state
+    var sp  = document.getElementById('speechPanel');
     if (sp && _spOrigParent) {
       _spOrigParent.insertBefore(sp, _spOrigNext);
       sp.style.cssText = '';
     }
 
+    var hpi = document.getElementById('helpPanelInner');
     if (!hpi || !_hpiOrigParent) {
       _spOrigParent = null; _spOrigNext = null;
       _hpiOrigParent = null; _hpiOrigNext = null;
@@ -8757,10 +8758,11 @@ function ttsSpeak(text, lang) {
       return;
     }
 
-    // Restore speechPanel to its original position inside the shell
     // Restore hpi back inside hp (hp is currently detached)
     _hpiOrigParent.insertBefore(hpi, _hpiOrigNext);
     hpi.style.cssText = '';
+
+    // Clear inline styles on buttons AFTER hpi is back in the shell
     var hbb = document.querySelector('.help-btn-bar');
     if (hbb) hbb.style.cssText = '';
     var hcb = document.getElementById('helpCloseBtn');
@@ -8773,6 +8775,9 @@ function ttsSpeak(text, lang) {
     }
     hp.removeAttribute('data-printing');
     if (_hpWasOpen) hp.classList.add('open');
+
+    // Force repaint so browser re-evaluates styles on restored elements
+    void hp.offsetHeight;
 
     _spOrigParent = null; _spOrigNext = null;
     _hpiOrigParent = null; _hpiOrigNext = null;
