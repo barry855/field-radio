@@ -728,6 +728,10 @@
   .flip-cam-select-chat {
     height: auto; padding: 4px 8px;
   }
+  .mic-input-select {
+    flex: 0 1 155px; min-width: 105px; max-width: 180px;
+    height: 30px; padding: 0 7px;
+  }
   .leave-btn {
     flex: 0 0 auto; height: 36px; padding: 0 10px;
     background: rgba(0,212,255,0.15); border: 1px solid var(--accent);
@@ -1386,7 +1390,8 @@
     }
     .gain-row .gain-label span { color: #000 !important; }
     .gain-row .gain-val { color: #000 !important; }
-    .gain-row input[type=range] { display: block !important; flex: 1 !important; border: 1px solid #999 !important; -webkit-appearance: auto !important; appearance: auto !important; }
+    .gain-row input[type=range] { display: block !important; flex: 1 !important; border: 1px solid #999 !important; accent-color: var(--accent) !important; -webkit-appearance: auto !important; appearance: auto !important; }
+    #remoteGainSliderChat { accent-color: var(--accent2) !important; }
     /* Talk/Type in Chat button in gain row */
     #speechToggleBtn { display: inline-flex !important; background: #fff !important; color: #000 !important; border: 1px solid #555 !important; }
 
@@ -1669,6 +1674,7 @@
     flex: 1; accent-color: var(--accent);
     height: 4px; cursor: pointer;
   }
+  #remoteGainSliderChat { accent-color: var(--accent2); }
   .gain-row .gain-val {
     min-width: 38px; text-align: right;
     color: #ffffff; font-family: 'Orbitron', sans-serif;
@@ -2151,6 +2157,7 @@ window.addEventListener('orientationchange', function() {
       </div>
       <div class="gain-row" style="flex-shrink:0;">
         <div class="gain-label"><span>MIKE</span><span>GAIN</span></div>
+        <select id="micInputSelect" class="flip-cam-select mic-input-select" title="Microphone input" onchange="switchMicrophone(this.value)"><option value="">MIC: DEFAULT</option></select>
         <input type="range" id="micGainSliderChat" min="0" max="3" step="0.05" value="1" oninput="applyMicGain(this.value)" style="flex:1; min-width:0;">
         <span class="gain-val" id="micGainValChat">1.00×</span>
         <button class="speech-top-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input" style="flex-shrink:0; white-space:nowrap;">Talk/Type in Chat</button>
@@ -5504,6 +5511,7 @@ async function initMediaOnly() {
     entry('Mic + camera ready', 'ok');
     syncMiniVideos();
     initFlipCamUI();
+    initMicInputUI();
     updateLocalVideoState();
     if (loginDisableVideoFlag) {
       const vt = stream.getVideoTracks()[0];
@@ -5625,6 +5633,7 @@ async function init() {
     entry('Mic + camera ready', 'ok');
     syncMiniVideos();
     initFlipCamUI();
+    initMicInputUI();
     updateLocalVideoState();
     if (loginDisableVideoFlag) {
       const vt = stream.getVideoTracks()[0];
@@ -8268,6 +8277,81 @@ async function toggleSpeaker() {
 
 // ── Microphone Gain Control ───────────────────────────────────
 // Web Audio API gain node inserted between mic source and outgoing stream.
+async function initMicInputUI() {
+  const select = document.getElementById('micInputSelect');
+  if (!select || !navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+  try {
+    const devices = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'audioinput');
+    let savedLabel = '';
+    try { savedLabel = localStorage.getItem('bravo_mic_label') || ''; } catch(e) {}
+    const currentTrack = _micRawTrack || (localStream && localStream.getAudioTracks()[0]);
+    const currentId = currentTrack && currentTrack.getSettings ? currentTrack.getSettings().deviceId : '';
+    select.innerHTML = '';
+    devices.forEach((device, index) => {
+      const option = document.createElement('option');
+      option.value = device.deviceId;
+      option.textContent = 'MIC: ' + (device.label || ('Microphone ' + (index + 1)));
+      if ((savedLabel && device.label === savedLabel) || (!savedLabel && device.deviceId === currentId)) option.selected = true;
+      select.appendChild(option);
+    });
+    if (!devices.length) {
+      const option = document.createElement('option');
+      option.textContent = 'MIC: NONE';
+      select.appendChild(option);
+      select.disabled = true;
+    } else {
+      select.disabled = false;
+    }
+  } catch(e) { entry('Microphone list unavailable: ' + e.message, 'sys'); }
+}
+
+function _rewireMixMicrophone() {
+  if (!_mixCtx || !_mixDest || !localStream) return;
+  try {
+    if (_mixMicNode) _mixMicNode.disconnect();
+    if (_mixMicGain) _mixMicGain.disconnect();
+    const tracks = localStream.getAudioTracks();
+    if (!tracks.length) return;
+    _mixMicNode = _mixCtx.createMediaStreamSource(new MediaStream(tracks));
+    _mixMicGain = _mixCtx.createGain();
+    _mixMicGain.gain.value = audioMuted ? 0.0 : 1.0;
+    _mixMicNode.connect(_mixMicGain);
+    _mixMicGain.connect(_mixDest);
+  } catch(e) { entry('Microphone mix rewire failed: ' + e.message, 'sys'); }
+}
+
+async function switchMicrophone(deviceId) {
+  const select = document.getElementById('micInputSelect');
+  if (!deviceId || !localStream || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+  if (select) select.disabled = true;
+  try {
+    const replacement = await navigator.mediaDevices.getUserMedia({
+      audio: { deviceId: { exact: deviceId }, echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+      video: false
+    });
+    const rawTrack = replacement.getAudioTracks()[0];
+    if (!rawTrack) throw new Error('Selected microphone supplied no audio track');
+    localStream.getAudioTracks().forEach(track => localStream.removeTrack(track));
+    teardownMicGain();
+    localStream.addTrack(rawTrack);
+    setupMicGainNode(localStream);
+    _rewireMixMicrophone();
+    const selectedTrack = localStream.getAudioTracks()[0];
+    realAudioTrack = selectedTrack || rawTrack;
+    realAudioTrack.enabled = !audioMuted;
+    if (!_mixOutTrack) await _setCallAudioTrack(audioMuted ? getSilentTrack() : realAudioTrack);
+    const option = select && select.options[select.selectedIndex];
+    const label = rawTrack.label || (option ? option.textContent.replace(/^MIC:\s*/, '') : '');
+    try { localStorage.setItem('bravo_mic_label', label); } catch(e) {}
+    entry('Microphone changed to ' + (label || 'selected device'), 'ok');
+  } catch(e) {
+    entry('Microphone change failed: ' + e.message, 'err');
+    await initMicInputUI();
+  } finally {
+    if (select) select.disabled = false;
+  }
+}
+
 let _micGainCtx = null, _micGainNode = null, _micGainDest = null, _micRawTrack = null;
 
 function teardownMicGain() {
