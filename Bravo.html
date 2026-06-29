@@ -1016,6 +1016,14 @@
     text-transform: uppercase; outline: none; margin-bottom: 14px;
   }
   .session-box input[type=text]:focus { border-color: var(--accent2); }
+  .code-strength {
+    font-size: 9px; letter-spacing: 1px; text-transform: uppercase;
+    margin-top: -10px; margin-bottom: 10px; min-height: 13px;
+    transition: color 0.3s;
+  }
+  .code-strength.weak   { color: var(--danger); }
+  .code-strength.fair   { color: var(--warn); }
+  .code-strength.strong { color: var(--accent2); }
   .session-go {
     width: 100%; padding: 10px; border-radius: 4px;
     background: var(--btn-bg); border: 1px solid var(--border);
@@ -1445,7 +1453,11 @@
     /* ── helpPanel: always hide the fixed overlay wrapper in print ── */
     /* JS (beforePrint) extracts #helpPanelInner and inserts it directly into flow */
     #helpPanel, #helpPanel[data-printing], #helpPanel.open {
-      display: none !important;
+      display: none !important; visibility: hidden !important;
+      position: static !important; inset: auto !important;
+      height: 0 !important; min-height: 0 !important;
+      padding: 0 !important; margin: 0 !important;
+      overflow: hidden !important;
     }
     #helpPanelInner {
       border: 1px solid #999 !important; border-radius: 4px !important;
@@ -1468,7 +1480,12 @@
     }
     .help-btn-bar { display: none !important; }
     #helpCloseBtn { display: none !important; }
-
+  }
+  @media screen {
+    .help-btn-bar { display: flex !important; }
+    #helpCloseBtn { display: block !important; }
+  }
+  @media print {
     /* ── Notes area — ruled lines, fills remaining page space ── */
     #printNotesArea {
       display: block !important;
@@ -1947,6 +1964,7 @@ window.addEventListener('orientationchange', function() {
     <span class="session-title" style="color:#00d4ff;text-shadow:0 0 20px rgba(0,212,255,0.5);">BRAVO</span>
     <label>Shared Code:</label>
     <input type="text" id="sessionCode" maxlength="8" placeholder="ENTER CODE" autocomplete="off">
+    <div class="code-strength" id="codeStrengthHint"></div>
     <div class="session-checks">
       <label class="session-check-item">
         <input type="checkbox" id="loginDisableVideo" onchange="try{localStorage.setItem('bravo_disable_video',this.checked?'1':'0')}catch(e){}"> Disable Video
@@ -2075,6 +2093,11 @@ window.addEventListener('orientationchange', function() {
         <input type="range" id="micGainSlider" min="0" max="3" step="0.05" value="1" oninput="applyMicGain(this.value)">
         <span class="gain-val" id="micGainVal">1.00×</span>
       </div>
+      <div class="gain-row">
+        <div class="gain-label"><span>SPKR</span><span>VOL</span></div>
+        <input type="range" id="remoteGainSlider" min="0" max="3" step="0.05" value="1" oninput="applyRemoteGain(this.value)">
+        <span class="gain-val" id="remoteGainVal">1.00×</span>
+      </div>
       <div class="video-panel">
         <div class="panel-label">REMOTE — ALPHA</div>
         <div class="video-grid">
@@ -2122,6 +2145,11 @@ window.addEventListener('orientationchange', function() {
         <span class="gain-val" id="micGainValChat">1.00×</span>
         <button class="speech-top-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input" style="flex-shrink:0; white-space:nowrap;">Talk/Type in Chat</button>
       </div>
+      <div class="gain-row" style="flex-shrink:0;">
+        <div class="gain-label"><span>SPKR</span><span>VOL</span></div>
+        <input type="range" id="remoteGainSliderChat" min="0" max="3" step="0.05" value="1" oninput="applyRemoteGain(this.value)" style="flex:1; min-width:0;">
+        <span class="gain-val" id="remoteGainValChat">1.00×</span>
+      </div>
       <div class="zoom-row" style="display:none;">
         <span>ZOOM LOCAL</span>
         <input type="range" id="zoomSliderChat" min="1" max="4" step="0.1" value="1" oninput="applyZoom(this.value,'local')">
@@ -2131,8 +2159,8 @@ window.addEventListener('orientationchange', function() {
         <div style="display:flex; flex-wrap:wrap; align-items:center; gap:4px;">
           <span class="sbr-label">CHAT:</span>
           <button class="speech-top-btn" onclick="saveChatToFile()" id="saveChatBtn" title="Save chat as HTML">💾 SAVE</button>
-          <button class="speech-top-btn" onclick="restoreChat()" id="restoreChatBtn" title="Restore previous session chat">↩ RESTORE</button>
           <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';ttsStopAll();morseStopAll();entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR</button>
+          <button class="speech-top-btn" onclick="restoreChat()" id="restoreChatBtn" title="Restore previous session chat">↩ RESTORE</button>
           <button class="speech-top-btn" id="findChatBtn" title="Find in chat">🔍 FIND</button>
         </div>
         <div id="translateBar">
@@ -2383,6 +2411,7 @@ const _tones = {
   file_in:      { freqs:[660,880],        durs:[0.08,0.14],       wave:'triangle', vol:0.14 },
   error:        { freqs:[300,250],        durs:[0.12,0.18],       wave:'sawtooth', vol:0.14 },
   vm_end:       { freqs:[660,660],        durs:[0.14,0.14],       wave:'sine',     vol:0.30 },
+  vm_start:     { freqs:[880,880,880],    durs:[0.10,0.10,0.10],  wave:'sine',     vol:0.30 },
 };
 var _actx = null;
 function playTone(name) {
@@ -2496,6 +2525,8 @@ document.addEventListener('click', function() {
   }
 }, true);
 
+const VERSION = '8.4';   // ← bump this on each deploy
+
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
 const ICE_SERVERS = [
@@ -2565,6 +2596,30 @@ let _speechVisible  = false;
 // ── Pre-registration: register peer silently while user is on login screen ───
 // Called when code reaches exactly 6 chars. Registers the peer and starts
 // Firebase presence so Alpha finds us before the user even clicks Connect.
+// ── Session code strength indicator ──────────────────────────
+function updateCodeStrength(code) {
+  const el = document.getElementById('codeStrengthHint');
+  if (!el) return;
+  if (!code || code.length < 2) { el.textContent = ''; el.className = 'code-strength'; return; }
+  const isAllSame    = /^(.)\1+$/.test(code);
+  const isSequential = /^(ABC|BCD|CDE|DEF|EFG|FGH|GHI|HIJ|IJK|JKL|KLM|LMN|MNO|NOP|OPQ|PQR|QRS|RST|STU|TUV|UVW|VWX|WXY|XYZ|ZYX|YXW|XWV|WVU|VUT|UTS|TSR|SRQ|RQP|QPO|PON|ONM|NML|MLK|LKJ|KJI|JIH|IHG|HGF|GFE|FED|EDC|DCB|CBA|012|123|234|345|456|567|678|789|890|987|876|765|654|543|432|321|210)/.test(code);
+  const isShortDict  = code.length <= 6 && /^[A-Z]+$/.test(code) &&
+    /^(PASSWORD|SECRET|HELLO|RADIO|ALPHA|BRAVO|FIELD|TEST|DEMO|TEMP|PASS|CODE|LOCK|OPEN|SAFE)$/.test(code);
+  const uniqueChars  = new Set(code.split('')).size;
+  const hasDigits    = /\d/.test(code);
+  const hasLetters   = /[A-Z]/.test(code);
+  let strength, label;
+  if (code.length < 4 || isAllSame || isSequential || isShortDict) {
+    strength = 'weak'; label = '⚠ Weak code';
+  } else if (code.length >= 6 && uniqueChars >= 4 && hasDigits && hasLetters) {
+    strength = 'strong'; label = '✓ Strong code';
+  } else {
+    strength = 'fair'; label = '~ Fair code';
+  }
+  el.textContent = label;
+  el.className = 'code-strength ' + strength;
+}
+
 function preRegister(code) {
   if (_preRegistered && _preRegCode === code) return; // already done for this code
   cancelPreRegister(); // tear down any prior pre-registration
@@ -2627,7 +2682,7 @@ function startSession() {
   setVideoButtons(true);
   loginDisableVideoFlag = disVidChecked;
   loginDisableAudioFlag = disAudChecked;
-  entry('LOGIN: disableVideo=' + disVidChecked + ' disableAudio=' + disAudChecked, 'sys');
+  entry('LOGIN: disableVideo=' + disVidChecked + ' disableAudio=' + disAudChecked + ' v' + VERSION, 'sys');
   clearInterval(loginTimeoutInterval);
   document.getElementById('sessionOverlay').style.display = 'none';
   showLoginBox();
@@ -3087,6 +3142,7 @@ let _loginTimeoutStarted = false;
     const code = document.getElementById('sessionCode').value.trim().toUpperCase().replace(/\s+/g,'');
     if (code === _lastCode) return;
     _lastCode = code;
+    updateCodeStrength(code);
     startPresencePolling(code);
     if (code.length === 6) {
       preRegister(code);
@@ -5888,6 +5944,19 @@ function attachDataConn(dc) {
       if (f.__control === 'leave') { handleRemoteLeave(); return; }
       // clearChat control intentionally not handled — CLEAR is local-only on each unit.
       if (f.__control === 'deleteMsg') { deleteBubble(f.ts, false); return; }
+      if (f.__control === 'voicemail') {
+        if (f.active) {
+          setStatus('voicemail');
+          _vmNotice('— 📼 ALPHA RECORDING VOICEMAIL —');
+          playTone('vm_start');
+          setTimeout(() => playTone('vm_start'), 400);
+          setTimeout(() => playTone('vm_start'), 800);
+        } else {
+          setStatus('linked');
+          _vmNotice('— 📼 VOICEMAIL SAVED —');
+        }
+        return;
+      }
       if (f.__control === 'refresh') { entry('Remote refreshed — reloading…', 'sys'); peerRefreshing = true; try { sessionStorage.setItem('fieldRadioRefreshing', '1'); } catch(e) {} setTimeout(() => window.location.reload(), 400); return; }
       if (f.__morse === true) { addBubble(f.text, false, null, true, null, null, true); playMorseAudio(f.text, f.wpm || 20); return; }
       if (f.__file  === true)      { addMediaBubble(f.name, f.type, f.data, false); return; }
@@ -6448,6 +6517,7 @@ function attachCall(c) {
   c.on('stream', stream => {
     const remoteAudio = document.getElementById('remoteAudio');
     if (remoteAudio.srcObject !== stream) remoteAudio.srcObject = stream;
+    setupRemoteGainNode(stream);
     const remoteVideo = document.getElementById('remoteVideo');
     if (remoteVideo.srcObject !== stream) remoteVideo.srcObject = stream;
     const _cu = document.getElementById('chatUnderlay');
@@ -6541,6 +6611,7 @@ function _doLeave() {
     localStream = null;
   }
   teardownMicGain();
+  teardownRemoteGain();
   // Clear all video elements immediately — no stale frames
   ['localVideo','remoteVideo','chatUnderlay'].forEach(id => {
     const el = document.getElementById(id);
@@ -6580,6 +6651,9 @@ function handleRemoteLeave() {
   }
   // Remote user left intentionally — cancel any pending reconnect and go to leave screen
   clearTimeout(dropTimer);  // prevent onDrop's grace-period timer from showing reconnect screen
+  clearInterval(_reconnectCountdownTimer);  // cancel reconnect overlay if it already started
+  const _ro = document.getElementById('reconnectOverlay');
+  if (_ro) _ro.classList.remove('active');  // hide it if visible
   leftPermanently = false; // we haven't left yet, remote did
   remotePeerLeft = true;
   // Clear remote video immediately
@@ -6596,25 +6670,18 @@ function handleRemoteLeave() {
   stopQualityPolling();
   stopAudioWatchdog();
   entry('Remote user left the session', 'sys');
-  // If voicemail is mid-recording (or onstop is in-flight after onDrop already
-  // stopped it), let onstop finish saving before we reset.
-  // _vmResetPending is true in both cases; upgrade _vmResetIsLeave so onstop
-  // shows SESSION ENDED instead of resetting for the next caller.
+  // If voicemail is mid-recording, let onstop finish saving then reset.
   if (_vmActive) {
     _vmResetPending = true;
-    _vmResetIsLeave = false;
     _stopVoicemail();
     return;
   }
-  if (_vmResetPending) {
-    // onDrop already stopped the recorder; onstop will handle the reset.
-    _vmResetIsLeave = false;
-    return;
-  }
-  // Alpha left — reset for next caller
+  // If onDrop already fired first and is handling the reset (voicemail onstop
+  // in-flight, or _onCallEnded's 1200ms startPeer already scheduled), do nothing.
+  if (_vmResetPending || remotePeerLeft) return;
+  // No voicemail, onDrop hasn't fired yet — reset for next caller after onDrop lands.
   entry('Answering machine: resetting for next caller…', 'sys');
-  remotePeerLeft = false;
-  if (!leftPermanently) startPeer();
+  setTimeout(() => { remotePeerLeft = false; if (!leftPermanently) startPeer(); }, 800);
 }
 
 function onDrop() {
@@ -6650,23 +6717,22 @@ function onDrop() {
   
   setStatus('standby');
   if (leftPermanently) return; // permanent leave handled by leaveSession()
-  if (remotePeerLeft) return;  // remote sent leave signal — stay on leave screen
+  if (remotePeerLeft) return;  // remote sent leave signal — already resetting
   if (_vmResetPending) return; // voicemail still saving — onstop will handle next state
   // Check sessionStorage in case the refresh control message raced with the drop
   try { if (sessionStorage.getItem('fieldRadioRefreshing') === '1') peerRefreshing = true; } catch(e) {}
   if (peerRefreshing) return;  // a refresh-reload is in progress — do not show login
-  // Show reconnect screen after a short grace period.
-  // handleRemoteLeave() will cancel this timer if a 'leave' signal arrives first,
-  // ensuring a clean leave goes to the leave screen, not the reconnect screen.
+  // Bravo is an answering machine — on any unexpected drop, reset for the next caller.
+  // Never show the reconnect countdown screen (that is Alpha behaviour).
   clearTimeout(dropTimer);
   dropTimer = setTimeout(() => {
-    if (remotePeerLeft) return; // leave message arrived — handled by handleRemoteLeave
-    // Re-check in case the refresh signal arrived during the grace period
+    if (remotePeerLeft || _vmResetPending || _vmActive || leftPermanently || peerRefreshing) return;
     try { if (sessionStorage.getItem('fieldRadioRefreshing') === '1') peerRefreshing = true; } catch(e) {}
-    if (peerRefreshing) return; // refresh in progress — do not show login
-    entry('Link lost — showing reconnect countdown', 'sys');
-    showReconnecting(30);
-  }, 600);
+    if (peerRefreshing) return;
+    entry('Call dropped — resetting for next caller…', 'sys');
+    remotePeerLeft = false;
+    if (!leftPermanently) startPeer();
+  }, 1500);
 }
 
 function muteLocal() {
@@ -6684,6 +6750,7 @@ let recRemote = null, recRemoteChunks = [], recRemoteBusy = false;
 let recLocal  = null, recLocalChunks  = [], recLocalBusy  = false;
 
 // ── Answering machine ─────────────────────────────────────────
+const RING_TIMEOUT_MS = 30000;   // auto-advance to voicemail after 30s of ringing
 let _vmTimer        = null;   // 15s unattended timeout
 let _vmMaxTimer     = null;   // 2-min hard recording limit
 let _vmActive       = false;  // voicemail recorder running
@@ -6694,6 +6761,7 @@ let _vmChunks    = [];
 let _vmCapturedStream = null;  // remote stream snapshot taken at call-connect time
 let _attended    = false;  // user interacted during this call
 let _ringTimer   = null;   // repeating ring interval
+let _ringTimeoutTimer = null; // fires RING_TIMEOUT_MS after ringing starts → voicemail
 let _ringing     = false;  // ring was triggered this call cycle
 let _vmCallStart = 0;      // Date.now() at markLinked
 
@@ -6739,9 +6807,24 @@ function _startRing() {
   entry('📞 Ringing…', 'sys');
   _playRingTone();
   _ringTimer = setInterval(_playRingTone, 2000);
+  // Auto-advance to voicemail if caller doesn't hang up after RING_TIMEOUT_MS
+  _ringTimeoutTimer = setTimeout(() => {
+    if (!_ringing) return;          // already answered or dropped
+    if (_vmActive)  return;         // voicemail already running
+    entry('📼 No answer after ' + (RING_TIMEOUT_MS / 1000) + 's — starting voicemail', 'sys');
+    // Snapshot remote stream now (mirrors what _onCallConnected does)
+    const remoteAudio = document.getElementById('remoteAudio');
+    const remoteVideo = document.getElementById('remoteVideo');
+    _vmCapturedStream = (remoteAudio && remoteAudio.srcObject)
+                     || (remoteVideo && remoteVideo.srcObject)
+                     || null;
+    _stopRing();
+    _startVoicemail();
+  }, RING_TIMEOUT_MS);
 }
 function _stopRing() {
-  clearInterval(_ringTimer); _ringTimer = null;
+  clearInterval(_ringTimer);   _ringTimer = null;
+  clearTimeout(_ringTimeoutTimer); _ringTimeoutTimer = null;
   _ringing = false;
 }
 function _playRingTone() {
@@ -6860,6 +6943,7 @@ async function _startVoicemail() {
         _vmResetPending = false;
         _vmResetIsLeave = false;
         entry('Answering machine: resetting for next caller…', 'sys');
+        clearTimeout(dropTimer);
         remotePeerLeft = false;
         if (!leftPermanently) startPeer();
       }
@@ -6883,6 +6967,7 @@ async function _startVoicemail() {
       _vmResetPending = false;
       _vmResetIsLeave = false;
       entry('Answering machine: resetting for next caller…', 'sys');
+      clearTimeout(dropTimer);
       remotePeerLeft = false;
       if (!leftPermanently) startPeer();
     }
@@ -6960,15 +7045,8 @@ function _onCallEnded() {
       }
     }
   }
-  // If handleRemoteLeave already set _vmResetPending, onstop owns the reset — don't duplicate it
+  // If voicemail onstop is pending, it owns the reset
   if (_vmResetPending) { _attended = false; _vmCallStart = 0; return; }
-  if (wasRinging && !remotePeerLeft) {
-    // Answering machine: skip reconnect screen, go straight back to waiting.
-    entry('Answering machine: resetting for next caller…', 'sys');
-    remotePeerLeft = true;
-    // Re-register with a fresh peer ID so Alpha's presence poll sees us immediately
-    setTimeout(() => { remotePeerLeft = false; if (!leftPermanently) startPeer(); }, 1200);
-  }
   _attended = false;
   _vmCallStart = 0;
 }
@@ -8233,6 +8311,52 @@ function setupMicGainNode(stream) {
   } catch(e) { console.warn('Mic gain setup failed:', e); }
 }
 
+// ── Remote (speaker) volume control ──────────────────────────
+let _remoteGainCtx = null, _remoteGainNode = null;
+
+function setupRemoteGainNode(stream) {
+  teardownRemoteGain();
+  try {
+    _remoteGainCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const src  = _remoteGainCtx.createMediaStreamSource(stream);
+    _remoteGainNode = _remoteGainCtx.createGain();
+    const dest = _remoteGainCtx.createMediaStreamDestination();
+    const saved = parseFloat(localStorage.getItem('bravo_remote_gain') || '1');
+    _remoteGainNode.gain.value = isFinite(saved) ? saved : 1;
+    src.connect(_remoteGainNode);
+    _remoteGainNode.connect(dest);
+    const ra = document.getElementById('remoteAudio');
+    if (ra) ra.srcObject = dest.stream;
+    ['remoteGainSlider','remoteGainSliderChat'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = _remoteGainNode.gain.value;
+    });
+    ['remoteGainVal','remoteGainValChat'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = _remoteGainNode.gain.value.toFixed(2) + '×';
+    });
+  } catch(e) { console.warn('Remote gain setup failed:', e); }
+}
+
+function teardownRemoteGain() {
+  if (_remoteGainNode) { try { _remoteGainNode.disconnect(); } catch(e) {} _remoteGainNode = null; }
+  if (_remoteGainCtx)  { try { _remoteGainCtx.close();      } catch(e) {} _remoteGainCtx  = null; }
+}
+
+function applyRemoteGain(val) {
+  const v = parseFloat(val);
+  ['remoteGainVal','remoteGainValChat'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = v.toFixed(2) + '×';
+  });
+  ['remoteGainSlider','remoteGainSliderChat'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.value !== String(val)) el.value = val;
+  });
+  if (_remoteGainNode) _remoteGainNode.gain.setTargetAtTime(v, _remoteGainCtx.currentTime, 0.01);
+  try { localStorage.setItem('bravo_remote_gain', String(v)); } catch(e) {}
+}
+
 // ── Local video zoom ──────────────────────────────────────────
 function applyZoom(val, channel) {
   const v = parseFloat(val);
@@ -8684,9 +8808,15 @@ function ttsSpeak(text, lang) {
 (function() {
   var _spOrigParent = null, _spOrigNext = null;
   var _hpiOrigParent = null, _hpiOrigNext = null;
+  var _hpOrigParent = null, _hpOrigNext = null;
   var _hpWasOpen = false;
+  var _printStyleEl = null;
+  var _prepared = false;
 
   function beforePrint() {
+    if (_prepared) return;   // guard against double-fire (matchMedia + event)
+    _prepared = true;
+
     var sp    = document.getElementById('speechPanel');
     var hp    = document.getElementById('helpPanel');
     var hpi   = document.getElementById('helpPanelInner');
@@ -8696,51 +8826,107 @@ function ttsSpeak(text, lang) {
     // Remember original positions so afterPrint can restore them
     _spOrigParent  = sp.parentNode;
     _spOrigNext    = sp.nextSibling;
-    _hpiOrigParent = hpi.parentNode;
+    _hpiOrigParent = hpi.parentNode;  // = hp
     _hpiOrigNext   = hpi.nextSibling;
+    _hpOrigParent  = hp.parentNode;
+    _hpOrigNext    = hp.nextSibling;
     _hpWasOpen     = hp.classList.contains('open');
 
-    // Hide the fixed overlay wrapper — Mac won't obey @media print on position:fixed
-    hp.setAttribute('data-printing', '1');
-    hp.style.cssText = 'display:none !important;';
+    // Inject a <style> into <head> — belt-and-suspenders for Safari
+    _printStyleEl = document.createElement('style');
+    _printStyleEl.id = '_printOverride';
+    _printStyleEl.textContent = '#helpPanel,#helpPanel.open{display:none!important;visibility:hidden!important;}';
+    document.head.appendChild(_printStyleEl);
 
-    // Insert order before #printNotesArea: hpi first, then sp immediately after
-    notes.parentNode.insertBefore(hpi, notes);
-    notes.parentNode.insertBefore(sp, notes);
+    // Pull hpi OUT of hp before detaching hp, so hpi survives
+    // Insert hpi and sp into body (outside the shell) to avoid shell border clipping in Chrome
+    var body = document.body;
+    body.appendChild(hpi);
+    body.appendChild(sp);
+
+    // Detach the now-empty #helpPanel shell entirely — eliminates ghost layout space in Chrome
+    hp.parentNode.removeChild(hp);
+
+    // Reset scroll position — #helpPanel has overflow-y:auto, hpi may have scrollTop > 0
+    hpi.scrollTop = 0;
 
     // Force in-flow rendering via inline styles (beats any @media print ignored by Mac)
-    hpi.style.cssText = 'position:static !important;display:block !important;border:1px solid #999 !important;border-radius:4px !important;max-width:100% !important;padding:8px 10px !important;margin:0 !important;overflow:visible !important;height:auto !important;max-height:none !important;background:#fff !important;color:#000 !important;';
+    hpi.style.cssText = 'position:static !important;display:block !important;border:1px solid #999 !important;border-radius:4px !important;max-width:100% !important;padding:8px 10px !important;margin:20px 0 0 0 !important;overflow:visible !important;height:auto !important;max-height:none !important;background:#fff !important;color:#000 !important;';
     sp.style.cssText  = 'position:static !important;display:flex !important;flex-direction:column !important;background:none !important;border:1px solid #999 !important;border-radius:4px !important;padding:8px 10px !important;margin-top:6px !important;overflow:visible !important;height:auto !important;max-height:none !important;gap:6px !important;flex-shrink:0 !important;';
+
+    // Explicitly zero out help-btn-bar — Chrome may reserve space for display:none in print CSS
+    var hbb = document.querySelector('.help-btn-bar');
+    if (hbb) hbb.style.cssText = 'display:none !important;height:0 !important;overflow:hidden !important;padding:0 !important;margin:0 !important;';
+    var hcb = document.getElementById('helpCloseBtn');
+    if (hcb) hcb.style.cssText = 'display:none !important;height:0 !important;overflow:hidden !important;padding:0 !important;margin:0 !important;';
   }
 
   function afterPrint() {
-    var sp  = document.getElementById('speechPanel');
-    var hp  = document.getElementById('helpPanel');
-    var hpi = document.getElementById('helpPanelInner');
-    if (!hpi || !_hpiOrigParent) return;
+    // Guard against double-firing (afterprint event + matchMedia both fire)
+    if (!_prepared) return;
+    _prepared = false;
 
-    // Restore speechPanel
+    // Remove injected print style
+    if (_printStyleEl && _printStyleEl.parentNode) {
+      _printStyleEl.parentNode.removeChild(_printStyleEl);
+    }
+    _printStyleEl = null;
+
+    // Always restore sp regardless of hpi state
+    var sp  = document.getElementById('speechPanel');
     if (sp && _spOrigParent) {
       _spOrigParent.insertBefore(sp, _spOrigNext);
       sp.style.cssText = '';
     }
 
-    // Restore helpPanelInner back inside #helpPanel
+    var hpi = document.getElementById('helpPanelInner');
+    if (!hpi || !_hpiOrigParent) {
+      _spOrigParent = null; _spOrigNext = null;
+      _hpiOrigParent = null; _hpiOrigNext = null;
+      _hpOrigParent = null; _hpOrigNext = null;
+      _hpWasOpen = false;
+      return;
+    }
+
+    // Clear inline styles on buttons while hpi is still in document.body (querySelector finds them)
+    var hbb = document.querySelector('.help-btn-bar');
+    if (hbb) hbb.style.cssText = '';
+    var hcb = document.getElementById('helpCloseBtn');
+    if (hcb) hcb.style.cssText = '';
+
+    // Restore hpi back inside hp (hp is currently detached)
     _hpiOrigParent.insertBefore(hpi, _hpiOrigNext);
     hpi.style.cssText = '';
 
-    // Restore helpPanel overlay
+    // Reattach hp to the DOM at its original position
+    var hp = _hpiOrigParent; // hp is hpi's original parent
+    if (_hpOrigParent) {
+      _hpOrigParent.insertBefore(hp, _hpOrigNext);
+    }
     hp.removeAttribute('data-printing');
-    hp.style.cssText = '';
     if (_hpWasOpen) hp.classList.add('open');
+
+    // Force repaint so browser re-evaluates styles on restored elements
+    void hp.offsetHeight;
 
     _spOrigParent = null; _spOrigNext = null;
     _hpiOrigParent = null; _hpiOrigNext = null;
+    _hpOrigParent = null; _hpOrigNext = null;
     _hpWasOpen = false;
   }
 
   window.addEventListener('beforeprint', beforePrint);
   window.addEventListener('afterprint',  afterPrint);
+
+  // Safari sometimes fires matchMedia 'print' change before beforeprint event
+  // Use both to ensure beforePrint runs in time
+  if (window.matchMedia) {
+    var mq = window.matchMedia('print');
+    mq.addListener(function(e) {
+      if (e.matches) { beforePrint(); }
+      else           { afterPrint();  }
+    });
+  }
 })();
 </script>
 
