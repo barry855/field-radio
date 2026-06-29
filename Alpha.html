@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -5741,15 +5742,21 @@ async function init() {
 
 // Module-level: refreshes REMOTE_ID from Firebase (BRAVO's suffixed peer ID).
 // Must be module-level so startPeer's peer.on('open') closure can reference it.
+let _remoteIdConfirmed = false; // true once Firebase has returned a valid peerId for BRAVO
 async function _refreshRemoteId() {
   try {
-    const _bravoPollKey = 'bravo-' + (MY_ID ? MY_ID.replace(/^alpha-/, '').replace(/-[0-9a-f]{4}$/, '') : '');
-    if (!_bravoPollKey || _bravoPollKey === 'bravo-') return;
+    const _code = MY_ID ? MY_ID.replace(/^alpha-/, '').replace(/-[0-9a-f]{4}$/, '') : '';
+    const _bravoPollKey = 'bravo-' + _code;
+    if (!_code || _bravoPollKey === 'bravo-') return;
     const _r = await fetch(FB_URL + '/presence/' + _bravoPollKey + '.json');
-    const _d = await _r.json();
-    if (_d && _d.peerId && _d.peerId !== REMOTE_ID) {
-      entry('BRAVO peer ID: ' + _d.peerId, 'sys');
-      REMOTE_ID = _d.peerId;
+    const _env = await _r.json();
+    const _d = _env ? await _decryptPresence(_code, _env) : null;
+    if (_d && _d.peerId) {
+      if (_d.peerId !== REMOTE_ID) {
+        entry('BRAVO peer ID: ' + _d.peerId, 'sys');
+        REMOTE_ID = _d.peerId;
+      }
+      _remoteIdConfirmed = true;
     }
   } catch(e) {}
 }
@@ -5772,6 +5779,7 @@ function startPeer() {
   }
   _peerDestroyPending = false;
   _peerGeneration++;           // invalidate any _pollAndDial loop from the previous peer
+  _remoteIdConfirmed = false;  // reset so new peer waits for fresh Firebase confirmation
   // Destroy any existing peer before creating a new one.
   // Without this the old peer's event handlers (especially 'disconnected' → peer.reconnect())
   // keep firing against the replaced reference, causing a permanent reconnect loop.
@@ -5808,8 +5816,7 @@ function startPeer() {
       _refreshRemoteId().then(() => {
         if (_peerGeneration !== _thisGen || linked) return;
         _dialPollCount++;
-        const hasSuffix = REMOTE_ID && /-[0-9a-f]{4}$/.test(REMOTE_ID);
-        if (hasSuffix) {
+        if (_remoteIdConfirmed) {
           dial();
         } else {
           if (_dialPollCount % 20 === 0) {
