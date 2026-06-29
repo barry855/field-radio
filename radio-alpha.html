@@ -978,6 +978,14 @@
     text-transform: uppercase; outline: none; margin-bottom: 14px;
   }
   .session-box input[type=text]:focus { border-color: var(--accent); }
+  .code-strength {
+    font-size: 9px; letter-spacing: 1px; text-transform: uppercase;
+    margin-top: -10px; margin-bottom: 10px; min-height: 13px;
+    transition: color 0.3s;
+  }
+  .code-strength.weak   { color: var(--danger); }
+  .code-strength.fair   { color: var(--warn); }
+  .code-strength.strong { color: var(--accent2); }
   .session-go { width: 100%; padding: 10px; border-radius: 4px;
     background: var(--btn-bg); border: 1px solid var(--border);
     color: var(--text); font-family: 'Orbitron', sans-serif;
@@ -1999,6 +2007,7 @@ window.addEventListener('orientationchange', function() {
     <span class="session-title" style="color:#00ff9f;text-shadow:0 0 20px rgba(0,255,159,0.5);">ALPHA</span>
     <label>Shared Code:</label>
     <input type="text" id="sessionCode" maxlength="8" placeholder="ENTER CODE" autocomplete="off">
+    <div class="code-strength" id="codeStrengthHint"></div>
     <div class="session-checks">
       <label class="session-check-item">
         <input type="checkbox" id="loginDisableVideo" onchange="try{localStorage.setItem('alpha_disable_video',this.checked?'1':'0')}catch(e){}"> Disable Video
@@ -2128,6 +2137,11 @@ window.addEventListener('orientationchange', function() {
         <input type="range" id="micGainSlider" min="0" max="3" step="0.05" value="1" oninput="applyMicGain(this.value)">
         <span class="gain-val" id="micGainVal">1.00×</span>
       </div>
+      <div class="gain-row">
+        <div class="gain-label"><span>SPKR</span><span>VOL</span></div>
+        <input type="range" id="remoteGainSlider" min="0" max="3" step="0.05" value="1" oninput="applyRemoteGain(this.value)">
+        <span class="gain-val" id="remoteGainVal">1.00×</span>
+      </div>
       <div class="video-panel">
         <div class="panel-label">REMOTE — BRAVO</div>
         <div class="video-grid">
@@ -2174,6 +2188,11 @@ window.addEventListener('orientationchange', function() {
         <input type="range" id="micGainSliderChat" min="0" max="3" step="0.05" value="1" oninput="applyMicGain(this.value)" style="flex:1; min-width:0;">
         <span class="gain-val" id="micGainValChat">1.00×</span>
         <button class="speech-top-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input" style="flex-shrink:0; white-space:nowrap;">Talk/Type in Chat</button>
+      </div>
+      <div class="gain-row" style="flex-shrink:0;">
+        <div class="gain-label"><span>SPKR</span><span>VOL</span></div>
+        <input type="range" id="remoteGainSliderChat" min="0" max="3" step="0.05" value="1" oninput="applyRemoteGain(this.value)" style="flex:1; min-width:0;">
+        <span class="gain-val" id="remoteGainValChat">1.00×</span>
       </div>
       <div class="zoom-row" style="display:none;">
         <span>ZOOM LOCAL</span>
@@ -2550,6 +2569,8 @@ document.addEventListener('click', function() {
   }
 }, true);
 
+const VERSION = '8.4';   // ← bump this on each deploy
+
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
 const ICE_SERVERS = [
@@ -2610,6 +2631,31 @@ let _sendBtnTouched = false;
 let _syslogVisible  = false;
 let _speechVisible  = false;
 // ── Pre-registration: register peer silently while user is on login screen ───
+// ── Session code strength indicator ──────────────────────────
+function updateCodeStrength(code) {
+  const el = document.getElementById('codeStrengthHint');
+  if (!el) return;
+  if (!code || code.length < 2) { el.textContent = ''; el.className = 'code-strength'; return; }
+  // Weakness patterns
+  const isAllSame    = /^(.)\1+$/.test(code);
+  const isSequential = /^(ABC|BCD|CDE|DEF|EFG|FGH|GHI|HIJ|IJK|JKL|KLM|LMN|MNO|NOP|OPQ|PQR|QRS|RST|STU|TUV|UVW|VWX|WXY|XYZ|ZYX|YXW|XWV|WVU|VUT|UTS|TSR|SRQ|RQP|QPO|PON|ONM|NML|MLK|LKJ|KJI|JIH|IHG|HGF|GFE|FED|EDC|DCB|CBA|012|123|234|345|456|567|678|789|890|987|876|765|654|543|432|321|210)/.test(code);
+  const isShortDict  = code.length <= 6 && /^[A-Z]+$/.test(code) &&
+    /^(PASSWORD|SECRET|HELLO|RADIO|ALPHA|BRAVO|FIELD|TEST|DEMO|TEMP|PASS|CODE|LOCK|OPEN|SAFE)$/.test(code);
+  const uniqueChars  = new Set(code.split('')).size;
+  const hasDigits    = /\d/.test(code);
+  const hasLetters   = /[A-Z]/.test(code);
+  let strength, label;
+  if (code.length < 4 || isAllSame || isSequential || isShortDict) {
+    strength = 'weak'; label = '⚠ Weak code';
+  } else if (code.length >= 6 && uniqueChars >= 4 && hasDigits && hasLetters) {
+    strength = 'strong'; label = '✓ Strong code';
+  } else {
+    strength = 'fair'; label = '~ Fair code';
+  }
+  el.textContent = label;
+  el.className = 'code-strength ' + strength;
+}
+
 function preRegister(code) {
   if (_preRegistered && _preRegCode === code) return;
   cancelPreRegister();
@@ -2673,7 +2719,7 @@ function startSession() {
   loginDisableVideoFlag = disVidChecked;
   loginDisableAudioFlag = disAudChecked;
   // Always log the checkbox state so we can see it in the activity log
-  entry('LOGIN: disableVideo=' + disVidChecked + ' disableAudio=' + disAudChecked, 'sys');
+  entry('LOGIN: disableVideo=' + disVidChecked + ' disableAudio=' + disAudChecked + ' v' + VERSION, 'sys');
   clearInterval(loginTimeoutInterval);
   document.getElementById('sessionOverlay').style.display = 'none';
   showLoginBox();
@@ -3151,6 +3197,7 @@ if (!_loginTimeoutStarted && document.getElementById('sessionOverlay').style.dis
     const code = document.getElementById('sessionCode').value.trim().toUpperCase().replace(/\s+/g,'');
     if (code === _lastCode) return;
     _lastCode = code;
+    updateCodeStrength(code);
     startPresencePolling(code);
     if (code.length === 6) {
       preRegister(code);
@@ -4176,6 +4223,8 @@ function openHelpPanel() {
       ['🔍 FIND',  'Find text in the chat'],
       ['Video Off','Toggle your camera on/off'],
       ['Mike On',  'Mute or unmute your microphone'],
+      ['MIKE GAIN','Slider — adjust outgoing microphone level (0–3×)'],
+      ['SPKR VOL', 'Slider — adjust incoming speaker volume (0–3×)'],
       ['Sys Audio','Mix computer audio output into transmitted signal'],
       ['Share Off','Share your screen'],
       ['SEE REMOTE','Toggle between remote and local video view in chat'],
@@ -6256,6 +6305,8 @@ function answerCall(c) {
 
 // ── Connection quality polling ────────────────────────────────
 let qualityInterval = null;
+const _qualHistory = [];   // rolling 20-sample RTT history for sparkline
+const _QUAL_MAX_SAMPLES = 20;
 
 function startQualityPolling() {
   stopQualityPolling();
@@ -6276,6 +6327,10 @@ function startQualityPolling() {
         }
       });
       const lossPct = sent > 0 ? (lost / sent) * 100 : 0;
+      if (rtt !== null) {
+        _qualHistory.push(rtt);
+        if (_qualHistory.length > _QUAL_MAX_SAMPLES) _qualHistory.shift();
+      }
       updateQuality(rtt, lossPct);
     } catch(e) {}
   }, 3000);
@@ -6283,6 +6338,7 @@ function startQualityPolling() {
 
 function stopQualityPolling() {
   if (qualityInterval) { clearInterval(qualityInterval); qualityInterval = null; }
+  _qualHistory.length = 0;
   updateQuality(null, null);
 }
 
@@ -6331,10 +6387,12 @@ function stopAudioWatchdog() {
 function updateQuality(rtt, lossPct) {
   const bars  = [document.getElementById('qbar1'), document.getElementById('qbar2'), document.getElementById('qbar3')];
   const label = document.getElementById('qualityLabel');
+  const qdiv  = document.getElementById('qualityDisplay');
   if (rtt === null) {
     bars.forEach(b => { b.className = ''; });
     label.textContent = '--';
     label.style.color = 'var(--text-dim)';
+    if (qdiv) qdiv.title = '';
     return;
   }
   // Score: 3=good, 2=ok, 1=poor
@@ -6346,6 +6404,18 @@ function updateQuality(rtt, lossPct) {
   bars.forEach((b, i) => { b.className = i < score ? cls : ''; });
   label.textContent = Math.round(rtt) + 'ms';
   label.style.color = color;
+  // Sparkline tooltip — last N RTT samples
+  if (qdiv && _qualHistory.length > 1) {
+    const mn = Math.min(..._qualHistory), mx = Math.max(..._qualHistory);
+    const range = mx - mn || 1;
+    const pts = _qualHistory.map((v, i) => {
+      const x = Math.round((i / (_qualHistory.length - 1)) * 58 + 1);
+      const y = Math.round(13 - ((v - mn) / range) * 12);
+      return x + ',' + y;
+    }).join(' ');
+    const avgRtt = Math.round(_qualHistory.reduce((a, b) => a + b, 0) / _qualHistory.length);
+    qdiv.title = 'RTT avg ' + avgRtt + 'ms  loss ' + lossPct.toFixed(1) + '%  (' + _qualHistory.length + ' samples)';
+  }
 }
 
 function setVideoButtons(enabled) {
@@ -6418,6 +6488,31 @@ function markLinked() {
     duplexBar.textContent = '● LIVE';
   }
   duplexBar.className = 'duplex-overlay live';
+  // Log the ICE path type (host / srflx / relay) so we know how we connected
+  (async () => {
+    try {
+      const pc = call && (call.peerConnection || call._pc);
+      if (!pc) return;
+      const stats = await pc.getStats();
+      let localType = null, remoteType = null;
+      const candidates = {};
+      stats.forEach(r => {
+        if (r.type === 'local-candidate' || r.type === 'remote-candidate') candidates[r.id] = r;
+      });
+      stats.forEach(r => {
+        if (r.type === 'candidate-pair' && r.state === 'succeeded' && r.nominated) {
+          const lc = candidates[r.localCandidateId];
+          const rc = candidates[r.remoteCandidateId];
+          if (lc) localType  = lc.candidateType;
+          if (rc) remoteType = rc.candidateType;
+        }
+      });
+      if (localType) {
+        const label = localType === 'relay' ? 'TURN RELAY' : localType === 'srflx' ? 'STUN (srflx)' : localType.toUpperCase();
+        entry('ICE path: local=' + label + (remoteType ? ' remote=' + remoteType : ''), 'sys');
+      }
+    } catch(e) {}
+  })();
   syncControls();
   startQualityPolling();
   openDataConn();
@@ -6597,6 +6692,9 @@ function attachCall(c) {
   c.on('stream', stream => {
     const remoteAudio = document.getElementById('remoteAudio');
     if (remoteAudio.srcObject !== stream) remoteAudio.srcObject = stream;
+    // Route remote audio through gain node for speaker volume control;
+    // setupRemoteGainNode replaces remoteAudio.srcObject with the gained stream.
+    setupRemoteGainNode(stream);
     const remoteVideo = document.getElementById('remoteVideo');
     if (remoteVideo.srcObject !== stream) remoteVideo.srcObject = stream;
     const _cu = document.getElementById('chatUnderlay');
@@ -6711,6 +6809,7 @@ function _doLeave() {
     localStream = null;
   }
   teardownMicGain();
+  teardownRemoteGain();
   // Clear all video elements immediately — no stale frames
   ['localVideo','remoteVideo','chatUnderlay','miniRemoteVideo','miniLocalVideo'].forEach(id => {
     const el = document.getElementById(id);
@@ -8288,6 +8387,57 @@ function setupMicGainNode(stream) {
     if (sliderChat) sliderChat.value = _micGainNode.gain.value;
     if (lblChat)    lblChat.textContent = _micGainNode.gain.value.toFixed(2) + '×';
   } catch(e) { console.warn('Mic gain setup failed:', e); }
+}
+
+// ── Remote (speaker) volume control ──────────────────────────
+// Routes remoteAudio through a Web Audio GainNode so the user can
+// adjust incoming volume independently of system volume.
+let _remoteGainCtx = null, _remoteGainNode = null;
+
+function setupRemoteGainNode(stream) {
+  // Tear down any previous node before rebuilding
+  teardownRemoteGain();
+  try {
+    _remoteGainCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const src  = _remoteGainCtx.createMediaStreamSource(stream);
+    _remoteGainNode = _remoteGainCtx.createGain();
+    const dest = _remoteGainCtx.createMediaStreamDestination();
+    const saved = parseFloat(localStorage.getItem('alpha_remote_gain') || '1');
+    _remoteGainNode.gain.value = isFinite(saved) ? saved : 1;
+    src.connect(_remoteGainNode);
+    _remoteGainNode.connect(dest);
+    // Route the gained stream to remoteAudio instead of the raw stream
+    const ra = document.getElementById('remoteAudio');
+    if (ra) ra.srcObject = dest.stream;
+    // Sync sliders to saved value
+    ['remoteGainSlider','remoteGainSliderChat'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = _remoteGainNode.gain.value;
+    });
+    ['remoteGainVal','remoteGainValChat'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = _remoteGainNode.gain.value.toFixed(2) + '×';
+    });
+  } catch(e) { console.warn('Remote gain setup failed:', e); }
+}
+
+function teardownRemoteGain() {
+  if (_remoteGainNode) { try { _remoteGainNode.disconnect(); } catch(e) {} _remoteGainNode = null; }
+  if (_remoteGainCtx)  { try { _remoteGainCtx.close();      } catch(e) {} _remoteGainCtx  = null; }
+}
+
+function applyRemoteGain(val) {
+  const v = parseFloat(val);
+  ['remoteGainVal','remoteGainValChat'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = v.toFixed(2) + '×';
+  });
+  ['remoteGainSlider','remoteGainSliderChat'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.value !== String(val)) el.value = val;
+  });
+  if (_remoteGainNode) _remoteGainNode.gain.setTargetAtTime(v, _remoteGainCtx.currentTime, 0.01);
+  try { localStorage.setItem('alpha_remote_gain', String(v)); } catch(e) {}
 }
 
 // ── Local video zoom ──────────────────────────────────────────
