@@ -8675,8 +8675,13 @@ function ttsSpeak(text, lang) {
   var _spOrigParent = null, _spOrigNext = null;
   var _hpiOrigParent = null, _hpiOrigNext = null;
   var _hpWasOpen = false;
+  var _printStyleEl = null;
+  var _prepared = false;
 
   function beforePrint() {
+    if (_prepared) return;   // guard against double-fire (matchMedia + event)
+    _prepared = true;
+
     var sp    = document.getElementById('speechPanel');
     var hp    = document.getElementById('helpPanel');
     var hpi   = document.getElementById('helpPanelInner');
@@ -8690,9 +8695,16 @@ function ttsSpeak(text, lang) {
     _hpiOrigNext   = hpi.nextSibling;
     _hpWasOpen     = hp.classList.contains('open');
 
-    // Hide the fixed overlay wrapper — Mac won't obey @media print on position:fixed
+    // Inject a <style> into <head> — beats inline styles and @media print on Safari
+    // This is the most reliable way to suppress position:fixed overlays on Mac
+    _printStyleEl = document.createElement('style');
+    _printStyleEl.id = '_printOverride';
+    _printStyleEl.textContent = '#helpPanel,#helpPanel.open{display:none!important;visibility:hidden!important;}';
+    document.head.appendChild(_printStyleEl);
+
+    // Also set inline style as belt-and-suspenders
     hp.setAttribute('data-printing', '1');
-    hp.style.cssText = 'display:none !important;';
+    hp.style.cssText = 'display:none !important; visibility:hidden !important;';
 
     // Insert order before #printNotesArea: hpi first, then sp immediately after
     notes.parentNode.insertBefore(hpi, notes);
@@ -8704,9 +8716,18 @@ function ttsSpeak(text, lang) {
   }
 
   function afterPrint() {
+    _prepared = false;
+
     var sp  = document.getElementById('speechPanel');
     var hp  = document.getElementById('helpPanel');
     var hpi = document.getElementById('helpPanelInner');
+
+    // Remove injected print style
+    if (_printStyleEl && _printStyleEl.parentNode) {
+      _printStyleEl.parentNode.removeChild(_printStyleEl);
+    }
+    _printStyleEl = null;
+
     if (!hpi || !_hpiOrigParent) return;
 
     // Restore speechPanel
@@ -8731,6 +8752,16 @@ function ttsSpeak(text, lang) {
 
   window.addEventListener('beforeprint', beforePrint);
   window.addEventListener('afterprint',  afterPrint);
+
+  // Safari sometimes fires matchMedia 'print' change before beforeprint event
+  // Use both to ensure beforePrint runs in time
+  if (window.matchMedia) {
+    var mq = window.matchMedia('print');
+    mq.addListener(function(e) {
+      if (e.matches) { beforePrint(); }
+      else           { afterPrint();  }
+    });
+  }
 })();
 </script>
 
