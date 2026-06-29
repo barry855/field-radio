@@ -1016,6 +1016,14 @@
     text-transform: uppercase; outline: none; margin-bottom: 14px;
   }
   .session-box input[type=text]:focus { border-color: var(--accent2); }
+  .code-strength {
+    font-size: 9px; letter-spacing: 1px; text-transform: uppercase;
+    margin-top: -10px; margin-bottom: 10px; min-height: 13px;
+    transition: color 0.3s;
+  }
+  .code-strength.weak   { color: var(--danger); }
+  .code-strength.fair   { color: var(--warn); }
+  .code-strength.strong { color: var(--accent2); }
   .session-go {
     width: 100%; padding: 10px; border-radius: 4px;
     background: var(--btn-bg); border: 1px solid var(--border);
@@ -1956,6 +1964,7 @@ window.addEventListener('orientationchange', function() {
     <span class="session-title" style="color:#00d4ff;text-shadow:0 0 20px rgba(0,212,255,0.5);">BRAVO</span>
     <label>Shared Code:</label>
     <input type="text" id="sessionCode" maxlength="8" placeholder="ENTER CODE" autocomplete="off">
+    <div class="code-strength" id="codeStrengthHint"></div>
     <div class="session-checks">
       <label class="session-check-item">
         <input type="checkbox" id="loginDisableVideo" onchange="try{localStorage.setItem('bravo_disable_video',this.checked?'1':'0')}catch(e){}"> Disable Video
@@ -2505,6 +2514,8 @@ document.addEventListener('click', function() {
   }
 }, true);
 
+const VERSION = '8.4';   // ← bump this on each deploy
+
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
 const ICE_SERVERS = [
@@ -2574,6 +2585,30 @@ let _speechVisible  = false;
 // ── Pre-registration: register peer silently while user is on login screen ───
 // Called when code reaches exactly 6 chars. Registers the peer and starts
 // Firebase presence so Alpha finds us before the user even clicks Connect.
+// ── Session code strength indicator ──────────────────────────
+function updateCodeStrength(code) {
+  const el = document.getElementById('codeStrengthHint');
+  if (!el) return;
+  if (!code || code.length < 2) { el.textContent = ''; el.className = 'code-strength'; return; }
+  const isAllSame    = /^(.)\1+$/.test(code);
+  const isSequential = /^(ABC|BCD|CDE|DEF|EFG|FGH|GHI|HIJ|IJK|JKL|KLM|LMN|MNO|NOP|OPQ|PQR|QRS|RST|STU|TUV|UVW|VWX|WXY|XYZ|ZYX|YXW|XWV|WVU|VUT|UTS|TSR|SRQ|RQP|QPO|PON|ONM|NML|MLK|LKJ|KJI|JIH|IHG|HGF|GFE|FED|EDC|DCB|CBA|012|123|234|345|456|567|678|789|890|987|876|765|654|543|432|321|210)/.test(code);
+  const isShortDict  = code.length <= 6 && /^[A-Z]+$/.test(code) &&
+    /^(PASSWORD|SECRET|HELLO|RADIO|ALPHA|BRAVO|FIELD|TEST|DEMO|TEMP|PASS|CODE|LOCK|OPEN|SAFE)$/.test(code);
+  const uniqueChars  = new Set(code.split('')).size;
+  const hasDigits    = /\d/.test(code);
+  const hasLetters   = /[A-Z]/.test(code);
+  let strength, label;
+  if (code.length < 4 || isAllSame || isSequential || isShortDict) {
+    strength = 'weak'; label = '⚠ Weak code';
+  } else if (code.length >= 6 && uniqueChars >= 4 && hasDigits && hasLetters) {
+    strength = 'strong'; label = '✓ Strong code';
+  } else {
+    strength = 'fair'; label = '~ Fair code';
+  }
+  el.textContent = label;
+  el.className = 'code-strength ' + strength;
+}
+
 function preRegister(code) {
   if (_preRegistered && _preRegCode === code) return; // already done for this code
   cancelPreRegister(); // tear down any prior pre-registration
@@ -2636,7 +2671,7 @@ function startSession() {
   setVideoButtons(true);
   loginDisableVideoFlag = disVidChecked;
   loginDisableAudioFlag = disAudChecked;
-  entry('LOGIN: disableVideo=' + disVidChecked + ' disableAudio=' + disAudChecked, 'sys');
+  entry('LOGIN: disableVideo=' + disVidChecked + ' disableAudio=' + disAudChecked + ' v' + VERSION, 'sys');
   clearInterval(loginTimeoutInterval);
   document.getElementById('sessionOverlay').style.display = 'none';
   showLoginBox();
@@ -3096,6 +3131,7 @@ let _loginTimeoutStarted = false;
     const code = document.getElementById('sessionCode').value.trim().toUpperCase().replace(/\s+/g,'');
     if (code === _lastCode) return;
     _lastCode = code;
+    updateCodeStrength(code);
     startPresencePolling(code);
     if (code.length === 6) {
       preRegister(code);
@@ -6688,6 +6724,7 @@ let recRemote = null, recRemoteChunks = [], recRemoteBusy = false;
 let recLocal  = null, recLocalChunks  = [], recLocalBusy  = false;
 
 // ── Answering machine ─────────────────────────────────────────
+const RING_TIMEOUT_MS = 30000;   // auto-advance to voicemail after 30s of ringing
 let _vmTimer        = null;   // 15s unattended timeout
 let _vmMaxTimer     = null;   // 2-min hard recording limit
 let _vmActive       = false;  // voicemail recorder running
@@ -6698,6 +6735,7 @@ let _vmChunks    = [];
 let _vmCapturedStream = null;  // remote stream snapshot taken at call-connect time
 let _attended    = false;  // user interacted during this call
 let _ringTimer   = null;   // repeating ring interval
+let _ringTimeoutTimer = null; // fires RING_TIMEOUT_MS after ringing starts → voicemail
 let _ringing     = false;  // ring was triggered this call cycle
 let _vmCallStart = 0;      // Date.now() at markLinked
 
@@ -6743,9 +6781,24 @@ function _startRing() {
   entry('📞 Ringing…', 'sys');
   _playRingTone();
   _ringTimer = setInterval(_playRingTone, 2000);
+  // Auto-advance to voicemail if caller doesn't hang up after RING_TIMEOUT_MS
+  _ringTimeoutTimer = setTimeout(() => {
+    if (!_ringing) return;          // already answered or dropped
+    if (_vmActive)  return;         // voicemail already running
+    entry('📼 No answer after ' + (RING_TIMEOUT_MS / 1000) + 's — starting voicemail', 'sys');
+    // Snapshot remote stream now (mirrors what _onCallConnected does)
+    const remoteAudio = document.getElementById('remoteAudio');
+    const remoteVideo = document.getElementById('remoteVideo');
+    _vmCapturedStream = (remoteAudio && remoteAudio.srcObject)
+                     || (remoteVideo && remoteVideo.srcObject)
+                     || null;
+    _stopRing();
+    _startVoicemail();
+  }, RING_TIMEOUT_MS);
 }
 function _stopRing() {
-  clearInterval(_ringTimer); _ringTimer = null;
+  clearInterval(_ringTimer);   _ringTimer = null;
+  clearTimeout(_ringTimeoutTimer); _ringTimeoutTimer = null;
   _ringing = false;
 }
 function _playRingTone() {
