@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -127,7 +128,8 @@
   .led.on-green  { background: var(--accent2); box-shadow: 0 0 6px var(--accent2); }
   .led.on-cyan   { background: var(--accent);  box-shadow: 0 0 6px var(--accent);  }
   .led.on-yellow { background: var(--warn);    box-shadow: 0 0 6px var(--warn);    animation: blink 0.8s step-end infinite; }
-  .led.on-amber  { background: #ffaa00;       box-shadow: 0 0 8px #ffaa00; }  /* reachable — solid amber */
+  .led.on-amber  { background: #ffaa00;       box-shadow: 0 0 8px #ffaa00; }  /* voicemail — solid amber */
+  .led.on-amber-flash { background: #ffaa00; box-shadow: 0 0 8px #ffaa00; animation: blink 1s step-end infinite; }  /* waiting — flashing amber */
   .led.on-blue   { background: #4499ff;       box-shadow: 0 0 8px #4499ff; animation: blink 0.5s step-end infinite; }  /* connecting */
 
   @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.35} }
@@ -3207,7 +3209,7 @@ function setStatus(state) {
   linkLed.className = 'led';
   if (state === 'calling')        { linkLed.classList.add('on-yellow'); statusEl.textContent = 'CALLING…';     document.title = '📡 CALLING… — ALPHA — Field Radio v6'; }
   else if (state === 'connecting')  { linkLed.classList.add('on-blue');   statusEl.textContent = 'CONNECTING…'; document.title = '🔵 CONNECTING… — ALPHA — Field Radio v6'; }
-  else if (state === 'reachable') { linkLed.classList.add('on-amber');  statusEl.textContent = 'WAITING';      document.title = '🟡 WAITING — ALPHA — Field Radio v6'; }
+  else if (state === 'reachable') { linkLed.classList.add('on-amber-flash');  statusEl.textContent = 'WAITING';      document.title = '🟡 WAITING — ALPHA — Field Radio v6'; }
   else if (state === 'linked')    { linkLed.classList.add('on-green');  statusEl.textContent = 'LIVE';         document.title = '🟢 LIVE — ALPHA — Field Radio v6'; }
   else if (state === 'voicemail') { linkLed.classList.add('on-amber');  statusEl.textContent = '📼 VOICEMAIL'; document.title = '📼 VOICEMAIL — ALPHA — Field Radio v6'; }
   else                            { statusEl.textContent = ''; document.title = 'ALPHA — Field Radio v6'; }
