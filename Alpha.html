@@ -1703,9 +1703,6 @@
     flex: 1; accent-color: var(--accent);
     height: 4px; cursor: pointer;
   }
-  .gain-row input[type=range].spkr-vol-slider {
-    accent-color: var(--accent2);
-  }
   .gain-row .gain-val {
     min-width: 38px; text-align: right;
     color: #ffffff; font-family: 'Orbitron', sans-serif;
@@ -2142,7 +2139,7 @@ window.addEventListener('orientationchange', function() {
       </div>
       <div class="gain-row">
         <div class="gain-label"><span>SPKR</span><span>VOL</span></div>
-        <input type="range" id="remoteGainSlider" class="spkr-vol-slider" min="0" max="3" step="0.05" value="1" oninput="applyRemoteGain(this.value)">
+        <input type="range" id="remoteGainSlider" min="0" max="3" step="0.05" value="1" oninput="applyRemoteGain(this.value)">
         <span class="gain-val" id="remoteGainVal">1.00×</span>
       </div>
       <div class="video-panel">
@@ -2194,7 +2191,7 @@ window.addEventListener('orientationchange', function() {
       </div>
       <div class="gain-row" style="flex-shrink:0;">
         <div class="gain-label"><span>SPKR</span><span>VOL</span></div>
-        <input type="range" id="remoteGainSliderChat" class="spkr-vol-slider" min="0" max="3" step="0.05" value="1" oninput="applyRemoteGain(this.value)" style="flex:1; min-width:0;">
+        <input type="range" id="remoteGainSliderChat" min="0" max="3" step="0.05" value="1" oninput="applyRemoteGain(this.value)" style="flex:1; min-width:0;">
         <span class="gain-val" id="remoteGainValChat">1.00×</span>
       </div>
       <div class="zoom-row" style="display:none;">
@@ -6366,10 +6363,6 @@ function startAudioWatchdog() {
     }
     if (silentCtx && silentCtx.state === 'suspended') {
       silentCtx.resume().catch(() => {});
-    }
-    if (_remoteGainCtx && _remoteGainCtx.state === 'suspended') {
-      _remoteGainCtx.resume().catch(() => {});
-      entry('Audio watchdog: _remoteGainCtx was suspended — resuming', 'sys');
     }
     // 2. Check outbound sender track is alive
     try {
