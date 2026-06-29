@@ -1445,7 +1445,11 @@
     /* ── helpPanel: always hide the fixed overlay wrapper in print ── */
     /* JS (beforePrint) extracts #helpPanelInner and inserts it directly into flow */
     #helpPanel, #helpPanel[data-printing], #helpPanel.open {
-      display: none !important;
+      display: none !important; visibility: hidden !important;
+      position: static !important; inset: auto !important;
+      height: 0 !important; min-height: 0 !important;
+      padding: 0 !important; margin: 0 !important;
+      overflow: hidden !important;
     }
     #helpPanelInner {
       border: 1px solid #999 !important; border-radius: 4px !important;
@@ -8711,7 +8715,7 @@ function ttsSpeak(text, lang) {
     notes.parentNode.insertBefore(sp, notes);
 
     // Force in-flow rendering via inline styles (beats any @media print ignored by Mac)
-    hpi.style.cssText = 'position:static !important;display:block !important;border:1px solid #999 !important;border-radius:4px !important;max-width:100% !important;padding:8px 10px !important;margin:0 !important;overflow:visible !important;height:auto !important;max-height:none !important;background:#fff !important;color:#000 !important;';
+    hpi.style.cssText = 'position:static !important;display:block !important;border:1px solid #999 !important;border-radius:4px !important;max-width:100% !important;padding:8px 10px !important;margin:6px 0 0 0 !important;overflow:visible !important;height:auto !important;max-height:none !important;background:#fff !important;color:#000 !important;';
     sp.style.cssText  = 'position:static !important;display:flex !important;flex-direction:column !important;background:none !important;border:1px solid #999 !important;border-radius:4px !important;padding:8px 10px !important;margin-top:6px !important;overflow:visible !important;height:auto !important;max-height:none !important;gap:6px !important;flex-shrink:0 !important;';
   }
 
