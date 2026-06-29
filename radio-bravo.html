@@ -6596,13 +6596,21 @@ function handleRemoteLeave() {
   stopQualityPolling();
   stopAudioWatchdog();
   entry('Remote user left the session', 'sys');
-  // If voicemail is mid-recording, let onstop finish saving before we reset.
-  // _vmResetPending tells onstop to call _doLeave() + startPeer() once done.
+  // If voicemail is mid-recording (or onstop is in-flight after onDrop already
+  // stopped it), let onstop finish saving before we reset.
+  // _vmResetPending is true in both cases; upgrade _vmResetIsLeave so onstop
+  // shows SESSION ENDED instead of resetting for the next caller.
   if (_vmActive) {
     _vmResetPending = true;
     _vmResetIsLeave = true;   // intentional leave — onstop shows SESSION ENDED, not reset
     _stopVoicemail();
     return;
+  }
+  if (_vmResetPending) {
+    // onDrop already stopped the recorder (onstop hasn't fired yet).
+    // Upgrade the reset so onstop calls _doLeave() instead of startPeer().
+    _vmResetIsLeave = true;
+    return;  // onstop will call _doLeave() when save is complete
   }
   // End this session immediately so both sides close at the same time
   _doLeave();
