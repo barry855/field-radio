@@ -262,6 +262,10 @@
     max-width: 90%;
     pointer-events: none;
   }
+  .bubble.vm-notice.vm-has-recording {
+    pointer-events: auto;
+    letter-spacing: 1px;
+  }
 
   /* connection quality */
   .quality-item {
@@ -2462,6 +2466,7 @@ const _tones = {
   call_in:      { freqs:[880,880,880],    durs:[0.08,0.05,0.13],  wave:'square',   vol:0.10 },
   file_in:      { freqs:[660,880],        durs:[0.08,0.14],       wave:'triangle', vol:0.14 },
   error:        { freqs:[300,250],        durs:[0.12,0.18],       wave:'sawtooth', vol:0.14 },
+  vm_end:       { freqs:[660,660],        durs:[0.14,0.14],       wave:'sine',     vol:0.30 },
   vm_start:     { freqs:[880,880,880],    durs:[0.10,0.10,0.10],  wave:'sine',     vol:0.30 },
 };
 var _actx = null;
@@ -3281,20 +3286,11 @@ function scrollToBottom(force) {
 
 
 
-function _vmNotice(text) {
-  const chatEl = document.getElementById('chat');
-  if (!chatEl) return;
-  const d = document.createElement('div');
-  d.className = 'bubble vm-notice';
-  d.textContent = text;
-  chatEl.appendChild(d);
-  chatEl.scrollTop = chatEl.scrollHeight;
-}
-
 function setStatus(state) {
   entry('STATUS: ' + state, 'sys');
   linkLed.className = 'led';
-  if (state === 'calling')        { linkLed.classList.add('on-yellow'); statusEl.textContent = 'CALLING…';     document.title = '📡 CALLING… — ALPHA — Field Radio v6'; }
+  if (state === 'answering')      { linkLed.classList.add('on-cyan');   statusEl.textContent = 'ANSWERING';    document.title = '📼 ANSWERING — ALPHA — Field Radio v6'; }
+  else if (state === 'calling')   { linkLed.classList.add('on-yellow'); statusEl.textContent = 'CALLING…';     document.title = '📡 CALLING… — ALPHA — Field Radio v6'; }
   else if (state === 'connecting')  { linkLed.classList.add('on-blue');   statusEl.textContent = 'CONNECTING…'; document.title = '🔵 CONNECTING… — ALPHA — Field Radio v6'; }
   else if (state === 'reachable') { linkLed.classList.add('on-amber-flash');  statusEl.textContent = 'WAITING';      document.title = '🟡 WAITING — ALPHA — Field Radio v6'; }
   else if (state === 'linked')    { linkLed.classList.add('on-green');  statusEl.textContent = 'LIVE';         document.title = '🟢 LIVE — ALPHA — Field Radio v6'; }
@@ -5860,6 +5856,44 @@ function _setupRemoteIdPoll(bravoPollKey) {
 let _unavailIdRetries = 0;
 let _peerDestroyPending = false;
 let _peerGeneration = 0;  // incremented each startPeer() — cancels stale _pollAndDial loops
+const ANSWERING_MODE_DELAY_MS = 5 * 60 * 1000;
+let _answeringMachineMode = false;
+let _answeringModeTimer = null;
+
+function _clearAnsweringModeTimer() {
+  clearTimeout(_answeringModeTimer);
+  _answeringModeTimer = null;
+}
+
+function _armAnsweringModeTimer() {
+  if (_answeringMachineMode || _answeringModeTimer || linked) return;
+  _answeringModeTimer = setTimeout(_enterAnsweringMachineMode, ANSWERING_MODE_DELAY_MS);
+}
+
+function _enterAnsweringMachineMode() {
+  _answeringModeTimer = null;
+  if (linked || leftPermanently || _answeringMachineMode) return;
+  _answeringMachineMode = true;
+  _peerGeneration++; // stop any active presence-poll-and-dial loop
+  clearTimeout(retryTimer);
+  clearTimeout(_dcWatchdog);
+  if (call) {
+    try { call.off('close', onDrop); call.off('error'); call.close(); } catch(e) {}
+    call = null;
+  }
+  if (dataConn) { try { dataConn.close(); } catch(e) {} dataConn = null; }
+  pendingDC = false;
+  linked = false;
+  _iceReady = false;
+  _streamArrived = false;
+  setStatus('answering');
+  duplexBar.textContent = 'ANSWERING MACHINE';
+  duplexBar.className = 'duplex-overlay';
+  syncControls();
+  entry('No BRAVO after 5 minutes — answering machine ready', 'ok');
+  _vmNotice('— 📼 ANSWERING MACHINE READY —');
+}
+
 function startPeer() {
   // Guard: PeerJS CDN may still be loading on slow mobile connections
   if (typeof Peer === 'undefined') {
@@ -5892,6 +5926,14 @@ function startPeer() {
   peer.on('open', () => {
     _unavailIdRetries = 0; // ID claimed — reset backoff
     entry('Radio online', 'ok');
+    _armAnsweringModeTimer();
+    if (_answeringMachineMode) {
+      setStatus('answering');
+      duplexBar.textContent = 'ANSWERING MACHINE';
+      duplexBar.className = 'duplex-overlay';
+      syncControls();
+      return;
+    }
     setStatus('calling');
     // Poll Firebase until BRAVO's suffixed peer ID appears, then dial.
     // _thisGen captures the generation at the time this peer was created; if
@@ -5902,9 +5944,9 @@ function startPeer() {
     const _thisGen = _peerGeneration;
     let _dialPollCount = 0;
     function _pollAndDial() {
-      if (_peerGeneration !== _thisGen || linked) return; // stale or already linked
+      if (_peerGeneration !== _thisGen || linked || _answeringMachineMode) return; // stale, linked or now waiting
       _refreshRemoteId().then(() => {
-        if (_peerGeneration !== _thisGen || linked) return;
+        if (_peerGeneration !== _thisGen || linked || _answeringMachineMode) return;
         _dialPollCount++;
         if (_remoteIdConfirmed) {
           dial();
@@ -5949,6 +5991,7 @@ function startPeer() {
     entry('Peer error [' + e.type + ']: ' + e.message, 'err');
     if (e.type === 'browser-incompatible') return;
     if (e.type === 'peer-unavailable') {
+      if (_answeringMachineMode) return;
       entry('Bravo offline — retry in 5s', 'sys');
       // Close the dead outgoing call so its 'close' event doesn't trigger a
       // competing onDrop → retryTimer chain alongside this one
@@ -5957,7 +6000,9 @@ function startPeer() {
       if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
       pendingDC = false;
       // Refresh BRAVO's peer ID — it may have re-registered with a new suffix
-      retryTimer = setTimeout(() => _refreshRemoteId().then(dial), 5000);
+      retryTimer = setTimeout(() => {
+        if (!_answeringMachineMode) _refreshRemoteId().then(dial);
+      }, 5000);
       return;
     }
     if (e.type === 'unavailable-id') {
@@ -6006,7 +6051,7 @@ function getCallStream() {
 
 function dial() {
   clearTimeout(retryTimer);
-  if (linked || !localStream) return;
+  if (linked || !localStream || _answeringMachineMode) return;
   // Close stale outgoing call before redialling — prevents its 'close' event
   // from triggering a competing onDrop → retryTimer race
   if (call) {
@@ -6036,7 +6081,7 @@ function dial() {
   // Watchdog: if no stream arrives within 90s, close and redial
   clearTimeout(retryTimer);
   retryTimer = setTimeout(() => {
-    if (!linked) {
+    if (!linked && !_answeringMachineMode) {
       entry('No answer after 90s — redialling…', 'sys');
       if (call) { try { call.off('close', onDrop); call.close(); } catch(e){} call = null; }
       if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
@@ -6309,6 +6354,17 @@ function openDataConn() {
 
 function answerCall(c) {
   clearTimeout(retryTimer);
+  if (_answeringMachineMode) {
+    _startRing();
+    _peerGeneration++; // cancel outbound work left from the calling phase
+    if (call && call !== c) {
+      try { call.off('close'); call.off('error'); call.close(); } catch(e) {}
+    }
+    linked = false;
+    _iceReady = false;
+    _streamArrived = false;
+    entry('Answering BRAVO in answering-machine mode', 'sys');
+  }
   c.answer(getCallStream());
   attachCall(c);
 }
@@ -6482,6 +6538,11 @@ function sendVideoState() {
 function markLinked() {
   if (linked) return;
   linked = true;
+  _clearAnsweringModeTimer();
+  if (_answeringMachineMode) {
+    _stopRing();
+    _onCallConnected();
+  }
   restoreSpeechDraft();
   clearTimeout(retryTimer);  // cancel 90s watchdog and any pending redial
   clearTimeout(dropTimer);   // cancel onDrop grace-period before reconnect screen shows
@@ -6803,6 +6864,9 @@ function leaveSession() {
 }
 
 function _doLeave() {
+  _clearAnsweringModeTimer();
+  _stopRing();
+  _stopVoicemail();
   saveRecordingIfActive();
   clearTimeout(_raPlayTimer); _raPlayTimer = null;  // cancel any pending audio play attempt
   ttsStopAll();
@@ -6879,11 +6943,25 @@ function handleRemoteLeave() {
   stopQualityPolling();
   stopAudioWatchdog();
   entry('Remote user left the session', 'sys');
+  if (_answeringMachineMode) {
+    if (_vmActive) {
+      _vmResetPending = true;
+      _stopVoicemail();
+      return;
+    }
+    clearTimeout(dropTimer);
+    dropTimer = setTimeout(() => {
+      remotePeerLeft = false;
+      if (!leftPermanently) startPeer();
+    }, 800);
+    return;
+  }
   // End this session immediately so both sides close at the same time
   _doLeave();
 }
 
 function onDrop() {
+  if (_answeringMachineMode) _onCallEnded();
   saveSpeechDraft();
   clearTimeout(retryTimer);
   clearTimeout(_raPlayTimer); _raPlayTimer = null;  // cancel any pending audio play attempt
@@ -6915,6 +6993,21 @@ function onDrop() {
     const el = document.getElementById(id);
     if (el) { el.classList.remove('no-video'); el.classList.add('stale'); }
   });
+  if (_answeringMachineMode) {
+    setStatus('answering');
+    duplexBar.textContent = 'ANSWERING MACHINE';
+    duplexBar.className = 'duplex-overlay';
+    syncControls();
+    if (leftPermanently || _vmResetPending) return;
+    clearTimeout(dropTimer);
+    dropTimer = setTimeout(() => {
+      if (_vmResetPending || _vmActive || leftPermanently || peerRefreshing) return;
+      remotePeerLeft = false;
+      entry('Answering machine: resetting for next caller…', 'sys');
+      startPeer();
+    }, 1200);
+    return;
+  }
   setStatus('calling');
   if (leftPermanently) return; // permanent leave handled by leaveSession()
   if (remotePeerLeft) return;  // remote sent leave signal — stay on leave screen
@@ -6944,6 +7037,241 @@ function resetLockTimer() { /* inactivity lock disabled */ }
 // ── Video+Mixed Audio Recording ───────────────────────────────
 let recRemote = null, recRemoteChunks = [], recRemoteBusy = false;
 let recLocal  = null, recLocalChunks  = [], recLocalBusy  = false;
+
+// ── Answering machine ─────────────────────────────────────────
+const RING_TIMEOUT_MS = 30000;
+let _vmTimer = null;
+let _vmMaxTimer = null;
+let _vmActive = false;
+let _vmResetPending = false;
+let _vmRec = null;
+let _vmChunks = [];
+let _vmCapturedStream = null;
+let _attended = false;
+let _ringTimer = null;
+let _ringTimeoutTimer = null;
+let _ringing = false;
+let _vmCallStart = 0;
+
+function _vmNotice(text, blobUrl, filename) {
+  const chatEl = document.getElementById('chat');
+  if (!chatEl) return;
+  const d = document.createElement('div');
+  d.className = 'bubble vm-notice';
+  if (blobUrl) {
+    d.classList.add('vm-has-recording');
+    const span = document.createElement('span');
+    span.textContent = text + ' ';
+    const audio = document.createElement('audio');
+    audio.controls = true;
+    audio.src = blobUrl;
+    audio.style.cssText = 'display:block;margin-top:6px;width:100%;max-width:320px;';
+    const dl = document.createElement('a');
+    dl.href = blobUrl;
+    dl.download = filename || 'voicemail';
+    dl.textContent = '⬇ save';
+    dl.style.cssText = 'color:var(--accent,#00d4ff);text-decoration:underline;cursor:pointer;font-size:0.85em;margin-top:4px;display:inline-block;';
+    d.appendChild(span);
+    d.appendChild(audio);
+    d.appendChild(dl);
+  } else {
+    d.textContent = text;
+  }
+  chatEl.appendChild(d);
+  chatEl.scrollTop = chatEl.scrollHeight;
+  try {
+    const key = HISTORY_KEY();
+    const history = JSON.parse(localStorage.getItem(key) || '[]');
+    history.push({ text, vmNotice: true, ts: Date.now(), filename: filename || null });
+    if (history.length > HISTORY_MAX) history.splice(0, history.length - HISTORY_MAX);
+    localStorage.setItem(key, JSON.stringify(history));
+  } catch(e) {}
+}
+
+function _startRing() {
+  _stopRing();
+  _ringing = true;
+  entry('📞 Ringing…', 'sys');
+  playTone('call_in');
+  _ringTimer = setInterval(() => playTone('call_in'), 2000);
+  _ringTimeoutTimer = setTimeout(() => {
+    if (!_ringing || _vmActive) return;
+    entry('📼 No answer after 30s — starting voicemail', 'sys');
+    const remoteAudio = document.getElementById('remoteAudio');
+    const remoteVideo = document.getElementById('remoteVideo');
+    _vmCapturedStream = (remoteAudio && remoteAudio.srcObject)
+                     || (remoteVideo && remoteVideo.srcObject)
+                     || null;
+    _stopRing();
+    _startVoicemail();
+  }, RING_TIMEOUT_MS);
+}
+
+function _stopRing() {
+  clearInterval(_ringTimer); _ringTimer = null;
+  clearTimeout(_ringTimeoutTimer); _ringTimeoutTimer = null;
+  _ringing = false;
+}
+
+function _markAttended() {
+  if (_attended) return;
+  _attended = true;
+  clearTimeout(_vmTimer); _vmTimer = null;
+  if (_vmActive) {
+    entry('Call attended — stopping voicemail recording', 'sys');
+    _stopVoicemail();
+  } else {
+    entry('Call attended — voicemail suppressed', 'sys');
+  }
+}
+
+async function _startVoicemail() {
+  if (_vmActive || !_answeringMachineMode) return;
+  let audioTracks = [];
+  const pc = call && (call.peerConnection || call._pc);
+  if (pc) {
+    try {
+      audioTracks = pc.getReceivers()
+        .map(r => r.track)
+        .filter(t => t && t.kind === 'audio' && t.readyState !== 'ended');
+    } catch(e) {}
+  }
+  if (!audioTracks.length) {
+    const remoteAudio = document.getElementById('remoteAudio');
+    const remoteVideo = document.getElementById('remoteVideo');
+    const remoteStream = _vmCapturedStream
+                      || (remoteAudio && remoteAudio.srcObject)
+                      || (remoteVideo && remoteVideo.srcObject)
+                      || null;
+    audioTracks = remoteStream ? remoteStream.getAudioTracks().filter(t => t.readyState !== 'ended') : [];
+  }
+  entry('DIAG: _startVoicemail — audioTracks=' + audioTracks.length, 'sys');
+  if (!audioTracks.length) {
+    entry('Voicemail: no remote audio track — cannot record', 'err');
+    return;
+  }
+
+  const remoteTracksStream = new MediaStream(audioTracks.map(t => t.clone()));
+  const localTracks = getLocalAudioTracksForRec();
+  const localForMix = localTracks.length ? new MediaStream(localTracks) : null;
+  let vmAudioContext = null;
+  let recordStream;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    await ctx.resume();
+    const dest = ctx.createMediaStreamDestination();
+    [remoteTracksStream, localForMix].forEach((stream, index) => {
+      if (!stream) return;
+      const src = ctx.createMediaStreamSource(stream);
+      const gain = ctx.createGain();
+      gain.gain.value = index === 1 ? 2.0 : 1.0;
+      src.connect(gain);
+      gain.connect(dest);
+    });
+    vmAudioContext = ctx;
+    recordStream = dest.stream;
+  } catch(e) {
+    entry('VM audio mix failed, using raw tracks: ' + e.message, 'sys');
+    recordStream = new MediaStream([
+      ...audioTracks.map(t => t.clone()),
+      ...getLocalAudioTracksForRec()
+    ]);
+  }
+
+  const mimeType = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm']
+    .find(t => MediaRecorder.isTypeSupported(t)) || 'audio/webm';
+  _vmChunks = [];
+  _vmRec = new MediaRecorder(recordStream, { mimeType });
+  _vmRec.ondataavailable = e => { if (e.data.size > 0) _vmChunks.push(e.data); };
+  _vmRec.onstop = () => {
+    _vmActive = false;
+    if (vmAudioContext) { try { vmAudioContext.close(); } catch(e) {} }
+    if (_vmChunks.length) {
+      const blob = new Blob(_vmChunks, { type: mimeType });
+      const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const ext = /mp4/.test(mimeType) ? 'mp4' : 'webm';
+      const filename = `alpha-voicemail-${ts}.${ext}`;
+      entry('📼 Voicemail saved', 'ok');
+      playTone('vm_end');
+      setTimeout(() => playTone('vm_end'), 450);
+      try { dcSend({ __control: 'voicemail', active: false }); } catch(e) {}
+      const blobUrl = URL.createObjectURL(blob);
+      _vmNotice('— 📼 VOICEMAIL RECORDED —', blobUrl, filename);
+      downloadBlob(blob, filename);
+    } else {
+      entry('Voicemail empty — nothing saved', 'sys');
+    }
+    if (_vmResetPending) {
+      _vmResetPending = false;
+      clearTimeout(dropTimer);
+      remotePeerLeft = false;
+      entry('Answering machine: resetting for next caller…', 'sys');
+      if (!leftPermanently) startPeer();
+    }
+  };
+  _vmRec.start(1000);
+  _vmActive = true;
+  _vmMaxTimer = setTimeout(() => {
+    if (_vmActive) {
+      entry('📼 Voicemail: 2-minute limit reached — stopping', 'sys');
+      _stopVoicemail();
+    }
+  }, 120000);
+  try { dcSend({ __control: 'voicemail', active: true }); } catch(e) {}
+  setStatus('voicemail');
+  entry('📼 Unattended — voicemail recording started', 'sys');
+  _vmNotice('— 📼 RECORDING VOICEMAIL… —');
+}
+
+function _stopVoicemail() {
+  clearTimeout(_vmTimer); _vmTimer = null;
+  clearTimeout(_vmMaxTimer); _vmMaxTimer = null;
+  if (_vmRec && _vmRec.state === 'recording') _vmRec.stop();
+}
+
+function _onCallConnected() {
+  _attended = false;
+  _vmCallStart = Date.now();
+  const remoteAudio = document.getElementById('remoteAudio');
+  const remoteVideo = document.getElementById('remoteVideo');
+  _vmCapturedStream = (remoteAudio && remoteAudio.srcObject)
+                   || (remoteVideo && remoteVideo.srcObject)
+                   || null;
+  _vmTimer = setTimeout(_startVoicemail, 15000);
+  ['keydown', 'pointerdown', 'touchstart'].forEach(ev =>
+    window.addEventListener(ev, _markAttended, { once: true, passive: true })
+  );
+}
+
+function _onCallEnded() {
+  const wasRinging = _ringing || (_vmCallStart > 0);
+  const wasRecording = _vmActive;
+  _stopRing();
+  if (wasRecording && !_vmResetPending) {
+    _vmResetPending = true;
+    remotePeerLeft = true;
+  }
+  _stopVoicemail();
+  clearTimeout(_vmTimer); _vmTimer = null;
+  _vmCapturedStream = null;
+  ['keydown', 'pointerdown', 'touchstart'].forEach(ev =>
+    window.removeEventListener(ev, _markAttended)
+  );
+  if (wasRinging) {
+    const time = new Date().toTimeString().slice(0, 5);
+    if (!_vmCallStart || Date.now() - _vmCallStart < 3000) {
+      _vmNotice('— 📞 MISSED CALL — ' + time + ' —');
+    } else {
+      const seconds = Math.round((Date.now() - _vmCallStart) / 1000);
+      const mins = Math.floor(seconds / 60);
+      const remainder = seconds % 60;
+      const duration = mins ? mins + 'm ' + remainder + 's' : remainder + 's';
+      _vmNotice('— 📞 CALL ENDED — ' + time + ' — ' + duration + ' —');
+    }
+  }
+  _attended = false;
+  _vmCallStart = 0;
+}
 
 // ── Combined-session accumulator ──────────────────────────────
 // When the user switches between local and remote recording mid-session,
