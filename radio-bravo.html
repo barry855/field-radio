@@ -6599,7 +6599,6 @@ function handleRemoteLeave() {
   stopQualityPolling();
   stopAudioWatchdog();
   entry('Remote user left the session', 'sys');
-  console.error('handleRemoteLeave — remotePeerLeft=' + remotePeerLeft + ' _vmResetPending=' + _vmResetPending + ' _vmActive=' + _vmActive);
   // If voicemail is mid-recording, let onstop finish saving then reset.
   if (_vmActive) {
     _vmResetPending = true;
@@ -6615,8 +6614,6 @@ function handleRemoteLeave() {
 }
 
 function onDrop() {
-  console.error('onDrop ENTERED — remotePeerLeft=' + remotePeerLeft + ' _vmResetPending=' + _vmResetPending + ' _vmActive=' + _vmActive + ' leftPermanently=' + leftPermanently);
-  console.error(new Error('onDrop stack').stack);
   _onCallEnded();        // log call, stop ring/voicemail, clear timers
   saveSpeechDraft();
   clearTimeout(retryTimer);
@@ -6649,24 +6646,21 @@ function onDrop() {
   
   setStatus('standby');
   if (leftPermanently) return; // permanent leave handled by leaveSession()
-  if (remotePeerLeft) return;  // remote sent leave signal — stay on leave screen
+  if (remotePeerLeft) return;  // remote sent leave signal — already resetting
   if (_vmResetPending) return; // voicemail still saving — onstop will handle next state
   // Check sessionStorage in case the refresh control message raced with the drop
   try { if (sessionStorage.getItem('fieldRadioRefreshing') === '1') peerRefreshing = true; } catch(e) {}
   if (peerRefreshing) return;  // a refresh-reload is in progress — do not show login
-  // Show reconnect screen after a short grace period.
-  // handleRemoteLeave() will cancel this timer if a 'leave' signal arrives first,
-  // ensuring a clean leave goes to the leave screen, not the reconnect screen.
+  // Bravo is an answering machine — on any unexpected drop, reset for the next caller.
+  // Never show the reconnect countdown screen (that is Alpha behaviour).
   clearTimeout(dropTimer);
   dropTimer = setTimeout(() => {
-    if (remotePeerLeft) return; // leave message arrived — handled by handleRemoteLeave
-    // Re-check in case the refresh signal arrived during the grace period
+    if (remotePeerLeft || _vmResetPending || leftPermanently || peerRefreshing) return;
     try { if (sessionStorage.getItem('fieldRadioRefreshing') === '1') peerRefreshing = true; } catch(e) {}
-    if (peerRefreshing) return; // refresh in progress — do not show login
-    entry('Link lost — showing reconnect countdown', 'sys');
-    console.error('RECONNECT TRIGGERED — dropTimer fired. remotePeerLeft=' + remotePeerLeft + ' _vmResetPending=' + _vmResetPending + ' leftPermanently=' + leftPermanently + ' peerRefreshing=' + peerRefreshing);
-    console.error(new Error('dropTimer stack').stack);
-    showReconnecting(30);
+    if (peerRefreshing) return;
+    entry('Call dropped — resetting for next caller…', 'sys');
+    remotePeerLeft = false;
+    if (!leftPermanently) startPeer();
   }, 1500);
 }
 
@@ -6853,7 +6847,6 @@ async function _startVoicemail() {
   _vmRec = new MediaRecorder(_vmRecStream, { mimeType });
   _vmRec.ondataavailable = e => { if (e.data.size > 0) _vmChunks.push(e.data); };
   _vmRec.onstop = async () => {
-    console.error('VM onstop FIRED — _vmResetPending=' + _vmResetPending + ' remotePeerLeft=' + remotePeerLeft + ' chunks=' + _vmChunks.length);
     _vmActive = false;
     if (_vmACtx) { try { _vmACtx.close(); } catch(e) {} _vmACtx = null; }
     if (!_vmChunks.length) {
@@ -6964,15 +6957,8 @@ function _onCallEnded() {
       }
     }
   }
-  // If handleRemoteLeave already set _vmResetPending, onstop owns the reset — don't duplicate it
+  // If voicemail onstop is pending, it owns the reset
   if (_vmResetPending) { _attended = false; _vmCallStart = 0; return; }
-  if (wasRinging && !remotePeerLeft) {
-    // Answering machine: skip reconnect screen, go straight back to waiting.
-    entry('Answering machine: resetting for next caller…', 'sys');
-    remotePeerLeft = true;
-    // Re-register with a fresh peer ID so Alpha's presence poll sees us immediately
-    setTimeout(() => { remotePeerLeft = false; if (!leftPermanently) startPeer(); }, 1200);
-  }
   _attended = false;
   _vmCallStart = 0;
 }
