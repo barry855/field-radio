@@ -128,7 +128,8 @@
   .led.on-green  { background: var(--accent2); box-shadow: 0 0 6px var(--accent2); }
   .led.on-cyan   { background: var(--accent);  box-shadow: 0 0 6px var(--accent);  }
   .led.on-yellow { background: var(--warn);    box-shadow: 0 0 6px var(--warn);    animation: blink 0.8s step-end infinite; }
-  .led.on-amber  { background: #ffaa00;       box-shadow: 0 0 8px #ffaa00; }  /* reachable — solid amber */
+  .led.on-amber  { background: #ffaa00;       box-shadow: 0 0 8px #ffaa00; }  /* solid amber */
+  .led.on-amber-flash { background: #ffaa00; box-shadow: 0 0 8px #ffaa00; animation: blink 1s step-end infinite; }  /* waiting — flashing amber */
   .led.on-blue   { background: #4499ff;       box-shadow: 0 0 8px #4499ff; animation: blink 0.5s step-end infinite; }  /* connecting */
   @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.35} }
 
@@ -3165,8 +3166,8 @@ function setStatus(state) {
   linkLed.className = 'led';
   if (state === 'standby')        { linkLed.classList.add('on-cyan');   statusEl.textContent = 'STANDBY'; document.title = '🔵 STANDBY — BRAVO — Field Radio v6'; }
   else if (state === 'connecting')  { linkLed.classList.add('on-blue');   statusEl.textContent = 'CONNECTING…'; document.title = '🔵 CONNECTING… — BRAVO — Field Radio v6'; }
-  else if (state === 'reachable') { linkLed.classList.add('on-amber');  statusEl.textContent = 'WAITING';  document.title = '🟡 WAITING — BRAVO — Field Radio v6'; }
-  else if (state === 'calling')   { linkLed.classList.add('on-amber');  statusEl.textContent = 'WAITING';  document.title = '🟡 WAITING — BRAVO — Field Radio v6'; }
+  else if (state === 'reachable') { linkLed.classList.add('on-amber-flash');  statusEl.textContent = 'WAITING';  document.title = '🟡 WAITING — BRAVO — Field Radio v6'; }
+  else if (state === 'calling')   { linkLed.classList.add('on-amber-flash');  statusEl.textContent = 'WAITING';  document.title = '🟡 WAITING — BRAVO — Field Radio v6'; }
   else if (state === 'linked')    { linkLed.classList.add('on-green');  statusEl.textContent = 'LIVE';   document.title = '🟢 LIVE — BRAVO — Field Radio v6'; }
   else                            { statusEl.textContent = ''; document.title = 'BRAVO — Field Radio v6'; }
 }
