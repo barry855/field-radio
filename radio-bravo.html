@@ -6655,7 +6655,7 @@ function onDrop() {
   // Never show the reconnect countdown screen (that is Alpha behaviour).
   clearTimeout(dropTimer);
   dropTimer = setTimeout(() => {
-    if (remotePeerLeft || _vmResetPending || leftPermanently || peerRefreshing) return;
+    if (remotePeerLeft || _vmResetPending || _vmActive || leftPermanently || peerRefreshing) return;
     try { if (sessionStorage.getItem('fieldRadioRefreshing') === '1') peerRefreshing = true; } catch(e) {}
     if (peerRefreshing) return;
     entry('Call dropped — resetting for next caller…', 'sys');
