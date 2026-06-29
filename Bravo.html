@@ -1310,6 +1310,7 @@
     .tab-content, .tab-pane {
       height: auto !important; overflow: visible !important;
       min-height: 0 !important; max-height: none !important;
+      flex: 0 0 auto !important;
     }
 
     /* ── Header / logo bar — light grey ── */
@@ -1414,6 +1415,13 @@
     .chat-find-bar { display: none !important; height: 0 !important; overflow: hidden !important; }
     .mini-video-overlay { display: none !important; }
     .zoom-row { display: none !important; height: 0 !important; overflow: hidden !important; }
+    /* speechPanel is moved to body before printing; collapse its old flex parent. */
+    #chatPanel {
+      display: none !important; flex: none !important;
+      height: 0 !important; min-height: 0 !important;
+      margin: 0 !important; padding: 0 !important; border: 0 !important;
+      overflow: hidden !important;
+    }
 
     /* ── Video elements — hidden, no space ── */
     #chatUnderlay { display: none !important; }
@@ -1431,6 +1439,7 @@
       overflow: visible !important; height: auto !important;
       max-height: none !important; gap: 6px !important;
       flex-shrink: 0 !important;
+      page-break-inside: avoid !important; break-inside: avoid-page !important;
     }
     #speechEditWrap { display: none !important; }
     #speechStatus { display: none !important; }
@@ -1464,6 +1473,7 @@
       max-width: 100% !important; padding: 8px 10px !important;
       margin: 0 !important; overflow: visible !important;
       height: auto !important; max-height: none !important;
+      page-break-inside: avoid !important; break-inside: avoid-page !important;
     }
     #helpPanelRows {
       overflow: visible !important; height: auto !important;
@@ -8863,8 +8873,8 @@ function ttsSpeak(text, lang) {
     hpi.scrollTop = 0;
 
     // Force in-flow rendering via inline styles (beats any @media print ignored by Mac)
-    hpi.style.cssText = 'position:static !important;display:block !important;border:1px solid #999 !important;border-radius:4px !important;max-width:100% !important;padding:8px 10px !important;margin:20px 0 0 0 !important;overflow:visible !important;height:auto !important;max-height:none !important;background:#fff !important;color:#000 !important;';
-    sp.style.cssText  = 'position:static !important;display:flex !important;flex-direction:column !important;background:none !important;border:1px solid #999 !important;border-radius:4px !important;padding:8px 10px !important;margin-top:6px !important;overflow:visible !important;height:auto !important;max-height:none !important;gap:6px !important;flex-shrink:0 !important;';
+    hpi.style.cssText = 'position:static !important;display:block !important;border:1px solid #999 !important;border-radius:4px !important;max-width:100% !important;padding:8px 10px !important;margin:6px 0 0 0 !important;overflow:visible !important;height:auto !important;max-height:none !important;background:#fff !important;color:#000 !important;page-break-inside:avoid !important;break-inside:avoid-page !important;';
+    sp.style.cssText  = 'position:static !important;display:flex !important;flex-direction:column !important;background:none !important;border:1px solid #999 !important;border-radius:4px !important;padding:8px 10px !important;margin-top:6px !important;overflow:visible !important;height:auto !important;max-height:none !important;gap:6px !important;flex-shrink:0 !important;page-break-inside:avoid !important;break-inside:avoid-page !important;';
 
     // Explicitly zero out help-btn-bar — Chrome may reserve space for display:none in print CSS
     var hbb = document.querySelector('.help-btn-bar');
