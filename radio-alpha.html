@@ -6017,10 +6017,9 @@ function attachDataConn(dc) {
         if (f.active) {
           setStatus('voicemail');
           _vmNotice('— 📼 BRAVO RECORDING VOICEMAIL —');
-          // 3 beeps to alert Alpha they are now in voicemail
+          // 2 beeps to alert Alpha they are now in voicemail
           playTone('vm_start');
           setTimeout(() => playTone('vm_start'), 400);
-          setTimeout(() => playTone('vm_start'), 800);
         } else {
           setStatus('linked');
           _vmNotice('— 📼 VOICEMAIL SAVED —');
@@ -8758,10 +8757,9 @@ function ttsSpeak(text, lang) {
   }
 
   function afterPrint() {
+    // Guard against double-firing (afterprint event + matchMedia both fire)
+    if (!_prepared) return;
     _prepared = false;
-
-    var sp  = document.getElementById('speechPanel');
-    var hpi = document.getElementById('helpPanelInner');
 
     if (_printStyleEl && _printStyleEl.parentNode) {
       _printStyleEl.parentNode.removeChild(_printStyleEl);
@@ -8775,6 +8773,7 @@ function ttsSpeak(text, lang) {
       sp.style.cssText = '';
     }
 
+    var hpi = document.getElementById('helpPanelInner');
     if (!hpi || !_hpiOrigParent) {
       _spOrigParent = null; _spOrigNext = null;
       _hpiOrigParent = null; _hpiOrigNext = null;
@@ -8783,18 +8782,24 @@ function ttsSpeak(text, lang) {
       return;
     }
 
+    // Restore hpi into helpPanel shell first
+    _hpiOrigParent.insertBefore(hpi, _hpiOrigNext);
+    hpi.style.cssText = '';
+
+    // Clear inline styles on buttons AFTER hpi is back in the shell
     var hbb = document.querySelector('.help-btn-bar');
     if (hbb) hbb.style.cssText = '';
     var hcb = document.getElementById('helpCloseBtn');
     if (hcb) hcb.style.cssText = '';
 
-    _hpiOrigParent.insertBefore(hpi, _hpiOrigNext);
-    hpi.style.cssText = '';
-
+    // Re-insert helpPanel shell into the page
     var hp = _hpiOrigParent;
     if (_hpOrigParent) _hpOrigParent.insertBefore(hp, _hpOrigNext);
     hp.removeAttribute('data-printing');
     if (_hpWasOpen) hp.classList.add('open');
+
+    // Force repaint so browser re-evaluates styles on restored elements
+    void hp.offsetHeight;
 
     _spOrigParent = null; _spOrigNext = null;
     _hpiOrigParent = null; _hpiOrigNext = null;
