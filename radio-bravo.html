@@ -6611,10 +6611,12 @@ function handleRemoteLeave() {
     _vmResetIsLeave = false;
     return;
   }
-  // Alpha left — reset for next caller
+  // Alpha left — reset for next caller.
+  // Keep remotePeerLeft = true until after onDrop fires (it blocks the
+  // dropTimer → showReconnecting path). Clear it inside the setTimeout so
+  // any synchronous or near-synchronous onDrop call is already handled.
   entry('Answering machine: resetting for next caller…', 'sys');
-  remotePeerLeft = false;
-  if (!leftPermanently) startPeer();
+  setTimeout(() => { remotePeerLeft = false; if (!leftPermanently) startPeer(); }, 800);
 }
 
 function onDrop() {
