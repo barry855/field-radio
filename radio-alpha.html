@@ -1328,6 +1328,32 @@
       min-height: 0 !important; max-height: none !important;
     }
 
+    /* ── Overall page — flex column ── */
+    html { height: 100% !important; }
+    body {
+      height: 100% !important; min-height: 0 !important;
+      overflow: visible !important;
+      background: #fff !important; margin: 0 !important;
+      display: flex !important; flex-direction: column !important;
+    }
+    .shell {
+      gap: 4px !important; padding: 6px !important;
+      height: auto !important; overflow: visible !important;
+      max-width: 100% !important;
+      display: flex !important; flex-direction: column !important;
+      flex-shrink: 0 !important;
+    }
+    .tab-content, .tab-pane {
+      height: auto !important; overflow: visible !important;
+      min-height: 0 !important; max-height: none !important;
+    }
+    /* Hide the chat pane entirely — all children hidden, just collapses the container */
+    #paneChat {
+      height: auto !important; min-height: 0 !important;
+      overflow: hidden !important; padding: 0 !important;
+      gap: 0 !important;
+    }
+
     /* ── Header / logo bar — light grey ── */
     header {
       background: #e8e8e8 !important;
@@ -8682,58 +8708,110 @@ function ttsSpeak(text, lang) {
 (function() {
   var _spOrigParent = null, _spOrigNext = null;
   var _hpiOrigParent = null, _hpiOrigNext = null;
+  var _hpOrigParent = null, _hpOrigNext = null;
   var _hpWasOpen = false;
+  var _printStyleEl = null;
+  var _prepared = false;
 
   function beforePrint() {
-    var sp   = document.getElementById('speechPanel');
-    var hp   = document.getElementById('helpPanel');
-    var hpi  = document.getElementById('helpPanelInner');
+    if (_prepared) return;
+    _prepared = true;
+
+    var sp    = document.getElementById('speechPanel');
+    var hp    = document.getElementById('helpPanel');
+    var hpi   = document.getElementById('helpPanelInner');
     var notes = document.getElementById('printNotesArea');
     if (!sp || !hp || !hpi || !notes) return;
 
-    // Remember original positions so afterPrint can restore them
     _spOrigParent  = sp.parentNode;
     _spOrigNext    = sp.nextSibling;
     _hpiOrigParent = hpi.parentNode;
     _hpiOrigNext   = hpi.nextSibling;
+    _hpOrigParent  = hp.parentNode;
+    _hpOrigNext    = hp.nextSibling;
     _hpWasOpen     = hp.classList.contains('open');
 
-    // Hide the fixed overlay wrapper — Mac won't obey @media print on position:fixed
-    hp.setAttribute('data-printing', '1');
-    hp.style.cssText = 'display:none !important;';
+    // Inject <style> into <head> for Safari — most authoritative way to hide fixed overlay
+    _printStyleEl = document.createElement('style');
+    _printStyleEl.textContent = '#helpPanel,#helpPanel.open{display:none!important;visibility:hidden!important;}';
+    document.head.appendChild(_printStyleEl);
 
-    // Insert order before #printNotesArea: hpi first, then sp immediately after
-    notes.parentNode.insertBefore(hpi, notes);
-    notes.parentNode.insertBefore(sp, notes);
+    // Move hpi and sp to body (outside shell) to avoid shell border clipping in Chrome
+    document.body.appendChild(hpi);
+    document.body.appendChild(sp);
 
-    // Force in-flow rendering via inline styles (beats any @media print ignored by Mac)
-    hpi.style.cssText = 'position:static !important;display:block !important;border:1px solid #999 !important;border-radius:4px !important;max-width:100% !important;padding:8px 10px !important;margin:0 !important;overflow:visible !important;height:auto !important;max-height:none !important;background:#fff !important;color:#000 !important;';
+    // Detach the now-empty #helpPanel shell — eliminates ghost layout space
+    hp.parentNode.removeChild(hp);
+
+    // Reset scroll position — #helpPanel has overflow-y:auto, hpi may have scrollTop > 0
+    hpi.scrollTop = 0;
+
+    // Force in-flow rendering via inline styles
+    hpi.style.cssText = 'position:static !important;display:block !important;border:1px solid #999 !important;border-radius:4px !important;max-width:100% !important;padding:8px 10px !important;margin:6px 0 0 0 !important;overflow:visible !important;height:auto !important;max-height:none !important;background:#fff !important;color:#000 !important;';
     sp.style.cssText  = 'position:static !important;display:flex !important;flex-direction:column !important;background:none !important;border:1px solid #999 !important;border-radius:4px !important;padding:8px 10px !important;margin-top:6px !important;overflow:visible !important;height:auto !important;max-height:none !important;gap:6px !important;flex-shrink:0 !important;';
+
+    // Explicitly zero out help-btn-bar — Chrome may reserve space for display:none elements
+    var hbb = document.querySelector('.help-btn-bar');
+    if (hbb) hbb.style.cssText = 'display:none !important;height:0 !important;overflow:hidden !important;padding:0 !important;margin:0 !important;';
+    var hcb = document.getElementById('helpCloseBtn');
+    if (hcb) hcb.style.cssText = 'display:none !important;height:0 !important;overflow:hidden !important;padding:0 !important;margin:0 !important;';
   }
 
   function afterPrint() {
-    var sp  = document.getElementById('speechPanel');
-    var hp  = document.getElementById('helpPanel');
-    var hpi = document.getElementById('helpPanelInner');
-    if (!hpi || !_hpiOrigParent) return;
+    _prepared = false;
 
+    var sp  = document.getElementById('speechPanel');
+    var hpi = document.getElementById('helpPanelInner');
+
+    if (_printStyleEl && _printStyleEl.parentNode) {
+      _printStyleEl.parentNode.removeChild(_printStyleEl);
+    }
+    _printStyleEl = null;
+
+    // Always restore sp regardless of hpi state
+    var sp  = document.getElementById('speechPanel');
     if (sp && _spOrigParent) {
       _spOrigParent.insertBefore(sp, _spOrigNext);
       sp.style.cssText = '';
     }
+
+    if (!hpi || !_hpiOrigParent) {
+      _spOrigParent = null; _spOrigNext = null;
+      _hpiOrigParent = null; _hpiOrigNext = null;
+      _hpOrigParent = null; _hpOrigNext = null;
+      _hpWasOpen = false;
+      return;
+    }
+
+    var hbb = document.querySelector('.help-btn-bar');
+    if (hbb) hbb.style.cssText = '';
+    var hcb = document.getElementById('helpCloseBtn');
+    if (hcb) hcb.style.cssText = '';
+
     _hpiOrigParent.insertBefore(hpi, _hpiOrigNext);
     hpi.style.cssText = '';
+
+    var hp = _hpiOrigParent;
+    if (_hpOrigParent) _hpOrigParent.insertBefore(hp, _hpOrigNext);
     hp.removeAttribute('data-printing');
-    hp.style.cssText = '';
     if (_hpWasOpen) hp.classList.add('open');
 
     _spOrigParent = null; _spOrigNext = null;
     _hpiOrigParent = null; _hpiOrigNext = null;
+    _hpOrigParent = null; _hpOrigNext = null;
     _hpWasOpen = false;
   }
 
   window.addEventListener('beforeprint', beforePrint);
   window.addEventListener('afterprint',  afterPrint);
+
+  // Safari fires matchMedia 'print' before beforeprint event — use both
+  if (window.matchMedia) {
+    var mq = window.matchMedia('print');
+    mq.addListener(function(e) {
+      if (e.matches) { beforePrint(); } else { afterPrint(); }
+    });
+  }
 })();
 </script>
 
