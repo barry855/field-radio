@@ -128,7 +128,8 @@
   .led.on-green  { background: var(--accent2); box-shadow: 0 0 6px var(--accent2); }
   .led.on-cyan   { background: var(--accent);  box-shadow: 0 0 6px var(--accent);  }
   .led.on-yellow { background: var(--warn);    box-shadow: 0 0 6px var(--warn);    animation: blink 0.8s step-end infinite; }
-  .led.on-amber  { background: #ffaa00;       box-shadow: 0 0 8px #ffaa00; }  /* reachable — solid amber */
+  .led.on-amber  { background: #ffaa00;       box-shadow: 0 0 8px #ffaa00; }  /* solid amber */
+  .led.on-amber-flash { background: #ffaa00; box-shadow: 0 0 8px #ffaa00; animation: blink 1s step-end infinite; }  /* waiting — flashing amber */
   .led.on-blue   { background: #4499ff;       box-shadow: 0 0 8px #4499ff; animation: blink 0.5s step-end infinite; }  /* connecting */
   @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.35} }
 
@@ -3165,8 +3166,8 @@ function setStatus(state) {
   linkLed.className = 'led';
   if (state === 'standby')        { linkLed.classList.add('on-cyan');   statusEl.textContent = 'STANDBY'; document.title = '🔵 STANDBY — BRAVO — Field Radio v6'; }
   else if (state === 'connecting')  { linkLed.classList.add('on-blue');   statusEl.textContent = 'CONNECTING…'; document.title = '🔵 CONNECTING… — BRAVO — Field Radio v6'; }
-  else if (state === 'reachable') { linkLed.classList.add('on-amber');  statusEl.textContent = 'WAITING';  document.title = '🟡 WAITING — BRAVO — Field Radio v6'; }
-  else if (state === 'calling')   { linkLed.classList.add('on-amber');  statusEl.textContent = 'WAITING';  document.title = '🟡 WAITING — BRAVO — Field Radio v6'; }
+  else if (state === 'reachable') { linkLed.classList.add('on-amber-flash');  statusEl.textContent = 'WAITING';  document.title = '🟡 WAITING — BRAVO — Field Radio v6'; }
+  else if (state === 'calling')   { linkLed.classList.add('on-amber-flash');  statusEl.textContent = 'WAITING';  document.title = '🟡 WAITING — BRAVO — Field Radio v6'; }
   else if (state === 'linked')    { linkLed.classList.add('on-green');  statusEl.textContent = 'LIVE';   document.title = '🟢 LIVE — BRAVO — Field Radio v6'; }
   else                            { statusEl.textContent = ''; document.title = 'BRAVO — Field Radio v6'; }
 }
@@ -5714,6 +5715,9 @@ function startPeer() {
   _peerDestroyPending = false;
   _peerGeneration++;           // invalidate any _pollAndDial loop from the previous peer
   _remoteIdConfirmed = false;  // reset so new peer waits for fresh Firebase confirmation
+  remotePeerLeft = false;      // reset so answering machine resets correctly on next call end
+  _vmResetPending = false;     // discard any stale deferred reset
+  _vmResetIsLeave = false;     // discard any stale leave flag
   // Destroy any existing peer before creating a new one.
   // Without this the old peer's event handlers (especially 'disconnected' → peer.reconnect())
   // keep firing against the replaced reference, causing a permanent reconnect loop.
@@ -6592,12 +6596,21 @@ function handleRemoteLeave() {
   stopQualityPolling();
   stopAudioWatchdog();
   entry('Remote user left the session', 'sys');
-  // If voicemail is mid-recording, let onstop finish saving before we reset.
-  // _vmResetPending tells onstop to call _doLeave() + startPeer() once done.
+  // If voicemail is mid-recording (or onstop is in-flight after onDrop already
+  // stopped it), let onstop finish saving before we reset.
+  // _vmResetPending is true in both cases; upgrade _vmResetIsLeave so onstop
+  // shows SESSION ENDED instead of resetting for the next caller.
   if (_vmActive) {
     _vmResetPending = true;
+    _vmResetIsLeave = true;   // intentional leave — onstop shows SESSION ENDED, not reset
     _stopVoicemail();
     return;
+  }
+  if (_vmResetPending) {
+    // onDrop already stopped the recorder (onstop hasn't fired yet).
+    // Upgrade the reset so onstop calls _doLeave() instead of startPeer().
+    _vmResetIsLeave = true;
+    return;  // onstop will call _doLeave() when save is complete
   }
   // End this session immediately so both sides close at the same time
   _doLeave();
@@ -6637,6 +6650,7 @@ function onDrop() {
   setStatus('standby');
   if (leftPermanently) return; // permanent leave handled by leaveSession()
   if (remotePeerLeft) return;  // remote sent leave signal — stay on leave screen
+  if (_vmResetPending) return; // voicemail still saving — onstop will handle next state
   // Check sessionStorage in case the refresh control message raced with the drop
   try { if (sessionStorage.getItem('fieldRadioRefreshing') === '1') peerRefreshing = true; } catch(e) {}
   if (peerRefreshing) return;  // a refresh-reload is in progress — do not show login
@@ -6673,6 +6687,7 @@ let _vmTimer        = null;   // 15s unattended timeout
 let _vmMaxTimer     = null;   // 2-min hard recording limit
 let _vmActive       = false;  // voicemail recorder running
 let _vmResetPending = false;  // reset deferred until voicemail onstop completes
+let _vmResetIsLeave = false;  // true when the deferred reset was triggered by an intentional remote leave
 let _vmRec       = null;   // MediaRecorder for voicemail
 let _vmChunks    = [];
 let _vmCapturedStream = null;  // remote stream snapshot taken at call-connect time
@@ -6842,9 +6857,15 @@ async function _startVoicemail() {
       entry('Voicemail empty — nothing saved', 'sys');
       if (_vmResetPending) {
         _vmResetPending = false;
-        entry('Answering machine: resetting for next caller…', 'sys');
-        remotePeerLeft = false;
-        if (!leftPermanently) startPeer();
+        if (_vmResetIsLeave) {
+          _vmResetIsLeave = false;
+          // Alpha left intentionally — show SESSION ENDED
+          _doLeave();
+        } else {
+          entry('Answering machine: resetting for next caller…', 'sys');
+          remotePeerLeft = false;
+          if (!leftPermanently) startPeer();
+        }
       }
       return;
     }
@@ -6864,9 +6885,15 @@ async function _startVoicemail() {
     // onDrop has already run teardown — just re-register for the next caller.
     if (_vmResetPending) {
       _vmResetPending = false;
-      entry('Answering machine: resetting for next caller…', 'sys');
-      remotePeerLeft = false;
-      if (!leftPermanently) startPeer();
+      if (_vmResetIsLeave) {
+        _vmResetIsLeave = false;
+        // Alpha left intentionally — show SESSION ENDED
+        _doLeave();
+      } else {
+        entry('Answering machine: resetting for next caller…', 'sys');
+        remotePeerLeft = false;
+        if (!leftPermanently) startPeer();
+      }
     }
   };
   _vmRec.start(1000);
@@ -6913,6 +6940,14 @@ function _onCallEnded() {
   const wasRinging = _ringing || (_vmCallStart > 0);
   const wasVmRecording = _vmActive;  // capture before _stopVoicemail clears it
   _stopRing();
+  // If voicemail is recording, mark the pending reset BEFORE stopping it so
+  // onstop always fires with the correct flags (avoids the race where onstop
+  // fires before the flags are set further down).
+  if (wasVmRecording && !_vmResetPending) {
+    _vmResetPending = true;
+    _vmResetIsLeave = false;  // normal drop — onstop resets for next caller
+    remotePeerLeft = true;    // suppress reconnect screen while onstop runs
+  }
   _stopVoicemail();
   clearTimeout(_vmTimer); _vmTimer = null;
   _vmCapturedStream = null;
@@ -6936,20 +6971,12 @@ function _onCallEnded() {
   }
   // If handleRemoteLeave already set _vmResetPending, onstop owns the reset — don't duplicate it
   if (_vmResetPending) { _attended = false; _vmCallStart = 0; return; }
-  if (wasRinging) {
+  if (wasRinging && !remotePeerLeft) {
     // Answering machine: skip reconnect screen, go straight back to waiting.
-    // If voicemail was recording when Alpha left, defer the reset until onstop
-    // has finished saving the file — _vmResetPending tells onstop to do it.
-    if (wasVmRecording) {
-      _vmResetPending = true;
-      remotePeerLeft = true;  // suppress reconnect screen — onstop will reset and call startPeer
-      entry('Voicemail still saving — reset deferred until file written', 'sys');
-    } else {
-      entry('Answering machine: resetting for next caller…', 'sys');
-      remotePeerLeft = true;
-      // Re-register with a fresh peer ID so Alpha's presence poll sees us immediately
-      setTimeout(() => { remotePeerLeft = false; if (!leftPermanently) startPeer(); }, 1200);
-    }
+    entry('Answering machine: resetting for next caller…', 'sys');
+    remotePeerLeft = true;
+    // Re-register with a fresh peer ID so Alpha's presence poll sees us immediately
+    setTimeout(() => { remotePeerLeft = false; if (!leftPermanently) startPeer(); }, 1200);
   }
   _attended = false;
   _vmCallStart = 0;
