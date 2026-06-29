@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <!-- Field Radio v6 — BRAVO -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -3514,7 +3515,7 @@ function loadHistory() {
         const span = document.createElement('span');
         span.textContent = m.text;
         const note = document.createElement('div');
-        note.style.cssText = 'font-size:0.8em;opacity:0.7;margin-top:4px;letter-spacing:0.5px;font-weight:normal;';
+        note.style.cssText = 'font-size:11px;color:#fff;margin-top:4px;letter-spacing:2px;font-weight:bold;';
         note.textContent = '💾 ' + m.filename;
         d.appendChild(span);
         d.appendChild(note);
@@ -5650,6 +5651,7 @@ let _peerDestroyPending = false;
 let _peerGeneration = 0;  // incremented each startPeer() — cancels stale _pollAndDial loops
 
 // ── Remote ID refresh (reads Alpha's published peerId from Firebase) ──────────
+let _remoteIdConfirmed = false; // true once Firebase has returned a valid peerId for ALPHA
 async function _refreshRemoteId() {
   try {
     const _code = MY_ID ? MY_ID.replace(/^bravo-/, '').replace(/-[0-9a-f]{4}$/, '') : '';
@@ -5657,9 +5659,12 @@ async function _refreshRemoteId() {
     const _r = await fetch(FB_URL + '/presence/alpha-' + _code + '.json');
     const _env = await _r.json();
     const _d = _env ? await _decryptPresence(_code, _env) : null;
-    if (_d && _d.peerId && _d.peerId !== REMOTE_ID) {
-      entry('ALPHA peer ID: ' + _d.peerId, 'sys');
-      REMOTE_ID = _d.peerId;
+    if (_d && _d.peerId) {
+      if (_d.peerId !== REMOTE_ID) {
+        entry('ALPHA peer ID: ' + _d.peerId, 'sys');
+        REMOTE_ID = _d.peerId;
+      }
+      _remoteIdConfirmed = true;
     }
   } catch(e) {}
 }
@@ -5708,6 +5713,7 @@ function startPeer() {
   }
   _peerDestroyPending = false;
   _peerGeneration++;           // invalidate any _pollAndDial loop from the previous peer
+  _remoteIdConfirmed = false;  // reset so new peer waits for fresh Firebase confirmation
   // Destroy any existing peer before creating a new one.
   // Without this the old peer's event handlers (especially 'disconnected' → peer.reconnect())
   // keep firing against the replaced reference, causing a permanent reconnect loop.
@@ -5745,8 +5751,7 @@ function startPeer() {
       _refreshRemoteId().then(() => {
         if (_peerGeneration !== _thisGen || linked) return;
         _dialPollCount++;
-        const hasSuffix = REMOTE_ID && /-[0-9a-f]{4}$/.test(REMOTE_ID);
-        if (hasSuffix) {
+        if (_remoteIdConfirmed) {
           if (!linked) dial();
         } else {
           if (_dialPollCount % 20 === 0) {
