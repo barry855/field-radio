@@ -8709,15 +8709,26 @@ function ttsSpeak(text, lang) {
     document.head.appendChild(_printStyleEl);
 
     // Pull hpi OUT of hp before detaching hp, so hpi survives
-    notes.parentNode.insertBefore(hpi, notes);
-    notes.parentNode.insertBefore(sp, notes);
+    // Insert hpi and sp into body (outside the shell) to avoid shell border clipping in Chrome
+    var body = document.body;
+    body.appendChild(hpi);
+    body.appendChild(sp);
 
     // Detach the now-empty #helpPanel shell entirely — eliminates ghost layout space in Chrome
     hp.parentNode.removeChild(hp);
 
+    // Reset scroll position — #helpPanel has overflow-y:auto, hpi may have scrollTop > 0
+    hpi.scrollTop = 0;
+
     // Force in-flow rendering via inline styles (beats any @media print ignored by Mac)
-    hpi.style.cssText = 'position:static !important;display:block !important;border:1px solid #999 !important;border-radius:4px !important;max-width:100% !important;padding:8px 10px !important;margin:6px 0 0 0 !important;overflow:visible !important;height:auto !important;max-height:none !important;background:#fff !important;color:#000 !important;';
+    hpi.style.cssText = 'position:static !important;display:block !important;border:1px solid #999 !important;border-radius:4px !important;max-width:100% !important;padding:8px 10px !important;margin:20px 0 0 0 !important;overflow:visible !important;height:auto !important;max-height:none !important;background:#fff !important;color:#000 !important;';
     sp.style.cssText  = 'position:static !important;display:flex !important;flex-direction:column !important;background:none !important;border:1px solid #999 !important;border-radius:4px !important;padding:8px 10px !important;margin-top:6px !important;overflow:visible !important;height:auto !important;max-height:none !important;gap:6px !important;flex-shrink:0 !important;';
+
+    // Explicitly zero out help-btn-bar — Chrome may reserve space for display:none in print CSS
+    var hbb = document.querySelector('.help-btn-bar');
+    if (hbb) hbb.style.cssText = 'display:none !important;height:0 !important;overflow:hidden !important;padding:0 !important;margin:0 !important;';
+    var hcb = document.getElementById('helpCloseBtn');
+    if (hcb) hcb.style.cssText = 'display:none !important;height:0 !important;overflow:hidden !important;padding:0 !important;margin:0 !important;';
   }
 
   function afterPrint() {
@@ -8732,17 +8743,28 @@ function ttsSpeak(text, lang) {
     }
     _printStyleEl = null;
 
-    if (!hpi || !_hpiOrigParent) return;
-
-    // Restore speechPanel to its original position inside the shell
+    // Always restore sp regardless of hpi state
     if (sp && _spOrigParent) {
       _spOrigParent.insertBefore(sp, _spOrigNext);
       sp.style.cssText = '';
     }
 
+    if (!hpi || !_hpiOrigParent) {
+      _spOrigParent = null; _spOrigNext = null;
+      _hpiOrigParent = null; _hpiOrigNext = null;
+      _hpOrigParent = null; _hpOrigNext = null;
+      _hpWasOpen = false;
+      return;
+    }
+
+    // Restore speechPanel to its original position inside the shell
     // Restore hpi back inside hp (hp is currently detached)
     _hpiOrigParent.insertBefore(hpi, _hpiOrigNext);
     hpi.style.cssText = '';
+    var hbb = document.querySelector('.help-btn-bar');
+    if (hbb) hbb.style.cssText = '';
+    var hcb = document.getElementById('helpCloseBtn');
+    if (hcb) hcb.style.cssText = '';
 
     // Reattach hp to the DOM at its original position
     var hp = _hpiOrigParent; // hp is hpi's original parent
