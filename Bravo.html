@@ -6602,18 +6602,19 @@ function handleRemoteLeave() {
   // shows SESSION ENDED instead of resetting for the next caller.
   if (_vmActive) {
     _vmResetPending = true;
-    _vmResetIsLeave = true;   // intentional leave — onstop shows SESSION ENDED, not reset
+    _vmResetIsLeave = false;
     _stopVoicemail();
     return;
   }
   if (_vmResetPending) {
-    // onDrop already stopped the recorder (onstop hasn't fired yet).
-    // Upgrade the reset so onstop calls _doLeave() instead of startPeer().
-    _vmResetIsLeave = true;
-    return;  // onstop will call _doLeave() when save is complete
+    // onDrop already stopped the recorder; onstop will handle the reset.
+    _vmResetIsLeave = false;
+    return;
   }
-  // End this session immediately so both sides close at the same time
-  _doLeave();
+  // Alpha left — reset for next caller
+  entry('Answering machine: resetting for next caller…', 'sys');
+  remotePeerLeft = false;
+  if (!leftPermanently) startPeer();
 }
 
 function onDrop() {
@@ -6857,15 +6858,10 @@ async function _startVoicemail() {
       entry('Voicemail empty — nothing saved', 'sys');
       if (_vmResetPending) {
         _vmResetPending = false;
-        if (_vmResetIsLeave) {
-          _vmResetIsLeave = false;
-          // Alpha left intentionally — show SESSION ENDED
-          _doLeave();
-        } else {
-          entry('Answering machine: resetting for next caller…', 'sys');
-          remotePeerLeft = false;
-          if (!leftPermanently) startPeer();
-        }
+        _vmResetIsLeave = false;
+        entry('Answering machine: resetting for next caller…', 'sys');
+        remotePeerLeft = false;
+        if (!leftPermanently) startPeer();
       }
       return;
     }
@@ -6885,15 +6881,10 @@ async function _startVoicemail() {
     // onDrop has already run teardown — just re-register for the next caller.
     if (_vmResetPending) {
       _vmResetPending = false;
-      if (_vmResetIsLeave) {
-        _vmResetIsLeave = false;
-        // Alpha left intentionally — show SESSION ENDED
-        _doLeave();
-      } else {
-        entry('Answering machine: resetting for next caller…', 'sys');
-        remotePeerLeft = false;
-        if (!leftPermanently) startPeer();
-      }
+      _vmResetIsLeave = false;
+      entry('Answering machine: resetting for next caller…', 'sys');
+      remotePeerLeft = false;
+      if (!leftPermanently) startPeer();
     }
   };
   _vmRec.start(1000);
