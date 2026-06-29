@@ -6170,8 +6170,18 @@ function getCallStream() {
     tracks.push(getSilentTrack());
     entry('STREAM: using silent audio track', 'sys');
   } else {
-    tracks.push(...localStream.getAudioTracks());
-    entry('STREAM: using real audio track', 'sys');
+    const liveAudioTrack = (realAudioTrack && realAudioTrack.readyState !== 'ended')
+      ? realAudioTrack
+      : localStream.getAudioTracks().find(t => t.readyState !== 'ended');
+    if (liveAudioTrack) {
+      liveAudioTrack.enabled = true;
+      realAudioTrack = liveAudioTrack;
+      tracks.push(liveAudioTrack);
+      entry('STREAM: using real audio track', 'sys');
+    } else {
+      tracks.push(getSilentTrack());
+      entry('STREAM: no live audio track — using silent fallback', 'sys');
+    }
   }
   return new MediaStream(tracks);
 }
@@ -8298,6 +8308,8 @@ function setupMicGainNode(stream) {
         _micRawTrack = oldAudio;
       }
       stream.addTrack(gainedAudio);
+      realAudioTrack = gainedAudio;
+      realAudioTrack.enabled = !audioMuted;
     }
     // Update slider & label to saved value (primary + chat-tab copy)
     const slider = document.getElementById('micGainSlider');
