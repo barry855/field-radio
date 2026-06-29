@@ -6642,6 +6642,7 @@ function onDrop() {
   setStatus('standby');
   if (leftPermanently) return; // permanent leave handled by leaveSession()
   if (remotePeerLeft) return;  // remote sent leave signal — stay on leave screen
+  if (_vmResetPending) return; // voicemail still saving — onstop will handle next state
   // Check sessionStorage in case the refresh control message raced with the drop
   try { if (sessionStorage.getItem('fieldRadioRefreshing') === '1') peerRefreshing = true; } catch(e) {}
   if (peerRefreshing) return;  // a refresh-reload is in progress — do not show login
