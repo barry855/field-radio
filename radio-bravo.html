@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <!-- Field Radio v6 — BRAVO -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -6931,6 +6932,14 @@ function _onCallEnded() {
   const wasRinging = _ringing || (_vmCallStart > 0);
   const wasVmRecording = _vmActive;  // capture before _stopVoicemail clears it
   _stopRing();
+  // If voicemail is recording, mark the pending reset BEFORE stopping it so
+  // onstop always fires with the correct flags (avoids the race where onstop
+  // fires before the flags are set further down).
+  if (wasVmRecording && !_vmResetPending) {
+    _vmResetPending = true;
+    _vmResetIsLeave = false;  // normal drop — onstop resets for next caller
+    remotePeerLeft = true;    // suppress reconnect screen while onstop runs
+  }
   _stopVoicemail();
   clearTimeout(_vmTimer); _vmTimer = null;
   _vmCapturedStream = null;
@@ -6956,19 +6965,10 @@ function _onCallEnded() {
   if (_vmResetPending) { _attended = false; _vmCallStart = 0; return; }
   if (wasRinging && !remotePeerLeft) {
     // Answering machine: skip reconnect screen, go straight back to waiting.
-    // If voicemail was recording when Alpha left, defer the reset until onstop
-    // has finished saving the file — _vmResetPending tells onstop to do it.
-    if (wasVmRecording) {
-      _vmResetPending = true;
-      _vmResetIsLeave = false;  // normal drop — onstop should reset for next caller
-      remotePeerLeft = true;  // suppress reconnect screen — onstop will reset and call startPeer
-      entry('Voicemail still saving — reset deferred until file written', 'sys');
-    } else {
-      entry('Answering machine: resetting for next caller…', 'sys');
-      remotePeerLeft = true;
-      // Re-register with a fresh peer ID so Alpha's presence poll sees us immediately
-      setTimeout(() => { remotePeerLeft = false; if (!leftPermanently) startPeer(); }, 1200);
-    }
+    entry('Answering machine: resetting for next caller…', 'sys');
+    remotePeerLeft = true;
+    // Re-register with a fresh peer ID so Alpha's presence poll sees us immediately
+    setTimeout(() => { remotePeerLeft = false; if (!leftPermanently) startPeer(); }, 1200);
   }
   _attended = false;
   _vmCallStart = 0;
