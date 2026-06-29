@@ -2093,6 +2093,11 @@ window.addEventListener('orientationchange', function() {
         <input type="range" id="micGainSlider" min="0" max="3" step="0.05" value="1" oninput="applyMicGain(this.value)">
         <span class="gain-val" id="micGainVal">1.00×</span>
       </div>
+      <div class="gain-row">
+        <div class="gain-label"><span>SPKR</span><span>VOL</span></div>
+        <input type="range" id="remoteGainSlider" min="0" max="3" step="0.05" value="1" oninput="applyRemoteGain(this.value)">
+        <span class="gain-val" id="remoteGainVal">1.00×</span>
+      </div>
       <div class="video-panel">
         <div class="panel-label">REMOTE — ALPHA</div>
         <div class="video-grid">
@@ -2139,6 +2144,11 @@ window.addEventListener('orientationchange', function() {
         <input type="range" id="micGainSliderChat" min="0" max="3" step="0.05" value="1" oninput="applyMicGain(this.value)" style="flex:1; min-width:0;">
         <span class="gain-val" id="micGainValChat">1.00×</span>
         <button class="speech-top-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input" style="flex-shrink:0; white-space:nowrap;">Talk/Type in Chat</button>
+      </div>
+      <div class="gain-row" style="flex-shrink:0;">
+        <div class="gain-label"><span>SPKR</span><span>VOL</span></div>
+        <input type="range" id="remoteGainSliderChat" min="0" max="3" step="0.05" value="1" oninput="applyRemoteGain(this.value)" style="flex:1; min-width:0;">
+        <span class="gain-val" id="remoteGainValChat">1.00×</span>
       </div>
       <div class="zoom-row" style="display:none;">
         <span>ZOOM LOCAL</span>
@@ -6493,6 +6503,7 @@ function attachCall(c) {
   c.on('stream', stream => {
     const remoteAudio = document.getElementById('remoteAudio');
     if (remoteAudio.srcObject !== stream) remoteAudio.srcObject = stream;
+    setupRemoteGainNode(stream);
     const remoteVideo = document.getElementById('remoteVideo');
     if (remoteVideo.srcObject !== stream) remoteVideo.srcObject = stream;
     const _cu = document.getElementById('chatUnderlay');
@@ -6586,6 +6597,7 @@ function _doLeave() {
     localStream = null;
   }
   teardownMicGain();
+  teardownRemoteGain();
   // Clear all video elements immediately — no stale frames
   ['localVideo','remoteVideo','chatUnderlay'].forEach(id => {
     const el = document.getElementById(id);
@@ -8283,6 +8295,52 @@ function setupMicGainNode(stream) {
     if (sliderChat && isFinite(savedGain)) { sliderChat.value = savedGain; }
     if (lblChat    && isFinite(savedGain)) { lblChat.textContent = savedGain.toFixed(2) + '×'; }
   } catch(e) { console.warn('Mic gain setup failed:', e); }
+}
+
+// ── Remote (speaker) volume control ──────────────────────────
+let _remoteGainCtx = null, _remoteGainNode = null;
+
+function setupRemoteGainNode(stream) {
+  teardownRemoteGain();
+  try {
+    _remoteGainCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const src  = _remoteGainCtx.createMediaStreamSource(stream);
+    _remoteGainNode = _remoteGainCtx.createGain();
+    const dest = _remoteGainCtx.createMediaStreamDestination();
+    const saved = parseFloat(localStorage.getItem('bravo_remote_gain') || '1');
+    _remoteGainNode.gain.value = isFinite(saved) ? saved : 1;
+    src.connect(_remoteGainNode);
+    _remoteGainNode.connect(dest);
+    const ra = document.getElementById('remoteAudio');
+    if (ra) ra.srcObject = dest.stream;
+    ['remoteGainSlider','remoteGainSliderChat'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = _remoteGainNode.gain.value;
+    });
+    ['remoteGainVal','remoteGainValChat'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = _remoteGainNode.gain.value.toFixed(2) + '×';
+    });
+  } catch(e) { console.warn('Remote gain setup failed:', e); }
+}
+
+function teardownRemoteGain() {
+  if (_remoteGainNode) { try { _remoteGainNode.disconnect(); } catch(e) {} _remoteGainNode = null; }
+  if (_remoteGainCtx)  { try { _remoteGainCtx.close();      } catch(e) {} _remoteGainCtx  = null; }
+}
+
+function applyRemoteGain(val) {
+  const v = parseFloat(val);
+  ['remoteGainVal','remoteGainValChat'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = v.toFixed(2) + '×';
+  });
+  ['remoteGainSlider','remoteGainSliderChat'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.value !== String(val)) el.value = val;
+  });
+  if (_remoteGainNode) _remoteGainNode.gain.setTargetAtTime(v, _remoteGainCtx.currentTime, 0.01);
+  try { localStorage.setItem('bravo_remote_gain', String(v)); } catch(e) {}
 }
 
 // ── Local video zoom ──────────────────────────────────────────
