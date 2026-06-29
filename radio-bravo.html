@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <!-- Field Radio v6 — BRAVO -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -5714,6 +5715,9 @@ function startPeer() {
   _peerDestroyPending = false;
   _peerGeneration++;           // invalidate any _pollAndDial loop from the previous peer
   _remoteIdConfirmed = false;  // reset so new peer waits for fresh Firebase confirmation
+  remotePeerLeft = false;      // reset so answering machine resets correctly on next call end
+  _vmResetPending = false;     // discard any stale deferred reset
+  _vmResetIsLeave = false;     // discard any stale leave flag
   // Destroy any existing peer before creating a new one.
   // Without this the old peer's event handlers (especially 'disconnected' → peer.reconnect())
   // keep firing against the replaced reference, causing a permanent reconnect loop.
@@ -6596,6 +6600,7 @@ function handleRemoteLeave() {
   // _vmResetPending tells onstop to call _doLeave() + startPeer() once done.
   if (_vmActive) {
     _vmResetPending = true;
+    _vmResetIsLeave = true;   // intentional leave — onstop shows SESSION ENDED, not reset
     _stopVoicemail();
     return;
   }
@@ -6673,6 +6678,7 @@ let _vmTimer        = null;   // 15s unattended timeout
 let _vmMaxTimer     = null;   // 2-min hard recording limit
 let _vmActive       = false;  // voicemail recorder running
 let _vmResetPending = false;  // reset deferred until voicemail onstop completes
+let _vmResetIsLeave = false;  // true when the deferred reset was triggered by an intentional remote leave
 let _vmRec       = null;   // MediaRecorder for voicemail
 let _vmChunks    = [];
 let _vmCapturedStream = null;  // remote stream snapshot taken at call-connect time
@@ -6842,9 +6848,15 @@ async function _startVoicemail() {
       entry('Voicemail empty — nothing saved', 'sys');
       if (_vmResetPending) {
         _vmResetPending = false;
-        entry('Answering machine: resetting for next caller…', 'sys');
-        remotePeerLeft = false;
-        if (!leftPermanently) startPeer();
+        if (_vmResetIsLeave) {
+          _vmResetIsLeave = false;
+          // Alpha left intentionally — show SESSION ENDED
+          _doLeave();
+        } else {
+          entry('Answering machine: resetting for next caller…', 'sys');
+          remotePeerLeft = false;
+          if (!leftPermanently) startPeer();
+        }
       }
       return;
     }
@@ -6864,9 +6876,15 @@ async function _startVoicemail() {
     // onDrop has already run teardown — just re-register for the next caller.
     if (_vmResetPending) {
       _vmResetPending = false;
-      entry('Answering machine: resetting for next caller…', 'sys');
-      remotePeerLeft = false;
-      if (!leftPermanently) startPeer();
+      if (_vmResetIsLeave) {
+        _vmResetIsLeave = false;
+        // Alpha left intentionally — show SESSION ENDED
+        _doLeave();
+      } else {
+        entry('Answering machine: resetting for next caller…', 'sys');
+        remotePeerLeft = false;
+        if (!leftPermanently) startPeer();
+      }
     }
   };
   _vmRec.start(1000);
@@ -6936,12 +6954,13 @@ function _onCallEnded() {
   }
   // If handleRemoteLeave already set _vmResetPending, onstop owns the reset — don't duplicate it
   if (_vmResetPending) { _attended = false; _vmCallStart = 0; return; }
-  if (wasRinging) {
+  if (wasRinging && !remotePeerLeft) {
     // Answering machine: skip reconnect screen, go straight back to waiting.
     // If voicemail was recording when Alpha left, defer the reset until onstop
     // has finished saving the file — _vmResetPending tells onstop to do it.
     if (wasVmRecording) {
       _vmResetPending = true;
+      _vmResetIsLeave = false;  // normal drop — onstop should reset for next caller
       remotePeerLeft = true;  // suppress reconnect screen — onstop will reset and call startPeer
       entry('Voicemail still saving — reset deferred until file written', 'sys');
     } else {
