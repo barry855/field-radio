@@ -6599,6 +6599,7 @@ function handleRemoteLeave() {
   stopQualityPolling();
   stopAudioWatchdog();
   entry('Remote user left the session', 'sys');
+  console.error('handleRemoteLeave — remotePeerLeft=' + remotePeerLeft + ' _vmResetPending=' + _vmResetPending + ' _vmActive=' + _vmActive);
   // If voicemail is mid-recording, let onstop finish saving then reset.
   if (_vmActive) {
     _vmResetPending = true;
@@ -6614,6 +6615,8 @@ function handleRemoteLeave() {
 }
 
 function onDrop() {
+  console.error('onDrop ENTERED — remotePeerLeft=' + remotePeerLeft + ' _vmResetPending=' + _vmResetPending + ' _vmActive=' + _vmActive + ' leftPermanently=' + leftPermanently);
+  console.error(new Error('onDrop stack').stack);
   _onCallEnded();        // log call, stop ring/voicemail, clear timers
   saveSpeechDraft();
   clearTimeout(retryTimer);
@@ -6661,6 +6664,8 @@ function onDrop() {
     try { if (sessionStorage.getItem('fieldRadioRefreshing') === '1') peerRefreshing = true; } catch(e) {}
     if (peerRefreshing) return; // refresh in progress — do not show login
     entry('Link lost — showing reconnect countdown', 'sys');
+    console.error('RECONNECT TRIGGERED — dropTimer fired. remotePeerLeft=' + remotePeerLeft + ' _vmResetPending=' + _vmResetPending + ' leftPermanently=' + leftPermanently + ' peerRefreshing=' + peerRefreshing);
+    console.error(new Error('dropTimer stack').stack);
     showReconnecting(30);
   }, 1500);
 }
@@ -6848,6 +6853,7 @@ async function _startVoicemail() {
   _vmRec = new MediaRecorder(_vmRecStream, { mimeType });
   _vmRec.ondataavailable = e => { if (e.data.size > 0) _vmChunks.push(e.data); };
   _vmRec.onstop = async () => {
+    console.error('VM onstop FIRED — _vmResetPending=' + _vmResetPending + ' remotePeerLeft=' + remotePeerLeft + ' chunks=' + _vmChunks.length);
     _vmActive = false;
     if (_vmACtx) { try { _vmACtx.close(); } catch(e) {} _vmACtx = null; }
     if (!_vmChunks.length) {
