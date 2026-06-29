@@ -1472,7 +1472,12 @@
     }
     .help-btn-bar { display: none !important; }
     #helpCloseBtn { display: none !important; }
-
+  }
+  @media screen {
+    .help-btn-bar { display: flex !important; }
+    #helpCloseBtn { display: block !important; }
+  }
+  @media print {
     /* ── Notes area — ruled lines, fills remaining page space ── */
     #printNotesArea {
       display: block !important;
@@ -8758,15 +8763,15 @@ function ttsSpeak(text, lang) {
       return;
     }
 
-    // Restore hpi back inside hp (hp is currently detached)
-    _hpiOrigParent.insertBefore(hpi, _hpiOrigNext);
-    hpi.style.cssText = '';
-
-    // Clear inline styles on buttons AFTER hpi is back in the shell
+    // Clear inline styles on buttons while hpi is still in document.body (querySelector finds them)
     var hbb = document.querySelector('.help-btn-bar');
     if (hbb) hbb.style.cssText = '';
     var hcb = document.getElementById('helpCloseBtn');
     if (hcb) hcb.style.cssText = '';
+
+    // Restore hpi back inside hp (hp is currently detached)
+    _hpiOrigParent.insertBefore(hpi, _hpiOrigNext);
+    hpi.style.cssText = '';
 
     // Reattach hp to the DOM at its original position
     var hp = _hpiOrigParent; // hp is hpi's original parent
