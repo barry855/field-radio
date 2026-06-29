@@ -6599,25 +6599,16 @@ function handleRemoteLeave() {
   stopQualityPolling();
   stopAudioWatchdog();
   entry('Remote user left the session', 'sys');
-  // If voicemail is mid-recording (or onstop is in-flight after onDrop already
-  // stopped it), let onstop finish saving before we reset.
-  // _vmResetPending is true in both cases; upgrade _vmResetIsLeave so onstop
-  // shows SESSION ENDED instead of resetting for the next caller.
+  // If voicemail is mid-recording, let onstop finish saving then reset.
   if (_vmActive) {
     _vmResetPending = true;
-    _vmResetIsLeave = false;
     _stopVoicemail();
     return;
   }
-  if (_vmResetPending) {
-    // onDrop already stopped the recorder; onstop will handle the reset.
-    _vmResetIsLeave = false;
-    return;
-  }
-  // Alpha left — reset for next caller.
-  // Keep remotePeerLeft = true until after onDrop fires (it blocks the
-  // dropTimer → showReconnecting path). Clear it inside the setTimeout so
-  // any synchronous or near-synchronous onDrop call is already handled.
+  // If onDrop already fired first and is handling the reset (voicemail onstop
+  // in-flight, or _onCallEnded's 1200ms startPeer already scheduled), do nothing.
+  if (_vmResetPending || remotePeerLeft) return;
+  // No voicemail, onDrop hasn't fired yet — reset for next caller after onDrop lands.
   entry('Answering machine: resetting for next caller…', 'sys');
   setTimeout(() => { remotePeerLeft = false; if (!leftPermanently) startPeer(); }, 800);
 }
@@ -6865,6 +6856,7 @@ async function _startVoicemail() {
         _vmResetPending = false;
         _vmResetIsLeave = false;
         entry('Answering machine: resetting for next caller…', 'sys');
+        clearTimeout(dropTimer);
         remotePeerLeft = false;
         if (!leftPermanently) startPeer();
       }
@@ -6888,6 +6880,7 @@ async function _startVoicemail() {
       _vmResetPending = false;
       _vmResetIsLeave = false;
       entry('Answering machine: resetting for next caller…', 'sys');
+      clearTimeout(dropTimer);
       remotePeerLeft = false;
       if (!leftPermanently) startPeer();
     }
