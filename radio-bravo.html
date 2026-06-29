@@ -6580,6 +6580,9 @@ function handleRemoteLeave() {
   }
   // Remote user left intentionally — cancel any pending reconnect and go to leave screen
   clearTimeout(dropTimer);  // prevent onDrop's grace-period timer from showing reconnect screen
+  clearInterval(_reconnectCountdownTimer);  // cancel reconnect overlay if it already started
+  const _ro = document.getElementById('reconnectOverlay');
+  if (_ro) _ro.classList.remove('active');  // hide it if visible
   leftPermanently = false; // we haven't left yet, remote did
   remotePeerLeft = true;
   // Clear remote video immediately
@@ -6668,7 +6671,7 @@ function onDrop() {
     if (peerRefreshing) return; // refresh in progress — do not show login
     entry('Link lost — showing reconnect countdown', 'sys');
     showReconnecting(30);
-  }, 600);
+  }, 1500);
 }
 
 function muteLocal() {
