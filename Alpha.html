@@ -6253,6 +6253,18 @@ function attachDataConn(dc) {
       if (f.__control === 'leave') { handleRemoteLeave(); return; }
       // clearChat control intentionally not handled — CLEAR is local-only on each unit.
       if (f.__control === 'deleteMsg') { deleteBubble(f.ts, false); return; }
+      if (f.__control === 'liveSession') {
+        _bravoRequestedLive = true;
+        if (_answeringMachineMode && linked) {
+          _markAttended();
+          setStatus('linked');
+          duplexBar.textContent = _noMediaMode ? '● LIVE (data only)' : '● LIVE';
+          duplexBar.className = 'duplex-overlay live';
+          syncControls();
+          _vmNotice('— ● BRAVO ANSWERED — LIVE SESSION —');
+        }
+        return;
+      }
       if (f.__control === 'voicemail') {
         if (f.active) {
           setStatus('voicemail');
@@ -7180,6 +7192,7 @@ let _vmRec = null;
 let _vmChunks = [];
 let _vmCapturedStream = null;
 let _attended = false;
+let _bravoRequestedLive = false;
 let _ringTimer = null;
 let _ringTimeoutTimer = null;
 let _ringing = false;
@@ -7444,6 +7457,7 @@ function _onCallConnected() {
   ['keydown', 'pointerdown', 'touchstart'].forEach(ev =>
     window.addEventListener(ev, _markAttended, { once: true, passive: true })
   );
+  if (_bravoRequestedLive) _markAttended();
 }
 
 function _onCallEnded() {
@@ -7474,6 +7488,7 @@ function _onCallEnded() {
     }
   }
   _attended = false;
+  _bravoRequestedLive = false;
   _vmCallStart = 0;
 }
 
