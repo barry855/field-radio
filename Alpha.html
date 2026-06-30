@@ -1373,14 +1373,12 @@
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 
     /* ── Overall page — flex column so notes fills remaining space ── */
-    html {
-      height: 100% !important;
-    }
+    html { height: auto !important; }
     body {
-      height: 100% !important; min-height: 0 !important;
+      height: auto !important; min-height: 0 !important;
       overflow: visible !important;
       background: #fff !important; margin: 0 !important;
-      display: flex !important; flex-direction: column !important;
+      display: block !important;
     }
     .shell {
       gap: 4px !important; padding: 6px !important;
@@ -1396,12 +1394,12 @@
     }
 
     /* ── Overall page — flex column ── */
-    html { height: 100% !important; }
+    html { height: auto !important; }
     body {
-      height: 100% !important; min-height: 0 !important;
+      height: auto !important; min-height: 0 !important;
       overflow: visible !important;
       background: #fff !important; margin: 0 !important;
-      display: flex !important; flex-direction: column !important;
+      display: block !important;
     }
     .shell {
       gap: 4px !important; padding: 6px !important;
@@ -1602,33 +1600,6 @@
   }
   @media print {
     /* ── Notes area — ruled lines, fills remaining page space ── */
-    #printNotesArea {
-      display: block !important;
-      border: 1px solid #999;
-      border-radius: 4px;
-      margin-top: 8px;
-      padding: 8px 10px 0;
-      min-height: 0;
-      flex: 1 1 auto;
-      page-break-inside: auto;
-      break-inside: auto;
-      background-image: repeating-linear-gradient(
-        to bottom,
-        transparent,
-        transparent 23px,
-        #ccc 23px,
-        #ccc 24px
-      ) !important;
-      background-position: 0 30px !important;
-    }
-    #printNotesArea p {
-      margin: 0 0 6px;
-      font-size: 10px;
-      color: #666;
-      font-family: 'Share Tech Mono', monospace;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-    }
   }
 
   /* new-message badge */
@@ -2684,7 +2655,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.19-test30s-vm-start-beep';   // test build: distinct caller-side voicemail start beep
+const VERSION = '8.21-test30s-print-all';   // test build: no notes filler on any print platform
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -9923,8 +9894,7 @@ function ttsSpeak(text, lang) {
     var sp    = document.getElementById('speechPanel');
     var hp    = document.getElementById('helpPanel');
     var hpi   = document.getElementById('helpPanelInner');
-    var notes = document.getElementById('printNotesArea');
-    if (!sp || !hp || !hpi || !notes) return;
+    if (!sp || !hp || !hpi) return;
 
     _spOrigParent  = sp.parentNode;
     _spOrigNext    = sp.nextSibling;
@@ -9936,7 +9906,7 @@ function ttsSpeak(text, lang) {
 
     // Inject <style> into <head> for Safari — most authoritative way to hide fixed overlay
     _printStyleEl = document.createElement('style');
-    _printStyleEl.textContent = '#helpPanel,#helpPanel.open{display:none!important;visibility:hidden!important;}';
+    _printStyleEl.textContent = 'html,body{height:auto!important;min-height:0!important;}body{display:block!important;}#helpPanel,#helpPanel.open{display:none!important;visibility:hidden!important;}';
     document.head.appendChild(_printStyleEl);
 
     // Move hpi and sp to body (outside shell) to avoid shell border clipping in Chrome
@@ -10026,4 +9996,4 @@ function ttsSpeak(text, lang) {
 
 
 <div id="helpPanel" role="dialog" aria-modal="true" aria-label="Button guide"><div id="helpPanelInner"><div class="help-btn-bar"><button onclick="closeHelpPanel()">✕ Close</button><button onclick="window.print()">⎙ Print</button></div><h3>Button Guide</h3><div id="helpPanelRows"></div><button id="helpCloseBtn" onclick="closeHelpPanel()">✕ Close</button></div></div>
-<div id="printNotesArea" style="display:none"><p>Notes</p></div></div></body></html>
+</div></body></html>
