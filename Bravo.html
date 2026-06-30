@@ -2635,7 +2635,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.11-test30s-audio';   // paired test build
+const VERSION = '8.13-test30s-gain';   // paired test build
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -6404,8 +6404,8 @@ function getCallStream() {
     tracks.push(getSilentTrack());
     entry('STREAM: using silent audio track', 'sys');
   } else {
-    const processedTrack = (realAudioTrack && realAudioTrack.readyState !== 'ended')
-      ? realAudioTrack
+    const processedTrack = (_micProcessedTrack && _micProcessedTrack.readyState !== 'ended')
+      ? _micProcessedTrack
       : localStream.getAudioTracks().find(t => t.readyState !== 'ended');
     const rawTrack = _micRawTrack && _micRawTrack.readyState !== 'ended' ? _micRawTrack : null;
     const liveAudioTrack = (_micGainCtx && _micGainCtx.state === 'running')
@@ -6413,7 +6413,7 @@ function getCallStream() {
       : (rawTrack || processedTrack);
     if (liveAudioTrack) {
       liveAudioTrack.enabled = true;
-      realAudioTrack = liveAudioTrack;
+      if (liveAudioTrack === processedTrack) realAudioTrack = processedTrack;
       tracks.push(liveAudioTrack);
       entry('STREAM: using ' + (liveAudioTrack === rawTrack ? 'raw fallback' : 'processed') + ' audio track', 'sys');
     } else {
@@ -8825,7 +8825,7 @@ async function switchMicrophone(deviceId) {
   }
 }
 
-let _micGainCtx = null, _micGainNode = null, _micGainDest = null, _micRawTrack = null;
+let _micGainCtx = null, _micGainNode = null, _micGainDest = null, _micRawTrack = null, _micProcessedTrack = null;
 
 function teardownMicGain() {
   // Stop the raw mic track that was swapped out by setupMicGainNode — without
@@ -8836,6 +8836,7 @@ function teardownMicGain() {
     try { _micGainDest.stream.getTracks().forEach(t => t.stop()); } catch(e) {}
     _micGainDest = null;
   }
+  _micProcessedTrack = null;
   if (_micGainNode) { try { _micGainNode.disconnect(); } catch(e) {} _micGainNode = null; }
   if (_micGainCtx) { try { _micGainCtx.close(); } catch(e) {} _micGainCtx = null; }
 }
@@ -8854,7 +8855,20 @@ function applyMicGain(val) {
   if (_micGainNode) {
     _micGainNode.gain.setTargetAtTime(v, _micGainCtx.currentTime, 0.01);
   }
+  const activate = () => _activateProcessedMicTrack();
+  if (_micGainCtx && _micGainCtx.state === 'suspended') _micGainCtx.resume().then(activate).catch(() => {});
+  else activate();
   try { localStorage.setItem('bravo_mic_gain', String(v)); } catch(e) {}
+}
+
+function _activateProcessedMicTrack() {
+  if (!_micProcessedTrack || _micProcessedTrack.readyState === 'ended') return;
+  realAudioTrack = _micProcessedTrack;
+  realAudioTrack.enabled = !audioMuted;
+  if (linked && !audioMuted && !_mixOutTrack) {
+    _setCallAudioTrack(_micProcessedTrack).catch(() => {});
+    entry('Microphone gain applied to live call', 'sys');
+  }
 }
 
 function setupMicGainNode(stream) {
@@ -8877,6 +8891,7 @@ function setupMicGainNode(stream) {
         _micRawTrack = oldAudio;
       }
       stream.addTrack(gainedAudio);
+      _micProcessedTrack = gainedAudio;
       realAudioTrack = gainedAudio;
       realAudioTrack.enabled = !audioMuted;
     }
