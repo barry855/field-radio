@@ -1,4 +1,4 @@
-<!-- redeploy -->
+
 <!DOCTYPE html>
 <!-- Field Radio v6 — BRAVO -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -1387,7 +1387,7 @@
       background: #fff !important; color: #000 !important;
       border: 1px solid #555 !important;
     }
-    #exportSessionBtn, #vmBox { display: none !important; }
+    #exportSessionBtn, #answerLiveBtn, #vmBox { display: none !important; }
     /* Row 1: TTS Off | Flip Cam | FS OFF | MINI CAM OFF */
     #ttsChatBtn, #flipChatBtn, #fsChatBtn, #miniChatBtn { display: inline-flex !important; }
     /* Row 2: See Remote | RECORD | Video Off | Mike On | Sys Audio Off | Share Off */
@@ -2205,6 +2205,7 @@ window.addEventListener('orientationchange', function() {
           <span class="sbr-label">CHAT:</span>
           <button class="speech-top-btn" onclick="saveChatToFile()" id="saveChatBtn" title="Save chat as HTML">💾 SAVE</button>
           <button class="speech-top-btn" onclick="exportSessionChat()" id="exportSessionBtn" title="Export a past session as HTML">EXPORT</button>
+          <button class="speech-top-btn" onclick="requestLiveSession()" id="answerLiveBtn" title="Stop Alpha's answering machine and begin a live call" style="display:none;">GO LIVE</button>
           <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';ttsStopAll();morseStopAll();entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR</button>
           <button class="speech-top-btn" onclick="restoreChat()" id="restoreChatBtn" title="Restore previous session chat">↩ RESTORE</button>
           <button class="speech-top-btn" id="findChatBtn" title="Find in chat">🔍 FIND</button>
@@ -3281,33 +3282,48 @@ function setStatus(state) {
   else if (state === 'reachable') { linkLed.classList.add('on-amber-flash');  statusEl.textContent = 'WAITING';  document.title = '🟡 WAITING — BRAVO — Field Radio v6'; }
   else if (state === 'calling')   { linkLed.classList.add('on-amber-flash');  statusEl.textContent = 'WAITING';  document.title = '🟡 WAITING — BRAVO — Field Radio v6'; }
   else if (state === 'linked')    { linkLed.classList.add('on-green');  statusEl.textContent = 'LIVE';   document.title = '🟢 LIVE — BRAVO — Field Radio v6'; }
-  else if (state === 'remote-answering') { linkLed.classList.add('on-cyan'); statusEl.textContent = 'ALPHA ANSWERING'; document.title = '📼 ALPHA ANSWERING — BRAVO — Field Radio v6'; }
+  else if (state === 'remote-answering') { linkLed.classList.add('on-amber'); statusEl.textContent = 'LEAVE MESSAGE'; document.title = '📼 LEAVE MESSAGE — BRAVO — Field Radio v6'; }
   else if (state === 'voicemail') { linkLed.classList.add('on-amber');  statusEl.textContent = '📼 VOICEMAIL'; document.title = '📼 VOICEMAIL — BRAVO — Field Radio v6'; }
   else                            { statusEl.textContent = ''; document.title = 'BRAVO — Field Radio v6'; }
 }
 
 let activeTab = 'chat';
 let unreadCount = 0;
-let _remoteAnsweringMode = false;
+let _alphaAnsweringAvailable = false;
 const msgBadge = document.getElementById('msgBadge');
 
+function _setAnswerLiveAvailable(available) {
+  _alphaAnsweringAvailable = !!available;
+  const button = document.getElementById('answerLiveBtn');
+  if (button) button.style.display = _alphaAnsweringAvailable ? '' : 'none';
+}
+
 function _applyBravoLinkedDisplay(logConnection) {
-  if (_remoteAnsweringMode) {
+  if (_alphaAnsweringAvailable) {
     setStatus('remote-answering');
-    duplexBar.textContent = '● LIVE TO ALPHA ANSWERING MACHINE';
-    if (logConnection) entry('Linked to Alpha — answering machine active', 'ok');
+    duplexBar.textContent = '● ALPHA ANSWERING — SPEAK AFTER THE CUE OR GO LIVE';
+    if (logConnection) entry('Linked to Alpha answering machine — waiting for message or GO LIVE', 'ok');
+  } else if (_noMediaMode) {
+    setStatus('linked');
+    duplexBar.textContent = '● LIVE (data only)';
+    if (logConnection) entry('Linked to Alpha — data channel only (no mic/camera)', 'ok');
   } else {
     setStatus('linked');
-    if (_noMediaMode) {
-      duplexBar.textContent = '● LIVE (data only)';
-      if (logConnection) entry('Linked to Alpha — data channel only (no mic/camera)', 'ok');
-    } else {
-      duplexBar.textContent = '● LIVE';
-      if (logConnection) entry('Linked to Alpha — full duplex active', 'ok');
-    }
+    duplexBar.textContent = '● LIVE';
+    if (logConnection) entry('Linked to Alpha — full duplex active', 'ok');
   }
   duplexBar.className = 'duplex-overlay live';
   syncControls();
+}
+
+function requestLiveSession() {
+  if (!_alphaAnsweringAvailable || !dataConn || !dataConn.open) return;
+  _setAnswerLiveAvailable(false);
+  _markAttended();
+  dcSend({ __control: 'liveSession', active: true, station: 'BRAVO' });
+  _applyBravoLinkedDisplay(false);
+  entry('Live session requested — Alpha voicemail cancelled', 'ok');
+  _vmNotice('— ● GOING LIVE WITH ALPHA —');
 }
 
 function syncControls() {
@@ -5891,7 +5907,6 @@ function startPeer() {
     setTimeout(startPeer, 500);
     return;
   }
-  _remoteAnsweringMode = false;
   _peerDestroyPending = false;
   _peerGeneration++;           // invalidate any _pollAndDial loop from the previous peer
   _remoteIdConfirmed = false;  // reset so new peer waits for fresh Firebase confirmation
@@ -6069,15 +6084,15 @@ function attachDataConn(dc) {
       // clearChat control intentionally not handled — CLEAR is local-only on each unit.
       if (f.__control === 'deleteMsg') { deleteBubble(f.ts, false); return; }
       if (f.__control === 'answeringMode') {
-        const wasAnswering = _remoteAnsweringMode;
-        _remoteAnsweringMode = !!f.active;
-        if (linked) _applyBravoLinkedDisplay(false);
-        if (_remoteAnsweringMode && !wasAnswering) {
-          entry('Alpha is in answering-machine mode', 'sys');
-          _vmNotice('— 📼 ALPHA ANSWERING MACHINE —');
-        } else if (!_remoteAnsweringMode && wasAnswering) {
-          entry('Alpha attended — continuing as a live session', 'ok');
-          _vmNotice('— ● ALPHA ATTENDED — LIVE SESSION —');
+        if (f.active) {
+          _setAnswerLiveAvailable(true);
+          if (linked) _markAttended();
+          entry('Alpha answering mode detected — leave a message after the cue or press GO LIVE', 'sys');
+          _vmNotice('— 📼 ALPHA ANSWERING — WAIT FOR THE VOICEMAIL CUE —');
+          if (linked) _applyBravoLinkedDisplay(false);
+        } else {
+          _setAnswerLiveAvailable(false);
+          if (linked) _applyBravoLinkedDisplay(false);
         }
         return;
       }
@@ -6089,7 +6104,7 @@ function attachDataConn(dc) {
           setTimeout(() => playTone('vm_start'), 400);
           setTimeout(() => playTone('vm_start'), 800);
         } else {
-          setStatus(_remoteAnsweringMode ? 'remote-answering' : 'linked');
+          _applyBravoLinkedDisplay(false);
           _vmNotice('— 📼 VOICEMAIL SAVED —');
         }
         return;
@@ -6824,7 +6839,6 @@ function handleRemoteLeave() {
 
 function onDrop() {
   _onCallEnded();        // log call, stop ring/voicemail, clear timers
-  _remoteAnsweringMode = false;
   saveSpeechDraft();
   clearTimeout(retryTimer);
   clearTimeout(_raPlayTimer); _raPlayTimer = null;  // cancel any pending audio play attempt
@@ -7217,6 +7231,7 @@ function _onCallConnected() {
   ['keydown', 'pointerdown', 'touchstart'].forEach(ev =>
     window.addEventListener(ev, _markAttended, { once: true, passive: true })
   );
+  if (_alphaAnsweringAvailable) _markAttended();
 }
 
 function _onCallEnded() {
@@ -7257,6 +7272,7 @@ function _onCallEnded() {
   // If voicemail onstop is pending, it owns the reset
   if (_vmResetPending) { _attended = false; _vmCallStart = 0; return; }
   _attended = false;
+  _setAnswerLiveAvailable(false);
   _vmCallStart = 0;
 }
 
