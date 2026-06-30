@@ -2248,7 +2248,6 @@ window.addEventListener('orientationchange', function() {
           <span class="sbr-label">CHAT:</span>
           <button class="speech-top-btn" onclick="saveChatToFile()" id="saveChatBtn" title="Save chat as HTML">💾 SAVE</button>
           <button class="speech-top-btn" onclick="exportSessionChat()" id="exportSessionBtn" title="Export a past session as HTML">EXPORT</button>
-          <button class="speech-top-btn" onclick="openVoicemailPicker()" id="vmPickerBtn" title="Open all received voicemails">VOICEMAILS</button>
           <button class="speech-top-btn" onclick="answerOwnVoicemailLive()" id="ownerLiveBtn" title="Save the current voicemail and answer live" style="display:none;">ANSWER LIVE</button>
           <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';ttsStopAll();morseStopAll();entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR</button>
           <button class="speech-top-btn" onclick="restoreChat()" id="restoreChatBtn" title="Restore previous session chat">↩ RESTORE</button>
@@ -2655,7 +2654,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.21-test30s-print-all';   // test build: no notes filler on any print platform
+const VERSION = '8.22-test30s-no-vm-button';   // test build: expandable voicemail box only
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
