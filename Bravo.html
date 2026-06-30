@@ -1,4 +1,4 @@
-<!-- redeploy -->
+
 <!DOCTYPE html>
 <!-- Field Radio v6 — BRAVO -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -2635,7 +2635,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.4';   // ← bump this on each deploy
+const VERSION = '8.6';   // ← bump this on each deploy
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -2800,6 +2800,9 @@ function startSession() {
   leftPermanently = false;
   remotePeerLeft = false;
   document.getElementById('qualityDisplay').style.display = 'flex';
+  setStatus('calling');
+  duplexBar.textContent = '● WAITING FOR ALPHA…';
+  duplexBar.className = 'duplex-overlay';
   if (usingPreReg) {
     entry('Using pre-registered peer — acquiring media only', 'sys');
     initMediaOnly();
@@ -3103,10 +3106,8 @@ function prefillLogin() {
     document.getElementById('loginPiMode').checked = localStorage.getItem('bravo_pi_mode') === '1';
     if (last) document.getElementById('sessionCode').value = last;
     setTimeout(() => entry('PREFILL: code=' + last + ' vid=' + disVid + ' aud=' + disAud + ' ls=' + (typeof localStorage !== 'undefined' ? 'ok' : 'blocked'), 'sys'), 500);
-    // Start presence polling immediately if code was pre-filled
-    if (last) startPresencePolling(last);
-    // Pre-register peer immediately if saved code is exactly 6 chars
-    if (last && last.length === 6) preRegister(last);
+    // Connection work starts only after login. Pre-registering here used to
+    // overlap PeerJS startup with media acquisition and could freeze the page.
     // Prefill mic gain slider from saved value
     const _rawGain = localStorage.getItem('bravo_mic_gain');
     const savedGain = _rawGain !== null ? parseFloat(_rawGain) : 1;
@@ -3253,12 +3254,7 @@ let _loginTimeoutStarted = false;
     if (code === _lastCode) return;
     _lastCode = code;
     updateCodeStrength(code);
-    startPresencePolling(code);
-    if (code.length === 6) {
-      preRegister(code);
-    } else {
-      cancelPreRegister();
-    }
+    // Do not open signalling/presence connections while the user is typing.
     // Suspend auto-login countdown while user is typing
     clearInterval(loginTimeoutInterval);
     clearTimeout(_resumeTimer);
@@ -5667,11 +5663,11 @@ async function initMediaOnly() {
       sOsc.connect(sGain); sGain.connect(sDest); sOsc.start();
       localStream = sDest.stream;
     } catch(ex) { localStream = new MediaStream(); }
-    if (!linked) dial();
+    entry('Receiver media ready — waiting for Alpha', 'sys');
     return;
   }
   const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
-  const videoConstraint = isMobile ? { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16/9 } } : { width: { ideal: 1920 }, height: { ideal: 1080 }, aspectRatio: { ideal: 16/9 } };
+  const videoConstraint = isMobile ? { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16/9 } } : { width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16/9 } };
   const _savedCamId = await _getSavedCameraDeviceId();
   if (_savedCamId) videoConstraint.deviceId = { exact: _savedCamId };
 
@@ -5699,8 +5695,8 @@ async function initMediaOnly() {
       const ab3 = document.getElementById('audioChatBtn'); if(ab3){ab3.textContent='Mike Off';ab3.classList.remove('disabled-state');ab3.classList.add('active-on');}
       entry('Audio disabled (login setting)', 'sys');
     }
-    // Peer is already open — dial directly if not already connected
-    if (!linked) dial();
+    // BRAVO is the receiver. Alpha owns call initiation.
+    entry('Receiver media ready — waiting for Alpha', 'sys');
   }
 
   navigator.mediaDevices.getUserMedia({
@@ -5731,7 +5727,7 @@ async function initMediaOnly() {
               sOsc.connect(sGain); sGain.connect(sDest); sOsc.start();
               localStream = sDest.stream;
             } catch(ex) { localStream = new MediaStream(); }
-            if (!linked) dial();
+            entry('Receiver ready (data-only) — waiting for Alpha', 'sys');
           });
       });
       return;
@@ -5750,7 +5746,7 @@ async function initMediaOnly() {
           sOsc.connect(sGain); sGain.connect(sDest); sOsc.start();
           localStream = sDest.stream;
         } catch(ex) { localStream = new MediaStream(); }
-        if (!linked) dial();
+        entry('Receiver ready (data-only) — waiting for Alpha', 'sys');
       });
   });
 }
@@ -5793,7 +5789,7 @@ async function init() {
   // Acquire mic + camera — facingMode only used as a soft hint on mobile,
   // omitted on desktop to avoid OverconstrainedError on macOS.
   const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
-  const videoConstraint = isMobile ? { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16/9 } } : { width: { ideal: 1920 }, height: { ideal: 1080 }, aspectRatio: { ideal: 16/9 } };
+  const videoConstraint = isMobile ? { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16/9 } } : { width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16/9 } };
   const _savedCamId = await _getSavedCameraDeviceId();
   if (_savedCamId) videoConstraint.deviceId = { exact: _savedCamId };
 
@@ -5953,6 +5949,35 @@ function dial() {
   }, 90000);
 }
 
+function _answerInboundAlphaCall(incoming, waitedMs) {
+  waitedMs = waitedMs || 0;
+  if (!localStream) {
+    if (waitedMs === 0) entry('Inbound call received — waiting for receiver media', 'sys');
+    if (waitedMs >= 15000) {
+      entry('ERROR: receiver media not ready after 15s — declining call', 'err');
+      try { incoming.close(); } catch(e) {}
+      return;
+    }
+    setTimeout(() => _answerInboundAlphaCall(incoming, waitedMs + 100), 100);
+    return;
+  }
+  _startRing();
+  clearTimeout(retryTimer);
+  if (call) {
+    try { call.off('close'); call.off('error'); call.close(); } catch(e) {}
+    call = null;
+  }
+  const wasLinked = linked;
+  linked = false;
+  _iceReady = false;
+  _streamArrived = false;
+  if (wasLinked) entry('Re-answering call from Alpha (reconnect)…', 'sys');
+  const answerStream = getCallStream();
+  entry('DIAG: answering with ' + answerStream.getTracks().length + ' tracks (audio=' + answerStream.getAudioTracks().length + ' video=' + answerStream.getVideoTracks().length + ')', 'sys');
+  incoming.answer(answerStream);
+  attachCall(incoming);
+}
+
 function startPeer() {
   // Guard: PeerJS CDN may still be loading on slow mobile connections
   if (typeof Peer === 'undefined') {
@@ -5989,31 +6014,9 @@ function startPeer() {
     _unavailIdRetries = 0; // ID claimed — reset backoff
     entry('Radio online [' + id + ']', 'ok');
     setStatus('calling');
-    // Poll Firebase until Alpha's suffixed peer ID appears, then dial.
-    // Also listen for inbound calls from Alpha — whichever arrives first wins.
-    // _thisGen captures the generation at the time this peer was created; if
-    // startPeer() runs again (unavailable-id restart) _peerGeneration changes
-    // and this loop self-terminates, preventing duplicate poll instances.
-    // Never fall back to the base ID — dialling 'alpha-CODE' when ALPHA has
-    // registered as 'alpha-CODE-xxxx' returns peer-unavailable immediately.
-    const _thisGen = _peerGeneration;
-    let _dialPollCount = 0;
-    function _pollAndDial() {
-      if (_peerGeneration !== _thisGen || linked) return; // stale or already linked
-      _refreshRemoteId().then(() => {
-        if (_peerGeneration !== _thisGen || linked) return;
-        _dialPollCount++;
-        if (_remoteIdConfirmed) {
-          if (!linked) dial();
-        } else {
-          if (_dialPollCount % 20 === 0) {
-            entry('Waiting for ALPHA peerId… (' + _dialPollCount + ')', 'sys');
-          }
-          setTimeout(_pollAndDial, 500);
-        }
-      });
-    }
-    _pollAndDial();
+    // One-way call ownership avoids a WebRTC glare race: ALPHA always places
+    // the call and BRAVO remains registered here to receive and answer it.
+    entry('Receiver online — waiting for Alpha to call', 'sys');
   });
 
   peer.on('connection', dc => {
@@ -6031,31 +6034,7 @@ function startPeer() {
 
   peer.on('call', incoming => {
     entry('Inbound call from Alpha', 'info');
-    _startRing();                    // audible ring until ICE connects
-    _peerGeneration++;               // stop the outbound _pollAndDial loop — Alpha reached us first
-    clearTimeout(retryTimer); // cancel any pending dial/retry — Alpha reached us first
-    if (!localStream) {
-      entry('ERROR: no local stream — cannot answer', 'err');
-      incoming.close();
-      return;
-    }
-    // If already linked or a previous call exists, close it silently WITHOUT going
-    // through onDrop — Alpha is simply re-dialling (e.g. ICE restart or brief drop
-    // on its side). Calling onDrop here would push Bravo to the reconnect screen and
-    // trigger a startSession() → unavailable-id spiral.
-    if (call) {
-      try { call.off('close'); call.off('error'); call.close(); } catch(e) {}
-      call = null;
-    }
-    // Keep linked=true if we were already linked so the UI stays live
-    const wasLinked = linked;
-    linked = false; // will be re-set by markLinked() once ICE connects on new call
-    _iceReady = false; _streamArrived = false;
-    if (wasLinked) entry('Re-answering call from Alpha (reconnect)…', 'sys');
-    const _as = getCallStream();
-    entry('DIAG: answering with ' + _as.getTracks().length + ' tracks (audio=' + _as.getAudioTracks().length + ' video=' + _as.getVideoTracks().length + ')', 'sys');
-    incoming.answer(_as);
-    attachCall(incoming);
+    _answerInboundAlphaCall(incoming);
   });
 
   peer.on('disconnected', () => {
@@ -6077,7 +6056,7 @@ function startPeer() {
         if (call) { try { call.close(); } catch(ex) {} call = null; }
         if (dataConn) { try { dataConn.close(); } catch(ex) {} dataConn = null; }
         pendingDC = false;
-        retryTimer = setTimeout(() => _refreshRemoteId().then(() => { if (!linked) dial(); }), 5000);
+        retryTimer = setTimeout(() => { if (!linked) startPeer(); }, 5000);
         return;
       }
       // Ghost session holds OUR id. Pick a new suffix and retry in 500ms.
@@ -6092,12 +6071,12 @@ function startPeer() {
       return;
     }
     if (e.type === 'peer-unavailable') {
-      // Alpha not registered yet — refresh its ID and retry in 5s
-      entry('Alpha not yet visible — retrying in 5s…', 'sys');
+      // BRAVO no longer dials Alpha; reset the receiver registration instead.
+      entry('Alpha not yet visible — resetting receiver in 5s…', 'sys');
       if (call) { try { call.close(); } catch(ex) {} call = null; }
       if (dataConn) { try { dataConn.close(); } catch(ex) {} dataConn = null; }
       pendingDC = false;
-      retryTimer = setTimeout(() => _refreshRemoteId().then(() => { if (!linked) dial(); }), 5000);
+      retryTimer = setTimeout(() => { if (!linked) startPeer(); }, 5000);
       return;
     }
     // network / server-error / socket-error / socket-closed
@@ -6548,8 +6527,9 @@ function sendVideoState() {
 function markLinked() {
   if (linked) return;
   linked = true;
-  _stopRing();           // stop ringing — call connected
-  _onCallConnected();    // start 15s attendance watch
+  // Keep the receiver ringing after WebRTC connects so the promised five
+  // beeps complete. The voicemail timer is armed by the ring sequence itself.
+  _onCallConnected();
   restoreSpeechDraft();
   clearTimeout(retryTimer);  // cancel any pending retry/watchdog
   clearTimeout(dropTimer);   // cancel onDrop grace-period before reconnect screen shows
@@ -7322,6 +7302,7 @@ function _markAttended(event) {
   if (event && event.target && event.target.closest && event.target.closest('#ownerLiveBtn')) return;
   if (_attended) return;
   _attended = true;
+  _stopRing(); // answering live cancels any remaining rings and the VM timer
   clearTimeout(_vmTimer); _vmTimer = null;
   _setOwnerLiveAvailable(false);
   if (_vmActive) {
