@@ -2533,6 +2533,17 @@ function playTone(name) {
     if (_actx.state === 'suspended') { _actx.resume().then(play); } else { play(); }
   } catch(e) { console.warn('playTone:', e); }
 }
+// Caller-side ring tone — played here in response to a remote 'ring' control
+// message, never locally on the answering machine itself.
+let _remoteRingTimer = null;
+function _startRemoteRingTone() {
+  _stopRemoteRingTone();
+  playTone('call_in');
+  _remoteRingTimer = setInterval(() => playTone('call_in'), 2000);
+}
+function _stopRemoteRingTone() {
+  if (_remoteRingTimer) { clearInterval(_remoteRingTimer); _remoteRingTimer = null; }
+}
 let _raPlayTimer = null;
 function scheduleRemoteAudioPlay() {
   // Debounce: wait for srcObject assignments to settle before calling play().
@@ -6133,11 +6144,18 @@ function attachDataConn(dc) {
         }
         return;
       }
+      if (f.__control === 'ring') {
+        // Ringing is silent on the answering machine — the tone plays only here,
+        // on the caller's end, while Alpha decides whether to answer or go to voicemail.
+        if (f.active) { _startRemoteRingTone(); } else { _stopRemoteRingTone(); }
+        return;
+      }
       if (f.__control === 'voicemail') {
         if (f.active) {
           setStatus('voicemail');
           _vmNotice('— 📼 ALPHA RECORDING VOICEMAIL —');
           // These tones play only on the caller receiving this control message.
+          _stopRemoteRingTone();
           playTone('vm_start');
           setTimeout(() => playTone('vm_start'), 400);
           setTimeout(() => playTone('vm_start'), 800);
@@ -6878,6 +6896,7 @@ function handleRemoteLeave() {
 }
 
 function onDrop() {
+  _stopRemoteRingTone(); // safety: stop caller-side ring if link drops mid-ring
   _onCallEnded();        // log call, stop ring/voicemail, clear timers
   saveSpeechDraft();
   clearTimeout(retryTimer);
@@ -7189,9 +7208,8 @@ if (document.readyState === 'loading') {
 function _startRing() {
   _stopRing();
   _ringing = true;
-  entry('📞 Ringing…', 'sys');
-  _playRingTone();
-  _ringTimer = setInterval(_playRingTone, 2000);
+  entry('📞 Ringing… (silent here — tone plays at caller\'s end)', 'sys');
+  try { dcSend({ __control: 'ring', active: true }); } catch(e) {}
   // Auto-advance to voicemail if caller doesn't hang up after RING_TIMEOUT_MS
   _ringTimeoutTimer = setTimeout(() => {
     if (!_ringing) return;          // already answered or dropped
@@ -7210,6 +7228,7 @@ function _startRing() {
 function _stopRing() {
   clearInterval(_ringTimer);   _ringTimer = null;
   clearTimeout(_ringTimeoutTimer); _ringTimeoutTimer = null;
+  if (_ringing) { try { dcSend({ __control: 'ring', active: false }); } catch(e) {} }
   _ringing = false;
 }
 function _playRingTone() {
