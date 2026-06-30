@@ -1,4 +1,4 @@
-<!-- redeploy -->
+
 <!DOCTYPE html>
 <!-- Field Radio v6 — BRAVO -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -7205,11 +7205,35 @@ if (document.readyState === 'loading') {
   _vmLoadStored();
 }
 
+const _LOCAL_RING_TIMES   = 5;     // how many telephone-style beeps to ring locally
+const _LOCAL_RING_GAP_MS  = 2000;  // gap between successive local rings
+let _localRingCount = 0;
+
 function _startRing() {
   _stopRing();
   _ringing = true;
-  entry('📞 Ringing… (silent here — tone plays at caller\'s end)', 'sys');
+  entry('📞 Ringing locally (' + _LOCAL_RING_TIMES + 'x) — VM timer starts after', 'sys');
   try { dcSend({ __control: 'ring', active: true }); } catch(e) {}
+  _localRingCount = 0;
+  _fireLocalRing();
+}
+
+function _fireLocalRing() {
+  if (!_ringing) return;
+  playTone('call_in'); // telephone-like beep, rings the receiver locally
+  _localRingCount++;
+  if (_localRingCount < _LOCAL_RING_TIMES) {
+    _ringTimer = setTimeout(_fireLocalRing, _LOCAL_RING_GAP_MS);
+  } else {
+    // 5 local rings done — give the last beep a moment to finish playing,
+    // then arm the no-answer-to-voicemail countdown.
+    _ringTimer = setTimeout(_armVmTimeout, 600);
+  }
+}
+
+function _armVmTimeout() {
+  if (!_ringing) return;          // already answered or dropped
+  if (_vmActive)  return;         // voicemail already running
   // Auto-advance to voicemail if caller doesn't hang up after RING_TIMEOUT_MS
   _ringTimeoutTimer = setTimeout(() => {
     if (!_ringing) return;          // already answered or dropped
@@ -7226,7 +7250,7 @@ function _startRing() {
   }, RING_TIMEOUT_MS);
 }
 function _stopRing() {
-  clearInterval(_ringTimer);   _ringTimer = null;
+  clearTimeout(_ringTimer);   _ringTimer = null;
   clearTimeout(_ringTimeoutTimer); _ringTimeoutTimer = null;
   if (_ringing) { try { dcSend({ __control: 'ring', active: false }); } catch(e) {} }
   _ringing = false;
