@@ -1,4 +1,4 @@
-<!-- redeploy -->
+
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -2684,7 +2684,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.14-test30s-audio-tune';   // test build: louder, echo-controlled call audio
+const VERSION = '8.15-test30s-controls';   // test build: control-message framing hardened
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -6339,7 +6339,7 @@ function attachDataConn(dc) {
     const decoded = dcDecode(msg);
     if (!decoded) return;
     const { text, obj } = decoded;
-    const f = obj || null;
+    const f = obj || decodeEmbeddedControl(text);
     if (f) {
       if (f.__control === 'video') { updateRemoteVideoState(f.enabled, f.hasTrack !== false); return; }
       if (f.__control === 'leave') { handleRemoteLeave(); return; }
@@ -6409,6 +6409,8 @@ function attachDataConn(dc) {
         }
         return;
       }
+      // Control packets are application signalling, never chat content.
+      if (f.__control) { entry('Ignored unknown control: ' + f.__control, 'sys'); return; }
       addBubble(JSON.stringify(f), false);
     } else {
       addBubble(text, false);
@@ -6557,15 +6559,40 @@ function dcSend(payload) {
 }
 
 // dcDecode — inverse of dcSend; returns { text } or { obj } or null
+function decodeEmbeddedControl(value) {
+  if (typeof value !== 'string') return null;
+  let s = value.trim();
+  // Accommodate legacy peers that sent a control object as text, including
+  // one extra JSON-stringification layer.
+  for (let depth = 0; depth < 2; depth++) {
+    if (!s.startsWith('{') && !s.startsWith('"')) return null;
+    try {
+      const parsed = JSON.parse(s);
+      if (parsed && typeof parsed === 'object' && parsed.__control) return parsed;
+      if (typeof parsed !== 'string') return null;
+      s = parsed.trim();
+    } catch(e) { return null; }
+  }
+  return null;
+}
+
 function dcDecode(raw) {
   let s;
   if (raw instanceof ArrayBuffer)   s = new TextDecoder().decode(raw);
   else if (raw instanceof Blob)     return null; // handle async elsewhere if needed
   else                              s = String(raw);
 
-  if (s.startsWith('T:')) return { text: s.slice(2) };
+  if (s.startsWith('T:')) {
+    const text = s.slice(2);
+    const control = decodeEmbeddedControl(text);
+    return control ? { obj: control } : { text };
+  }
   if (s.startsWith('J:')) {
-    try { return { obj: JSON.parse(s.slice(2)) }; } catch(e) { return { text: s }; }
+    try {
+      const parsed = JSON.parse(s.slice(2));
+      const control = decodeEmbeddedControl(parsed);
+      return { obj: control || parsed };
+    } catch(e) { return { text: s }; }
   }
   // Legacy fallback — other side may still use json serialization mode
   if (s.startsWith('{')) {
