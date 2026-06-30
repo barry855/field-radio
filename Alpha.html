@@ -2684,7 +2684,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.6';   // ← bump this on each deploy
+const VERSION = '8.7';   // ← bump this on each deploy
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -2718,6 +2718,8 @@ let silentCtx = null;
 let silentTrack = null;
 
 let peer, call, dataConn, localStream, linked = false, retryTimer;
+let _dialWatchdogTimer = null; // separate from short retry timers; prevents orphaned 90s callbacks
+const _failedRemoteIds = Object.create(null);
 let _iceReady = false;   // ICE connected but stream not yet confirmed — not truly LIVE yet
 let _streamArrived = false; // at least one remote track/stream has arrived
 let _noMediaMode = false;   // true when we're running without real mic/camera
@@ -6024,15 +6026,8 @@ function _checkAnsweringModeDeadline() {
 }
 
 function _armAnsweringModeTimer() {
-  if (_answeringMachineMode || linked || leftPermanently) return;
-  if (!_answeringDeadlineAt) {
-    _answeringDeadlineAt = Date.now() + ANSWERING_MODE_DELAY_MS;
-    entry('Answering machine will arm in 2 minutes if BRAVO remains offline', 'sys');
-  }
-  if (!_answeringModeWatchdog) {
-    _answeringModeWatchdog = setInterval(_checkAnsweringModeDeadline, 5000);
-  }
-  _checkAnsweringModeDeadline();
+  // ALPHA is the caller. Keep looking for BRAVO instead of silently changing
+  // roles after two minutes; BRAVO owns receiver-side voicemail handling.
 }
 
 function _enterAnsweringMachineMode() {
@@ -6166,17 +6161,22 @@ function startPeer() {
     if (e.type === 'browser-incompatible') return;
     if (e.type === 'peer-unavailable') {
       if (_answeringMachineMode) return;
-      entry('Bravo offline — retry in 5s', 'sys');
+      const failedId = REMOTE_ID;
+      _failedRemoteIds[failedId] = Date.now() + 20000;
+      _remoteIdConfirmed = false;
+      clearTimeout(_dialWatchdogTimer); _dialWatchdogTimer = null;
+      clearTimeout(retryTimer);
+      entry('Bravo ID unavailable (' + failedId + ') — checking for a fresh receiver ID', 'sys');
       // Close the dead outgoing call so its 'close' event doesn't trigger a
       // competing onDrop → retryTimer chain alongside this one
-      if (call) { try { call.close(); } catch(ex) {} call = null; }
+      if (call) { try { call.off('close'); call.off('error'); call.close(); } catch(ex) {} call = null; }
       // Clear stale pendingDC so the next dial() can open a fresh data channel
       if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
       pendingDC = false;
       // Refresh BRAVO's peer ID — it may have re-registered with a new suffix
       retryTimer = setTimeout(() => {
         if (!_answeringMachineMode) _refreshRemoteId().then(dial);
-      }, 5000);
+      }, 1000);
       return;
     }
     if (e.type === 'unavailable-id') {
@@ -6206,6 +6206,8 @@ function startPeer() {
     }
     // network / server-error / socket-error / socket-closed
     entry('Retrying in 6s…', 'sys');
+    clearTimeout(_dialWatchdogTimer); _dialWatchdogTimer = null;
+    clearTimeout(retryTimer);
     retryTimer = setTimeout(() => { _peerDestroyPending = true; peer.destroy(); startPeer(); }, 6000);
   });
 }
@@ -6226,6 +6228,11 @@ function getCallStream() {
 function dial() {
   clearTimeout(retryTimer);
   if (linked || !localStream || _answeringMachineMode) return;
+  const failedUntil = _failedRemoteIds[REMOTE_ID] || 0;
+  if (failedUntil > Date.now()) {
+    retryTimer = setTimeout(() => _refreshRemoteId().then(dial), 1000);
+    return;
+  }
   _armAnsweringModeTimer();
   // Close stale outgoing call before redialling — prevents its 'close' event
   // from triggering a competing onDrop → retryTimer race
@@ -6253,9 +6260,11 @@ function dial() {
   const c = peer.call(REMOTE_ID, _cs);
   attachCall(c);
   openDataConn();
-  // Watchdog: if no stream arrives within 90s, close and redial
-  clearTimeout(retryTimer);
-  retryTimer = setTimeout(() => {
+  // Watchdog: if no stream arrives within 90s, close and redial. This has its
+  // own handle so short peer-unavailable retries cannot orphan old watchdogs.
+  clearTimeout(_dialWatchdogTimer);
+  _dialWatchdogTimer = setTimeout(() => {
+    _dialWatchdogTimer = null;
     if (!linked && !_answeringMachineMode) {
       entry('No answer after 90s — redialling…', 'sys');
       if (call) { try { call.off('close', onDrop); call.close(); } catch(e){} call = null; }
@@ -6556,6 +6565,7 @@ function openDataConn() {
 
 function answerCall(c) {
   clearTimeout(retryTimer);
+  clearTimeout(_dialWatchdogTimer); _dialWatchdogTimer = null;
   if (_answeringMachineMode) {
     _startRing();
     _peerGeneration++; // cancel outbound work left from the calling phase
@@ -6747,7 +6757,8 @@ function markLinked() {
     _onCallConnected();
   }
   restoreSpeechDraft();
-  clearTimeout(retryTimer);  // cancel 90s watchdog and any pending redial
+  clearTimeout(retryTimer);  // cancel any pending short redial
+  clearTimeout(_dialWatchdogTimer); _dialWatchdogTimer = null;
   clearTimeout(dropTimer);   // cancel onDrop grace-period before reconnect screen shows
   // If the reconnect countdown is already running, cancel it and hide the overlay
   clearInterval(_reconnectCountdownTimer);
@@ -7003,6 +7014,8 @@ function attachCall(c) {
       if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
       pendingDC = false;
       entry('Call rejected before link — redialling in 3s…', 'sys');
+      clearTimeout(_dialWatchdogTimer); _dialWatchdogTimer = null;
+      clearTimeout(retryTimer);
       retryTimer = setTimeout(dial, 3000);
     } else {
       onDrop();
@@ -7168,6 +7181,7 @@ function onDrop() {
   if (_answeringMachineMode) _onCallEnded();
   saveSpeechDraft();
   clearTimeout(retryTimer);
+  clearTimeout(_dialWatchdogTimer); _dialWatchdogTimer = null;
   clearTimeout(_raPlayTimer); _raPlayTimer = null;  // cancel any pending audio play attempt
   if (call && call._iceDropTimer) { clearTimeout(call._iceDropTimer); call._iceDropTimer = null; }
   saveRecordingIfActive();
