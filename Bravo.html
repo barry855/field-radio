@@ -289,7 +289,7 @@
   .vm-box-entry:last-child { border-bottom: none; }
   .vm-box-entry audio { height: 24px; flex: 1; min-width: 120px; }
   .vm-box-dl { color: var(--accent2); text-decoration: underline; white-space: nowrap; }
-  .vm-box-ts { color: #888; white-space: nowrap; }
+  .vm-box-ts { color: #fff; white-space: nowrap; }
   .vm-box-del { color: #f55; background: none; border: 0; padding: 2px; cursor: pointer; font-size: 12px; margin-left: auto; flex-shrink: 0; }
   .vm-box-empty { color: #666; font-size: 10px; padding: 6px 4px; letter-spacing: 1px; }
   .vm-picker-overlay {
@@ -2635,7 +2635,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.16-test30s-alpha-wait';   // paired test build
+const VERSION = '8.18-test30s-vm-cleanup';   // paired test build
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -7056,14 +7056,7 @@ function _vmNotice(text, blobUrl, filename) {
     audio.controls = true;
     audio.src = blobUrl;
     audio.style.cssText = 'display:block;margin-top:6px;width:100%;max-width:320px;';
-    const dl = document.createElement('a');
-    dl.href = blobUrl;
-    dl.download = filename || 'voicemail';
-    dl.textContent = '⬇ save';
-    dl.style.cssText = 'color:var(--accent2,#00ffcc);text-decoration:underline;cursor:pointer;font-size:0.85em;margin-top:4px;display:inline-block;';
-    d.appendChild(span);
-    d.appendChild(audio);
-    d.appendChild(dl);
+    d.append(span, audio);
   } else {
     d.textContent = text;
   }
