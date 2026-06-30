@@ -2538,8 +2538,13 @@ function playTone(name) {
 let _remoteRingTimer = null;
 function _startRemoteRingTone() {
   _stopRemoteRingTone();
+  let count = 1;
   playTone('call_in');
-  _remoteRingTimer = setInterval(() => playTone('call_in'), 2000);
+  _remoteRingTimer = setInterval(() => {
+    if (count >= 5) { _stopRemoteRingTone(); return; }
+    playTone('call_in');
+    count++;
+  }, 2000);
 }
 function _stopRemoteRingTone() {
   if (_remoteRingTimer) { clearInterval(_remoteRingTimer); _remoteRingTimer = null; }
@@ -7225,8 +7230,11 @@ function _fireLocalRing() {
   if (_localRingCount < _LOCAL_RING_TIMES) {
     _ringTimer = setTimeout(_fireLocalRing, _LOCAL_RING_GAP_MS);
   } else {
-    // 5 local rings done — give the last beep a moment to finish playing,
-    // then arm the no-answer-to-voicemail countdown.
+    // Exactly 5 rings are complete.  Stop the caller-side repeating tone now,
+    // but keep this call in the unanswered/ringing state while the voicemail
+    // countdown runs.
+    try { dcSend({ __control: 'ring', active: false }); } catch(e) {}
+    // Give the last beep a moment to finish before starting the VM timer.
     _ringTimer = setTimeout(_armVmTimeout, 600);
   }
 }
@@ -7456,15 +7464,16 @@ function _onCallConnected() {
   _attended = false;
   _vmCallStart = Date.now();
   // Capture the remote stream NOW while srcObject is guaranteed to be set.
-  // By the time the 15s timer fires, srcObject may have been cleared (e.g. if
-  // Alpha left early), so we snapshot the tracks here instead.
+  // The ring sequence will use this snapshot if the VM timer expires later.
   const remoteAudio = document.getElementById('remoteAudio');
   const remoteVideo = document.getElementById('remoteVideo');
   const rs = (remoteAudio && remoteAudio.srcObject)
            || (remoteVideo && remoteVideo.srcObject)
            || null;
   _vmCapturedStream = rs;
-  _vmTimer = setTimeout(_startVoicemail, 15000);
+  // _startRing() owns the unattended flow.  Its five telephone beeps must
+  // finish before it arms the voicemail timer; do not start a competing
+  // connection-time timer here.
   ['keydown', 'pointerdown', 'touchstart'].forEach(ev =>
     window.addEventListener(ev, _markAttended, { once: true, passive: true })
   );
