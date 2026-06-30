@@ -2505,7 +2505,7 @@ const _tones = {
   file_in:      { freqs:[660,880],        durs:[0.08,0.14],       wave:'triangle', vol:0.14 },
   error:        { freqs:[300,250],        durs:[0.12,0.18],       wave:'sawtooth', vol:0.14 },
   vm_end:       { freqs:[660,660],        durs:[0.14,0.14],       wave:'sine',     vol:0.30 },
-  vm_start:     { freqs:[880,880,880],    durs:[0.10,0.10,0.10],  wave:'sine',     vol:0.30 },
+  vm_start:     { freqs:[1000],           durs:[0.55],             wave:'sine',     vol:0.65 },
 };
 var _actx = null;
 function playTone(name) {
@@ -2635,7 +2635,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.18-test30s-vm-cleanup';   // paired test build
+const VERSION = '8.19-test30s-vm-start-beep';   // paired test build
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -6186,8 +6186,6 @@ function attachDataConn(dc) {
           // These tones play only on the caller receiving this control message.
           _stopRemoteRingTone();
           playTone('vm_start');
-          setTimeout(() => playTone('vm_start'), 400);
-          setTimeout(() => playTone('vm_start'), 800);
         } else {
           _applyBravoLinkedDisplay(false);
           _vmNotice('— 📼 VOICEMAIL SAVED —');
