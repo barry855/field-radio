@@ -1,4 +1,4 @@
-<!-- redeploy -->
+
 <!DOCTYPE html>
 <!-- Field Radio v6 — BRAVO -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -2635,7 +2635,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.8';   // ← bump this on each deploy
+const VERSION = '8.9';   // ← bump this on each deploy
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -2669,6 +2669,7 @@ let silentCtx = null;
 let silentTrack = null;
 
 let peer, call, dataConn, localStream, linked = false, retryTimer;
+let _dialWatchdogTimer = null;
 let _iceReady = false;   // ICE connected but stream not yet confirmed — not truly LIVE yet
 let _streamArrived = false; // at least one remote track/stream has arrived
 let _noMediaMode = false;   // true when we're running without real mic/camera
@@ -5910,8 +5911,31 @@ async function _refreshRemoteId() {
         REMOTE_ID = _d.peerId;
       }
       _remoteIdConfirmed = true;
+      const answeringNow = _d.answering === true;
+      if (answeringNow !== _alphaAnsweringAvailable) {
+        _alphaAnsweringAvailable = answeringNow;
+        entry(answeringNow
+          ? 'Alpha answering machine available — Bravo will call'
+          : 'Alpha is the active caller — Bravo will wait', 'sys');
+      }
     }
   } catch(e) {}
+}
+
+let _alphaRolePollTimer = null;
+function _startAlphaRolePoll() {
+  clearInterval(_alphaRolePollTimer);
+  const checkRole = () => {
+    if (linked || leftPermanently) return;
+    _refreshRemoteId().then(() => {
+      if (_alphaAnsweringAvailable && _remoteIdConfirmed && !linked && !call) {
+        entry('Calling Alpha answering machine…', 'info');
+        dial();
+      }
+    });
+  };
+  checkRole();
+  _alphaRolePollTimer = setInterval(checkRole, 2000);
 }
 
 // ── Dial Alpha (mirrors Alpha's dial logic) ───────────────────────────────────
@@ -5937,8 +5961,9 @@ function dial() {
   attachCall(c);
   openDataConn();
   // Watchdog: if no stream in 90s, redial
-  clearTimeout(retryTimer);
-  retryTimer = setTimeout(() => {
+  clearTimeout(_dialWatchdogTimer);
+  _dialWatchdogTimer = setTimeout(() => {
+    _dialWatchdogTimer = null;
     if (!linked) {
       entry('No answer after 90s — redialling…', 'sys');
       if (call) { try { call.off('close', onDrop); call.close(); } catch(e){} call = null; }
@@ -5963,6 +5988,7 @@ function _answerInboundAlphaCall(incoming, waitedMs) {
   }
   _startRing();
   clearTimeout(retryTimer);
+  clearTimeout(_dialWatchdogTimer); _dialWatchdogTimer = null;
   if (call) {
     try { call.off('close'); call.off('error'); call.close(); } catch(e) {}
     call = null;
@@ -6015,8 +6041,10 @@ function startPeer() {
     entry('Radio online [' + id + ']', 'ok');
     setStatus('calling');
     // One-way call ownership avoids a WebRTC glare race: ALPHA always places
-    // the call and BRAVO remains registered here to receive and answer it.
+    // the live call. If ALPHA publishes answering=true, BRAVO takes over and
+    // calls the answering machine instead.
     entry('Receiver online — waiting for Alpha to call', 'sys');
+    _startAlphaRolePoll();
   });
 
   peer.on('connection', dc => {
@@ -6056,7 +6084,11 @@ function startPeer() {
         if (call) { try { call.close(); } catch(ex) {} call = null; }
         if (dataConn) { try { dataConn.close(); } catch(ex) {} dataConn = null; }
         pendingDC = false;
-        retryTimer = setTimeout(() => { if (!linked) startPeer(); }, 5000);
+        clearTimeout(_dialWatchdogTimer); _dialWatchdogTimer = null;
+        clearTimeout(retryTimer);
+        retryTimer = setTimeout(() => {
+          if (!linked && _alphaAnsweringAvailable) _refreshRemoteId().then(dial);
+        }, 5000);
         return;
       }
       // Ghost session holds OUR id. Pick a new suffix and retry in 500ms.
@@ -6071,16 +6103,20 @@ function startPeer() {
       return;
     }
     if (e.type === 'peer-unavailable') {
-      // BRAVO no longer dials Alpha; reset the receiver registration instead.
-      entry('Alpha not yet visible — resetting receiver in 5s…', 'sys');
+      entry('Alpha answering machine not yet reachable — retrying in 5s…', 'sys');
       if (call) { try { call.close(); } catch(ex) {} call = null; }
       if (dataConn) { try { dataConn.close(); } catch(ex) {} dataConn = null; }
       pendingDC = false;
-      retryTimer = setTimeout(() => { if (!linked) startPeer(); }, 5000);
+      clearTimeout(_dialWatchdogTimer); _dialWatchdogTimer = null;
+      clearTimeout(retryTimer);
+      retryTimer = setTimeout(() => {
+        if (!linked && _alphaAnsweringAvailable) _refreshRemoteId().then(dial);
+      }, 5000);
       return;
     }
     // network / server-error / socket-error / socket-closed
     entry('Retrying in 6s…', 'sys');
+    clearTimeout(_dialWatchdogTimer); _dialWatchdogTimer = null;
     setTimeout(() => { _peerDestroyPending = true; peer.destroy(); startPeer(); }, 6000);
   });
 }
@@ -6531,7 +6567,8 @@ function markLinked() {
   // beeps complete. The voicemail timer is armed by the ring sequence itself.
   _onCallConnected();
   restoreSpeechDraft();
-  clearTimeout(retryTimer);  // cancel any pending retry/watchdog
+  clearTimeout(retryTimer);
+  clearTimeout(_dialWatchdogTimer); _dialWatchdogTimer = null;
   clearTimeout(dropTimer);   // cancel onDrop grace-period before reconnect screen shows
   // If the reconnect countdown is already running, cancel it and hide the overlay
   clearInterval(_reconnectCountdownTimer);
@@ -6885,6 +6922,7 @@ function onDrop() {
   _onCallEnded();        // log call, stop ring/voicemail, clear timers
   saveSpeechDraft();
   clearTimeout(retryTimer);
+  clearTimeout(_dialWatchdogTimer); _dialWatchdogTimer = null;
   clearTimeout(_raPlayTimer); _raPlayTimer = null;  // cancel any pending audio play attempt
   if (call && call._iceDropTimer) { clearTimeout(call._iceDropTimer); call._iceDropTimer = null; }
   saveRecordingIfActive();
