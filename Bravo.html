@@ -2613,7 +2613,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.23-test30s-one-page-print';   // paired test build
+const VERSION = '8.24-test30s-camera-on-demand';   // paired test build
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -5661,6 +5661,8 @@ async function initMediaOnly() {
 
   function applyAndDial(stream) {
     localStream = stream;
+    const standbyVideo = stream.getVideoTracks()[0];
+    if (standbyVideo) standbyVideo.enabled = false;
     _forceAspectRatio169(stream.getVideoTracks()[0]);
     setupMicGainNode(stream);
     document.getElementById('localVideo').srcObject = stream;
@@ -5783,6 +5785,8 @@ async function init() {
 
   function applyStreamFlags(stream) {
     localStream = stream;
+    const standbyVideo = stream.getVideoTracks()[0];
+    if (standbyVideo) standbyVideo.enabled = false;
     _forceAspectRatio169(stream.getVideoTracks()[0]);
     setupMicGainNode(stream);
     document.getElementById('localVideo').srcObject = stream;
@@ -6141,12 +6145,14 @@ function attachDataConn(dc) {
       if (f.__control === 'answeringMode') {
         if (f.active) {
           _setAnswerLiveAvailable(true);
+          _setCameraActive(false, 'answering mode');
           if (linked) _markAttended();
           entry('Alpha answering mode detected — leave a message after the cue or press GO LIVE', 'sys');
           _vmNotice('— 📼 ALPHA ANSWERING — WAIT FOR THE VOICEMAIL CUE —');
           if (linked) _applyBravoLinkedDisplay(false);
         } else {
           _setAnswerLiveAvailable(false);
+          if (linked && !loginDisableVideoFlag) _setCameraActive(true, 'live session');
           if (linked) _applyBravoLinkedDisplay(false);
         }
         return;
@@ -6581,6 +6587,10 @@ function sendVideoState() {
 function markLinked() {
   if (linked) return;
   linked = true;
+  // Allow the answering-mode control packet to arrive before deciding this is live.
+  setTimeout(() => {
+    if (linked && !_alphaAnsweringAvailable && !loginDisableVideoFlag) _setCameraActive(true, 'live session');
+  }, 350);
   // Keep the receiver ringing after WebRTC connects so the promised five
   // beeps complete. The voicemail timer is armed by the ring sequence itself.
   _onCallConnected();
@@ -6907,6 +6917,7 @@ function handleRemoteLeave() {
   if (_ro) _ro.classList.remove('active');  // hide it if visible
   leftPermanently = false; // we haven't left yet, remote did
   remotePeerLeft = true;
+  _setCameraActive(false, 'live session');
   // Clear remote video immediately
   ['remoteVideo'].forEach(id => {
     const el = document.getElementById(id);
@@ -6946,6 +6957,7 @@ function onDrop() {
   saveRecordingIfActive();
   _pendingChatMsg = null;  // discard any queued message — it belongs to the dropped session
   linked = false;
+  _setCameraActive(false, 'live session');
   _iceReady = false; _streamArrived = false;
   call = null;
   // Reset data channel state so it re-opens cleanly on reconnect
@@ -7001,6 +7013,7 @@ function resetLockTimer() { /* inactivity lock disabled */ }
 // ── Video+Mixed Audio Recording ───────────────────────────────
 let recRemote = null, recRemoteChunks = [], recRemoteBusy = false;
 let recLocal  = null, recLocalChunks  = [], recLocalBusy  = false;
+let _cameraForcedForLocalRecording = false;
 
 // ── Answering machine ─────────────────────────────────────────
 const RING_TIMEOUT_MS = 30000;   // auto-advance to voicemail after 30s of ringing
@@ -7351,6 +7364,7 @@ function _markAttended(event) {
   if (event && event.target && event.target.closest && event.target.closest('#ownerLiveBtn')) return;
   if (_attended) return;
   _attended = true;
+  if (!loginDisableVideoFlag && !_alphaAnsweringAvailable) _setCameraActive(true, 'live session');
   _stopRing(); // answering live cancels any remaining rings and the VM timer
   clearTimeout(_vmTimer); _vmTimer = null;
   _setOwnerLiveAvailable(false);
@@ -7840,6 +7854,12 @@ async function toggleRecordLocal() {
   if (!localStream || !localStream.getVideoTracks().length) {
     entry('No local video to record', 'err'); return;
   }
+  const localCameraTrack = localStream.getVideoTracks()[0];
+  _cameraForcedForLocalRecording = !localCameraTrack.enabled;
+  if (_cameraForcedForLocalRecording) {
+    _setCameraActive(true, 'local recording');
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  }
 
   const remoteAudio = document.getElementById('remoteAudio');
   const remoteVideo = document.getElementById('remoteVideo');
@@ -7856,6 +7876,8 @@ async function toggleRecordLocal() {
   recLocal.ondataavailable = e => { if (e.data.size > 0) recLocalChunks.push(e.data); };
   recLocal.onstop = async () => {
     await saveRec(recLocalChunks, mimeType, 'local');
+    if (_cameraForcedForLocalRecording) _setCameraActive(false, 'local recording');
+    _cameraForcedForLocalRecording = false;
     recLocalBusy = false;
     btn.disabled = false; btn.textContent = '➤ RECORD';
   };
@@ -8028,6 +8050,18 @@ async function toggleRecordChat() {
   entry(`Chat recording started (${isLocalMain ? 'local' : 'remote'} main${_chatRec.showPip ? ' + PiP' : ''})…`, 'ok');
 }
 
+function _setCameraActive(active, reason) {
+  if (!localStream) return false;
+  const track = localStream.getVideoTracks()[0];
+  if (!track) return false;
+  track.enabled = !!active;
+  setVideoButtons(!!active);
+  updateLocalVideoState();
+  sendVideoState();
+  if (reason) entry('Camera ' + (active ? 'enabled for ' : 'disabled after ') + reason, 'sys');
+  return true;
+}
+
 function toggleVideo() {
   if (!localStream) return;
   const track = localStream.getVideoTracks()[0];
@@ -8038,6 +8072,10 @@ function toggleVideo() {
     try { localStorage.setItem('bravo_disable_video', '1'); document.getElementById('loginDisableVideo').checked = true; } catch(e) {}
     entry('Local video disabled', 'sys');
   } else {
+    if (!(linked && _attended) && !(recLocal && recLocal.state === 'recording')) {
+      entry('Camera stays off until the session is live or local recording starts', 'sys');
+      return;
+    }
     track.enabled = true;
     setVideoButtons(true);
     try { localStorage.setItem('bravo_disable_video', '0'); document.getElementById('loginDisableVideo').checked = false; } catch(e) {}
