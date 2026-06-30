@@ -2684,7 +2684,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.15-test30s-controls';   // test build: control-message framing hardened
+const VERSION = '8.16-test30s-alpha-wait';   // test build: Alpha stays waiting after Bravo leaves
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -6130,7 +6130,12 @@ function startPeer() {
       syncControls();
       return;
     }
-    setStatus('calling');
+    setStatus(_waitingAfterRemoteLeave ? 'reachable' : 'calling');
+    if (_waitingAfterRemoteLeave) {
+      duplexBar.textContent = 'WAITING';
+      duplexBar.className = 'duplex-overlay';
+      syncControls();
+    }
     // Poll Firebase until BRAVO's suffixed peer ID appears, then dial.
     // _thisGen captures the generation at the time this peer was created; if
     // startPeer() runs again (unavailable-id restart) _peerGeneration changes
@@ -6172,6 +6177,7 @@ function startPeer() {
   });
 
   peer.on('call', incoming => {
+    _waitingAfterRemoteLeave = false;
     entry('Inbound call from Bravo', 'info');
     answerCall(incoming);
   });
@@ -6289,6 +6295,8 @@ function dial() {
   }
 
   entry('Calling Bravo…', 'info');
+  _waitingAfterRemoteLeave = false;
+  setStatus('calling');
   const _cs = getCallStream();
   entry('DIAG: calling with ' + _cs.getTracks().length + ' tracks (audio=' + _cs.getAudioTracks().length + ' video=' + _cs.getVideoTracks().length + ')', 'sys');
   const c = peer.call(REMOTE_ID, _cs);
@@ -7117,6 +7125,7 @@ function saveRecordingIfActive() {
 let leftPermanently = false;
 let remotePeerLeft = false;
 let peerRefreshing  = false;  // true when either side is doing a refresh-reload
+let _waitingAfterRemoteLeave = false;
 
 function exportSysLog() {
   try {
@@ -7235,8 +7244,33 @@ function handleRemoteLeave() {
     }, 800);
     return;
   }
-  // End this session immediately so both sides close at the same time
-  _doLeave();
+  // Bravo leaving must not end Alpha's page. Clean up only the remote session,
+  // then keep Alpha online and waiting for Bravo to return.
+  saveRecordingIfActive();
+  linked = false;
+  _iceReady = false;
+  _streamArrived = false;
+  clearTimeout(retryTimer);
+  clearTimeout(_dialWatchdogTimer); _dialWatchdogTimer = null;
+  clearTimeout(_dcWatchdog);
+  if (call) {
+    try { call.off('close'); call.off('error'); call.close(); } catch(e) {}
+    call = null;
+  }
+  if (dataConn) { try { dataConn.close(); } catch(e) {} dataConn = null; }
+  pendingDC = false;
+  duplexBar.textContent = 'WAITING';
+  duplexBar.className = 'duplex-overlay';
+  setStatus('reachable');
+  if (rw) { rw.classList.remove('stale', 'video-off', 'no-video'); rw.classList.add('waiting'); }
+  syncControls();
+  _waitingAfterRemoteLeave = true;
+  entry('Alpha ready and waiting for Bravo to return', 'ok');
+  clearTimeout(dropTimer);
+  dropTimer = setTimeout(() => {
+    remotePeerLeft = false;
+    if (!leftPermanently) startPeer();
+  }, 800);
 }
 
 function onDrop() {
