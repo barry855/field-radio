@@ -2662,7 +2662,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.26-test30s-camera-release';   // test build: real camera released while video is off
+const VERSION = '8.27-test30s-guide-order';   // test build: help and print guides follow screen row order
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -4376,7 +4376,45 @@ function openHelpPanel() {
       ['SEE REMOTE','Toggle between remote and local video view in chat'],
       ['Pi Mode',  'Compact mode — hides STT controls (for Raspberry Pi)'],
     ];
-    rows.innerHTML = items.map(([n,d]) =>
+    const screenOrder = [
+      ['REFRESH','Reconnect the remote screen'],
+      ['LEAVE','End the session'],
+      ['?','Open this Button Guide'],
+      ['TTS','Toggle automatic speech for incoming messages'],
+      ['CAMERA','Choose the camera used for video and recording'],
+      ['FS','Toggle full screen'],
+      ['MINI CAM','Toggle the picture-in-picture camera'],
+      ['SEE REMOTE','Switch the chat video between remote and local'],
+      ['RECORD','Record the current local or remote view'],
+      ['VIDEO','Camera is on only while live or recording locally'],
+      ['MIKE','Mute or unmute the microphone'],
+      ['SYS AUDIO','Mix computer audio into the transmitted signal'],
+      ['SHARE','Share the screen or return to camera'],
+      ['MIKE GAIN','Adjust outgoing microphone level'],
+      ['SPKR VOL','Adjust incoming speaker volume'],
+      ['TALK/TYPE','Open the speech and text input panel'],
+      ['CHAT SAVE','Save the current chat as an HTML file'],
+      ['EXPORT','Choose and export a stored chat session'],
+      ['CHAT CLEAR','Clear chat history'],
+      ['RESTORE','Restore a previous chat session'],
+      ['FIND','Find text in chat'],
+      ['VOICEMAIL BOX','Play stored voicemail recordings'],
+      ['MY LANGUAGE','Choose chat translation and speech language'],
+      ['ORIGINAL','Reset speech language to the system default'],
+      ['ANSWER LIVE','Stop voicemail and begin a live session'],
+      ['ATTACH','Attach a file, photo or video'],
+      ['LOAD','Load a text file into the input box'],
+      ['INPUT SAVE','Save input-box text to a file'],
+      ['COPY','Copy input-box text to the clipboard'],
+      ['INPUT CLEAR','Clear the input box'],
+      ['CW','Send input text as Morse-code audio'],
+      ['TALK','Dictate using speech-to-text'],
+      ['SEND','Send typed or dictated text'],
+      ['VM SAVE / X','Download a voicemail / delete its browser copy'],
+      ['SYS LOG','Toggle the diagnostic log'],
+      ['PI MODE','Use the compact Raspberry Pi layout']
+    ];
+    rows.innerHTML = screenOrder.map(([n,d]) =>
       `<div class="help-row"><span class="help-name">${n}</span><span class="help-desc">${d}</span></div>`
     ).join('');
     rows.dataset.built = '1';
