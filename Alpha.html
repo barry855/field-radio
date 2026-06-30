@@ -2662,7 +2662,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.23-test30s-one-page-print';   // test build: main, guide and Talk/Type fit one page
+const VERSION = '8.24-test30s-camera-on-demand';   // test build: camera only for live or local recording
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -5743,6 +5743,8 @@ async function initMediaOnly() {
 
   function applyAndDial(stream) {
     localStream = stream;
+    const standbyVideo = stream.getVideoTracks()[0];
+    if (standbyVideo) standbyVideo.enabled = false;
     _forceAspectRatio169(stream.getVideoTracks()[0]);
     setupMicGainNode(stream);
     document.getElementById('localVideo').srcObject = stream;
@@ -5866,6 +5868,8 @@ async function init() {
 
   function applyStreamFlags(stream) {
     localStream = stream;
+    const standbyVideo = stream.getVideoTracks()[0];
+    if (standbyVideo) standbyVideo.enabled = false;
     _forceAspectRatio169(stream.getVideoTracks()[0]);
     setupMicGainNode(stream);
     document.getElementById('localVideo').srcObject = stream;
@@ -6797,6 +6801,7 @@ function sendVideoState() {
 function markLinked() {
   if (linked) return;
   linked = true;
+  if (!_answeringMachineMode && !loginDisableVideoFlag) _setCameraActive(true, 'live session');
   _clearAnsweringModeTimer();
   if (_answeringMachineMode) {
     // Keep the receiver ringing after WebRTC connects so all five beeps can
@@ -7189,6 +7194,7 @@ function handleRemoteLeave() {
   clearTimeout(dropTimer);  // prevent onDrop's grace-period timer from showing reconnect screen
   leftPermanently = false; // we haven't left yet, remote did
   remotePeerLeft = true;
+  _setCameraActive(false, 'live session');
   // Clear remote video immediately
   ['remoteVideo','miniRemoteVideo'].forEach(id => {
     const el = document.getElementById(id);
@@ -7259,6 +7265,7 @@ function onDrop() {
   if (call && call._iceDropTimer) { clearTimeout(call._iceDropTimer); call._iceDropTimer = null; }
   saveRecordingIfActive();
   linked = false;
+  _setCameraActive(false, 'live session');
   _iceReady = false; _streamArrived = false;
   call = null;
   // Reset data channel state so it re-opens cleanly on next dial
@@ -7328,6 +7335,7 @@ function resetLockTimer() { /* inactivity lock disabled */ }
 // ── Video+Mixed Audio Recording ───────────────────────────────
 let recRemote = null, recRemoteChunks = [], recRemoteBusy = false;
 let recLocal  = null, recLocalChunks  = [], recLocalBusy  = false;
+let _cameraForcedForLocalRecording = false;
 
 // ── Answering machine ─────────────────────────────────────────
 const RING_TIMEOUT_MS = 30000;
@@ -7653,6 +7661,7 @@ function _markAttended(event) {
   if (event && event.target && event.target.closest && event.target.closest('#ownerLiveBtn')) return;
   if (_attended) return;
   _attended = true;
+  if (!loginDisableVideoFlag) _setCameraActive(true, 'live session');
   _stopRing(); // answering live cancels any remaining rings and the VM timer
   clearTimeout(_vmTimer); _vmTimer = null;
   _setOwnerLiveAvailable(false);
@@ -8189,6 +8198,12 @@ async function toggleRecordLocal() {
   if (!localStream || !localStream.getVideoTracks().length) {
     entry('No local video to record', 'err'); return;
   }
+  const localCameraTrack = localStream.getVideoTracks()[0];
+  _cameraForcedForLocalRecording = !localCameraTrack.enabled;
+  if (_cameraForcedForLocalRecording) {
+    _setCameraActive(true, 'local recording');
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  }
 
   const remoteAudio = document.getElementById('remoteAudio');
   const remoteVideo = document.getElementById('remoteVideo');
@@ -8214,6 +8229,8 @@ async function toggleRecordLocal() {
   if (!recVideoTracks.length || !recAudioTracks.length) {
     if (stopLoop) stopLoop();
     if (aCtx) aCtx.close();
+    if (_cameraForcedForLocalRecording) _setCameraActive(false, 'local recording');
+    _cameraForcedForLocalRecording = false;
     entry('Local recording could not start — video or audio track missing', 'err');
     return;
   }
@@ -8226,6 +8243,8 @@ async function toggleRecordLocal() {
     if (stopLoop) stopLoop();
     if (aCtx) aCtx.close();
     await saveRec(recLocalChunks, mimeType, 'local');
+    if (_cameraForcedForLocalRecording) _setCameraActive(false, 'local recording');
+    _cameraForcedForLocalRecording = false;
     recLocalBusy = false;
     btn.disabled = false; btn.textContent = '➤ RECORD';
   };
@@ -8421,6 +8440,18 @@ async function toggleRecordChat() {
 // Legacy no-op — buttons now call specific functions directly
 function toggleRecord() {}
 
+function _setCameraActive(active, reason) {
+  if (!localStream) return false;
+  const track = localStream.getVideoTracks()[0];
+  if (!track) return false;
+  track.enabled = !!active;
+  setVideoButtons(!!active);
+  updateLocalVideoState();
+  sendVideoState();
+  if (reason) entry('Camera ' + (active ? 'enabled for ' : 'disabled after ') + reason, 'sys');
+  return true;
+}
+
 function toggleVideo() {
   if (!localStream) return;
   const track = localStream.getVideoTracks()[0];
@@ -8431,6 +8462,10 @@ function toggleVideo() {
     try { localStorage.setItem('alpha_disable_video', '1'); document.getElementById('loginDisableVideo').checked = true; } catch(e) {}
     entry('Local video disabled', 'sys');
   } else {
+    if (!(linked && _attended) && !(recLocal && recLocal.state === 'recording')) {
+      entry('Camera stays off until the session is live or local recording starts', 'sys');
+      return;
+    }
     track.enabled = true;
     setVideoButtons(true);
     try { localStorage.setItem('alpha_disable_video', '0'); document.getElementById('loginDisableVideo').checked = false; } catch(e) {}
