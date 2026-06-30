@@ -2684,7 +2684,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.10-test30s';   // test build: 30-second answering-machine delay
+const VERSION = '8.11-test30s-audio';   // test build: 30-second delay + audio resilience
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -2803,6 +2803,12 @@ function startSession() {
   stopPresencePolling();
   const code = document.getElementById('sessionCode').value.trim().toUpperCase().replace(/\s+/g,'');
   if (!code) { document.getElementById('sessionCode').focus(); return; }
+  // Create the microphone processing context inside the login gesture. Chrome
+  // may otherwise create it suspended after getUserMedia resolves.
+  try {
+    if (!_micGainCtx || _micGainCtx.state === 'closed') _micGainCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (_micGainCtx.state === 'suspended') _micGainCtx.resume().catch(() => {});
+  } catch(e) {}
   const usingPreReg = _preRegistered && _preRegCode === code;
   if (!usingPreReg) {
     MY_ID     = 'alpha-' + code;
@@ -6235,8 +6241,13 @@ function getCallStream() {
     tracks.push(getSilentTrack());
     entry('STREAM: using silent audio track', 'sys');
   } else {
-    tracks.push(...localStream.getAudioTracks());
-    entry('STREAM: using real audio track', 'sys');
+    const processedTrack = localStream.getAudioTracks().find(t => t.readyState !== 'ended');
+    const rawTrack = _micRawTrack && _micRawTrack.readyState !== 'ended' ? _micRawTrack : null;
+    const liveAudioTrack = (_micGainCtx && _micGainCtx.state === 'running')
+      ? processedTrack
+      : (rawTrack || processedTrack);
+    if (liveAudioTrack) tracks.push(liveAudioTrack);
+    entry('STREAM: using ' + (liveAudioTrack === rawTrack ? 'raw fallback' : 'processed') + ' audio track', 'sys');
   }
   return new MediaStream(tracks);
 }
@@ -6654,6 +6665,8 @@ function startAudioWatchdog() {
       _mixCtx.resume().catch(() => {});
       entry('Audio watchdog: _mixCtx was suspended — resuming', 'sys');
     }
+    if (_micGainCtx && _micGainCtx.state === 'suspended') _micGainCtx.resume().catch(() => {});
+    if (_remoteGainCtx && _remoteGainCtx.state === 'suspended') _remoteGainCtx.resume().catch(() => {});
     if (silentCtx && silentCtx.state === 'suspended') {
       silentCtx.resume().catch(() => {});
     }
@@ -9268,6 +9281,7 @@ function applyMicGain(val) {  const v = parseFloat(val);
 function setupMicGainNode(stream) {
   try {
     if (!_micGainCtx) _micGainCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (_micGainCtx.state === 'suspended') _micGainCtx.resume().catch(() => {});
     const src = _micGainCtx.createMediaStreamSource(stream);
     _micGainNode = _micGainCtx.createGain();
     _micGainDest = _micGainCtx.createMediaStreamDestination();
@@ -9319,9 +9333,20 @@ function setupRemoteGainNode(stream) {
     _remoteGainNode.gain.value = isFinite(saved) ? saved : 1;
     src.connect(_remoteGainNode);
     _remoteGainNode.connect(dest);
-    // Route the gained stream to remoteAudio instead of the raw stream
+    // Use the raw stream immediately so a suspended AudioContext can never
+    // silence incoming speech. Switch to the gained stream once it is running.
     const ra = document.getElementById('remoteAudio');
-    if (ra) ra.srcObject = dest.stream;
+    if (ra) ra.srcObject = stream;
+    const activateGainPath = () => {
+      if (_remoteGainCtx && _remoteGainCtx.state === 'running' && ra) {
+        ra.srcObject = dest.stream;
+        scheduleRemoteAudioPlay();
+      }
+    };
+    if (_remoteGainCtx.state === 'running') activateGainPath();
+    else _remoteGainCtx.resume().then(activateGainPath).catch(() => {
+      if (ra) ra.srcObject = stream;
+    });
     // Sync sliders to saved value
     ['remoteGainSlider','remoteGainSliderChat'].forEach(id => {
       const el = document.getElementById(id);
