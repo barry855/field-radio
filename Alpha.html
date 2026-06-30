@@ -2662,7 +2662,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.27-test30s-guide-order';   // test build: help and print guides follow screen row order
+const VERSION = '8.28-test30s-video-on-guard';   // test build: Video On allowed throughout ordinary live sessions
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -8553,7 +8553,8 @@ async function toggleVideo() {
     await _setCameraActive(false, 'manual video off');
     try { localStorage.setItem('alpha_disable_video', '1'); document.getElementById('loginDisableVideo').checked = true; } catch(e) {}
   } else {
-    if (!(linked && _attended) && !(recLocal && recLocal.state === 'recording')) {
+    const liveCameraAllowed = linked && (!_answeringMachineMode || _attended);
+    if (!liveCameraAllowed && !(recLocal && recLocal.state === 'recording')) {
       entry('Camera stays off until the session is live or local recording starts', 'sys'); return;
     }
     await _setCameraActive(true, 'manual video on');
