@@ -1,4 +1,4 @@
-<!-- redeploy -->
+
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -2684,7 +2684,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.9';   // ← bump this on each deploy
+const VERSION = '8.10-test30s';   // test build: 30-second answering-machine delay
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -6004,7 +6004,7 @@ function _setupRemoteIdPoll(bravoPollKey) {
 let _unavailIdRetries = 0;
 let _peerDestroyPending = false;
 let _peerGeneration = 0;  // incremented each startPeer() — cancels stale _pollAndDial loops
-const ANSWERING_MODE_DELAY_MS = 2 * 60 * 1000;
+const ANSWERING_MODE_DELAY_MS = 30 * 1000;
 let _answeringMachineMode = false;
 let _answeringModeTimer = null;
 let _answeringModeWatchdog = null;
@@ -6033,7 +6033,7 @@ function _armAnsweringModeTimer() {
   if (_answeringMachineMode || linked || leftPermanently) return;
   if (!_answeringDeadlineAt) {
     _answeringDeadlineAt = Date.now() + ANSWERING_MODE_DELAY_MS;
-    entry('Answering machine will arm in 2 minutes if BRAVO remains offline', 'sys');
+    entry('TEST: answering machine will arm in 30 seconds if BRAVO remains offline', 'sys');
   }
   if (!_answeringModeWatchdog) {
     _answeringModeWatchdog = setInterval(_checkAnsweringModeDeadline, 5000);
@@ -6066,7 +6066,7 @@ function _enterAnsweringMachineMode() {
   duplexBar.textContent = 'ANSWERING MACHINE';
   duplexBar.className = 'duplex-overlay';
   syncControls();
-  entry('No BRAVO after 2 minutes — answering machine ready', 'ok');
+  entry('TEST: no BRAVO after 30 seconds — answering machine ready', 'ok');
   _vmNotice('— 📼 ANSWERING MACHINE READY —');
   // Publish the role handoff immediately so a late BRAVO knows it must place
   // the call to ALPHA's answering machine instead of waiting indefinitely.
