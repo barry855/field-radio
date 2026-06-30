@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -6228,6 +6229,12 @@ function attachDataConn(dc) {
     const sb = document.getElementById('sendBtn'); if (sb) sb.disabled = false;
     const cw = document.getElementById('cwSendBtn'); if (cw) cw.disabled = false;
     sendVideoState();
+    // Tell Bravo whether this connected call is being handled unattended.
+    // Include the current attendance state in case the data channel opened
+    // after Alpha had already interacted with the call.
+    if (_answeringMachineMode) {
+      dcSend({ __control: 'answeringMode', active: !_attended, station: 'ALPHA' });
+    }
     if (_pendingChatMsg) {
       const queued = _pendingChatMsg; _pendingChatMsg = null;
       try { dcSend(queued); entry('Queued message sent', 'sys'); } catch(e) {}
@@ -7309,6 +7316,9 @@ function _markAttended() {
   if (_attended) return;
   _attended = true;
   clearTimeout(_vmTimer); _vmTimer = null;
+  if (_answeringMachineMode) {
+    try { dcSend({ __control: 'answeringMode', active: false, station: 'ALPHA' }); } catch(e) {}
+  }
   if (_vmActive) {
     entry('Call attended — stopping voicemail recording', 'sys');
     _stopVoicemail();
