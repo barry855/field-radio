@@ -2684,7 +2684,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.11-test30s-audio';   // test build: 30-second delay + audio resilience
+const VERSION = '8.13-test30s-gain';   // test build: 30-second delay + working input gain
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -6241,7 +6241,9 @@ function getCallStream() {
     tracks.push(getSilentTrack());
     entry('STREAM: using silent audio track', 'sys');
   } else {
-    const processedTrack = localStream.getAudioTracks().find(t => t.readyState !== 'ended');
+    const processedTrack = (_micProcessedTrack && _micProcessedTrack.readyState !== 'ended')
+      ? _micProcessedTrack
+      : localStream.getAudioTracks().find(t => t.readyState !== 'ended');
     const rawTrack = _micRawTrack && _micRawTrack.readyState !== 'ended' ? _micRawTrack : null;
     const liveAudioTrack = (_micGainCtx && _micGainCtx.state === 'running')
       ? processedTrack
@@ -7884,7 +7886,16 @@ function preferredMime() {
 // Return the local mic audio tracks for recording — raw, no Web Audio involved.
 // Clone + force-enable so mute state on the live call track doesn't affect the recording.
 function getLocalAudioTracksForRec() {
-  const src = realAudioTrack || (localStream && localStream.getAudioTracks()[0]) || null;
+  // Record the gained track whenever its context is running, with raw capture
+  // as the reliability fallback.
+  const gained = _micGainCtx && _micGainCtx.state === 'running'
+              && _micProcessedTrack && _micProcessedTrack.readyState !== 'ended'
+              ? _micProcessedTrack : null;
+  const src = gained
+           || (_micRawTrack && _micRawTrack.readyState !== 'ended' && _micRawTrack)
+           || (realAudioTrack && realAudioTrack.readyState !== 'ended' && realAudioTrack)
+           || (localStream && localStream.getAudioTracks().find(t => t.readyState !== 'ended'))
+           || null;
   if (!src) return [];
   const clone = src.clone();
   clone.enabled = true;
@@ -7930,7 +7941,12 @@ function buildCompositeStream(mainVideo, overlayVideo, audioTracks) {
   const showPip = !!overlayVideo; // only draw PiP if caller explicitly passed a video el
   let afId;
   function draw() {
-    c.drawImage(mainVideo, 0, 0, W, H);
+    if (mainVideo && mainVideo.readyState >= 2) {
+      try { c.drawImage(mainVideo, 0, 0, W, H); } catch(e) {}
+    } else {
+      c.fillStyle = '#000';
+      c.fillRect(0, 0, W, H);
+    }
     if (showPip && overlayVideo.readyState >= 2) {
       c.save();
       c.beginPath();
@@ -8125,25 +8141,28 @@ async function toggleRecordLocal() {
   let stopLoop = null, recStream, aCtx = null;
   const withMini = !!miniVideoVisible;   // snapshot the flag right now
 
-  if (withMini) {
-    // Composite: local video + remote mini PiP — needs Web Audio for canvas mix
-    const remoteStream = (remoteAudio && remoteAudio.srcObject) || (remoteVideo && remoteVideo.srcObject) || null;
-    const { ctx, dest: aDest } = await buildAudioMix(getLocalAudioTracksForRec(), remoteStream);
-    aCtx = ctx;
-    const localVideo      = document.getElementById('localVideo');
-    const miniRemoteVideo = document.getElementById('miniRemoteVideo');
-    const comp = buildCompositeStream(localVideo, miniRemoteVideo, aDest.stream.getAudioTracks());
-    recStream = comp.stream; stopLoop = comp.stopLoop;
-  } else {
-    // Plain: raw tracks directly — no Web Audio, no WASAPI interference
-    const remoteStream = (remoteAudio && remoteAudio.srcObject) || (remoteVideo && remoteVideo.srcObject) || null;
-    const remoteAudioTracks = remoteStream ? remoteStream.getAudioTracks() : [];
-    recStream = new MediaStream([
-      ...localStream.getVideoTracks(),
-      ...getLocalAudioTracksForRec(),
-      ...remoteAudioTracks
-    ]);
+  // Always render the local camera through canvas. Chromium's native MP4
+  // recorder can emit audio-only files when given a camera track plus multiple
+  // audio tracks, especially while the page is in answering-machine mode.
+  // Canvas guarantees one video track; buildAudioMix guarantees one audio track.
+  const remoteStream = (remoteAudio && remoteAudio.srcObject) || (remoteVideo && remoteVideo.srcObject) || null;
+  const { ctx, dest: aDest } = await buildAudioMix(getLocalAudioTracksForRec(), remoteStream);
+  aCtx = ctx;
+  const localVideo = document.getElementById('localVideo');
+  const miniRemoteVideo = withMini ? document.getElementById('miniRemoteVideo') : null;
+  const comp = buildCompositeStream(localVideo, miniRemoteVideo, aDest.stream.getAudioTracks());
+  recStream = comp.stream;
+  stopLoop = comp.stopLoop;
+
+  const recVideoTracks = recStream.getVideoTracks();
+  const recAudioTracks = recStream.getAudioTracks();
+  if (!recVideoTracks.length || !recAudioTracks.length) {
+    if (stopLoop) stopLoop();
+    if (aCtx) aCtx.close();
+    entry('Local recording could not start — video or audio track missing', 'err');
+    return;
   }
+  entry('Local recorder tracks: video=' + recVideoTracks.length + ' audio=' + recAudioTracks.length, 'sys');
 
   recLocalChunks = [];
   recLocal = new MediaRecorder(recStream, { mimeType });
@@ -9247,7 +9266,7 @@ async function switchMicrophone(deviceId) {
   }
 }
 
-let _micGainCtx = null, _micGainNode = null, _micGainDest = null, _micRawTrack = null;
+let _micGainCtx = null, _micGainNode = null, _micGainDest = null, _micRawTrack = null, _micProcessedTrack = null;
 
 function teardownMicGain() {
   // Stop the raw mic track that was swapped out by setupMicGainNode — without
@@ -9258,6 +9277,7 @@ function teardownMicGain() {
     try { _micGainDest.stream.getTracks().forEach(t => t.stop()); } catch(e) {}
     _micGainDest = null;
   }
+  _micProcessedTrack = null;
   if (_micGainNode) { try { _micGainNode.disconnect(); } catch(e) {} _micGainNode = null; }
   if (_micGainCtx) { try { _micGainCtx.close(); } catch(e) {} _micGainCtx = null; }
 }
@@ -9275,7 +9295,20 @@ function applyMicGain(val) {  const v = parseFloat(val);
   if (_micGainNode) {
     _micGainNode.gain.setTargetAtTime(v, _micGainCtx.currentTime, 0.01);
   }
+  const activate = () => _activateProcessedMicTrack();
+  if (_micGainCtx && _micGainCtx.state === 'suspended') _micGainCtx.resume().then(activate).catch(() => {});
+  else activate();
   try { localStorage.setItem('alpha_mic_gain', String(v)); } catch(e) {}
+}
+
+function _activateProcessedMicTrack() {
+  if (!_micProcessedTrack || _micProcessedTrack.readyState === 'ended') return;
+  realAudioTrack = _micProcessedTrack;
+  realAudioTrack.enabled = !audioMuted;
+  if (linked && !audioMuted && !_mixOutTrack) {
+    _setCallAudioTrack(_micProcessedTrack).catch(() => {});
+    entry('Microphone gain applied to live call', 'sys');
+  }
 }
 
 function setupMicGainNode(stream) {
@@ -9301,6 +9334,7 @@ function setupMicGainNode(stream) {
         _micRawTrack = oldAudio;
       }
       stream.addTrack(gainedAudio);
+      _micProcessedTrack = gainedAudio;
       realAudioTrack = gainedAudio;
       realAudioTrack.enabled = !audioMuted;
     }
