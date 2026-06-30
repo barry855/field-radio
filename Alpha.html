@@ -2206,13 +2206,13 @@ window.addEventListener('orientationchange', function() {
       </div>
       <div class="gain-row">
         <div class="gain-label"><span>MIKE</span><span>GAIN</span></div>
-        <input type="range" id="micGainSlider" min="0" max="3" step="0.05" value="1" oninput="applyMicGain(this.value)">
-        <span class="gain-val" id="micGainVal">1.00×</span>
+        <input type="range" id="micGainSlider" min="0" max="3" step="0.05" value="1.35" oninput="applyMicGain(this.value)">
+        <span class="gain-val" id="micGainVal">1.35×</span>
       </div>
       <div class="gain-row">
         <div class="gain-label"><span>SPKR</span><span>VOL</span></div>
-        <input type="range" id="remoteGainSlider" min="0" max="3" step="0.05" value="1" oninput="applyRemoteGain(this.value)">
-        <span class="gain-val" id="remoteGainVal">1.00×</span>
+        <input type="range" id="remoteGainSlider" min="0" max="3" step="0.05" value="1.15" oninput="applyRemoteGain(this.value)">
+        <span class="gain-val" id="remoteGainVal">1.15×</span>
       </div>
       <div class="video-panel">
         <div class="panel-label">REMOTE — BRAVO</div>
@@ -2258,14 +2258,14 @@ window.addEventListener('orientationchange', function() {
       <div class="gain-row" style="flex-shrink:0;">
         <div class="gain-label"><span>MIKE</span><span>GAIN</span></div>
         <select id="micInputSelect" class="flip-cam-select mic-input-select" title="Microphone input" onchange="switchMicrophone(this.value)"><option value="">MIC: DEFAULT</option></select>
-        <input type="range" id="micGainSliderChat" min="0" max="3" step="0.05" value="1" oninput="applyMicGain(this.value)" style="flex:1; min-width:0;">
-        <span class="gain-val" id="micGainValChat">1.00×</span>
+        <input type="range" id="micGainSliderChat" min="0" max="3" step="0.05" value="1.35" oninput="applyMicGain(this.value)" style="flex:1; min-width:0;">
+        <span class="gain-val" id="micGainValChat">1.35×</span>
         <button class="speech-top-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input" style="flex-shrink:0; white-space:nowrap;">Talk/Type in Chat</button>
       </div>
       <div class="gain-row" style="flex-shrink:0;">
         <div class="gain-label"><span>SPKR</span><span>VOL</span></div>
-        <input type="range" id="remoteGainSliderChat" min="0" max="3" step="0.05" value="1" oninput="applyRemoteGain(this.value)" style="flex:1; min-width:0;">
-        <span class="gain-val" id="remoteGainValChat">1.00×</span>
+        <input type="range" id="remoteGainSliderChat" min="0" max="3" step="0.05" value="1.15" oninput="applyRemoteGain(this.value)" style="flex:1; min-width:0;">
+        <span class="gain-val" id="remoteGainValChat">1.15×</span>
       </div>
       <div class="zoom-row" style="display:none;">
         <span>ZOOM LOCAL</span>
@@ -2684,7 +2684,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.13-test30s-gain';   // test build: 30-second delay + working input gain
+const VERSION = '8.14-test30s-audio-tune';   // test build: louder, echo-controlled call audio
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -3175,7 +3175,12 @@ function prefillLogin() {
     // overlap PeerJS startup with media acquisition and could freeze the page.
     // Prefill mic gain slider from saved value
     const _rawGain = localStorage.getItem('alpha_mic_gain');
-    const savedGain = _rawGain !== null ? parseFloat(_rawGain) : 1;
+    let savedGain = _rawGain !== null ? parseFloat(_rawGain) : 1.35;
+    if (savedGain === 1 && localStorage.getItem('alpha_gain_135_migrated') !== '1') {
+      savedGain = 1.35;
+      localStorage.setItem('alpha_mic_gain', '1.35');
+      localStorage.setItem('alpha_gain_135_migrated', '1');
+    }
     const gSlider = document.getElementById('micGainSlider');
     const gLabel  = document.getElementById('micGainVal');
     if (gSlider && isFinite(savedGain)) { gSlider.value = savedGain; }
@@ -9318,7 +9323,7 @@ function setupMicGainNode(stream) {
     const src = _micGainCtx.createMediaStreamSource(stream);
     _micGainNode = _micGainCtx.createGain();
     _micGainDest = _micGainCtx.createMediaStreamDestination();
-    const savedGain = (() => { const r = localStorage.getItem('alpha_mic_gain'); return r !== null ? parseFloat(r) : 1; })();
+    const savedGain = (() => { const r = localStorage.getItem('alpha_mic_gain'); return r !== null ? parseFloat(r) : 1.35; })();
     _micGainNode.gain.value = isFinite(savedGain) ? savedGain : 1;
     src.connect(_micGainNode);
     _micGainNode.connect(_micGainDest);
@@ -9363,7 +9368,7 @@ function setupRemoteGainNode(stream) {
     const src  = _remoteGainCtx.createMediaStreamSource(stream);
     _remoteGainNode = _remoteGainCtx.createGain();
     const dest = _remoteGainCtx.createMediaStreamDestination();
-    const saved = parseFloat(localStorage.getItem('alpha_remote_gain') || '1');
+    const saved = parseFloat(localStorage.getItem('alpha_remote_gain') || '1.15');
     _remoteGainNode.gain.value = isFinite(saved) ? saved : 1;
     src.connect(_remoteGainNode);
     _remoteGainNode.connect(dest);
