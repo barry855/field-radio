@@ -2684,7 +2684,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.8';   // ← bump this on each deploy
+const VERSION = '8.9';   // ← bump this on each deploy
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -2914,7 +2914,11 @@ async function _decryptPresence(code, env) {
 async function presenceWrite(myKey) {
   try {
     const code = presenceCode || myKey.split('-').slice(1).join('-');
-    const env  = await _encryptPresence(code, { ts: Date.now(), peerId: MY_ID });
+    const env  = await _encryptPresence(code, {
+      ts: Date.now(),
+      peerId: MY_ID,
+      answering: _answeringMachineMode === true
+    });
     await fetch(FB_URL + '/presence/' + myKey + '.json', {
       method: 'PUT',
       body: JSON.stringify(env)
@@ -6064,6 +6068,10 @@ function _enterAnsweringMachineMode() {
   syncControls();
   entry('No BRAVO after 2 minutes — answering machine ready', 'ok');
   _vmNotice('— 📼 ANSWERING MACHINE READY —');
+  // Publish the role handoff immediately so a late BRAVO knows it must place
+  // the call to ALPHA's answering machine instead of waiting indefinitely.
+  const presenceCodeNow = MY_ID ? MY_ID.replace(/^alpha-/, '').replace(/-[0-9a-f]{4}$/, '') : '';
+  if (presenceCodeNow) presenceWrite('alpha-' + presenceCodeNow);
 }
 
 document.addEventListener('visibilitychange', () => {
