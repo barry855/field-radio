@@ -1,4 +1,4 @@
-<!-- redeploy -->
+
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -2684,7 +2684,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.7';   // ← bump this on each deploy
+const VERSION = '8.8';   // ← bump this on each deploy
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -6026,8 +6026,15 @@ function _checkAnsweringModeDeadline() {
 }
 
 function _armAnsweringModeTimer() {
-  // ALPHA is the caller. Keep looking for BRAVO instead of silently changing
-  // roles after two minutes; BRAVO owns receiver-side voicemail handling.
+  if (_answeringMachineMode || linked || leftPermanently) return;
+  if (!_answeringDeadlineAt) {
+    _answeringDeadlineAt = Date.now() + ANSWERING_MODE_DELAY_MS;
+    entry('Answering machine will arm in 2 minutes if BRAVO remains offline', 'sys');
+  }
+  if (!_answeringModeWatchdog) {
+    _answeringModeWatchdog = setInterval(_checkAnsweringModeDeadline, 5000);
+  }
+  _checkAnsweringModeDeadline();
 }
 
 function _enterAnsweringMachineMode() {
@@ -6040,9 +6047,10 @@ function _enterAnsweringMachineMode() {
   _answeringMachineMode = true;
   _peerGeneration++; // stop any active presence-poll-and-dial loop
   clearTimeout(retryTimer);
+  clearTimeout(_dialWatchdogTimer); _dialWatchdogTimer = null;
   clearTimeout(_dcWatchdog);
   if (call) {
-    try { call.off('close', onDrop); call.off('error'); call.close(); } catch(e) {}
+    try { call.off('close'); call.off('error'); call.close(); } catch(e) {}
     call = null;
   }
   if (dataConn) { try { dataConn.close(); } catch(e) {} dataConn = null; }
