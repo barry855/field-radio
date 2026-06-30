@@ -3281,13 +3281,34 @@ function setStatus(state) {
   else if (state === 'reachable') { linkLed.classList.add('on-amber-flash');  statusEl.textContent = 'WAITING';  document.title = '🟡 WAITING — BRAVO — Field Radio v6'; }
   else if (state === 'calling')   { linkLed.classList.add('on-amber-flash');  statusEl.textContent = 'WAITING';  document.title = '🟡 WAITING — BRAVO — Field Radio v6'; }
   else if (state === 'linked')    { linkLed.classList.add('on-green');  statusEl.textContent = 'LIVE';   document.title = '🟢 LIVE — BRAVO — Field Radio v6'; }
+  else if (state === 'remote-answering') { linkLed.classList.add('on-cyan'); statusEl.textContent = 'ALPHA ANSWERING'; document.title = '📼 ALPHA ANSWERING — BRAVO — Field Radio v6'; }
   else if (state === 'voicemail') { linkLed.classList.add('on-amber');  statusEl.textContent = '📼 VOICEMAIL'; document.title = '📼 VOICEMAIL — BRAVO — Field Radio v6'; }
   else                            { statusEl.textContent = ''; document.title = 'BRAVO — Field Radio v6'; }
 }
 
 let activeTab = 'chat';
 let unreadCount = 0;
+let _remoteAnsweringMode = false;
 const msgBadge = document.getElementById('msgBadge');
+
+function _applyBravoLinkedDisplay(logConnection) {
+  if (_remoteAnsweringMode) {
+    setStatus('remote-answering');
+    duplexBar.textContent = '● LIVE TO ALPHA ANSWERING MACHINE';
+    if (logConnection) entry('Linked to Alpha — answering machine active', 'ok');
+  } else {
+    setStatus('linked');
+    if (_noMediaMode) {
+      duplexBar.textContent = '● LIVE (data only)';
+      if (logConnection) entry('Linked to Alpha — data channel only (no mic/camera)', 'ok');
+    } else {
+      duplexBar.textContent = '● LIVE';
+      if (logConnection) entry('Linked to Alpha — full duplex active', 'ok');
+    }
+  }
+  duplexBar.className = 'duplex-overlay live';
+  syncControls();
+}
 
 function syncControls() {
   const d2 = document.getElementById('duplexBar2');
@@ -5870,6 +5891,7 @@ function startPeer() {
     setTimeout(startPeer, 500);
     return;
   }
+  _remoteAnsweringMode = false;
   _peerDestroyPending = false;
   _peerGeneration++;           // invalidate any _pollAndDial loop from the previous peer
   _remoteIdConfirmed = false;  // reset so new peer waits for fresh Firebase confirmation
@@ -6046,6 +6068,19 @@ function attachDataConn(dc) {
       if (f.__control === 'leave') { handleRemoteLeave(); return; }
       // clearChat control intentionally not handled — CLEAR is local-only on each unit.
       if (f.__control === 'deleteMsg') { deleteBubble(f.ts, false); return; }
+      if (f.__control === 'answeringMode') {
+        const wasAnswering = _remoteAnsweringMode;
+        _remoteAnsweringMode = !!f.active;
+        if (linked) _applyBravoLinkedDisplay(false);
+        if (_remoteAnsweringMode && !wasAnswering) {
+          entry('Alpha is in answering-machine mode', 'sys');
+          _vmNotice('— 📼 ALPHA ANSWERING MACHINE —');
+        } else if (!_remoteAnsweringMode && wasAnswering) {
+          entry('Alpha attended — continuing as a live session', 'ok');
+          _vmNotice('— ● ALPHA ATTENDED — LIVE SESSION —');
+        }
+        return;
+      }
       if (f.__control === 'voicemail') {
         if (f.active) {
           setStatus('voicemail');
@@ -6054,7 +6089,7 @@ function attachDataConn(dc) {
           setTimeout(() => playTone('vm_start'), 400);
           setTimeout(() => playTone('vm_start'), 800);
         } else {
-          setStatus('linked');
+          setStatus(_remoteAnsweringMode ? 'remote-answering' : 'linked');
           _vmNotice('— 📼 VOICEMAIL SAVED —');
         }
         return;
@@ -6444,16 +6479,7 @@ function markLinked() {
   clearInterval(_reconnectCountdownTimer);
   const _ro = document.getElementById('reconnectOverlay');
   if (_ro) _ro.classList.remove('active');
-  setStatus('linked');
-  if (_noMediaMode) {
-    entry('Linked to Alpha — data channel only (no mic/camera)', 'ok');
-    duplexBar.textContent = '● LIVE (data only)';
-  } else {
-    entry('Linked to Alpha — full duplex active', 'ok');
-    duplexBar.textContent = '● LIVE';
-  }
-  duplexBar.className = 'duplex-overlay live';
-  syncControls();
+  _applyBravoLinkedDisplay(true);
   startQualityPolling();
   // Alpha owns data channel initiation — Bravo only accepts inbound DCs.
   applyMuteToSenders();
@@ -6798,6 +6824,7 @@ function handleRemoteLeave() {
 
 function onDrop() {
   _onCallEnded();        // log call, stop ring/voicemail, clear timers
+  _remoteAnsweringMode = false;
   saveSpeechDraft();
   clearTimeout(retryTimer);
   clearTimeout(_raPlayTimer); _raPlayTimer = null;  // cancel any pending audio play attempt
