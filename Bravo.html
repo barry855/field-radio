@@ -1,4 +1,4 @@
-<!-- redeploy -->
+
 <!DOCTYPE html>
 <!-- Field Radio v6 — BRAVO -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -1408,7 +1408,7 @@
       background: #fff !important; color: #000 !important;
       border: 1px solid #555 !important;
     }
-    #exportSessionBtn, #answerLiveBtn, #ownerLiveBtn, #vmPickerBtn, #vmBox, #vmPickerOverlay { display: none !important; }
+    #answerLiveBtn, #ownerLiveBtn, #vmPickerBtn, #vmBox, #vmPickerOverlay { display: none !important; }
     /* Row 1: TTS Off | Flip Cam | FS OFF | MINI CAM OFF */
     #ttsChatBtn, #flipChatBtn, #fsChatBtn, #miniChatBtn { display: inline-flex !important; }
     /* Row 2: See Remote | RECORD | Video Off | Mike On | Sys Audio Off | Share Off */
@@ -1537,9 +1537,9 @@
     #helpPanelInner { padding: 6px 8px !important; }
     #helpPanelInner h3 { margin: 0 0 4px !important; font-size: 13px !important; }
     #helpPanelRows { gap: 0 10px !important; }
-    .help-row { padding: 2px 0 !important; gap: 6px !important; line-height: 1.12 !important; }
+    .help-row { padding: 1px 0 !important; gap: 5px !important; line-height: 1.08 !important; }
     .help-name { flex-basis: 96px !important; padding: 1px 4px !important; font-size: 8px !important; }
-    .help-desc { font-size: 9px !important; line-height: 1.12 !important; }
+    .help-desc { font-size: 8.5px !important; line-height: 1.08 !important; }
     #speechPanel { padding: 5px 8px !important; margin-top: 4px !important; gap: 3px !important; }
     #speechPanel .speech-btn-row { gap: 3px !important; }
     .help-name {
@@ -2613,7 +2613,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.24-test30s-camera-on-demand';   // paired test build
+const VERSION = '8.26-test30s-camera-release';   // paired test build
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -4305,6 +4305,18 @@ function openHelpPanel() {
   const rows = document.getElementById('helpPanelRows');
   if (rows && !rows.dataset.built) {
     const items = [['Talk/Type in Chat','Open the speech and text input panel'],['TALK','Dictate via speech-to-text'],['SEND','Send typed or dictated text to chat'],['ATTACH','Attach a file to send'],['LOAD','Load a text file into the input box'],['SAVE','Save the input box text to a file'],['COPY','Copy the input box text to clipboard'],['CLEAR','Clear the input box'],['CW','Send input text as Morse code audio'],['TTS','Toggle auto-speak for incoming messages'],['ORIGINAL','Reset speech language to system default'],['↺','Refresh / reconnect'],['✕ Leave','End the session'],['RECORD','Record the current call'],['MINI CAM','Toggle picture-in-picture camera overlay'],['FS','Toggle full screen'],['SYS LOG','Toggle the system diagnostic log'],['💾 SAVE','Save chat history as an HTML file'],['↩ RESTORE','Restore a previous session chat'],['🗑 CLEAR','Clear chat history'],['🔍 FIND','Find text in the chat'],['Video Off','Toggle your camera on/off'],['Mic On/Off','Mute or unmute your microphone'],['Sys Audio','Mix computer audio into transmitted signal'],['Share Off','Share your screen'],['Pi Mode','Compact mode — hides STT controls']];
+    items.unshift(
+      ['EXPORT','Choose and export a previously stored chat session'],
+      ['CAMERA','Choose the camera used for video and local recording'],
+      ['VOICEMAIL BOX','Play stored voicemail recordings'],
+      ['VM SAVE / X','Download a voicemail / delete its browser copy'],
+      ['ANSWER LIVE','Stop voicemail recording and begin a live session'],
+      ['MY LANGUAGE','Choose chat translation and speech language'],
+      ['MIKE GAIN','Adjust outgoing microphone level'],
+      ['SPKR VOL','Adjust incoming speaker volume'],
+      ['SEE REMOTE','Switch between remote and local video in chat'],
+      ['VIDEO POLICY','Camera is on only while live or during local recording']
+    );
     rows.innerHTML = items.map(([n,d])=>`<div class="help-row"><span class="help-name">${n}</span><span class="help-desc">${d}</span></div>`).join('');
     rows.dataset.built='1';
   }
@@ -5661,8 +5673,7 @@ async function initMediaOnly() {
 
   function applyAndDial(stream) {
     localStream = stream;
-    const standbyVideo = stream.getVideoTracks()[0];
-    if (standbyVideo) standbyVideo.enabled = false;
+    _parkCameraStream(stream);
     _forceAspectRatio169(stream.getVideoTracks()[0]);
     setupMicGainNode(stream);
     document.getElementById('localVideo').srcObject = stream;
@@ -5785,8 +5796,7 @@ async function init() {
 
   function applyStreamFlags(stream) {
     localStream = stream;
-    const standbyVideo = stream.getVideoTracks()[0];
-    if (standbyVideo) standbyVideo.enabled = false;
+    _parkCameraStream(stream);
     _forceAspectRatio169(stream.getVideoTracks()[0]);
     setupMicGainNode(stream);
     document.getElementById('localVideo').srcObject = stream;
@@ -6557,8 +6567,9 @@ function updateLocalVideoState() {
   const track = localStream && localStream.getVideoTracks()[0];
   if (!wrap) return;
   wrap.classList.toggle('no-video', !track);
-  wrap.classList.toggle('video-off', !!track && !track.enabled);
-  if (track) setVideoButtons(track.enabled);
+  const cameraActive = !!(track && track.enabled && !track._fieldRadioStandby);
+  wrap.classList.toggle('video-off', !cameraActive);
+  setVideoButtons(cameraActive);
 }
 
 function updateRemoteVideoState(enabled, hasTrack = true) {
@@ -6578,8 +6589,8 @@ function sendVideoState() {
   try {
     dcSend({
       __control: 'video',
-      enabled: !!(track && track.enabled),
-      hasTrack: !!track
+      enabled: !!(track && track.enabled && !track._fieldRadioStandby),
+      hasTrack: !!(track && !track._fieldRadioStandby)
     });
   } catch(e) {}
 }
@@ -7855,9 +7866,10 @@ async function toggleRecordLocal() {
     entry('No local video to record', 'err'); return;
   }
   const localCameraTrack = localStream.getVideoTracks()[0];
-  _cameraForcedForLocalRecording = !localCameraTrack.enabled;
+  _cameraForcedForLocalRecording = !localCameraTrack.enabled || !!localCameraTrack._fieldRadioStandby;
   if (_cameraForcedForLocalRecording) {
-    _setCameraActive(true, 'local recording');
+    const cameraReady = await _setCameraActive(true, 'local recording');
+    if (!cameraReady) return;
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
   }
 
@@ -7876,7 +7888,7 @@ async function toggleRecordLocal() {
   recLocal.ondataavailable = e => { if (e.data.size > 0) recLocalChunks.push(e.data); };
   recLocal.onstop = async () => {
     await saveRec(recLocalChunks, mimeType, 'local');
-    if (_cameraForcedForLocalRecording) _setCameraActive(false, 'local recording');
+    if (_cameraForcedForLocalRecording) await _setCameraActive(false, 'local recording');
     _cameraForcedForLocalRecording = false;
     recLocalBusy = false;
     btn.disabled = false; btn.textContent = '➤ RECORD';
@@ -8050,39 +8062,81 @@ async function toggleRecordChat() {
   entry(`Chat recording started (${isLocalMain ? 'local' : 'remote'} main${_chatRec.showPip ? ' + PiP' : ''})…`, 'ok');
 }
 
-function _setCameraActive(active, reason) {
-  if (!localStream) return false;
-  const track = localStream.getVideoTracks()[0];
-  if (!track) return false;
-  track.enabled = !!active;
-  setVideoButtons(!!active);
-  updateLocalVideoState();
-  sendVideoState();
-  if (reason) entry('Camera ' + (active ? 'enabled for ' : 'disabled after ') + reason, 'sys');
-  return true;
+let _standbyVideoCanvas = null;
+let _standbyVideoTrack = null;
+function _getStandbyVideoTrack() {
+  if (_standbyVideoTrack && _standbyVideoTrack.readyState !== 'ended') return _standbyVideoTrack;
+  _standbyVideoCanvas = document.createElement('canvas');
+  _standbyVideoCanvas.width = 640; _standbyVideoCanvas.height = 360;
+  const ctx = _standbyVideoCanvas.getContext('2d');
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, 640, 360);
+  _standbyVideoTrack = _standbyVideoCanvas.captureStream(1).getVideoTracks()[0];
+  _standbyVideoTrack._fieldRadioStandby = true;
+  return _standbyVideoTrack;
 }
 
-function toggleVideo() {
+function _parkCameraStream(stream) {
+  if (!stream) return;
+  const standby = _getStandbyVideoTrack();
+  stream.getVideoTracks().forEach(track => {
+    if (track === standby) return;
+    stream.removeTrack(track);
+    try { track.stop(); } catch(e) {}
+  });
+  if (!stream.getVideoTracks().includes(standby)) stream.addTrack(standby);
+}
+
+async function _setCameraActive(active, reason) {
+  if (!localStream) return false;
+  const current = localStream.getVideoTracks()[0] || null;
+  if (active && current && !current._fieldRadioStandby && current.readyState !== 'ended') {
+    current.enabled = true; updateLocalVideoState(); sendVideoState(); return true;
+  }
+  try {
+    let replacement;
+    if (active) {
+      const savedId = await _getSavedCameraDeviceId();
+      const video = { facingMode: currentFacingMode || 'user', width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16/9 } };
+      if (savedId) video.deviceId = { exact: savedId };
+      let cam;
+      try { cam = await navigator.mediaDevices.getUserMedia({ video, audio: false }); }
+      catch(e) { delete video.deviceId; cam = await navigator.mediaDevices.getUserMedia({ video, audio: false }); }
+      replacement = cam.getVideoTracks()[0];
+      _forceAspectRatio169(replacement);
+    } else {
+      replacement = _getStandbyVideoTrack();
+    }
+    const pc = call && (call.peerConnection || call._pc);
+    const sender = pc && pc.getSenders ? pc.getSenders().find(s => s.track && s.track.kind === 'video') : null;
+    if (sender) await sender.replaceTrack(replacement);
+    if (current && current !== replacement) localStream.removeTrack(current);
+    if (!localStream.getVideoTracks().includes(replacement)) localStream.addTrack(replacement);
+    const localVideo = document.getElementById('localVideo'); if (localVideo) localVideo.srcObject = localStream;
+    if (current && current !== replacement && !current._fieldRadioStandby) { try { current.stop(); } catch(e) {} }
+    updateLocalVideoState(); syncMiniVideos(); sendVideoState();
+    if (reason) entry('Camera ' + (active ? 'enabled for ' : 'released after ') + reason, 'sys');
+    return true;
+  } catch(e) {
+    entry('Camera ' + (active ? 'start' : 'stop') + ' failed: ' + e.message, 'err');
+    updateLocalVideoState();
+    return false;
+  }
+}
+
+async function toggleVideo() {
   if (!localStream) return;
   const track = localStream.getVideoTracks()[0];
-  if (!track) return;
-  if (track.enabled) {
-    track.enabled = false;
-    setVideoButtons(false);
+  const active = !!(track && track.enabled && !track._fieldRadioStandby);
+  if (active) {
+    await _setCameraActive(false, 'manual video off');
     try { localStorage.setItem('bravo_disable_video', '1'); document.getElementById('loginDisableVideo').checked = true; } catch(e) {}
-    entry('Local video disabled', 'sys');
   } else {
     if (!(linked && _attended) && !(recLocal && recLocal.state === 'recording')) {
-      entry('Camera stays off until the session is live or local recording starts', 'sys');
-      return;
+      entry('Camera stays off until the session is live or local recording starts', 'sys'); return;
     }
-    track.enabled = true;
-    setVideoButtons(true);
+    await _setCameraActive(true, 'manual video on');
     try { localStorage.setItem('bravo_disable_video', '0'); document.getElementById('loginDisableVideo').checked = false; } catch(e) {}
-    entry('Local video enabled', 'sys');
   }
-  updateLocalVideoState();
-  sendVideoState();
 }
 
 // ── Screen Share ──────────────────────────────────────────────
