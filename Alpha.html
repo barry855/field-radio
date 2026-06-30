@@ -1583,6 +1583,14 @@
       max-height: none !important;
     }
     .help-row { page-break-inside: avoid !important; break-inside: avoid !important; }
+    #helpPanelInner { padding: 6px 8px !important; }
+    #helpPanelInner h3 { margin: 0 0 4px !important; font-size: 13px !important; }
+    #helpPanelRows { gap: 0 10px !important; }
+    .help-row { padding: 2px 0 !important; gap: 6px !important; line-height: 1.12 !important; }
+    .help-name { flex-basis: 96px !important; padding: 1px 4px !important; font-size: 8px !important; }
+    .help-desc { font-size: 9px !important; line-height: 1.12 !important; }
+    #speechPanel { padding: 5px 8px !important; margin-top: 4px !important; gap: 3px !important; }
+    #speechPanel .speech-btn-row { gap: 3px !important; }
     .help-name {
       background: #fff !important; color: #000 !important;
       border: 1px solid #333 !important;
@@ -2654,7 +2662,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.22-test30s-no-vm-button';   // test build: expandable voicemail box only
+const VERSION = '8.23-test30s-one-page-print';   // test build: main, guide and Talk/Type fit one page
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -9919,8 +9927,8 @@ function ttsSpeak(text, lang) {
     hpi.scrollTop = 0;
 
     // Force in-flow rendering via inline styles
-    hpi.style.cssText = 'position:static !important;display:block !important;border:1px solid #999 !important;border-radius:4px !important;max-width:100% !important;padding:8px 10px !important;margin:6px 0 0 0 !important;overflow:visible !important;height:auto !important;max-height:none !important;background:#fff !important;color:#000 !important;page-break-inside:avoid !important;break-inside:avoid-page !important;';
-    sp.style.cssText  = 'position:static !important;display:flex !important;flex-direction:column !important;background:none !important;border:1px solid #999 !important;border-radius:4px !important;padding:8px 10px !important;margin-top:6px !important;overflow:visible !important;height:auto !important;max-height:none !important;gap:6px !important;flex-shrink:0 !important;page-break-inside:avoid !important;break-inside:avoid-page !important;';
+    hpi.style.cssText = 'position:static !important;display:block !important;border:1px solid #999 !important;border-radius:4px !important;max-width:100% !important;padding:6px 8px !important;margin:4px 0 0 0 !important;overflow:visible !important;height:auto !important;max-height:none !important;background:#fff !important;color:#000 !important;page-break-inside:avoid !important;break-inside:avoid-page !important;';
+    sp.style.cssText  = 'position:static !important;display:flex !important;flex-direction:column !important;background:none !important;border:1px solid #999 !important;border-radius:4px !important;padding:5px 8px !important;margin-top:4px !important;overflow:visible !important;height:auto !important;max-height:none !important;gap:3px !important;flex-shrink:0 !important;page-break-inside:avoid !important;break-inside:avoid-page !important;';
 
     // Explicitly zero out help-btn-bar — Chrome may reserve space for display:none elements
     var hbb = document.querySelector('.help-btn-bar');
