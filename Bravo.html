@@ -266,24 +266,17 @@
     letter-spacing: 1px;
   }
 
-  /* ── Voicemail Box ── */
   .vm-box {
-    flex-shrink: 0;
-    border: 1px solid rgba(0,255,170,0.25);
-    border-radius: 5px;
-    margin-top: 4px;
-    overflow: hidden;
+    flex-shrink: 0; border: 1px solid rgba(0,255,170,0.28);
+    border-radius: 5px; margin-top: 4px; overflow: hidden;
   }
   .vm-box-header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 4px 8px;
-    background: rgba(0,255,170,0.07);
-    cursor: pointer;
-    font-size: 10px; letter-spacing: 2px; font-weight: bold;
-    color: var(--accent2, #00ffaa);
-    user-select: none;
+    display: flex; align-items: center; gap: 8px; padding: 4px 8px;
+    background: rgba(0,255,170,0.08); cursor: pointer; user-select: none;
+    font-size: 10px; letter-spacing: 2px; font-weight: bold; color: var(--accent2);
   }
-  .vm-box-header:hover { background: rgba(0,255,170,0.13); }
+  .vm-box-header:hover { background: rgba(0,255,170,0.15); }
+  .vm-box-summary { margin-left: auto; color: var(--text-dim); font-size: 9px; letter-spacing: 0; }
   .vm-box-body { display: none; padding: 4px 6px; max-height: 180px; overflow-y: auto; }
   .vm-box.open .vm-box-body { display: block; }
   .vm-box-arrow { transition: transform 0.2s; }
@@ -295,9 +288,9 @@
   }
   .vm-box-entry:last-child { border-bottom: none; }
   .vm-box-entry audio { height: 24px; flex: 1; min-width: 120px; }
-  .vm-box-dl { color: var(--accent2,#00ffaa); text-decoration: underline; cursor: pointer; white-space: nowrap; }
+  .vm-box-dl { color: var(--accent2); text-decoration: underline; white-space: nowrap; }
   .vm-box-ts { color: #888; white-space: nowrap; }
-  .vm-box-del { color: #f55; cursor: pointer; font-size: 12px; margin-left: auto; flex-shrink:0; }
+  .vm-box-del { color: #f55; background: none; border: 0; padding: 2px; cursor: pointer; font-size: 12px; margin-left: auto; flex-shrink: 0; }
   .vm-box-empty { color: #666; font-size: 10px; padding: 6px 4px; letter-spacing: 1px; }
 
   /* connection quality */
@@ -762,6 +755,10 @@
   .flip-cam-select-chat {
     height: auto; padding: 4px 8px;
   }
+  .mic-input-select {
+    flex: 0 1 155px; min-width: 105px; max-width: 180px;
+    height: 30px; padding: 0 7px;
+  }
   .leave-btn {
     flex: 0 0 auto; height: 36px; padding: 0 10px;
     background: rgba(0,212,255,0.15); border: 1px solid var(--accent);
@@ -1076,29 +1073,6 @@
     gap: 32px;
   }
   .reconnect-overlay.active { display: flex; }
-
-  /* ── Inactivity lock overlay ── */
-  .lock-overlay {
-    display: none; position: fixed; inset: 0; z-index: 300;
-    background: rgba(0,0,0,0.93);
-    flex-direction: column; align-items: center; justify-content: center;
-    gap: 20px; backdrop-filter: blur(6px);
-  }
-  .lock-overlay.active { display: flex; }
-  .lock-icon  { font-size: 48px; }
-  .lock-title { font-family: 'Orbitron', sans-serif; font-size: 18px;
-    letter-spacing: 4px; color: var(--accent2); }
-  .lock-sub   { font-size: 11px; color: #888; letter-spacing: 2px; }
-  .lock-unlock-btn {
-    padding: 12px 32px; background: var(--btn-bg);
-    border: 1px solid var(--accent2); border-radius: 6px;
-    color: var(--accent2); font-family: 'Orbitron', sans-serif;
-    font-size: 12px; letter-spacing: 2px; cursor: pointer;
-  }
-  .lock-unlock-btn:hover { background: var(--btn-hover); }
-  .lock-timeout-row { display: flex; align-items: center; gap: 8px; font-size: 11px; color: #888; }
-  .lock-timeout-row select { background: var(--btn-bg); color: var(--text);
-    border: 1px solid var(--border); border-radius: 3px; padding: 2px 4px; font-size: 11px; }
   .reconnect-title {
     font-family: 'Orbitron', sans-serif;
     font-size: clamp(32px, 8vw, 64px);
@@ -1367,6 +1341,7 @@
     .tab-content, .tab-pane {
       height: auto !important; overflow: visible !important;
       min-height: 0 !important; max-height: none !important;
+      flex: 0 0 auto !important;
     }
 
     /* ── Header / logo bar — light grey ── */
@@ -1412,6 +1387,7 @@
       background: #fff !important; color: #000 !important;
       border: 1px solid #555 !important;
     }
+    #exportSessionBtn, #vmBox { display: none !important; }
     /* Row 1: TTS Off | Flip Cam | FS OFF | MINI CAM OFF */
     #ttsChatBtn, #flipChatBtn, #fsChatBtn, #miniChatBtn { display: inline-flex !important; }
     /* Row 2: See Remote | RECORD | Video Off | Mike On | Sys Audio Off | Share Off */
@@ -1442,7 +1418,8 @@
     }
     .gain-row .gain-label span { color: #000 !important; }
     .gain-row .gain-val { color: #000 !important; }
-    .gain-row input[type=range] { display: block !important; flex: 1 !important; border: 1px solid #999 !important; -webkit-appearance: auto !important; appearance: auto !important; }
+    .gain-row input[type=range] { display: block !important; flex: 1 !important; border: 1px solid #999 !important; accent-color: var(--accent) !important; -webkit-appearance: auto !important; appearance: auto !important; }
+    #remoteGainSliderChat { accent-color: var(--accent2) !important; }
     /* Talk/Type in Chat button in gain row */
     #speechToggleBtn { display: inline-flex !important; background: #fff !important; color: #000 !important; border: 1px solid #555 !important; }
 
@@ -1471,6 +1448,13 @@
     .chat-find-bar { display: none !important; height: 0 !important; overflow: hidden !important; }
     .mini-video-overlay { display: none !important; }
     .zoom-row { display: none !important; height: 0 !important; overflow: hidden !important; }
+    /* speechPanel is moved to body before printing; collapse its old flex parent. */
+    #chatPanel {
+      display: none !important; flex: none !important;
+      height: 0 !important; min-height: 0 !important;
+      margin: 0 !important; padding: 0 !important; border: 0 !important;
+      overflow: hidden !important;
+    }
 
     /* ── Video elements — hidden, no space ── */
     #chatUnderlay { display: none !important; }
@@ -1488,6 +1472,7 @@
       overflow: visible !important; height: auto !important;
       max-height: none !important; gap: 6px !important;
       flex-shrink: 0 !important;
+      page-break-inside: avoid !important; break-inside: avoid-page !important;
     }
     #speechEditWrap { display: none !important; }
     #speechStatus { display: none !important; }
@@ -1521,6 +1506,7 @@
       max-width: 100% !important; padding: 8px 10px !important;
       margin: 0 !important; overflow: visible !important;
       height: auto !important; max-height: none !important;
+      page-break-inside: avoid !important; break-inside: avoid-page !important;
     }
     #helpPanelRows {
       overflow: visible !important; height: auto !important;
@@ -1716,6 +1702,7 @@
     flex: 1; accent-color: var(--accent);
     height: 4px; cursor: pointer;
   }
+  #remoteGainSliderChat { accent-color: var(--accent2); }
   .gain-row .gain-val {
     min-width: 38px; text-align: right;
     color: #ffffff; font-family: 'Orbitron', sans-serif;
@@ -2075,29 +2062,10 @@ window.addEventListener('orientationchange', function() {
       <button id="helpTouchBtn" onclick="openHelpPanel()" aria-label="Button guide">?</button>
     </div>
   </header>
-  <!-- ── Inactivity lock overlay ── -->
-  <div class="lock-overlay" id="lockOverlay">
-    <div class="lock-icon">🔒</div>
-    <div class="lock-title">SESSION LOCKED</div>
-    <div class="lock-sub">INACTIVITY TIMEOUT</div>
-    <button class="lock-unlock-btn" onclick="unlockSession()">UNLOCK</button>
-    <div class="lock-timeout-row">
-      Auto-lock after
-      <select id="lockTimeoutSelect" onchange="setLockTimeout(this.value)">
-        <option value="0">Never</option>
-        <option value="5">5 min</option>
-        <option value="10" selected>10 min</option>
-        <option value="20">20 min</option>
-        <option value="30">30 min</option>
-        <option value="60">1 hr</option>
-      </select>
-      of inactivity
-    </div>
-  </div>
   <div class="tab-bar" style="display:none;">
     <button class="tab-btn" id="tabLocalBtn" style="display:none" onclick="switchTab(&#39;local&#39;)">LOCAL</button>
     <button class="tab-btn" id="tabRemoteBtn" style="display:none" onclick="switchTab(&#39;remote&#39;)">REMOTE</button>
-    <button class="tab-btn active" id="tabChatBtn" onclick="switchTab(&#39;chat&#39;)">CHAT <span class="msg-badge" id="msgBadge">0</span><span class="msg-badge" id="missedBadge" style="background:#f80;margin-left:2px;display:none;">0</span></button>
+    <button class="tab-btn active" id="tabChatBtn" onclick="switchTab(&#39;chat&#39;)">CHAT <span class="msg-badge" id="msgBadge">0</span></button>
   </div>
   <div class="tab-content">
     <!-- LOCAL TAB -->
@@ -2217,6 +2185,7 @@ window.addEventListener('orientationchange', function() {
       </div>
       <div class="gain-row" style="flex-shrink:0;">
         <div class="gain-label"><span>MIKE</span><span>GAIN</span></div>
+        <select id="micInputSelect" class="flip-cam-select mic-input-select" title="Microphone input" onchange="switchMicrophone(this.value)"><option value="">MIC: DEFAULT</option></select>
         <input type="range" id="micGainSliderChat" min="0" max="3" step="0.05" value="1" oninput="applyMicGain(this.value)" style="flex:1; min-width:0;">
         <span class="gain-val" id="micGainValChat">1.00×</span>
         <button class="speech-top-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input" style="flex-shrink:0; white-space:nowrap;">Talk/Type in Chat</button>
@@ -2226,10 +2195,6 @@ window.addEventListener('orientationchange', function() {
         <input type="range" id="remoteGainSliderChat" min="0" max="3" step="0.05" value="1" oninput="applyRemoteGain(this.value)" style="flex:1; min-width:0;">
         <span class="gain-val" id="remoteGainValChat">1.00×</span>
       </div>
-      <div class="gain-row" id="micDeviceRow" style="display:none;flex-shrink:0;">
-        <div class="gain-label"><span>MIC</span><span>IN</span></div>
-        <select id="micDeviceSelect" onchange="_switchMic(this.value)" style="flex:1;min-width:0;font-size:10px;background:var(--btn-bg);color:var(--text);border:1px solid var(--border);border-radius:3px;padding:2px 4px;"></select>
-      </div>
       <div class="zoom-row" style="display:none;">
         <span>ZOOM LOCAL</span>
         <input type="range" id="zoomSliderChat" min="1" max="4" step="0.1" value="1" oninput="applyZoom(this.value,'local')">
@@ -2238,17 +2203,16 @@ window.addEventListener('orientationchange', function() {
       <div id="chatToolsWrap" style="flex-shrink:0; border:1px solid rgba(255,255,255,0.25); border-radius:5px; padding:4px 6px; margin-top:2px; display:flex; flex-direction:column; gap:4px;">
         <div style="display:flex; flex-wrap:wrap; align-items:center; gap:4px;">
           <span class="sbr-label">CHAT:</span>
-          <button class="speech-top-btn" onclick="saveChatToFile()" id="saveChatBtn" title="Save current chat as HTML">💾 SAVE</button>
-          <button class="speech-top-btn" onclick="exportSessionChat()" id="exportSessionBtn" title="Export a past session to HTML file">📤 EXPORT</button>
+          <button class="speech-top-btn" onclick="saveChatToFile()" id="saveChatBtn" title="Save chat as HTML">💾 SAVE</button>
+          <button class="speech-top-btn" onclick="exportSessionChat()" id="exportSessionBtn" title="Export a past session as HTML">EXPORT</button>
           <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';ttsStopAll();morseStopAll();entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR</button>
           <button class="speech-top-btn" onclick="restoreChat()" id="restoreChatBtn" title="Restore previous session chat">↩ RESTORE</button>
           <button class="speech-top-btn" id="findChatBtn" title="Find in chat">🔍 FIND</button>
         </div>
-        <!-- ── Voicemail Box ── -->
         <div class="vm-box" id="vmBox">
-          <div class="vm-box-header" onclick="toggleVmBox()">
-            <span>📼 VOICEMAIL BOX</span>
-            <span id="vmBoxCount" style="font-size:9px;color:#888;"></span>
+          <div class="vm-box-header" onclick="toggleVmBox()" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleVmBox();}">
+            <span>VOICEMAIL BOX</span>
+            <span class="vm-box-summary" id="vmBoxSummary"></span>
             <span class="vm-box-arrow">▶</span>
           </div>
           <div class="vm-box-body" id="vmBoxBody">
@@ -2736,34 +2700,6 @@ function cancelPreRegister() {
   pendingDC = false;
 }
 
-// ── TURN reachability check ───────────────────────────────────
-async function checkTurnReachability() {
-  try {
-    const pc = new RTCPeerConnection({
-      iceServers: [
-        { urls: 'turn:global.relay.metered.ca:80',
-          username: '554e937371f5aaea2f60db1f', credential: 'iz048pNn3xMiESzK' }
-      ],
-      iceCandidatePoolSize: 1
-    });
-    pc.createDataChannel('_turn_check');
-    await pc.setLocalDescription(await pc.createOffer());
-    await new Promise((resolve, reject) => {
-      const t = setTimeout(() => reject(new Error('timeout')), 5000);
-      pc.onicecandidate = ev => {
-        if (ev.candidate && ev.candidate.type === 'relay') {
-          clearTimeout(t); resolve('ok');
-        }
-        if (!ev.candidate) { clearTimeout(t); reject(new Error('no relay candidate')); }
-      };
-    });
-    pc.close();
-    entry('TURN relay: reachable ✓', 'sys');
-  } catch(e) {
-    entry('⚠ TURN relay unreachable (' + e.message + ') — relay calls may fail on mobile/NAT networks. Check Metered.ca credentials.', 'warn');
-  }
-}
-
 function startSession() {
   stopPresencePolling();
   const code = document.getElementById('sessionCode').value.trim().toUpperCase().replace(/\s+/g,'');
@@ -2803,7 +2739,6 @@ function startSession() {
   loginDisableVideoFlag = disVidChecked;
   loginDisableAudioFlag = disAudChecked;
   entry('LOGIN: disableVideo=' + disVidChecked + ' disableAudio=' + disAudChecked + ' v' + VERSION, 'sys');
-  checkTurnReachability();
   clearInterval(loginTimeoutInterval);
   document.getElementById('sessionOverlay').style.display = 'none';
   showLoginBox();
@@ -3346,33 +3281,13 @@ function setStatus(state) {
   else if (state === 'reachable') { linkLed.classList.add('on-amber-flash');  statusEl.textContent = 'WAITING';  document.title = '🟡 WAITING — BRAVO — Field Radio v6'; }
   else if (state === 'calling')   { linkLed.classList.add('on-amber-flash');  statusEl.textContent = 'WAITING';  document.title = '🟡 WAITING — BRAVO — Field Radio v6'; }
   else if (state === 'linked')    { linkLed.classList.add('on-green');  statusEl.textContent = 'LIVE';   document.title = '🟢 LIVE — BRAVO — Field Radio v6'; }
+  else if (state === 'voicemail') { linkLed.classList.add('on-amber');  statusEl.textContent = '📼 VOICEMAIL'; document.title = '📼 VOICEMAIL — BRAVO — Field Radio v6'; }
   else                            { statusEl.textContent = ''; document.title = 'BRAVO — Field Radio v6'; }
 }
 
 let activeTab = 'chat';
 let unreadCount = 0;
-let missedCallCount = 0;
 const msgBadge = document.getElementById('msgBadge');
-const missedBadge = document.getElementById('missedBadge');
-
-function _incMissedCall() {
-  missedCallCount++;
-  if (missedBadge) {
-    missedBadge.textContent = missedCallCount;
-    missedBadge.style.display = '';
-    missedBadge.classList.remove('visible');
-    void missedBadge.offsetWidth;
-    missedBadge.classList.add('visible');
-  }
-  // Also update document title
-  document.title = '(' + missedCallCount + ' missed) BRAVO — Field Radio';
-}
-
-function _clearMissedCall() {
-  missedCallCount = 0;
-  if (missedBadge) { missedBadge.style.display = 'none'; missedBadge.textContent = '0'; }
-  document.title = 'BRAVO — Field Radio';
-}
 
 function syncControls() {
   const d2 = document.getElementById('duplexBar2');
@@ -3775,43 +3690,43 @@ function clearHistory() {
 function exportSessionChat() {
   try {
     const code = presenceCode || 'unknown';
-    const idx  = JSON.parse(localStorage.getItem(historyIndexKey(code)) || '[]');
-    if (idx.length === 0) { entry('No previous session history for this code.', 'sys'); return; }
-    const fmt = ts => new Date(ts).toLocaleString();
-    const choice = idx.length === 1 ? '1' : window.prompt(
-      'Export which session?\n' +
-      idx.map((ts, i) => (i + 1) + '. ' + fmt(ts)).join('\n')
+    const index = JSON.parse(localStorage.getItem(historyIndexKey(code)) || '[]');
+    if (!index.length) { entry('No previous session history for this code.', 'sys'); return; }
+    const format = ts => new Date(ts).toLocaleString();
+    const choice = index.length === 1 ? '1' : window.prompt(
+      'Export which session?\n' + index.map((ts, i) => (i + 1) + '. ' + format(ts)).join('\n')
     );
-    const n = parseInt(choice, 10);
-    if (!n || n < 1 || n > idx.length) { entry('Export cancelled.', 'sys'); return; }
-    const slotTs = idx[n - 1];
-    const slot   = JSON.parse(localStorage.getItem(historySlotKey(code, slotTs)) || 'null');
-    if (!slot || !slot.msgs || slot.msgs.length === 0) { entry('Session slot empty.', 'sys'); return; }
-    const rows = slot.msgs.map(m => {
-      const align = m.mine ? 'flex-end' : 'flex-start';
-      const bg    = m.mine ? 'rgba(0,255,170,0.12)' : 'rgba(0,212,255,0.10)';
-      const border= m.mine ? '#00ffaa' : '#00d4ff';
-      const who   = m.mine ? 'BRAVO' : 'ALPHA';
-      const tick  = m.mine ? (m.status === 'seen' || m.status === 'delivered' ? ' ✓✓' : ' ✓') : '';
-      const time  = m.ts ? new Date(m.ts).toLocaleTimeString() : '';
-      return `<div style="display:flex;justify-content:${align};margin:6px 0;">
-        <div style="max-width:75%;background:${bg};border:1px solid ${border};border-radius:10px;padding:8px 12px;font-family:sans-serif;font-size:13px;">
-          <div style="font-size:9px;color:#888;margin-bottom:3px;">${who} · ${time}${tick}</div>
-          <div>${m.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')}</div>
-        </div></div>`;
+    if (choice === null) return;
+    const selected = parseInt(choice, 10);
+    if (!selected || selected < 1 || selected > index.length) { entry('Export selection is not valid.', 'sys'); return; }
+    const slotTs = index[selected - 1];
+    const slot = JSON.parse(localStorage.getItem(historySlotKey(code, slotTs)) || 'null');
+    if (!slot || !Array.isArray(slot.msgs) || !slot.msgs.length) { entry('Selected session is empty.', 'sys'); return; }
+    const escapeHtml = value => String(value == null ? '' : value)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const rows = slot.msgs.map(message => {
+      const mine = !!message.mine;
+      const time = message.ts ? new Date(message.ts).toLocaleTimeString() : '';
+      const status = mine ? ((message.status === 'seen' || message.status === 'delivered') ? ' &#10003;&#10003;' : ' &#10003;') : '';
+      return '<div class="row ' + (mine ? 'mine' : 'theirs') + '"><div class="message">' +
+        '<div class="meta">' + (mine ? 'BRAVO' : 'ALPHA') + ' &middot; ' + escapeHtml(time) + status + '</div>' +
+        '<div>' + escapeHtml(message.text).replace(/\n/g, '<br>') + '</div></div></div>';
     }).join('\n');
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
-<title>Field Radio — ${code} — ${fmt(slotTs)}</title>
-<style>body{background:#111;color:#eee;font-family:sans-serif;max-width:700px;margin:0 auto;padding:20px;}
-h2{font-size:13px;color:#888;letter-spacing:2px;border-bottom:1px solid #333;padding-bottom:8px;}</style>
-</head><body><h2>FIELD RADIO · CODE: ${code} · SESSION: ${fmt(slotTs)}</h2>
-${rows}</body></html>`;
-    const blob = new Blob([html], { type: 'text/html' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'fieldradio-' + code + '-' + new Date(slotTs).toISOString().slice(0,10) + '.html';
-    a.click();
-    entry('Exported session from ' + fmt(slotTs), 'ok');
+    const safeCode = escapeHtml(code);
+    const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Field Radio - ' + safeCode + '</title>' +
+      '<style>body{background:#111;color:#eee;font-family:Arial,sans-serif;max-width:700px;margin:0 auto;padding:20px}' +
+      'h2{font-size:13px;color:#aaa;letter-spacing:2px;border-bottom:1px solid #444;padding-bottom:8px}' +
+      '.row{display:flex;margin:6px 0}.mine{justify-content:flex-end}.theirs{justify-content:flex-start}' +
+      '.message{max-width:75%;border:1px solid #00ff9f;border-radius:8px;padding:8px 12px;font-size:13px}' +
+      '.theirs .message{border-color:#00d4ff}.meta{font-size:9px;color:#999;margin-bottom:3px}</style></head><body>' +
+      '<h2>FIELD RADIO &middot; CODE: ' + safeCode + ' &middot; SESSION: ' + escapeHtml(format(slotTs)) + '</h2>' + rows + '</body></html>';
+    const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'fieldradio-' + code.replace(/[^A-Z0-9_-]/gi, '-') + '-' + new Date(slotTs).toISOString().slice(0, 10) + '.html';
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    entry('Exported session from ' + format(slotTs), 'ok');
   } catch(e) { entry('Export failed: ' + e.message, 'err'); }
 }
 
@@ -5650,70 +5565,6 @@ function _saveCameraLabel(label) {
   try { localStorage.setItem('bravo_camera_label', label); } catch(e) {}
 }
 
-// ── Saved mic preference ─────────────────────────────────────
-async function _getSavedMicDeviceId() {
-  let savedLabel = '';
-  try { savedLabel = localStorage.getItem('bravo_mic_label') || ''; } catch(e) {}
-  if (!savedLabel) return null;
-  try {
-    const all = await navigator.mediaDevices.enumerateDevices();
-    const match = all.find(d => d.kind === 'audioinput' && d.label === savedLabel);
-    return match ? match.deviceId : null;
-  } catch(e) { return null; }
-}
-
-function _saveMicLabel(label) {
-  if (!label) return;
-  try { localStorage.setItem('bravo_mic_label', label); } catch(e) {}
-}
-
-async function _populateMicSelector() {
-  const sel = document.getElementById('micDeviceSelect');
-  if (!sel) return;
-  try {
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const mics = devices.filter(d => d.kind === 'audioinput');
-    sel.innerHTML = '';
-    const savedLabel = localStorage.getItem('bravo_mic_label') || '';
-    mics.forEach(d => {
-      const opt = document.createElement('option');
-      opt.value = d.deviceId;
-      opt.textContent = d.label || ('Mic ' + d.deviceId.slice(0, 6));
-      opt.selected = d.label && d.label === savedLabel;
-      sel.appendChild(opt);
-    });
-    sel.style.display = mics.length > 1 ? '' : 'none';
-    const row = document.getElementById('micDeviceRow');
-    if (row) row.style.display = mics.length > 1 ? '' : 'none';
-  } catch(e) {}
-}
-
-async function _switchMic(deviceId) {
-  if (!localStream) return;
-  try {
-    const savedLabel = document.getElementById('micDeviceSelect')?.selectedOptions[0]?.textContent || '';
-    _saveMicLabel(savedLabel);
-    const newStream = await navigator.mediaDevices.getUserMedia({
-      audio: { deviceId: { exact: deviceId }, echoCancellation: true, noiseSuppression: true, autoGainControl: false },
-      video: false
-    });
-    const newTrack = newStream.getAudioTracks()[0];
-    if (!newTrack) return;
-    const old = localStream.getAudioTracks()[0];
-    if (old) { localStream.removeTrack(old); old.stop(); }
-    localStream.addTrack(newTrack);
-    if (call) {
-      const pc = call.peerConnection || call._pc;
-      if (pc) {
-        const sender = pc.getSenders().find(s => s.track && s.track.kind === 'audio');
-        if (sender) await sender.replaceTrack(newTrack);
-      }
-    }
-    setupMicGainNode(localStream);
-    entry('Mic switched to: ' + (newTrack.label || deviceId), 'sys');
-  } catch(e) { entry('Mic switch failed: ' + e.message, 'err'); }
-}
-
 async function initMediaOnly() {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     entry('Mic/camera API not available — data channel only', 'sys');
@@ -5738,11 +5589,11 @@ async function initMediaOnly() {
     localStream = stream;
     _forceAspectRatio169(stream.getVideoTracks()[0]);
     setupMicGainNode(stream);
-    _populateMicSelector();
     document.getElementById('localVideo').srcObject = stream;
     entry('Mic + camera ready', 'ok');
     syncMiniVideos();
     initFlipCamUI();
+    initMicInputUI();
     updateLocalVideoState();
     if (loginDisableVideoFlag) {
       const vt = stream.getVideoTracks()[0];
@@ -5860,11 +5711,11 @@ async function init() {
     localStream = stream;
     _forceAspectRatio169(stream.getVideoTracks()[0]);
     setupMicGainNode(stream);
-    _populateMicSelector();
     document.getElementById('localVideo').srcObject = stream;
     entry('Mic + camera ready', 'ok');
     syncMiniVideos();
     initFlipCamUI();
+    initMicInputUI();
     updateLocalVideoState();
     if (loginDisableVideoFlag) {
       const vt = stream.getVideoTracks()[0];
@@ -6421,8 +6272,18 @@ function getCallStream() {
     tracks.push(getSilentTrack());
     entry('STREAM: using silent audio track', 'sys');
   } else {
-    tracks.push(...localStream.getAudioTracks());
-    entry('STREAM: using real audio track', 'sys');
+    const liveAudioTrack = (realAudioTrack && realAudioTrack.readyState !== 'ended')
+      ? realAudioTrack
+      : localStream.getAudioTracks().find(t => t.readyState !== 'ended');
+    if (liveAudioTrack) {
+      liveAudioTrack.enabled = true;
+      realAudioTrack = liveAudioTrack;
+      tracks.push(liveAudioTrack);
+      entry('STREAM: using real audio track', 'sys');
+    } else {
+      tracks.push(getSilentTrack());
+      entry('STREAM: no live audio track — using silent fallback', 'sys');
+    }
   }
   return new MediaStream(tracks);
 }
@@ -6597,7 +6458,6 @@ function markLinked() {
   // Alpha owns data channel initiation — Bravo only accepts inbound DCs.
   applyMuteToSenders();
   startAudioWatchdog();
-  resetLockTimer();
 }
 
 function attachCall(c) {
@@ -6991,47 +6851,11 @@ function muteLocal() {
   // no-op — full duplex, mic always open when linked
 }
 
-// ── Inactivity lock ───────────────────────────────────────────
+// ── Session timeout (disabled — session runs indefinitely) ────
 let lockTimer;
 let autoReconnectTimer;
-let dropTimer;
-
-let _lockMinutes = 10;
-try { _lockMinutes = parseInt(localStorage.getItem('bravo_lock_minutes') || '10', 10) || 0; } catch(e) {}
-
-function setLockTimeout(val) {
-  _lockMinutes = parseInt(val, 10) || 0;
-  try { localStorage.setItem('bravo_lock_minutes', String(_lockMinutes)); } catch(e) {}
-  resetLockTimer();
-}
-
-function resetLockTimer() {
-  clearTimeout(lockTimer);
-  lockTimer = null;
-  if (!linked) return;
-  if (!_lockMinutes) return;
-  lockTimer = setTimeout(lockSession, _lockMinutes * 60 * 1000);
-}
-
-function lockSession() {
-  const overlay = document.getElementById('lockOverlay');
-  if (overlay) overlay.classList.add('active');
-}
-
-function unlockSession() {
-  const overlay = document.getElementById('lockOverlay');
-  if (overlay) overlay.classList.remove('active');
-  resetLockTimer();
-}
-
-['pointerdown', 'keydown', 'touchstart'].forEach(ev =>
-  document.addEventListener(ev, () => { if (linked) resetLockTimer(); }, { passive: true })
-);
-
-(function() {
-  const sel = document.getElementById('lockTimeoutSelect');
-  if (sel) sel.value = String(_lockMinutes) in Object.fromEntries([...sel.options].map(o=>[o.value,1])) ? String(_lockMinutes) : '10';
-})();
+let dropTimer;  // cancellable handle for onDrop's leave-vs-drop grace period
+function resetLockTimer() { /* inactivity lock disabled */ }
 
 // ── Video+Mixed Audio Recording ───────────────────────────────
 let recRemote = null, recRemoteChunks = [], recRemoteBusy = false;
@@ -7089,61 +6913,71 @@ function _vmNotice(text, blobUrl, filename) {
   } catch(e) {}
 }
 
-// ── Voicemail Box ─────────────────────────────────────────────
-// In-session list of recorded voicemails. Populated from _vmEntries[]
-// which is built at call-end and on page load from localStorage.
-const _vmEntries = []; // { ts, blobUrl, filename }
+const _vmEntries = [];
+let _vmMissedCount = 0;
+
+function _vmUpdateSummary() {
+  const summary = document.getElementById('vmBoxSummary');
+  if (!summary) return;
+  const parts = [];
+  if (_vmEntries.length) parts.push(_vmEntries.length + ' saved');
+  if (_vmMissedCount) parts.push(_vmMissedCount + ' missed');
+  summary.textContent = parts.join(' | ');
+}
 
 function _vmBoxAddEntry(ts, blobUrl, filename) {
   _vmEntries.push({ ts, blobUrl, filename });
   _vmBoxRender();
 }
 
+function _vmRecordMissedCall() {
+  _vmMissedCount++;
+  _vmUpdateSummary();
+}
+
 function _vmBoxRender() {
-  const body  = document.getElementById('vmBoxBody');
+  const body = document.getElementById('vmBoxBody');
   const empty = document.getElementById('vmBoxEmpty');
-  const count = document.getElementById('vmBoxCount');
   if (!body) return;
-  // Remove all entries (not the empty placeholder)
-  [...body.querySelectorAll('.vm-box-entry')].forEach(e => e.remove());
-  const live = _vmEntries.filter(e => e.blobUrl); // only entries with playable blobs
-  if (count) count.textContent = live.length ? '(' + live.length + ')' : '';
-  if (empty) empty.style.display = live.length ? 'none' : '';
-  live.forEach(entry => {
+  body.querySelectorAll('.vm-box-entry').forEach(node => node.remove());
+  if (empty) empty.style.display = _vmEntries.length ? 'none' : '';
+  _vmEntries.forEach(item => {
     const row = document.createElement('div');
     row.className = 'vm-box-entry';
-    row.dataset.ts = entry.ts;
-    const tsEl = document.createElement('span');
-    tsEl.className = 'vm-box-ts';
-    tsEl.textContent = new Date(entry.ts).toLocaleTimeString();
+    const time = document.createElement('span');
+    time.className = 'vm-box-ts';
+    time.textContent = new Date(item.ts).toLocaleTimeString();
     const audio = document.createElement('audio');
     audio.controls = true;
-    audio.src = entry.blobUrl;
-    const dl = document.createElement('a');
-    dl.className = 'vm-box-dl';
-    dl.href = entry.blobUrl;
-    dl.download = entry.filename || ('voicemail-' + entry.ts + '.webm');
-    dl.textContent = '⬇';
-    dl.title = 'Save ' + (entry.filename || 'voicemail');
-    const del = document.createElement('span');
-    del.className = 'vm-box-del';
-    del.textContent = '✕';
-    del.title = 'Remove from list';
-    del.onclick = () => {
-      const idx = _vmEntries.findIndex(e => e.ts === entry.ts);
-      if (idx !== -1) _vmEntries.splice(idx, 1);
+    audio.src = item.blobUrl;
+    const download = document.createElement('a');
+    download.className = 'vm-box-dl';
+    download.href = item.blobUrl;
+    download.download = item.filename || ('voicemail-' + item.ts + '.webm');
+    download.textContent = 'SAVE';
+    download.title = 'Save voicemail';
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'vm-box-del';
+    remove.textContent = 'X';
+    remove.title = 'Remove from voicemail box';
+    remove.onclick = () => {
+      const index = _vmEntries.indexOf(item);
+      if (index !== -1) _vmEntries.splice(index, 1);
       _vmBoxRender();
     };
-    row.appendChild(tsEl);
-    row.appendChild(audio);
-    row.appendChild(dl);
-    row.appendChild(del);
+    row.append(time, audio, download, remove);
     body.appendChild(row);
   });
+  _vmUpdateSummary();
 }
 
 function toggleVmBox() {
-  document.getElementById('vmBox').classList.toggle('open');
+  const box = document.getElementById('vmBox');
+  if (!box) return;
+  const opening = !box.classList.contains('open');
+  box.classList.toggle('open');
+  if (opening) { _vmMissedCount = 0; _vmUpdateSummary(); }
 }
 
 function _startRing() {
@@ -7305,7 +7139,7 @@ async function _startVoicemail() {
     try { dcSend({ __control: 'voicemail', active: false }); } catch(e) {}
     const _vmBlobUrl = URL.createObjectURL(blob);
     _vmNotice('— 📼 VOICEMAIL RECORDED —', _vmBlobUrl, _vmFilename);
-    _vmBoxAddEntry(Date.now(), _vmBlobUrl, _vmFilename);  // add to voicemail box
+    _vmBoxAddEntry(Date.now(), _vmBlobUrl, _vmFilename);
     downloadBlob(blob, _vmFilename);  // auto-download immediately
     // If Alpha left while we were recording, do the reset now that the save is done.
     // onDrop has already run teardown — just re-register for the next caller.
@@ -7343,7 +7177,6 @@ function _stopVoicemail() {
 function _onCallConnected() {
   _attended = false;
   _vmCallStart = Date.now();
-  _clearMissedCall();  // attending a live call — clear missed call indicator
   // Capture the remote stream NOW while srcObject is guaranteed to be set.
   // By the time the 15s timer fires, srcObject may have been cleared (e.g. if
   // Alpha left early), so we snapshot the tracks here instead.
@@ -7381,12 +7214,12 @@ function _onCallEnded() {
     const timeStr = new Date().toTimeString().slice(0, 5);
     if (!_vmCallStart) {
       _vmNotice('— 📞 MISSED CALL — ' + timeStr + ' —');
-      _incMissedCall();
+      _vmRecordMissedCall();
     } else {
       const dur = Math.round((Date.now() - _vmCallStart) / 1000);
       if (dur < 3) {
         _vmNotice('— 📞 MISSED CALL — ' + timeStr + ' —');
-        _incMissedCall();
+        _vmRecordMissedCall();
       } else {
         const mins = Math.floor(dur / 60), secs = dur % 60;
         const durStr = mins > 0 ? mins + 'm ' + secs + 's' : secs + 's';
@@ -8596,6 +8429,81 @@ async function toggleSpeaker() {
 
 // ── Microphone Gain Control ───────────────────────────────────
 // Web Audio API gain node inserted between mic source and outgoing stream.
+async function initMicInputUI() {
+  const select = document.getElementById('micInputSelect');
+  if (!select || !navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+  try {
+    const devices = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'audioinput');
+    let savedLabel = '';
+    try { savedLabel = localStorage.getItem('bravo_mic_label') || ''; } catch(e) {}
+    const currentTrack = _micRawTrack || (localStream && localStream.getAudioTracks()[0]);
+    const currentId = currentTrack && currentTrack.getSettings ? currentTrack.getSettings().deviceId : '';
+    select.innerHTML = '';
+    devices.forEach((device, index) => {
+      const option = document.createElement('option');
+      option.value = device.deviceId;
+      option.textContent = 'MIC: ' + (device.label || ('Microphone ' + (index + 1)));
+      if ((savedLabel && device.label === savedLabel) || (!savedLabel && device.deviceId === currentId)) option.selected = true;
+      select.appendChild(option);
+    });
+    if (!devices.length) {
+      const option = document.createElement('option');
+      option.textContent = 'MIC: NONE';
+      select.appendChild(option);
+      select.disabled = true;
+    } else {
+      select.disabled = false;
+    }
+  } catch(e) { entry('Microphone list unavailable: ' + e.message, 'sys'); }
+}
+
+function _rewireMixMicrophone() {
+  if (!_mixCtx || !_mixDest || !localStream) return;
+  try {
+    if (_mixMicNode) _mixMicNode.disconnect();
+    if (_mixMicGain) _mixMicGain.disconnect();
+    const tracks = localStream.getAudioTracks();
+    if (!tracks.length) return;
+    _mixMicNode = _mixCtx.createMediaStreamSource(new MediaStream(tracks));
+    _mixMicGain = _mixCtx.createGain();
+    _mixMicGain.gain.value = audioMuted ? 0.0 : 1.0;
+    _mixMicNode.connect(_mixMicGain);
+    _mixMicGain.connect(_mixDest);
+  } catch(e) { entry('Microphone mix rewire failed: ' + e.message, 'sys'); }
+}
+
+async function switchMicrophone(deviceId) {
+  const select = document.getElementById('micInputSelect');
+  if (!deviceId || !localStream || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+  if (select) select.disabled = true;
+  try {
+    const replacement = await navigator.mediaDevices.getUserMedia({
+      audio: { deviceId: { exact: deviceId }, echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+      video: false
+    });
+    const rawTrack = replacement.getAudioTracks()[0];
+    if (!rawTrack) throw new Error('Selected microphone supplied no audio track');
+    localStream.getAudioTracks().forEach(track => localStream.removeTrack(track));
+    teardownMicGain();
+    localStream.addTrack(rawTrack);
+    setupMicGainNode(localStream);
+    _rewireMixMicrophone();
+    const selectedTrack = localStream.getAudioTracks()[0];
+    realAudioTrack = selectedTrack || rawTrack;
+    realAudioTrack.enabled = !audioMuted;
+    if (!_mixOutTrack) await _setCallAudioTrack(audioMuted ? getSilentTrack() : realAudioTrack);
+    const option = select && select.options[select.selectedIndex];
+    const label = rawTrack.label || (option ? option.textContent.replace(/^MIC:\s*/, '') : '');
+    try { localStorage.setItem('bravo_mic_label', label); } catch(e) {}
+    entry('Microphone changed to ' + (label || 'selected device'), 'ok');
+  } catch(e) {
+    entry('Microphone change failed: ' + e.message, 'err');
+    await initMicInputUI();
+  } finally {
+    if (select) select.disabled = false;
+  }
+}
+
 let _micGainCtx = null, _micGainNode = null, _micGainDest = null, _micRawTrack = null;
 
 function teardownMicGain() {
@@ -8647,6 +8555,8 @@ function setupMicGainNode(stream) {
         _micRawTrack = oldAudio;
       }
       stream.addTrack(gainedAudio);
+      realAudioTrack = gainedAudio;
+      realAudioTrack.enabled = !audioMuted;
     }
     // Update slider & label to saved value (primary + chat-tab copy)
     const slider = document.getElementById('micGainSlider');
@@ -9200,8 +9110,8 @@ function ttsSpeak(text, lang) {
     hpi.scrollTop = 0;
 
     // Force in-flow rendering via inline styles (beats any @media print ignored by Mac)
-    hpi.style.cssText = 'position:static !important;display:block !important;border:1px solid #999 !important;border-radius:4px !important;max-width:100% !important;padding:8px 10px !important;margin:20px 0 0 0 !important;overflow:visible !important;height:auto !important;max-height:none !important;background:#fff !important;color:#000 !important;';
-    sp.style.cssText  = 'position:static !important;display:flex !important;flex-direction:column !important;background:none !important;border:1px solid #999 !important;border-radius:4px !important;padding:8px 10px !important;margin-top:6px !important;overflow:visible !important;height:auto !important;max-height:none !important;gap:6px !important;flex-shrink:0 !important;';
+    hpi.style.cssText = 'position:static !important;display:block !important;border:1px solid #999 !important;border-radius:4px !important;max-width:100% !important;padding:8px 10px !important;margin:6px 0 0 0 !important;overflow:visible !important;height:auto !important;max-height:none !important;background:#fff !important;color:#000 !important;page-break-inside:avoid !important;break-inside:avoid-page !important;';
+    sp.style.cssText  = 'position:static !important;display:flex !important;flex-direction:column !important;background:none !important;border:1px solid #999 !important;border-radius:4px !important;padding:8px 10px !important;margin-top:6px !important;overflow:visible !important;height:auto !important;max-height:none !important;gap:6px !important;flex-shrink:0 !important;page-break-inside:avoid !important;break-inside:avoid-page !important;';
 
     // Explicitly zero out help-btn-bar — Chrome may reserve space for display:none in print CSS
     var hbb = document.querySelector('.help-btn-bar');
