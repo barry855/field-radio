@@ -292,6 +292,29 @@
   .vm-box-ts { color: #888; white-space: nowrap; }
   .vm-box-del { color: #f55; background: none; border: 0; padding: 2px; cursor: pointer; font-size: 12px; margin-left: auto; flex-shrink: 0; }
   .vm-box-empty { color: #666; font-size: 10px; padding: 6px 4px; letter-spacing: 1px; }
+  .vm-picker-overlay {
+    display: none; position: fixed; inset: 0; z-index: 12000;
+    align-items: center; justify-content: center; padding: 16px;
+    background: rgba(0,0,0,0.78);
+  }
+  .vm-picker-overlay.open { display: flex; }
+  .vm-picker-panel {
+    width: min(680px, 96vw); max-height: min(78vh, 640px);
+    display: flex; flex-direction: column; overflow: hidden;
+    background: var(--panel); border: 1px solid var(--accent2); border-radius: 6px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+  }
+  .vm-picker-head {
+    display: flex; align-items: center; gap: 8px; padding: 10px 12px;
+    border-bottom: 1px solid var(--border); color: var(--accent2);
+  }
+  .vm-picker-head h3 { margin: 0; font-size: 12px; letter-spacing: 2px; }
+  .vm-picker-count { margin-left: auto; color: var(--text-dim); font-size: 10px; }
+  .vm-picker-close {
+    width: 28px; height: 28px; padding: 0; border: 1px solid var(--border);
+    border-radius: 4px; background: var(--btn-bg); color: var(--text); cursor: pointer;
+  }
+  .vm-picker-body { padding: 8px 10px; overflow-y: auto; min-height: 90px; }
 
   /* connection quality */
   .quality-item {
@@ -1387,7 +1410,7 @@
       background: #fff !important; color: #000 !important;
       border: 1px solid #555 !important;
     }
-    #exportSessionBtn, #answerLiveBtn, #vmBox { display: none !important; }
+    #exportSessionBtn, #answerLiveBtn, #vmPickerBtn, #vmBox, #vmPickerOverlay { display: none !important; }
     /* Row 1: TTS Off | Flip Cam | FS OFF | MINI CAM OFF */
     #ttsChatBtn, #flipChatBtn, #fsChatBtn, #miniChatBtn { display: inline-flex !important; }
     /* Row 2: See Remote | RECORD | Video Off | Mike On | Sys Audio Off | Share Off */
@@ -2205,6 +2228,7 @@ window.addEventListener('orientationchange', function() {
           <span class="sbr-label">CHAT:</span>
           <button class="speech-top-btn" onclick="saveChatToFile()" id="saveChatBtn" title="Save chat as HTML">💾 SAVE</button>
           <button class="speech-top-btn" onclick="exportSessionChat()" id="exportSessionBtn" title="Export a past session as HTML">EXPORT</button>
+          <button class="speech-top-btn" onclick="openVoicemailPicker()" id="vmPickerBtn" title="Open all received voicemails">VOICEMAILS</button>
           <button class="speech-top-btn" onclick="requestLiveSession()" id="answerLiveBtn" title="Stop Alpha's answering machine and begin a live call" style="display:none;">GO LIVE</button>
           <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';ttsStopAll();morseStopAll();entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR</button>
           <button class="speech-top-btn" onclick="restoreChat()" id="restoreChatBtn" title="Restore previous session chat">↩ RESTORE</button>
@@ -2219,6 +2243,18 @@ window.addEventListener('orientationchange', function() {
           <div class="vm-box-body" id="vmBoxBody">
             <div class="vm-box-empty" id="vmBoxEmpty">No voicemails saved.</div>
           </div>
+        </div>
+        <div class="vm-picker-overlay" id="vmPickerOverlay" onclick="if(event.target===this)closeVoicemailPicker()">
+          <section class="vm-picker-panel" role="dialog" aria-modal="true" aria-labelledby="vmPickerTitle">
+            <div class="vm-picker-head">
+              <h3 id="vmPickerTitle">RECEIVED VOICEMAILS</h3>
+              <span class="vm-picker-count" id="vmPickerCount"></span>
+              <button class="vm-picker-close" type="button" onclick="closeVoicemailPicker()" title="Close voicemail picker" aria-label="Close voicemail picker">X</button>
+            </div>
+            <div class="vm-picker-body" id="vmPickerBody">
+              <div class="vm-box-empty" id="vmPickerEmpty">No voicemails saved in this browser.</div>
+            </div>
+          </section>
         </div>
         <div id="translateBar">
     <label>🗣 MY LANGUAGE</label>
@@ -6954,21 +6990,103 @@ function _vmNotice(text, blobUrl, filename) {
   } catch(e) {}
 }
 
+const _VM_DB_NAME = 'fieldradio-voicemails-v1';
+const _VM_DB_STORE = 'messages';
+const _VM_STATION = 'BRAVO';
 const _vmEntries = [];
 let _vmMissedCount = 0;
+let _vmLoaded = false;
+
+function _vmOpenDb() {
+  return new Promise((resolve, reject) => {
+    if (!window.indexedDB) { reject(new Error('browser storage unavailable')); return; }
+    const request = indexedDB.open(_VM_DB_NAME, 1);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(_VM_DB_STORE)) {
+        const store = db.createObjectStore(_VM_DB_STORE, { keyPath: 'id' });
+        store.createIndex('station', 'station', { unique: false });
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error('voicemail storage failed'));
+    request.onblocked = () => reject(new Error('voicemail storage blocked by another tab'));
+  });
+}
+
+async function _vmReadStored() {
+  const db = await _vmOpenDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(_VM_DB_STORE, 'readonly');
+    const request = tx.objectStore(_VM_DB_STORE).index('station').getAll(_VM_STATION);
+    request.onsuccess = () => resolve(request.result || []);
+    request.onerror = () => reject(request.error || new Error('could not read voicemails'));
+    tx.oncomplete = () => db.close();
+    tx.onerror = () => { db.close(); reject(tx.error || new Error('could not read voicemails')); };
+  });
+}
+
+async function _vmWriteStored(record) {
+  const db = await _vmOpenDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(_VM_DB_STORE, 'readwrite');
+    tx.objectStore(_VM_DB_STORE).put(record);
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror = () => { db.close(); reject(tx.error || new Error('could not save voicemail')); };
+  });
+}
+
+async function _vmDeleteStored(id) {
+  const db = await _vmOpenDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(_VM_DB_STORE, 'readwrite');
+    tx.objectStore(_VM_DB_STORE).delete(id);
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror = () => { db.close(); reject(tx.error || new Error('could not delete voicemail')); };
+  });
+}
 
 function _vmUpdateSummary() {
-  const summary = document.getElementById('vmBoxSummary');
-  if (!summary) return;
   const parts = [];
   if (_vmEntries.length) parts.push(_vmEntries.length + ' saved');
   if (_vmMissedCount) parts.push(_vmMissedCount + ' missed');
-  summary.textContent = parts.join(' | ');
+  const summary = document.getElementById('vmBoxSummary');
+  const pickerCount = document.getElementById('vmPickerCount');
+  if (summary) summary.textContent = parts.join(' | ');
+  if (pickerCount) pickerCount.textContent = _vmEntries.length + (_vmEntries.length === 1 ? ' message' : ' messages');
 }
 
-function _vmBoxAddEntry(ts, blobUrl, filename) {
-  _vmEntries.push({ ts, blobUrl, filename });
+async function _vmLoadStored() {
+  if (_vmLoaded) return;
+  _vmLoaded = true;
+  try {
+    const records = await _vmReadStored();
+    records.sort((a, b) => b.ts - a.ts);
+    records.forEach(record => {
+      if (_vmEntries.some(item => item.id === record.id) || !record.blob) return;
+      _vmEntries.push({
+        id: record.id, ts: record.ts, filename: record.filename,
+        blobUrl: URL.createObjectURL(record.blob), stored: true
+      });
+    });
+    _vmEntries.sort((a, b) => b.ts - a.ts);
+    _vmBoxRender();
+  } catch(e) {
+    _vmLoaded = false;
+    entry('Voicemail picker storage unavailable: ' + e.message, 'sys');
+  }
+}
+
+function _vmBoxAddEntry(ts, blobUrl, filename, blob) {
+  const id = _VM_STATION + '-' + ts + '-' + Math.random().toString(36).slice(2, 8);
+  const item = { id, ts, blobUrl, filename, stored: false };
+  _vmEntries.unshift(item);
   _vmBoxRender();
+  if (blob) {
+    item.persistPromise = _vmWriteStored({ id, station: _VM_STATION, ts, filename, blob }).then(() => {
+      item.stored = true;
+    }).catch(e => entry('Voicemail saved as download only: ' + e.message, 'sys'));
+  }
 }
 
 function _vmRecordMissedCall() {
@@ -6976,39 +7094,54 @@ function _vmRecordMissedCall() {
   _vmUpdateSummary();
 }
 
+async function _vmRemoveEntry(item) {
+  const index = _vmEntries.indexOf(item);
+  if (index !== -1) _vmEntries.splice(index, 1);
+  try { if (item.blobUrl) URL.revokeObjectURL(item.blobUrl); } catch(e) {}
+  _vmBoxRender();
+  try {
+    if (item.persistPromise) await item.persistPromise;
+    await _vmDeleteStored(item.id);
+  } catch(e) { entry('Could not remove stored voicemail: ' + e.message, 'sys'); }
+}
+
+function _vmCreateRow(item) {
+  const row = document.createElement('div');
+  row.className = 'vm-box-entry';
+  const time = document.createElement('span');
+  time.className = 'vm-box-ts';
+  time.textContent = new Date(item.ts).toLocaleString();
+  const audio = document.createElement('audio');
+  audio.controls = true;
+  audio.preload = 'metadata';
+  audio.src = item.blobUrl;
+  const download = document.createElement('a');
+  download.className = 'vm-box-dl';
+  download.href = item.blobUrl;
+  download.download = item.filename || ('voicemail-' + item.ts + '.webm');
+  download.textContent = 'SAVE';
+  download.title = 'Save voicemail';
+  const remove = document.createElement('button');
+  remove.type = 'button';
+  remove.className = 'vm-box-del';
+  remove.textContent = 'X';
+  remove.title = 'Remove voicemail';
+  remove.onclick = () => _vmRemoveEntry(item);
+  row.append(time, audio, download, remove);
+  return row;
+}
+
 function _vmBoxRender() {
-  const body = document.getElementById('vmBoxBody');
-  const empty = document.getElementById('vmBoxEmpty');
-  if (!body) return;
-  body.querySelectorAll('.vm-box-entry').forEach(node => node.remove());
-  if (empty) empty.style.display = _vmEntries.length ? 'none' : '';
-  _vmEntries.forEach(item => {
-    const row = document.createElement('div');
-    row.className = 'vm-box-entry';
-    const time = document.createElement('span');
-    time.className = 'vm-box-ts';
-    time.textContent = new Date(item.ts).toLocaleTimeString();
-    const audio = document.createElement('audio');
-    audio.controls = true;
-    audio.src = item.blobUrl;
-    const download = document.createElement('a');
-    download.className = 'vm-box-dl';
-    download.href = item.blobUrl;
-    download.download = item.filename || ('voicemail-' + item.ts + '.webm');
-    download.textContent = 'SAVE';
-    download.title = 'Save voicemail';
-    const remove = document.createElement('button');
-    remove.type = 'button';
-    remove.className = 'vm-box-del';
-    remove.textContent = 'X';
-    remove.title = 'Remove from voicemail box';
-    remove.onclick = () => {
-      const index = _vmEntries.indexOf(item);
-      if (index !== -1) _vmEntries.splice(index, 1);
-      _vmBoxRender();
-    };
-    row.append(time, audio, download, remove);
-    body.appendChild(row);
+  [
+    ['vmBoxBody', 'vmBoxEmpty'],
+    ['vmPickerBody', 'vmPickerEmpty']
+  ].forEach(([bodyId, emptyId]) => {
+    const body = document.getElementById(bodyId);
+    const empty = document.getElementById(emptyId);
+    if (!body) return;
+    body.querySelectorAll('.vm-box-entry').forEach(node => node.remove());
+    if (empty) empty.style.display = _vmEntries.length ? 'none' : '';
+    _vmEntries.forEach(item => body.appendChild(_vmCreateRow(item)));
   });
   _vmUpdateSummary();
 }
@@ -7019,6 +7152,33 @@ function toggleVmBox() {
   const opening = !box.classList.contains('open');
   box.classList.toggle('open');
   if (opening) { _vmMissedCount = 0; _vmUpdateSummary(); }
+}
+
+async function openVoicemailPicker() {
+  await _vmLoadStored();
+  _vmMissedCount = 0;
+  _vmBoxRender();
+  const overlay = document.getElementById('vmPickerOverlay');
+  if (!overlay) return;
+  overlay.classList.add('open');
+  const close = overlay.querySelector('.vm-picker-close');
+  if (close) close.focus();
+}
+
+function closeVoicemailPicker() {
+  const overlay = document.getElementById('vmPickerOverlay');
+  if (!overlay) return;
+  overlay.querySelectorAll('audio').forEach(audio => audio.pause());
+  overlay.classList.remove('open');
+}
+
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape') closeVoicemailPicker();
+});
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', _vmLoadStored, { once: true });
+} else {
+  _vmLoadStored();
 }
 
 function _startRing() {
@@ -7180,7 +7340,7 @@ async function _startVoicemail() {
     try { dcSend({ __control: 'voicemail', active: false }); } catch(e) {}
     const _vmBlobUrl = URL.createObjectURL(blob);
     _vmNotice('— 📼 VOICEMAIL RECORDED —', _vmBlobUrl, _vmFilename);
-    _vmBoxAddEntry(Date.now(), _vmBlobUrl, _vmFilename);
+    _vmBoxAddEntry(Date.now(), _vmBlobUrl, _vmFilename, blob);
     downloadBlob(blob, _vmFilename);  // auto-download immediately
     // If Alpha left while we were recording, do the reset now that the save is done.
     // onDrop has already run teardown — just re-register for the next caller.
