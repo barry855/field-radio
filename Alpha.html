@@ -1,4 +1,4 @@
-<!-- redeploy -->
+
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -2313,7 +2313,7 @@ window.addEventListener('orientationchange', function() {
           <button class="speech-top-btn" onclick="saveChatToFile()" id="saveChatBtn" title="Save chat as HTML">💾 SAVE</button>
           <button class="speech-top-btn" onclick="exportSessionChat()" id="exportSessionBtn" title="Export a past session as HTML">EXPORT</button>
           <button class="speech-top-btn" onclick="restoreChat()" id="restoreChatBtn" title="Restore previous session chat">↩ RESTORE</button>
-          <button class="speech-top-btn" onclick="refreshChatScreenOnly()" id="screenRefreshChatBtn" title="Refresh the chat video screen only">📺 Scr. Refresh</button>
+          <button class="speech-top-btn" onclick="refreshChatScreenOnly()" id="screenRefreshChatBtn" title="Clear only this screen; saved chat and voicemail remain">📺 Scr. Refresh</button>
           <button class="speech-top-btn" id="findChatBtn" title="Find in chat">🔍 FIND</button>
           <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';ttsStopAll();morseStopAll();entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR !</button>
         </div>
@@ -2718,7 +2718,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.53-test30s-live-cancels-vm';   // paired build: chat TV refresh + live takeover hard-cancels voicemail
+const VERSION = '8.57-test30s-local-screen-clear';   // paired build: local screen clear retains saved chat and voicemail
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -3555,6 +3555,11 @@ function syncChatUnderlay() {
 function refreshChatScreenOnly() {
   const el = document.getElementById('chatUnderlay');
   if (!el) return;
+  const chatEl = document.getElementById('chat');
+  if (chatEl) chatEl.innerHTML = '';
+  ttsStopAll();
+  morseStopAll();
+  _vmCountdownNoticeEl = null;
   el.srcObject = null;
   syncChatUnderlay();
   syncChatMiniOverlay();
@@ -3562,7 +3567,7 @@ function refreshChatScreenOnly() {
   const rv = document.getElementById('remoteVideo');
   const lv = document.getElementById('localVideo');
   [rv, lv].forEach(v => { try { if (v && v.srcObject) v.play().catch(() => {}); } catch(e) {} });
-  entry('Screen view refreshed (no reconnect)', 'sys');
+  entry('Local chat screen cleared and video view refreshed; saved history retained', 'sys');
 }
 
 function syncChatMiniOverlay() {
@@ -4392,7 +4397,7 @@ function setupTooltips() {
     audioBtn2: 'Toggle microphone',
     refreshBtn: 'Reconnect the remote screen',
     refreshBtnLocal: 'Reconnect the remote screen',
-    screenRefreshChatBtn: 'Refresh the chat video screen only',
+    screenRefreshChatBtn: 'Clear only this screen; saved chat and voicemail remain',
     flipBtn: 'Switch camera',
     flipBtn2: 'Switch camera',
     recBtn: 'Record local video (with mini overlay if shown)',
@@ -4497,7 +4502,7 @@ function openHelpPanel() {
       ['CHAT SAVE','Save the current chat as an HTML file'],
       ['EXPORT','Choose and export a stored chat session'],
       ['RESTORE','Restore a previous chat session'],
-      ['SCR. REFRESH','Refresh the chat video screen only'],
+      ['SCR. REFRESH','Clear only this screen; saved chat and voicemail remain'],
       ['FIND','Find text in chat'],
       ['CHAT CLEAR !','Clear chat history'],
       ['VOICEMAIL BOX','Play stored voicemail recordings'],
