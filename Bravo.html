@@ -2611,7 +2611,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.41-test30s-click-blank-live';   // paired build: blank-area click replaces live buttons
+const VERSION = '8.42-test30s-vm-countdown';   // paired build: visible second-by-second voicemail countdown
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -3322,6 +3322,27 @@ function setStatus(state) {
   else if (state === 'remote-answering') { linkLed.classList.add('on-amber'); statusEl.textContent = 'LEAVE MESSAGE'; document.title = '📼 LEAVE MESSAGE — BRAVO — Field Radio v6'; }
   else if (state === 'voicemail') { linkLed.classList.add('on-amber');  statusEl.textContent = '📼 VOICEMAIL'; document.title = '📼 VOICEMAIL — BRAVO — Field Radio v6'; }
   else                            { statusEl.textContent = ''; document.title = 'BRAVO — Field Radio v6'; }
+}
+
+let _vmCountdownTicker = null;
+let _vmCountdownEndsAt = 0;
+function _startVmCountdown(seconds) {
+  _stopVmCountdown();
+  _vmCountdownEndsAt = Date.now() + Math.max(1, Number(seconds) || 30) * 1000;
+  const render = () => {
+    const left = Math.max(0, Math.ceil((_vmCountdownEndsAt - Date.now()) / 1000));
+    linkLed.className = 'led on-amber-flash';
+    statusEl.textContent = 'WAITING ' + left + 'â€¦';
+    document.title = 'WAITING ' + left + 'â€¦ â€” BRAVO â€” Field Radio';
+    if (left <= 0) _stopVmCountdown();
+  };
+  render();
+  _vmCountdownTicker = setInterval(render, 250);
+}
+function _stopVmCountdown() {
+  clearInterval(_vmCountdownTicker);
+  _vmCountdownTicker = null;
+  _vmCountdownEndsAt = 0;
 }
 
 let activeTab = 'chat';
@@ -6222,12 +6243,14 @@ function attachDataConn(dc) {
       if (f.__control === 'voicemailCountdown') {
         if (f.active) {
           const seconds = Number(f.seconds) || 30;
+          _startVmCountdown(seconds);
           _vmNotice('â€” VOICEMAIL RECORDING WILL START IN ' + seconds + ' SECONDS â€”');
           entry('Alpha voicemail starts in ' + seconds + ' seconds', 'sys');
-        }
+        } else _stopVmCountdown();
         return;
       }
       if (f.__control === 'voicemail') {
+        _stopVmCountdown();
         if (f.active) {
           setStatus('voicemail');
           _vmNotice('— 📼 ALPHA RECORDING VOICEMAIL —');
@@ -7349,6 +7372,7 @@ function _fireLocalRing() {
 function _armVmTimeout() {
   if (!_ringing) return;          // already answered or dropped
   if (_vmActive)  return;         // voicemail already running
+  _startVmCountdown(Math.round(RING_TIMEOUT_MS / 1000));
   try { dcSend({ __control: 'voicemailCountdown', active: true, seconds: Math.round(RING_TIMEOUT_MS / 1000) }); } catch(e) {}
   // Auto-advance to voicemail if caller doesn't hang up after RING_TIMEOUT_MS
   _ringTimeoutTimer = setTimeout(() => {
@@ -7366,6 +7390,7 @@ function _armVmTimeout() {
   }, RING_TIMEOUT_MS);
 }
 function _stopRing() {
+  _stopVmCountdown();
   clearTimeout(_ringTimer);   _ringTimer = null;
   clearTimeout(_ringTimeoutTimer); _ringTimeoutTimer = null;
   if (_ringing) { try { dcSend({ __control: 'ring', active: false }); } catch(e) {} }
