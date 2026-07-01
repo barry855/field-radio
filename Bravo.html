@@ -2206,7 +2206,7 @@ window.addEventListener('orientationchange', function() {
         <div class="panel-label">REMOTE — ALPHA</div>
         <div class="video-grid">
           <div class="video-wrap waiting" id="remoteWrap">
-            <video id="remoteVideo" autoplay="" playsinline=""></video>
+              <video id="remoteVideo" autoplay="" playsinline="" muted=""></video>
             <span class="video-label">ALPHA</span>
             <span class="duplex-overlay" id="duplexBar2">OFFLINE</span>
           </div>
@@ -2670,7 +2670,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.59-test30s-two-way-live-takeover';   // paired build: answering-machine interruption clears receiver screen and forces live
+const VERSION = '8.60-test30s-speaker-volume';   // paired build: speaker slider controls real playback volume and optional gain boost
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -6920,6 +6920,7 @@ function attachCall(c) {
             if (_tracks.length) {
               const _rs = new MediaStream(_tracks);
               _ra.srcObject = _rs;
+              setupRemoteGainNode(_rs);
               const _rv = document.getElementById('remoteVideo');
               if (_rv && !_rv.srcObject) _rv.srcObject = _rs;
               const _cu = document.getElementById('chatUnderlay');
@@ -9339,11 +9340,15 @@ function setupRemoteGainNode(stream) {
     _remoteGainNode = _remoteGainCtx.createGain();
     const dest = _remoteGainCtx.createMediaStreamDestination();
     const saved = parseFloat(localStorage.getItem('bravo_remote_gain') || '1.15');
-    _remoteGainNode.gain.value = isFinite(saved) ? saved : 1;
+    const initialGain = isFinite(saved) ? Math.max(0, Math.min(3, saved)) : 1;
+    _remoteGainNode.gain.value = initialGain > 1 ? initialGain : 1;
     src.connect(_remoteGainNode);
     _remoteGainNode.connect(dest);
     const ra = document.getElementById('remoteAudio');
-    if (ra) ra.srcObject = stream;
+    if (ra) {
+      ra.srcObject = stream;
+      ra.volume = Math.min(initialGain, 1);
+    }
     const activateGainPath = () => {
       if (_remoteGainCtx && _remoteGainCtx.state === 'running' && ra) {
         ra.srcObject = dest.stream;
@@ -9356,11 +9361,11 @@ function setupRemoteGainNode(stream) {
     });
     ['remoteGainSlider','remoteGainSliderChat'].forEach(id => {
       const el = document.getElementById(id);
-      if (el) el.value = _remoteGainNode.gain.value;
+      if (el) el.value = initialGain;
     });
     ['remoteGainVal','remoteGainValChat'].forEach(id => {
       const el = document.getElementById(id);
-      if (el) el.textContent = _remoteGainNode.gain.value.toFixed(2) + '×';
+      if (el) el.textContent = initialGain.toFixed(2) + '×';
     });
   } catch(e) { console.warn('Remote gain setup failed:', e); }
 }
@@ -9371,7 +9376,8 @@ function teardownRemoteGain() {
 }
 
 function applyRemoteGain(val) {
-  const v = parseFloat(val);
+  const parsed = parseFloat(val);
+  const v = isFinite(parsed) ? Math.max(0, Math.min(3, parsed)) : 1;
   ['remoteGainVal','remoteGainValChat'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.textContent = v.toFixed(2) + '×';
@@ -9380,7 +9386,12 @@ function applyRemoteGain(val) {
     const el = document.getElementById(id);
     if (el && el.value !== String(val)) el.value = val;
   });
-  if (_remoteGainNode) _remoteGainNode.gain.setTargetAtTime(v, _remoteGainCtx.currentTime, 0.01);
+  const ra = document.getElementById('remoteAudio');
+  if (ra) ra.volume = Math.min(v, 1);
+  if (_remoteGainCtx && _remoteGainCtx.state === 'suspended') _remoteGainCtx.resume().catch(() => {});
+  if (_remoteGainNode && _remoteGainCtx) {
+    _remoteGainNode.gain.setTargetAtTime(v > 1 ? v : 1, _remoteGainCtx.currentTime, 0.01);
+  }
   try { localStorage.setItem('bravo_remote_gain', String(v)); } catch(e) {}
 }
 
