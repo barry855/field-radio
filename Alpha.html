@@ -2720,7 +2720,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.58-test30s-pi-no-speech-flash';   // paired build: Pi mode hides all TTS/STT controls before first render
+const VERSION = '8.59-test30s-two-way-live-takeover';   // paired build: answering-machine interruption clears receiver screen and forces live
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -3593,6 +3593,14 @@ function syncChatMiniOverlay() {
     if (lbl) lbl.textContent = 'LOCAL';
     if (overlay) overlay.classList.toggle('no-video', !stream);
   }
+}
+
+function clearLocalChatDisplayForTakeover() {
+  const chatEl = document.getElementById('chat');
+  if (chatEl) chatEl.innerHTML = '';
+  _vmCountdownNoticeEl = null;
+  ttsStopAll();
+  morseStopAll();
 }
 
 function updateChatVideoViewBtn() {
@@ -6510,6 +6518,7 @@ function attachDataConn(dc) {
       }
       if (f.__control === 'voicemailCountdown') {
         if (f.active) {
+          _bravoAnsweringAvailable = true;
           // A live takeover wins over any countdown packet already in transit.
           if (_bravoRequestedLive || _attended) { _stopVmCountdown(); return; }
           const seconds = Number(f.seconds) || 30;
@@ -6521,6 +6530,7 @@ function attachDataConn(dc) {
       if (f.__control === 'voicemail') {
         _stopVmCountdown();
         if (f.active) {
+          _bravoAnsweringAvailable = true;
           if (_bravoRequestedLive || _attended) return;
           setStatus('voicemail');
           _vmNotice('— 📼 BRAVO RECORDING VOICEMAIL —');
@@ -7518,6 +7528,7 @@ let _vmFinalizeResolve = null;
 let _vmCapturedStream = null;
 let _attended = false;
 let _bravoRequestedLive = false;
+let _bravoAnsweringAvailable = false;
 let _liveTakeoverRequested = false;
 let _ownerTakeoverPending = false;
 let _ringTimer = null;
@@ -7820,7 +7831,7 @@ function _finishOwnerLiveTakeover() {
   duplexBar.className = 'duplex-overlay live';
   syncControls();
   entry('Voicemail saved — live session started', 'ok');
-  _vmNotice('— ● VOICEMAIL SAVED — LIVE SESSION —');
+  clearLocalChatDisplayForTakeover();
 }
 
 function answerOwnVoicemailLive() {
@@ -7834,14 +7845,26 @@ function answerOwnVoicemailLive() {
 document.addEventListener('pointerdown', event => {
   const target = event.target;
   if (target && target.closest && target.closest('button,a,input,select,textarea,audio,[role="button"]')) return;
+  if (linked && _bravoAnsweringAvailable) {
+    _bravoAnsweringAvailable = false;
+    clearLocalChatDisplayForTakeover();
+    dcSend({ __control: 'liveSession', active: true, station: 'ALPHA' });
+    setStatus('linked');
+    duplexBar.textContent = _noMediaMode ? 'LIVE (data only)' : 'LIVE';
+    duplexBar.className = 'duplex-overlay live';
+    syncControls();
+    entry('Live session requested - Bravo voicemail cancelled', 'ok');
+    return;
+  }
   if (linked && _answeringMachineMode && !_attended) _markAttended(event);
 });
 
 function _markAttended(event, suppressCamera) {
-  if (event && event.target && event.target.closest && event.target.closest('#ownerLiveBtn')) return;
+  if (event && event.target && event.target.closest && event.target.closest('button,a,input,select,textarea,audio,[role="button"]')) return;
   _liveTakeoverRequested = true;
   if (_attended) return;
   _attended = true;
+  if (_answeringMachineMode && (_ringing || _vmActive)) clearLocalChatDisplayForTakeover();
   if (!suppressCamera && !loginDisableVideoFlag) _setCameraActive(true, 'live session');
   _stopRing(); // answering live cancels any remaining rings and the VM timer
   clearTimeout(_vmTimer); _vmTimer = null;
