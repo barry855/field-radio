@@ -2613,7 +2613,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.36-test30s-bravo-av-recorder';   // test build: persistent canvas video plus mixed microphone audio
+const VERSION = '8.37-test30s-login-camera-off';   // test build: Video Off login never opens camera hardware
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -5715,7 +5715,7 @@ async function initMediaOnly() {
     _forceAspectRatio169(stream.getVideoTracks()[0]);
     setupMicGainNode(stream);
     document.getElementById('localVideo').srcObject = stream;
-    entry('Mic + camera ready', 'ok');
+    entry('Media ready - camera follows login preference', 'ok');
     syncMiniVideos();
     initFlipCamUI();
     initMicInputUI();
@@ -5740,7 +5740,7 @@ async function initMediaOnly() {
 
   navigator.mediaDevices.getUserMedia({
     audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
-    video: videoConstraint
+    video: loginDisableVideoFlag ? false : videoConstraint
   })
   .then(applyAndDial)
   .catch(e => {
@@ -5750,7 +5750,7 @@ async function initMediaOnly() {
       delete fallbackConstraint.deviceId;
       navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
-        video: fallbackConstraint
+        video: loginDisableVideoFlag ? false : fallbackConstraint
       }).then(applyAndDial).catch(e2 => {
         entry('Media error (' + e2.name + ') — falling back to audio-only', 'sys');
         navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false } })
@@ -5838,7 +5838,7 @@ async function init() {
     _forceAspectRatio169(stream.getVideoTracks()[0]);
     setupMicGainNode(stream);
     document.getElementById('localVideo').srcObject = stream;
-    entry('Mic + camera ready', 'ok');
+    entry('Media ready - camera follows login preference', 'ok');
     syncMiniVideos();
     initFlipCamUI();
     initMicInputUI();
@@ -5902,7 +5902,7 @@ async function init() {
 
   navigator.mediaDevices.getUserMedia({
     audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
-    video: videoConstraint
+    video: loginDisableVideoFlag ? false : videoConstraint
   })
   .then(applyStreamFlags)
   .catch(e => {
@@ -5912,7 +5912,7 @@ async function init() {
       delete fallbackConstraint.deviceId;
       navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
-        video: fallbackConstraint
+        video: loginDisableVideoFlag ? false : fallbackConstraint
       }).then(applyStreamFlags).catch(handleMediaError);
       return;
     }
