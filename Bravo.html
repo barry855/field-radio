@@ -2611,7 +2611,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.42-test30s-vm-countdown';   // paired build: visible second-by-second voicemail countdown
+const VERSION = '8.44-test30s-ascii-clock';   // paired build: ASCII-only clock/status display
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -3314,14 +3314,14 @@ function scrollToBottom(force) {
 function setStatus(state) {
   entry('STATUS: ' + state, 'sys');
   linkLed.className = 'led';
-  if (state === 'standby')        { linkLed.classList.add('on-cyan');   statusEl.textContent = 'STANDBY'; document.title = '🔵 STANDBY — BRAVO — Field Radio v6'; }
-  else if (state === 'connecting')  { linkLed.classList.add('on-blue');   statusEl.textContent = 'CONNECTING…'; document.title = '🔵 CONNECTING… — BRAVO — Field Radio v6'; }
-  else if (state === 'reachable') { linkLed.classList.add('on-amber-flash');  statusEl.textContent = 'WAITING';  document.title = '🟡 WAITING — BRAVO — Field Radio v6'; }
-  else if (state === 'calling')   { linkLed.classList.add('on-amber-flash');  statusEl.textContent = 'WAITING';  document.title = '🟡 WAITING — BRAVO — Field Radio v6'; }
-  else if (state === 'linked')    { linkLed.classList.add('on-green');  statusEl.textContent = 'LIVE';   document.title = '🟢 LIVE — BRAVO — Field Radio v6'; }
-  else if (state === 'remote-answering') { linkLed.classList.add('on-amber'); statusEl.textContent = 'LEAVE MESSAGE'; document.title = '📼 LEAVE MESSAGE — BRAVO — Field Radio v6'; }
-  else if (state === 'voicemail') { linkLed.classList.add('on-amber');  statusEl.textContent = '📼 VOICEMAIL'; document.title = '📼 VOICEMAIL — BRAVO — Field Radio v6'; }
-  else                            { statusEl.textContent = ''; document.title = 'BRAVO — Field Radio v6'; }
+  if (state === 'standby')        { linkLed.classList.add('on-cyan');   statusEl.textContent = 'STANDBY';       document.title = 'STANDBY - BRAVO - Field Radio v6'; }
+  else if (state === 'connecting'){ linkLed.classList.add('on-blue');   statusEl.textContent = 'CONNECTING...'; document.title = 'CONNECTING... - BRAVO - Field Radio v6'; }
+  else if (state === 'reachable') { linkLed.classList.add('on-amber-flash'); statusEl.textContent = 'WAITING';  document.title = 'WAITING - BRAVO - Field Radio v6'; }
+  else if (state === 'calling')   { linkLed.classList.add('on-amber-flash'); statusEl.textContent = 'WAITING';  document.title = 'WAITING - BRAVO - Field Radio v6'; }
+  else if (state === 'linked')    { linkLed.classList.add('on-green');  statusEl.textContent = 'LIVE';          document.title = 'LIVE - BRAVO - Field Radio v6'; }
+  else if (state === 'remote-answering') { linkLed.classList.add('on-amber'); statusEl.textContent = 'LEAVE MESSAGE'; document.title = 'LEAVE MESSAGE - BRAVO - Field Radio v6'; }
+  else if (state === 'voicemail') { linkLed.classList.add('on-amber');  statusEl.textContent = 'VOICEMAIL';     document.title = 'VOICEMAIL - BRAVO - Field Radio v6'; }
+  else                            { statusEl.textContent = ''; document.title = 'BRAVO - Field Radio v6'; }
 }
 
 let _vmCountdownTicker = null;
@@ -3331,9 +3331,10 @@ function _startVmCountdown(seconds) {
   _vmCountdownEndsAt = Date.now() + Math.max(1, Number(seconds) || 30) * 1000;
   const render = () => {
     const left = Math.max(0, Math.ceil((_vmCountdownEndsAt - Date.now()) / 1000));
+    const clock = String(Math.floor(left / 60)).padStart(2, '0') + ':' + String(left % 60).padStart(2, '0');
     linkLed.className = 'led on-amber-flash';
-    statusEl.textContent = 'WAITING ' + left + 'â€¦';
-    document.title = 'WAITING ' + left + 'â€¦ â€” BRAVO â€” Field Radio';
+    statusEl.textContent = 'WAITING ' + clock;
+    document.title = 'WAITING ' + clock + ' - BRAVO - Field Radio';
     if (left <= 0) _stopVmCountdown();
   };
   render();
