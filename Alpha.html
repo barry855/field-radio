@@ -1,4 +1,4 @@
-<!-- redeploy -->
+
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -853,6 +853,10 @@
   body.is-pi #speechLangSelect,
   body.is-pi #speechOriginalBtn { display: none; }
   body.is-pi #speechStatus { display: none; }
+  body.is-pi #speechListenBtn,
+  body.is-pi #speechBtnRow3 .sbr-label,
+  body.is-pi #ttsVoiceSelect,
+  body.is-pi #speechTtsBtn { display: none !important; }
   #speechPanel > .speech-status {
     font-size: 11px; letter-spacing: 1px; padding: 2px 4px;
     color: #ffffff !important; font-family: monospace; word-break: break-all;
@@ -2308,9 +2312,10 @@ window.addEventListener('orientationchange', function() {
           <span class="sbr-label">CHAT:</span>
           <button class="speech-top-btn" onclick="saveChatToFile()" id="saveChatBtn" title="Save chat as HTML">💾 SAVE</button>
           <button class="speech-top-btn" onclick="exportSessionChat()" id="exportSessionBtn" title="Export a past session as HTML">EXPORT</button>
-          <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';ttsStopAll();morseStopAll();entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR</button>
           <button class="speech-top-btn" onclick="restoreChat()" id="restoreChatBtn" title="Restore previous session chat">↩ RESTORE</button>
+          <button class="speech-top-btn" onclick="refreshChatScreenOnly()" id="screenRefreshChatBtn" title="Refresh the chat video screen only">📺 Scr. Refresh</button>
           <button class="speech-top-btn" id="findChatBtn" title="Find in chat">🔍 FIND</button>
+          <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';ttsStopAll();morseStopAll();entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR !</button>
         </div>
         <div class="vm-box" id="vmBox">
           <div class="vm-box-header" onclick="toggleVmBox()" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleVmBox();}">
@@ -2713,7 +2718,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.49-test30s-bottom-talk-retract';   // paired build: bottom fullscreen Talk/Type panel retracts after 20s
+const VERSION = '8.53-test30s-live-cancels-vm';   // paired build: chat TV refresh + live takeover hard-cancels voicemail
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -3547,6 +3552,19 @@ function syncChatUnderlay() {
   }
 }
 
+function refreshChatScreenOnly() {
+  const el = document.getElementById('chatUnderlay');
+  if (!el) return;
+  el.srcObject = null;
+  syncChatUnderlay();
+  syncChatMiniOverlay();
+  try { el.play().catch(() => {}); } catch(e) {}
+  const rv = document.getElementById('remoteVideo');
+  const lv = document.getElementById('localVideo');
+  [rv, lv].forEach(v => { try { if (v && v.srcObject) v.play().catch(() => {}); } catch(e) {} });
+  entry('Screen view refreshed (no reconnect)', 'sys');
+}
+
 function syncChatMiniOverlay() {
   const miniChatVideo = document.getElementById('miniChatVideo');
   if (!miniChatVideo) return;
@@ -4374,6 +4392,7 @@ function setupTooltips() {
     audioBtn2: 'Toggle microphone',
     refreshBtn: 'Reconnect the remote screen',
     refreshBtnLocal: 'Reconnect the remote screen',
+    screenRefreshChatBtn: 'Refresh the chat video screen only',
     flipBtn: 'Switch camera',
     flipBtn2: 'Switch camera',
     recBtn: 'Record local video (with mini overlay if shown)',
@@ -4477,9 +4496,10 @@ function openHelpPanel() {
       ['TALK/TYPE','Open the speech and text input panel'],
       ['CHAT SAVE','Save the current chat as an HTML file'],
       ['EXPORT','Choose and export a stored chat session'],
-      ['CHAT CLEAR','Clear chat history'],
       ['RESTORE','Restore a previous chat session'],
+      ['SCR. REFRESH','Refresh the chat video screen only'],
       ['FIND','Find text in chat'],
+      ['CHAT CLEAR !','Clear chat history'],
       ['VOICEMAIL BOX','Play stored voicemail recordings'],
       ['MY LANGUAGE','Choose chat translation and speech language'],
       ['ORIGINAL','Reset speech language to the system default'],
@@ -6460,6 +6480,7 @@ function attachDataConn(dc) {
       if (f.__control === 'deleteMsg') { deleteBubble(f.ts, false); return; }
       if (f.__control === 'liveSession') {
         _bravoRequestedLive = true;
+        _liveTakeoverRequested = true;
         if (_answeringMachineMode && linked) {
           _markAttended();
           setStatus('linked');
@@ -7486,6 +7507,7 @@ let _vmFinalizeResolve = null;
 let _vmCapturedStream = null;
 let _attended = false;
 let _bravoRequestedLive = false;
+let _liveTakeoverRequested = false;
 let _ownerTakeoverPending = false;
 let _ringTimer = null;
 let _ringTimeoutTimer = null;
@@ -7745,11 +7767,11 @@ function _fireLocalRing() {
 }
 
 function _armVmTimeout() {
-  if (!_ringing || _vmActive || _attended || _bravoRequestedLive) return;
+  if (!_ringing || _vmActive || _attended || _bravoRequestedLive || _liveTakeoverRequested) return;
   _startVmCountdown(Math.round(RING_TIMEOUT_MS / 1000));
   try { dcSend({ __control: 'voicemailCountdown', active: true, seconds: Math.round(RING_TIMEOUT_MS / 1000) }); } catch(e) {}
   _ringTimeoutTimer = setTimeout(() => {
-    if (!_ringing || _vmActive || _attended || _bravoRequestedLive) return;
+    if (!_ringing || _vmActive || _attended || _bravoRequestedLive || _liveTakeoverRequested) return;
     entry('📼 No answer after 30s — starting voicemail', 'sys');
     const remoteAudio = document.getElementById('remoteAudio');
     const remoteVideo = document.getElementById('remoteVideo');
@@ -7806,6 +7828,7 @@ document.addEventListener('pointerdown', event => {
 
 function _markAttended(event, suppressCamera) {
   if (event && event.target && event.target.closest && event.target.closest('#ownerLiveBtn')) return;
+  _liveTakeoverRequested = true;
   if (_attended) return;
   _attended = true;
   if (!suppressCamera && !loginDisableVideoFlag) _setCameraActive(true, 'live session');
@@ -7831,7 +7854,7 @@ function _markAttended(event, suppressCamera) {
 }
 
 async function _startVoicemail() {
-  if (_vmActive || !_answeringMachineMode || _attended || _bravoRequestedLive) return;
+  if (_vmActive || !_answeringMachineMode || _attended || _bravoRequestedLive || _liveTakeoverRequested) return;
   _setOwnerLiveAvailable(true);
   let audioTracks = [];
   const pc = call && (call.peerConnection || call._pc);
@@ -7951,7 +7974,7 @@ function _stopVoicemail() {
 }
 
 function _onCallConnected() {
-  _attended = false;
+  if (!_liveTakeoverRequested) _attended = false;
   _vmCallStart = Date.now();
   const remoteAudio = document.getElementById('remoteAudio');
   const remoteVideo = document.getElementById('remoteVideo');
@@ -7964,8 +7987,8 @@ function _onCallConnected() {
   ['keydown', 'pointerdown', 'touchstart'].forEach(ev =>
     window.addEventListener(ev, _markAttended, { once: true, passive: true })
   );
-  _setOwnerLiveAvailable(_answeringMachineMode && !_bravoRequestedLive);
-  if (_bravoRequestedLive) _markAttended();
+  _setOwnerLiveAvailable(_answeringMachineMode && !_bravoRequestedLive && !_liveTakeoverRequested);
+  if (_bravoRequestedLive || _liveTakeoverRequested) _markAttended();
 }
 
 function _onCallEnded() {
@@ -7997,6 +8020,7 @@ function _onCallEnded() {
   }
   _attended = false;
   _bravoRequestedLive = false;
+  _liveTakeoverRequested = false;
   _ownerTakeoverPending = false;
   _setOwnerLiveAvailable(false);
   _vmCallStart = 0;
