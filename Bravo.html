@@ -1841,6 +1841,30 @@
   }
 
   /* ── Button label color: yellow, leaving Record buttons untouched ──────── */
+  /* Fullscreen video is the canvas; controls overlay it instead of reserving space. */
+  body.app-fullscreen .tab-content,
+  body.app-fullscreen #paneChat { background: transparent !important; }
+  body.app-fullscreen #chatPanel {
+    position: fixed; inset: 0; z-index: 1000;
+    width: 100vw; height: 100vh; padding: 0; margin: 0; background: #000;
+  }
+  body.app-fullscreen #chatUnderlay {
+    width: 100vw; height: 100vh; border-radius: 0;
+  }
+  body.app-fullscreen header,
+  body.app-fullscreen .tab-bar,
+  body.app-fullscreen #paneChat .chat-find-bar,
+  body.app-fullscreen #paneChat .chat-btn-bar-row,
+  body.app-fullscreen #paneChat .gain-row,
+  body.app-fullscreen #paneChat .zoom-row,
+  body.app-fullscreen #paneChat #speechPanel,
+  body.app-fullscreen #paneChat #chatToolsWrap,
+  body.app-fullscreen #paneChat #translateBar {
+    background-color: rgba(0, 0, 0, 0.58) !important;
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+  }
+
   .media-btn,
   .speech-top-btn,
   .log-action-btn,
@@ -2611,7 +2635,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.46-test30s-sticky-live-takeover';   // paired build: blank-area live takeover cancels voicemail races
+const VERSION = '8.47-test30s-fullscreen-video-overlay';   // paired build: fullscreen video canvas with overlaid tools
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
