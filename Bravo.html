@@ -2611,7 +2611,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.44-test30s-ascii-clock';   // paired build: ASCII-only clock/status display
+const VERSION = '8.45-test30s-caller-bubble-countdown';   // paired build: live caller voicemail bubble countdown
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -3326,15 +3326,22 @@ function setStatus(state) {
 
 let _vmCountdownTicker = null;
 let _vmCountdownEndsAt = 0;
-function _startVmCountdown(seconds) {
+let _vmCountdownNoticeEl = null;
+function _startVmCountdown(seconds, showCallerNotice) {
   _stopVmCountdown();
   _vmCountdownEndsAt = Date.now() + Math.max(1, Number(seconds) || 30) * 1000;
+  if (showCallerNotice) {
+    _vmCountdownNoticeEl = _vmNotice('VOICEMAIL RECORDING WILL START IN ' + (Number(seconds) || 30) + ' SECONDS');
+  }
   const render = () => {
     const left = Math.max(0, Math.ceil((_vmCountdownEndsAt - Date.now()) / 1000));
     const clock = String(Math.floor(left / 60)).padStart(2, '0') + ':' + String(left % 60).padStart(2, '0');
     linkLed.className = 'led on-amber-flash';
     statusEl.textContent = 'WAITING ' + clock;
     document.title = 'WAITING ' + clock + ' - BRAVO - Field Radio';
+    if (_vmCountdownNoticeEl) {
+      _vmCountdownNoticeEl.textContent = 'VOICEMAIL RECORDING WILL START IN ' + left + (left === 1 ? ' SECOND' : ' SECONDS');
+    }
     if (left <= 0) _stopVmCountdown();
   };
   render();
@@ -3344,6 +3351,7 @@ function _stopVmCountdown() {
   clearInterval(_vmCountdownTicker);
   _vmCountdownTicker = null;
   _vmCountdownEndsAt = 0;
+  _vmCountdownNoticeEl = null;
 }
 
 let activeTab = 'chat';
@@ -6244,8 +6252,7 @@ function attachDataConn(dc) {
       if (f.__control === 'voicemailCountdown') {
         if (f.active) {
           const seconds = Number(f.seconds) || 30;
-          _startVmCountdown(seconds);
-          _vmNotice('â€” VOICEMAIL RECORDING WILL START IN ' + seconds + ' SECONDS â€”');
+          _startVmCountdown(seconds, true);
           entry('Alpha voicemail starts in ' + seconds + ' seconds', 'sys');
         } else _stopVmCountdown();
         return;
@@ -7123,7 +7130,7 @@ let _vmCallStart = 0;      // Date.now() at markLinked
 
 function _vmNotice(text, blobUrl, filename) {
   const chatEl = document.getElementById('chat');
-  if (!chatEl) return;
+  if (!chatEl) return null;
   const d = document.createElement('div');
   d.className = 'bubble vm-notice';
   if (blobUrl) {
@@ -7148,6 +7155,7 @@ function _vmNotice(text, blobUrl, filename) {
     if (history.length > HISTORY_MAX) history.splice(0, history.length - HISTORY_MAX);
     localStorage.setItem(key, JSON.stringify(history));
   } catch(e) {}
+  return d;
 }
 
 const _VM_DB_NAME = 'fieldradio-voicemails-v1';
