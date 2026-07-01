@@ -2613,7 +2613,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.38-test30s-vm-warning';   // test build: caller receives 30-second voicemail warning
+const VERSION = '8.39-test30s-no-vm-autodownload';   // test build: voicemail downloads only from SAVE
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -7213,7 +7213,7 @@ function _vmBoxAddEntry(ts, blobUrl, filename, blob) {
   if (blob) {
     item.persistPromise = _vmWriteStored({ id, station: _VM_STATION, ts, filename, blob }).then(() => {
       item.stored = true;
-    }).catch(e => entry('Voicemail saved as download only: ' + e.message, 'sys'));
+    }).catch(e => entry('Voicemail browser storage failed: ' + e.message, 'err'));
   }
 }
 
@@ -7528,7 +7528,6 @@ async function _startVoicemail() {
     const _vmBlobUrl = URL.createObjectURL(blob);
     _vmNotice('— 📼 VOICEMAIL RECORDED —', _vmBlobUrl, _vmFilename);
     _vmBoxAddEntry(Date.now(), _vmBlobUrl, _vmFilename, blob);
-    downloadBlob(blob, _vmFilename);  // auto-download immediately
     _finishOwnerLiveTakeover();
     // If Alpha left while we were recording, do the reset now that the save is done.
     // onDrop has already run teardown — just re-register for the next caller.
