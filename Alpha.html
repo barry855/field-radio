@@ -1,4 +1,4 @@
-<!-- redeploy -->
+
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -2662,7 +2662,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.34-test30s-local-record-independent';   // test build: connection retries cannot stop local recording
+const VERSION = '8.35-test30s-record-track-prefill';   // test build: protect local recording track and honor video prefill
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -5787,7 +5787,7 @@ async function initMediaOnly() {
 
   function applyAndDial(stream) {
     localStream = stream;
-    _parkCameraStream(stream);
+    if (loginDisableVideoFlag) _parkCameraStream(stream);
     _forceAspectRatio169(stream.getVideoTracks()[0]);
     setupMicGainNode(stream);
     document.getElementById('localVideo').srcObject = stream;
@@ -5911,7 +5911,7 @@ async function init() {
 
   function applyStreamFlags(stream) {
     localStream = stream;
-    _parkCameraStream(stream);
+    if (loginDisableVideoFlag) _parkCameraStream(stream);
     _forceAspectRatio169(stream.getVideoTracks()[0]);
     setupMicGainNode(stream);
     document.getElementById('localVideo').srcObject = stream;
@@ -7237,7 +7237,7 @@ function handleRemoteLeave() {
   clearTimeout(dropTimer);  // prevent onDrop's grace-period timer from showing reconnect screen
   leftPermanently = false; // we haven't left yet, remote did
   remotePeerLeft = true;
-  _setCameraActive(false, 'live session');
+  if (!(recLocal && recLocal.state === 'recording')) _setCameraActive(false, 'live session');
   // Clear remote video immediately
   ['remoteVideo','miniRemoteVideo'].forEach(id => {
     const el = document.getElementById(id);
@@ -7308,7 +7308,7 @@ function onDrop() {
   if (call && call._iceDropTimer) { clearTimeout(call._iceDropTimer); call._iceDropTimer = null; }
   saveRecordingIfActive();
   linked = false;
-  _setCameraActive(false, 'live session');
+  if (!(recLocal && recLocal.state === 'recording')) _setCameraActive(false, 'live session');
   _iceReady = false; _streamArrived = false;
   call = null;
   // Reset data channel state so it re-opens cleanly on next dial
