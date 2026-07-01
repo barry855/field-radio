@@ -2613,7 +2613,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.31-test30s-local-only-camera';   // paired test build
+const VERSION = '8.33-test30s-video-anytime';   // paired test build
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -4315,7 +4315,7 @@ function openHelpPanel() {
       ['MIKE GAIN','Adjust outgoing microphone level'],
       ['SPKR VOL','Adjust incoming speaker volume'],
       ['SEE REMOTE','Switch between remote and local video in chat'],
-      ['VIDEO POLICY','Camera is on only while live or during local recording']
+      ['VIDEO POLICY','Turn the camera on or off at any time']
     );
     const screenOrder = [
       ['REFRESH','Reconnect the remote screen'],
@@ -4327,7 +4327,7 @@ function openHelpPanel() {
       ['MINI CAM','Toggle the picture-in-picture camera'],
       ['SEE REMOTE','Switch the chat video between remote and local'],
       ['RECORD','Record the current local or remote view'],
-      ['VIDEO','Camera is on only while live or recording locally'],
+      ['VIDEO','Turn the camera on or off at any time'],
       ['MIKE','Mute or unmute the microphone'],
       ['SYS AUDIO','Mix computer audio into the transmitted signal'],
       ['SHARE','Share the screen or return to camera'],
@@ -7906,10 +7906,16 @@ async function toggleRecordLocal() {
   const localCameraTrack = localStream.getVideoTracks()[0];
   _cameraForcedForLocalRecording = !localCameraTrack.enabled || !!localCameraTrack._fieldRadioStandby;
   if (_cameraForcedForLocalRecording) {
-    const cameraReady = linked
+    let cameraReady = linked
       ? await _setCameraActive(true, 'local recording')
       : await _activateOfflineRecordingCamera();
-    if (!cameraReady) return;
+    let activeCameraTrack = localStream.getVideoTracks()[0] || null;
+    if (!cameraReady || !activeCameraTrack || activeCameraTrack._fieldRadioStandby || activeCameraTrack.readyState === 'ended') {
+      entry('Primary camera path unavailable - trying local-only camera', 'sys');
+      cameraReady = await _activateOfflineRecordingCamera();
+      activeCameraTrack = localStream.getVideoTracks()[0] || null;
+    }
+    if (!cameraReady || !activeCameraTrack || activeCameraTrack._fieldRadioStandby) return;
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     const preview = document.getElementById('localVideo');
     if (preview && preview.readyState < 2) {
@@ -7918,6 +7924,21 @@ async function toggleRecordLocal() {
         preview.addEventListener('loadeddata', done, { once: true });
         setTimeout(done, 1000);
       });
+    }
+    if (preview && (preview.readyState < 2 || !preview.videoWidth)) {
+      entry('No camera frame received - retrying local-only camera', 'sys');
+      cameraReady = await _activateOfflineRecordingCamera();
+      if (!cameraReady) return;
+      await new Promise(resolve => {
+        const done = () => resolve();
+        preview.addEventListener('loadeddata', done, { once: true });
+        setTimeout(done, 1200);
+      });
+      if (preview.readyState < 2 || !preview.videoWidth) {
+        entry('Camera opened but supplied no video frames', 'err');
+        await _setCameraActive(false, 'failed local recording');
+        return;
+      }
     }
   }
 
@@ -8181,12 +8202,24 @@ async function _setCameraActive(active, reason) {
 async function _activateOfflineRecordingCamera() {
   if (!localStream || !navigator.mediaDevices) return false;
   try {
-    const cameraStream = await navigator.mediaDevices.getUserMedia({
-      video: { width: { ideal: 1280 }, height: { ideal: 720 } },
-      audio: false
-    });
-    const replacement = cameraStream.getVideoTracks()[0];
     const current = localStream.getVideoTracks()[0] || null;
+    if (current && !current._fieldRadioStandby) {
+      const oldPreview = document.getElementById('localVideo');
+      if (oldPreview) oldPreview.srcObject = null;
+      localStream.removeTrack(current);
+      try { current.stop(); } catch(e) {}
+      await new Promise(resolve => setTimeout(resolve, 250));
+    }
+    let cameraStream;
+    try {
+      cameraStream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false
+      });
+    } catch(e) {
+      cameraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    }
+    const replacement = cameraStream.getVideoTracks()[0];
+    replacement.enabled = true;
     if (current) localStream.removeTrack(current);
     localStream.addTrack(replacement);
     const localVideo = document.getElementById('localVideo');
@@ -8205,16 +8238,10 @@ async function toggleVideo() {
   const track = localStream.getVideoTracks()[0];
   const active = !!(track && track.enabled && !track._fieldRadioStandby);
   if (active) {
-    await _setCameraActive(false, 'manual video off');
+    if (!await _setCameraActive(false, 'manual video off')) return;
     try { localStorage.setItem('bravo_disable_video', '1'); document.getElementById('loginDisableVideo').checked = true; } catch(e) {}
   } else {
-    // Pressing Video On while Alpha is answering explicitly requests live mode.
-    if (linked && _alphaAnsweringAvailable) requestLiveSession(true);
-    const liveCameraAllowed = linked && !_alphaAnsweringAvailable;
-    if (!liveCameraAllowed && !(recLocal && recLocal.state === 'recording')) {
-      entry('Camera stays off until the session is live or local recording starts', 'sys'); return;
-    }
-    await _setCameraActive(true, 'manual video on');
+    if (!await _setCameraActive(true, 'manual video on')) return;
     try { localStorage.setItem('bravo_disable_video', '0'); document.getElementById('loginDisableVideo').checked = false; } catch(e) {}
   }
 }
