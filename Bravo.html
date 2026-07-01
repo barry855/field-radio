@@ -2613,7 +2613,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.37-test30s-login-camera-off';   // test build: Video Off login never opens camera hardware
+const VERSION = '8.38-test30s-vm-warning';   // test build: caller receives 30-second voicemail warning
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -6211,6 +6211,14 @@ function attachDataConn(dc) {
         if (f.active) { _startRemoteRingTone(); } else { _stopRemoteRingTone(); }
         return;
       }
+      if (f.__control === 'voicemailCountdown') {
+        if (f.active) {
+          const seconds = Number(f.seconds) || 30;
+          _vmNotice('â€” VOICEMAIL RECORDING WILL START IN ' + seconds + ' SECONDS â€”');
+          entry('Alpha voicemail starts in ' + seconds + ' seconds', 'sys');
+        }
+        return;
+      }
       if (f.__control === 'voicemail') {
         if (f.active) {
           setStatus('voicemail');
@@ -7333,6 +7341,7 @@ function _fireLocalRing() {
 function _armVmTimeout() {
   if (!_ringing) return;          // already answered or dropped
   if (_vmActive)  return;         // voicemail already running
+  try { dcSend({ __control: 'voicemailCountdown', active: true, seconds: Math.round(RING_TIMEOUT_MS / 1000) }); } catch(e) {}
   // Auto-advance to voicemail if caller doesn't hang up after RING_TIMEOUT_MS
   _ringTimeoutTimer = setTimeout(() => {
     if (!_ringing) return;          // already answered or dropped
@@ -7352,6 +7361,7 @@ function _stopRing() {
   clearTimeout(_ringTimer);   _ringTimer = null;
   clearTimeout(_ringTimeoutTimer); _ringTimeoutTimer = null;
   if (_ringing) { try { dcSend({ __control: 'ring', active: false }); } catch(e) {} }
+  try { dcSend({ __control: 'voicemailCountdown', active: false }); } catch(e) {}
   _ringing = false;
 }
 function _playRingTone() {
