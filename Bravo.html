@@ -2613,7 +2613,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.34-test30s-local-record-independent';   // paired test build
+const VERSION = '8.35-test30s-record-track-prefill';   // paired test build
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -5711,7 +5711,7 @@ async function initMediaOnly() {
 
   function applyAndDial(stream) {
     localStream = stream;
-    _parkCameraStream(stream);
+    if (loginDisableVideoFlag) _parkCameraStream(stream);
     _forceAspectRatio169(stream.getVideoTracks()[0]);
     setupMicGainNode(stream);
     document.getElementById('localVideo').srcObject = stream;
@@ -5834,7 +5834,7 @@ async function init() {
 
   function applyStreamFlags(stream) {
     localStream = stream;
-    _parkCameraStream(stream);
+    if (loginDisableVideoFlag) _parkCameraStream(stream);
     _forceAspectRatio169(stream.getVideoTracks()[0]);
     setupMicGainNode(stream);
     document.getElementById('localVideo').srcObject = stream;
@@ -6193,7 +6193,7 @@ function attachDataConn(dc) {
       if (f.__control === 'answeringMode') {
         if (f.active) {
           _setAnswerLiveAvailable(true);
-          _setCameraActive(false, 'answering mode');
+          if (!(recLocal && recLocal.state === 'recording')) _setCameraActive(false, 'answering mode');
           if (linked) _markAttended();
           entry('Alpha answering mode detected — leave a message after the cue or press GO LIVE', 'sys');
           _vmNotice('— 📼 ALPHA ANSWERING — WAIT FOR THE VOICEMAIL CUE —');
@@ -6966,7 +6966,7 @@ function handleRemoteLeave() {
   if (_ro) _ro.classList.remove('active');  // hide it if visible
   leftPermanently = false; // we haven't left yet, remote did
   remotePeerLeft = true;
-  _setCameraActive(false, 'live session');
+  if (!(recLocal && recLocal.state === 'recording')) _setCameraActive(false, 'live session');
   // Clear remote video immediately
   ['remoteVideo'].forEach(id => {
     const el = document.getElementById(id);
@@ -7006,7 +7006,7 @@ function onDrop() {
   saveRecordingIfActive();
   _pendingChatMsg = null;  // discard any queued message — it belongs to the dropped session
   linked = false;
-  _setCameraActive(false, 'live session');
+  if (!(recLocal && recLocal.state === 'recording')) _setCameraActive(false, 'live session');
   _iceReady = false; _streamArrived = false;
   call = null;
   // Reset data channel state so it re-opens cleanly on reconnect
