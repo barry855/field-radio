@@ -2613,7 +2613,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.35-test30s-record-track-prefill';   // paired test build
+const VERSION = '8.36-test30s-bravo-av-recorder';   // test build: persistent canvas video plus mixed microphone audio
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -7711,7 +7711,10 @@ async function buildAudioMix(...streams) {
   const dest = ctx.createMediaStreamDestination();
   streams.forEach((s, i) => {
     if (!s) return;
-    const tracks = s.getAudioTracks ? s.getAudioTracks() : [];
+    // Accept either a MediaStream or the raw track array returned for local audio.
+    const tracks = Array.isArray(s)
+      ? s.filter(track => track && track.kind === 'audio' && track.readyState !== 'ended')
+      : (s.getAudioTracks ? s.getAudioTracks() : []);
     if (!tracks.length) return;
     try {
       const audioOnly = new MediaStream(tracks);
@@ -7945,17 +7948,37 @@ async function toggleRecordLocal() {
   const remoteAudio = document.getElementById('remoteAudio');
   const remoteVideo = document.getElementById('remoteVideo');
   const mimeType = preferredMime();
+  let stopLoop = null, recStream, aCtx = null;
+  const withMini = !!miniVideoVisible;
   const remoteStream = (remoteAudio && remoteAudio.srcObject) || (remoteVideo && remoteVideo.srcObject) || null;
-  const recStream = new MediaStream([
-    ...localStream.getVideoTracks(),
-    ...getLocalAudioTracksForRec(),
-    ...(remoteStream ? remoteStream.getAudioTracks() : [])
-  ]);
+  // Record a persistent canvas video track and exactly one mixed audio track.
+  // This survives camera/call track replacement and avoids Chromium dropping audio.
+  const { ctx, dest: aDest } = await buildAudioMix(getLocalAudioTracksForRec(), remoteStream);
+  aCtx = ctx;
+  const localVideo = document.getElementById('localVideo');
+  const miniRemoteVideo = withMini ? document.getElementById('miniRemoteVideo') : null;
+  const comp = buildCompositeStream(localVideo, miniRemoteVideo, aDest.stream.getAudioTracks());
+  recStream = comp.stream;
+  stopLoop = comp.stopLoop;
+
+  const recVideoTracks = recStream.getVideoTracks();
+  const recAudioTracks = recStream.getAudioTracks();
+  if (!recVideoTracks.length || !recAudioTracks.length) {
+    if (stopLoop) stopLoop();
+    if (aCtx) aCtx.close();
+    if (_cameraForcedForLocalRecording) await _setCameraActive(false, 'local recording');
+    _cameraForcedForLocalRecording = false;
+    entry('Local recording could not start - video or audio track missing', 'err');
+    return;
+  }
+  entry('Local recorder tracks: video=' + recVideoTracks.length + ' audio=' + recAudioTracks.length, 'sys');
 
   recLocalChunks = [];
   recLocal = new MediaRecorder(recStream, { mimeType });
   recLocal.ondataavailable = e => { if (e.data.size > 0) recLocalChunks.push(e.data); };
   recLocal.onstop = async () => {
+    if (stopLoop) stopLoop();
+    if (aCtx) aCtx.close();
     await saveRec(recLocalChunks, mimeType, 'local');
     if (_cameraForcedForLocalRecording) await _setCameraActive(false, 'local recording');
     _cameraForcedForLocalRecording = false;
