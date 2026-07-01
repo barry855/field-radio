@@ -2720,7 +2720,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.64-test30s-hide-controls-live-clear';   // paired build: suppress all control packets and clear both live-takeover paths
+const VERSION = '8.65-test30s-mic-limiter';   // paired build: peak-limited microphone gain prevents Mac transmit clipping
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -9768,7 +9768,7 @@ async function switchMicrophone(deviceId) {
   }
 }
 
-let _micGainCtx = null, _micGainNode = null, _micGainDest = null, _micRawTrack = null, _micProcessedTrack = null;
+let _micGainCtx = null, _micGainNode = null, _micLimiterNode = null, _micGainDest = null, _micRawTrack = null, _micProcessedTrack = null;
 
 function teardownMicGain() {
   // Stop the raw mic track that was swapped out by setupMicGainNode — without
@@ -9781,10 +9781,13 @@ function teardownMicGain() {
   }
   _micProcessedTrack = null;
   if (_micGainNode) { try { _micGainNode.disconnect(); } catch(e) {} _micGainNode = null; }
+  if (_micLimiterNode) { try { _micLimiterNode.disconnect(); } catch(e) {} _micLimiterNode = null; }
   if (_micGainCtx) { try { _micGainCtx.close(); } catch(e) {} _micGainCtx = null; }
 }
 
-function applyMicGain(val) {  const v = parseFloat(val);
+function applyMicGain(val) {
+  const parsed = parseFloat(val);
+  const v = isFinite(parsed) ? Math.max(0, Math.min(3, parsed)) : 1;
   // Sync all gain labels and sliders (primary + chat-tab copy)
   ['micGainVal', 'micGainValChat'].forEach(id => {
     const lbl = document.getElementById(id);
@@ -9819,11 +9822,18 @@ function setupMicGainNode(stream) {
     if (_micGainCtx.state === 'suspended') _micGainCtx.resume().catch(() => {});
     const src = _micGainCtx.createMediaStreamSource(stream);
     _micGainNode = _micGainCtx.createGain();
+    _micLimiterNode = _micGainCtx.createDynamicsCompressor();
+    _micLimiterNode.threshold.value = -3;
+    _micLimiterNode.knee.value = 0;
+    _micLimiterNode.ratio.value = 20;
+    _micLimiterNode.attack.value = 0.003;
+    _micLimiterNode.release.value = 0.15;
     _micGainDest = _micGainCtx.createMediaStreamDestination();
     const savedGain = (() => { const r = localStorage.getItem('alpha_mic_gain'); return r !== null ? parseFloat(r) : 1.35; })();
     _micGainNode.gain.value = isFinite(savedGain) ? savedGain : 1;
     src.connect(_micGainNode);
-    _micGainNode.connect(_micGainDest);
+    _micGainNode.connect(_micLimiterNode);
+    _micLimiterNode.connect(_micGainDest);
     // Replace audio track in localStream with the gained version
     const gainedAudio = _micGainDest.stream.getAudioTracks()[0];
     if (gainedAudio) {
