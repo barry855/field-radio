@@ -2207,8 +2207,6 @@ window.addEventListener('orientationchange', function() {
           <span class="sbr-label">CHAT:</span>
           <button class="speech-top-btn" onclick="saveChatToFile()" id="saveChatBtn" title="Save chat as HTML">💾 SAVE</button>
           <button class="speech-top-btn" onclick="exportSessionChat()" id="exportSessionBtn" title="Export a past session as HTML">EXPORT</button>
-          <button class="speech-top-btn" onclick="requestLiveSession()" id="answerLiveBtn" title="Stop Alpha's answering machine and begin a live call" style="display:none;">GO LIVE</button>
-          <button class="speech-top-btn" onclick="answerOwnVoicemailLive()" id="ownerLiveBtn" title="Save the current voicemail and answer live" style="display:none;">ANSWER LIVE</button>
           <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';ttsStopAll();morseStopAll();entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR</button>
           <button class="speech-top-btn" onclick="restoreChat()" id="restoreChatBtn" title="Restore previous session chat">↩ RESTORE</button>
           <button class="speech-top-btn" id="findChatBtn" title="Find in chat">🔍 FIND</button>
@@ -2613,7 +2611,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.40-test30s-clear-chat-start';   // paired build: each login starts with an empty chat screen
+const VERSION = '8.41-test30s-click-blank-live';   // paired build: blank-area click replaces live buttons
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -3340,8 +3338,8 @@ function _setAnswerLiveAvailable(available) {
 function _applyBravoLinkedDisplay(logConnection) {
   if (_alphaAnsweringAvailable) {
     setStatus('remote-answering');
-    duplexBar.textContent = '● ALPHA ANSWERING — SPEAK AFTER THE CUE OR GO LIVE';
-    if (logConnection) entry('Linked to Alpha answering machine — waiting for message or GO LIVE', 'ok');
+    duplexBar.textContent = '● ALPHA ANSWERING — CLICK A BLANK AREA TO GO LIVE';
+    if (logConnection) entry('Linked to Alpha answering machine — click a blank area to go live', 'ok');
   } else if (_noMediaMode) {
     setStatus('linked');
     duplexBar.textContent = '● LIVE (data only)';
@@ -3364,6 +3362,16 @@ function requestLiveSession(suppressCamera) {
   entry('Live session requested — Alpha voicemail cancelled', 'ok');
   _vmNotice('— ● GOING LIVE WITH ALPHA —');
 }
+
+document.addEventListener('pointerdown', event => {
+  const target = event.target;
+  if (target && target.closest && target.closest('button,a,input,select,textarea,audio,[role="button"]')) return;
+  if (linked && _alphaAnsweringAvailable) {
+    requestLiveSession();
+  } else if (linked && (_ringing || _vmActive) && !_attended) {
+    _markAttended(event);
+  }
+});
 
 function syncControls() {
   const d2 = document.getElementById('duplexBar2');
@@ -4312,7 +4320,6 @@ function openHelpPanel() {
       ['CAMERA','Choose the camera used for video and local recording'],
       ['VOICEMAIL BOX','Play stored voicemail recordings'],
       ['VM SAVE / X','Download a voicemail / delete its browser copy'],
-      ['ANSWER LIVE','Stop voicemail recording and begin a live session'],
       ['MY LANGUAGE','Choose chat translation and speech language'],
       ['MIKE GAIN','Adjust outgoing microphone level'],
       ['SPKR VOL','Adjust incoming speaker volume'],
@@ -4344,7 +4351,6 @@ function openHelpPanel() {
       ['VOICEMAIL BOX','Play stored voicemail recordings'],
       ['MY LANGUAGE','Choose chat translation and speech language'],
       ['ORIGINAL','Reset speech language to the system default'],
-      ['ANSWER LIVE','Stop voicemail and begin a live session'],
       ['ATTACH','Attach a file, photo or video'],
       ['LOAD','Load a text file into the input box'],
       ['INPUT SAVE','Save input-box text to a file'],
@@ -6197,7 +6203,7 @@ function attachDataConn(dc) {
           _setAnswerLiveAvailable(true);
           if (!(recLocal && recLocal.state === 'recording')) _setCameraActive(false, 'answering mode');
           if (linked) _markAttended();
-          entry('Alpha answering mode detected — leave a message after the cue or press GO LIVE', 'sys');
+          entry('Alpha answering mode detected — leave a message after the cue or click a blank area to go live', 'sys');
           _vmNotice('— 📼 ALPHA ANSWERING — WAIT FOR THE VOICEMAIL CUE —');
           if (linked) _applyBravoLinkedDisplay(false);
         } else {
