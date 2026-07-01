@@ -2662,7 +2662,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.39-test30s-no-vm-autodownload';   // paired build: voicemail downloads only from SAVE
+const VERSION = '8.40-test30s-clear-chat-start';   // paired build: each login starts with an empty chat screen
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -2837,7 +2837,9 @@ function startSession() {
   } else {
     init();
   }
-  setTimeout(loadHistory, 100);
+  // Start every login with a clean visible chat. Stored sessions remain
+  // available through RESTORE and EXPORT.
+  document.getElementById('chat').innerHTML = '';
 }
 
 // ── Pre-fill last used code + checkbox states on load ────────
