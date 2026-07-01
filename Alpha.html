@@ -1,4 +1,4 @@
-<!-- redeploy -->
+
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -2720,7 +2720,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.62-test30s-symmetric-takeover';   // paired build: symmetric countdown cancellation, screen clearing and late-packet suppression
+const VERSION = '8.63-test30s-local-preview-start';   // paired build: local video preview starts independently of microphone state
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -5885,6 +5885,27 @@ function _saveCameraLabel(label) {
   try { localStorage.setItem('alpha_camera_label', label); } catch(e) {}
 }
 
+function attachAndStartLocalPreview(stream) {
+  const video = document.getElementById('localVideo');
+  if (!video) return;
+  video.muted = true;
+  video.autoplay = true;
+  video.playsInline = true;
+  if (video.srcObject !== stream) video.srcObject = stream;
+  const start = () => {
+    if (!video.srcObject) return;
+    const attempt = video.play();
+    if (attempt && attempt.catch) attempt.catch(() => {});
+  };
+  if (video.readyState >= 1) start();
+  else video.addEventListener('loadedmetadata', start, { once: true });
+  requestAnimationFrame(start);
+  setTimeout(start, 250);
+  ['pointerdown', 'touchstart', 'keydown'].forEach(type =>
+    window.addEventListener(type, start, { once: true, passive: true })
+  );
+}
+
 async function initMediaOnly() {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     entry('Mic/camera API not available — data channel only', 'sys');
@@ -5910,7 +5931,7 @@ async function initMediaOnly() {
     if (loginDisableVideoFlag) _parkCameraStream(stream);
     _forceAspectRatio169(stream.getVideoTracks()[0]);
     setupMicGainNode(stream);
-    document.getElementById('localVideo').srcObject = stream;
+    attachAndStartLocalPreview(stream);
     entry('Media ready - camera follows login preference', 'ok');
     syncMiniVideos();
     initFlipCamUI();
@@ -6034,7 +6055,7 @@ async function init() {
     if (loginDisableVideoFlag) _parkCameraStream(stream);
     _forceAspectRatio169(stream.getVideoTracks()[0]);
     setupMicGainNode(stream);
-    document.getElementById('localVideo').srcObject = stream;
+    attachAndStartLocalPreview(stream);
     entry('Media ready - camera follows login preference', 'ok');
     syncMiniVideos();
     initFlipCamUI();
