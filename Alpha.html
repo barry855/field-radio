@@ -2720,7 +2720,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.63-test30s-local-preview-start';   // paired build: local video preview starts independently of microphone state
+const VERSION = '8.64-test30s-hide-controls-live-clear';   // paired build: suppress all control packets and clear both live-takeover paths
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -6615,8 +6615,10 @@ function attachDataConn(dc) {
       }
       // Control packets are application signalling, never chat content.
       if (f.__control) { entry('Ignored unknown control: ' + f.__control, 'sys'); return; }
+      if (containsControlPacket(f)) { entry('Suppressed wrapped control packet', 'sys'); return; }
       addBubble(JSON.stringify(f), false);
     } else {
+      if (containsControlPacket(text)) { entry('Suppressed text-encoded control packet', 'sys'); return; }
       addBubble(text, false);
       ttsSpeak(text, _myLang);
     }
@@ -6780,9 +6782,24 @@ function decodeEmbeddedControl(value) {
   return null;
 }
 
+function containsControlPacket(value, depth = 0) {
+  if (depth > 4 || value == null) return false;
+  if (typeof value === 'string') return /["']__control["']\s*:/.test(value);
+  if (typeof value !== 'object') return false;
+  if (Object.prototype.hasOwnProperty.call(value, '__control')) return true;
+  try { return Object.values(value).some(item => containsControlPacket(item, depth + 1)); }
+  catch(e) { return false; }
+}
+
 function dcDecode(raw) {
+  if (raw && typeof raw === 'object' && !(raw instanceof ArrayBuffer) && !(raw instanceof Blob) && !ArrayBuffer.isView(raw)) {
+    if (raw.__control || raw.__chat || raw.__file || raw.__chunk || raw.__morse) return { obj: raw };
+    if (Object.prototype.hasOwnProperty.call(raw, 'data')) return dcDecode(raw.data);
+    return { obj: raw };
+  }
   let s;
   if (raw instanceof ArrayBuffer)   s = new TextDecoder().decode(raw);
+  else if (ArrayBuffer.isView(raw)) s = new TextDecoder().decode(raw);
   else if (raw instanceof Blob)     return null; // handle async elsewhere if needed
   else                              s = String(raw);
 
@@ -7887,6 +7904,7 @@ document.addEventListener('pointerdown', event => {
   if (target && target.closest && target.closest('button,a,input,select,textarea,audio,[role="button"]')) return;
   if (linked && _bravoAnsweringAvailable) {
     _bravoAnsweringAvailable = false;
+    _bravoRequestedLive = true;
     clearLocalChatDisplayForTakeover();
     dcSend({ __control: 'liveSession', active: true, station: 'ALPHA' });
     setStatus('linked');
