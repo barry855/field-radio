@@ -10,6 +10,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="screen-orientation" content="any">
 <meta name="google" content="notranslate">
+<script>try{if(localStorage.getItem('bravo_pi_mode')==='1')document.documentElement.classList.add('is-pi');}catch(e){}</script>
 <title>BRAVO — Field Radio v6</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌐</text></svg>">
 <style>
@@ -884,14 +885,15 @@
   }
   #speechPanel > .speech-status { display: none; }
   body.is-android #speechPanel > .speech-status { display: block; }
-  body.is-pi #speechBtnRow2 .sbr-label,
-  body.is-pi #speechLangSelect,
-  body.is-pi #speechOriginalBtn { display: none; }
-  body.is-pi #speechStatus { display: none; }
-  body.is-pi #speechListenBtn,
-  body.is-pi #speechBtnRow3 .sbr-label,
-  body.is-pi #ttsVoiceSelect,
-  body.is-pi #speechTtsBtn { display: none !important; }
+  html.is-pi #speechBtnRow2 .sbr-label,
+  html.is-pi #speechLangSelect,
+  html.is-pi #speechOriginalBtn,
+  html.is-pi #speechStatus,
+  html.is-pi #speechListenBtn,
+  html.is-pi #speechBtnRow3,
+  html.is-pi #ttsBtn,
+  html.is-pi #ttsBtn2,
+  html.is-pi #ttsChatBtn { display: none !important; }
   #speechPanel > .speech-status {
     font-size: 11px; letter-spacing: 1px; padding: 2px 4px;
     color: #ffffff !important; font-family: monospace; word-break: break-all;
@@ -2668,7 +2670,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.57-test30s-local-screen-clear';   // paired build: local screen clear retains saved chat and voicemail
+const VERSION = '8.58-test30s-pi-no-speech-flash';   // paired build: Pi mode hides all TTS/STT controls before first render
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -3124,6 +3126,7 @@ document.addEventListener('click', () => {
 
 function setPiMode(on) {
   try { localStorage.setItem('bravo_pi_mode', on ? '1' : '0'); } catch(e) {}
+  document.documentElement.classList.toggle('is-pi', on);
   document.body.classList.toggle('is-pi', on);
   updateSpeechPlaceholder();
 }
@@ -5571,7 +5574,10 @@ function setSpeechStatus(txt) {
 
 document.addEventListener('DOMContentLoaded', () => {
   if (/android/i.test(navigator.userAgent)) document.body.classList.add('is-android');
-  if (localStorage.getItem('bravo_pi_mode') === '1') document.body.classList.add('is-pi');
+  if (localStorage.getItem('bravo_pi_mode') === '1') {
+    document.documentElement.classList.add('is-pi');
+    document.body.classList.add('is-pi');
+  }
   updateSpeechPlaceholder();
   entry('UA: ' + navigator.userAgent, 'sys');
   switchTab('chat');
