@@ -2256,7 +2256,6 @@ window.addEventListener('orientationchange', function() {
           <span class="sbr-label">CHAT:</span>
           <button class="speech-top-btn" onclick="saveChatToFile()" id="saveChatBtn" title="Save chat as HTML">💾 SAVE</button>
           <button class="speech-top-btn" onclick="exportSessionChat()" id="exportSessionBtn" title="Export a past session as HTML">EXPORT</button>
-          <button class="speech-top-btn" onclick="answerOwnVoicemailLive()" id="ownerLiveBtn" title="Save the current voicemail and answer live" style="display:none;">ANSWER LIVE</button>
           <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';ttsStopAll();morseStopAll();entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR</button>
           <button class="speech-top-btn" onclick="restoreChat()" id="restoreChatBtn" title="Restore previous session chat">↩ RESTORE</button>
           <button class="speech-top-btn" id="findChatBtn" title="Find in chat">🔍 FIND</button>
@@ -2662,7 +2661,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.40-test30s-clear-chat-start';   // paired build: each login starts with an empty chat screen
+const VERSION = '8.41-test30s-click-blank-live';   // paired build: blank-area click replaces live buttons
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -4346,7 +4345,6 @@ function openHelpPanel() {
       ['CAMERA',   'Choose the camera used for video and local recording'],
       ['VOICEMAIL BOX','Play stored voicemail recordings'],
       ['VM SAVE / X','Download a voicemail / delete its browser copy'],
-      ['ANSWER LIVE','Stop voicemail recording and begin a live session'],
       ['MY LANGUAGE','Choose chat translation and speech language'],
       ['Talk/Type in Chat', 'Open the speech and text input panel'],
       ['TALK',    'Hold to dictate via speech-to-text'],
@@ -4403,7 +4401,6 @@ function openHelpPanel() {
       ['VOICEMAIL BOX','Play stored voicemail recordings'],
       ['MY LANGUAGE','Choose chat translation and speech language'],
       ['ORIGINAL','Reset speech language to the system default'],
-      ['ANSWER LIVE','Stop voicemail and begin a live session'],
       ['ATTACH','Attach a file, photo or video'],
       ['LOAD','Load a text file into the input box'],
       ['INPUT SAVE','Save input-box text to a file'],
@@ -7711,6 +7708,12 @@ function answerOwnVoicemailLive() {
   _markAttended();
   if (!wasRecording) _finishOwnerLiveTakeover();
 }
+
+document.addEventListener('pointerdown', event => {
+  const target = event.target;
+  if (target && target.closest && target.closest('button,a,input,select,textarea,audio,[role="button"]')) return;
+  if (linked && _answeringMachineMode && !_attended) _markAttended(event);
+});
 
 function _markAttended(event, suppressCamera) {
   if (event && event.target && event.target.closest && event.target.closest('#ownerLiveBtn')) return;
