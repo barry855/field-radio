@@ -2662,7 +2662,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.28-test30s-video-on-guard';   // test build: Video On allowed throughout ordinary live sessions
+const VERSION = '8.30-test30s-offline-local-record';   // test build: local camera recording works while disconnected
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -7700,11 +7700,11 @@ function answerOwnVoicemailLive() {
   if (!wasRecording) _finishOwnerLiveTakeover();
 }
 
-function _markAttended(event) {
+function _markAttended(event, suppressCamera) {
   if (event && event.target && event.target.closest && event.target.closest('#ownerLiveBtn')) return;
   if (_attended) return;
   _attended = true;
-  if (!loginDisableVideoFlag) _setCameraActive(true, 'live session');
+  if (!suppressCamera && !loginDisableVideoFlag) _setCameraActive(true, 'live session');
   _stopRing(); // answering live cancels any remaining rings and the VM timer
   clearTimeout(_vmTimer); _vmTimer = null;
   _setOwnerLiveAvailable(false);
@@ -8247,6 +8247,14 @@ async function toggleRecordLocal() {
     const cameraReady = await _setCameraActive(true, 'local recording');
     if (!cameraReady) return;
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const preview = document.getElementById('localVideo');
+    if (preview && preview.readyState < 2) {
+      await new Promise(resolve => {
+        const done = () => resolve();
+        preview.addEventListener('loadeddata', done, { once: true });
+        setTimeout(done, 1000);
+      });
+    }
   }
 
   const remoteAudio = document.getElementById('remoteAudio');
@@ -8530,10 +8538,17 @@ async function _setCameraActive(active, reason) {
     }
     const pc = call && (call.peerConnection || call._pc);
     const sender = pc && pc.getSenders ? pc.getSenders().find(s => s.track && s.track.kind === 'video') : null;
-    if (sender) await sender.replaceTrack(replacement);
+    if (sender) {
+      try { await sender.replaceTrack(replacement); }
+      catch(e) {
+        if (linked) throw e;
+        entry('Camera ready locally; stale disconnected video sender ignored', 'sys');
+      }
+    }
     if (current && current !== replacement) localStream.removeTrack(current);
     if (!localStream.getVideoTracks().includes(replacement)) localStream.addTrack(replacement);
-    const localVideo = document.getElementById('localVideo'); if (localVideo) localVideo.srcObject = localStream;
+    const localVideo = document.getElementById('localVideo');
+    if (localVideo) { localVideo.srcObject = localStream; try { await localVideo.play(); } catch(e) {} }
     if (current && current !== replacement && !current._fieldRadioStandby) { try { current.stop(); } catch(e) {} }
     updateLocalVideoState(); syncMiniVideos(); sendVideoState();
     if (reason) entry('Camera ' + (active ? 'enabled for ' : 'released after ') + reason, 'sys');
@@ -8553,6 +8568,8 @@ async function toggleVideo() {
     await _setCameraActive(false, 'manual video off');
     try { localStorage.setItem('alpha_disable_video', '1'); document.getElementById('loginDisableVideo').checked = true; } catch(e) {}
   } else {
+    // Pressing Video On while connected is an explicit decision to go live.
+    if (linked && _answeringMachineMode && !_attended) _markAttended(null, true);
     const liveCameraAllowed = linked && (!_answeringMachineMode || _attended);
     if (!liveCameraAllowed && !(recLocal && recLocal.state === 'recording')) {
       entry('Camera stays off until the session is live or local recording starts', 'sys'); return;
