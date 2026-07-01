@@ -2662,7 +2662,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.33-test30s-video-anytime';   // test build: Video On/Off available in every state
+const VERSION = '8.34-test30s-local-record-independent';   // test build: connection retries cannot stop local recording
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -7120,7 +7120,7 @@ function attachCall(c) {
 }
 
 // ── Save recordings if a disconnection interrupts them ────────
-function saveRecordingIfActive() {
+function saveRecordingIfActive(includeLocal = false) {
   if (recRemote && recRemote.state === 'recording') {
     entry('Connection lost — auto-saving remote recording…', 'sys');
     const btn2 = document.getElementById('recBtn2');
@@ -7128,7 +7128,7 @@ function saveRecordingIfActive() {
     recRemoteBusy = true;
     recRemote.stop();
   }
-  if (recLocal && recLocal.state === 'recording') {
+  if (includeLocal && recLocal && recLocal.state === 'recording') {
     entry('Connection lost — auto-saving local recording…', 'sys');
     const btn = document.getElementById('recBtn');
     if (btn) { btn.textContent = '➤ RECORD'; btn.classList.remove('recording'); }
@@ -7179,7 +7179,7 @@ function _doLeave() {
   _clearAnsweringModeTimer();
   _stopRing();
   _stopVoicemail();
-  saveRecordingIfActive();
+  saveRecordingIfActive(true);
   clearTimeout(_raPlayTimer); _raPlayTimer = null;  // cancel any pending audio play attempt
   ttsStopAll();
   morseStopAll();
