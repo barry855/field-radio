@@ -2670,7 +2670,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.60-test30s-speaker-volume';   // paired build: speaker slider controls real playback volume and optional gain boost
+const VERSION = '8.62-test30s-symmetric-takeover';   // paired build: symmetric countdown cancellation, screen clearing and late-packet suppression
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -3446,11 +3446,13 @@ function _applyBravoLinkedDisplay(logConnection) {
 function requestLiveSession(suppressCamera) {
   if (!_alphaAnsweringAvailable || !dataConn || !dataConn.open) return;
   _setAnswerLiveAvailable(false);
+  _stopVmCountdown();
+  _stopRemoteRingTone();
+  clearLocalChatDisplayForTakeover();
   _markAttended(null, suppressCamera);
   dcSend({ __control: 'liveSession', active: true, station: 'BRAVO' });
   _applyBravoLinkedDisplay(false);
   entry('Live session requested — Alpha voicemail cancelled', 'ok');
-  _vmNotice('— ● GOING LIVE WITH ALPHA —');
 }
 
 document.addEventListener('pointerdown', event => {
@@ -6320,6 +6322,9 @@ function attachDataConn(dc) {
       // clearChat control intentionally not handled — CLEAR is local-only on each unit.
       if (f.__control === 'deleteMsg') { deleteBubble(f.ts, false); return; }
       if (f.__control === 'liveSession') {
+        _stopVmCountdown();
+        _stopRemoteRingTone();
+        _stopRing();
         clearLocalChatDisplayForTakeover();
         _setAnswerLiveAvailable(false);
         _markAttended();
@@ -6339,7 +6344,11 @@ function attachDataConn(dc) {
           _vmNotice('— 📼 ALPHA ANSWERING — WAIT FOR THE VOICEMAIL CUE —');
           if (linked) _applyBravoLinkedDisplay(false);
         } else {
+          const wasWaitingForAlpha = _alphaAnsweringAvailable;
           _setAnswerLiveAvailable(false);
+          _stopVmCountdown();
+          _stopRemoteRingTone();
+          if (wasWaitingForAlpha) clearLocalChatDisplayForTakeover();
           if (linked && !loginDisableVideoFlag) _setCameraActive(true, 'live session');
           if (linked) _applyBravoLinkedDisplay(false);
         }
@@ -6371,6 +6380,10 @@ function attachDataConn(dc) {
           _stopRemoteRingTone();
           playTone('vm_start');
         } else {
+          if (!_alphaAnsweringAvailable) {
+            _applyBravoLinkedDisplay(false);
+            return;
+          }
           _applyBravoLinkedDisplay(false);
           _vmNotice('— 📼 VOICEMAIL SAVED —');
           playTone('vm_end');
@@ -7777,10 +7790,10 @@ function _onCallEnded() {
       }
     }
   }
-  // If voicemail onstop is pending, it owns the reset
+  _setAnswerLiveAvailable(false);
+  // If voicemail onstop is pending, it owns the remaining reset
   if (_vmResetPending) { _attended = false; _vmCallStart = 0; return; }
   _attended = false;
-  _setAnswerLiveAvailable(false);
   _ownerTakeoverPending = false;
   _setOwnerLiveAvailable(false);
   _vmCallStart = 0;
