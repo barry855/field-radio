@@ -2611,7 +2611,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.45-test30s-caller-bubble-countdown';   // paired build: live caller voicemail bubble countdown
+const VERSION = '8.46-test30s-sticky-live-takeover';   // paired build: blank-area live takeover cancels voicemail races
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -6251,6 +6251,8 @@ function attachDataConn(dc) {
       }
       if (f.__control === 'voicemailCountdown') {
         if (f.active) {
+          // Ignore a countdown packet that was queued before GO LIVE.
+          if (!_alphaAnsweringAvailable) { _stopVmCountdown(); return; }
           const seconds = Number(f.seconds) || 30;
           _startVmCountdown(seconds, true);
           entry('Alpha voicemail starts in ' + seconds + ' seconds', 'sys');
@@ -6260,6 +6262,7 @@ function attachDataConn(dc) {
       if (f.__control === 'voicemail') {
         _stopVmCountdown();
         if (f.active) {
+          if (!_alphaAnsweringAvailable) return;
           setStatus('voicemail');
           _vmNotice('— 📼 ALPHA RECORDING VOICEMAIL —');
           // These tones play only on the caller receiving this control message.
@@ -7379,13 +7382,13 @@ function _fireLocalRing() {
 }
 
 function _armVmTimeout() {
-  if (!_ringing) return;          // already answered or dropped
+  if (!_ringing || _attended) return; // already answered or dropped
   if (_vmActive)  return;         // voicemail already running
   _startVmCountdown(Math.round(RING_TIMEOUT_MS / 1000));
   try { dcSend({ __control: 'voicemailCountdown', active: true, seconds: Math.round(RING_TIMEOUT_MS / 1000) }); } catch(e) {}
   // Auto-advance to voicemail if caller doesn't hang up after RING_TIMEOUT_MS
   _ringTimeoutTimer = setTimeout(() => {
-    if (!_ringing) return;          // already answered or dropped
+    if (!_ringing || _attended) return; // already answered or dropped
     if (_vmActive)  return;         // voicemail already running
     entry('📼 No answer after ' + (RING_TIMEOUT_MS / 1000) + 's — starting voicemail', 'sys');
     // Snapshot remote stream now (mirrors what _onCallConnected does)
@@ -7475,11 +7478,17 @@ function _markAttended(event, suppressCamera) {
     _stopVoicemail();
   } else {
     entry('Call attended — voicemail suppressed', 'sys');
+    if (linked) {
+      setStatus('linked');
+      duplexBar.textContent = _noMediaMode ? 'LIVE (data only)' : 'LIVE';
+      duplexBar.className = 'duplex-overlay live';
+      syncControls();
+    }
   }
 }
 
 async function _startVoicemail() {
-  if (_vmActive) return;
+  if (_vmActive || _attended) return;
   _setOwnerLiveAvailable(true);
   // Get remote audio tracks directly from WebRTC receivers — this works even on
   // Android where ontrack fires without ev.streams and srcObject may be null.
