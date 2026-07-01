@@ -1,4 +1,4 @@
-<!-- redeploy -->
+
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -2662,7 +2662,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.30-test30s-offline-local-record';   // test build: local camera recording works while disconnected
+const VERSION = '8.31-test30s-local-only-camera';   // test build: offline recorder bypasses WebRTC camera swapping
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -8244,7 +8244,9 @@ async function toggleRecordLocal() {
   const localCameraTrack = localStream.getVideoTracks()[0];
   _cameraForcedForLocalRecording = !localCameraTrack.enabled || !!localCameraTrack._fieldRadioStandby;
   if (_cameraForcedForLocalRecording) {
-    const cameraReady = await _setCameraActive(true, 'local recording');
+    const cameraReady = linked
+      ? await _setCameraActive(true, 'local recording')
+      : await _activateOfflineRecordingCamera();
     if (!cameraReady) return;
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     const preview = document.getElementById('localVideo');
@@ -8556,6 +8558,28 @@ async function _setCameraActive(active, reason) {
   } catch(e) {
     entry('Camera ' + (active ? 'start' : 'stop') + ' failed: ' + e.message, 'err');
     updateLocalVideoState();
+    return false;
+  }
+}
+
+async function _activateOfflineRecordingCamera() {
+  if (!localStream || !navigator.mediaDevices) return false;
+  try {
+    const cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false
+    });
+    const replacement = cameraStream.getVideoTracks()[0];
+    const current = localStream.getVideoTracks()[0] || null;
+    if (current) localStream.removeTrack(current);
+    localStream.addTrack(replacement);
+    const localVideo = document.getElementById('localVideo');
+    if (localVideo) { localVideo.srcObject = localStream; try { await localVideo.play(); } catch(e) {} }
+    updateLocalVideoState(); syncMiniVideos();
+    entry('Camera enabled for offline local recording', 'sys');
+    return true;
+  } catch(e) {
+    entry('Offline recording camera failed: ' + e.name + ' - ' + e.message, 'err');
     return false;
   }
 }
