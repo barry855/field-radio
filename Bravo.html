@@ -1864,6 +1864,34 @@
     backdrop-filter: blur(3px);
     -webkit-backdrop-filter: blur(3px);
   }
+  body.app-fullscreen #paneChat #speechPanel.speech-open {
+    display: flex !important;
+    position: fixed !important;
+    top: auto !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    width: 100vw;
+    height: min(42vh, 360px);
+    min-height: 190px;
+    box-sizing: border-box;
+    z-index: 1004;
+    border-radius: 10px 10px 0 0;
+    transform: translateY(0);
+    transition: transform 0.35s ease, opacity 0.3s ease;
+  }
+  body.app-fullscreen.fs-controls-hidden #paneChat #speechPanel.speech-open {
+    display: flex !important;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(105%);
+  }
+  body.app-fullscreen.fs-controls-visible #paneChat #speechPanel.speech-open {
+    display: flex !important;
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
 
   .media-btn,
   .speech-top-btn,
@@ -2635,7 +2663,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.47-test30s-fullscreen-video-overlay';   // paired build: fullscreen video canvas with overlaid tools
+const VERSION = '8.49-test30s-bottom-talk-retract';   // paired build: bottom fullscreen Talk/Type panel retracts after 20s
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -8954,9 +8982,37 @@ async function selectCamera(deviceId) {
 // configurations silently reject or no-op requestFullscreen(). The real
 // Fullscreen API is still requested as a bonus when available.
 let _fsHideTimer = null;
+let _fsSpeechWasVisible = false;
 
 function _fsIsActive() {
   return document.body.classList.contains('app-fullscreen');
+}
+
+function _fsEnsureTextBox() {
+  const panel = document.getElementById('speechPanel');
+  const btn = document.getElementById('speechToggleBtn');
+  if (_syslogVisible) {
+    _syslogVisible = false;
+    const logPanel = document.getElementById('logPanel');
+    if (logPanel) { logPanel.classList.remove('syslog-open'); logPanel.classList.add('collapsed'); }
+    const logBtn = document.getElementById('syslogToggleBtn');
+    if (logBtn) logBtn.classList.remove('active');
+  }
+  _speechVisible = true;
+  if (panel) panel.classList.add('speech-open');
+  if (btn) { btn.classList.add('active'); btn.textContent = 'SHOW CHAT'; }
+  updateSpeechSendBtn();
+  syncUnderlayOpacity();
+}
+
+function _fsRestoreTextBox() {
+  if (_fsSpeechWasVisible) return;
+  _speechVisible = false;
+  const panel = document.getElementById('speechPanel');
+  const btn = document.getElementById('speechToggleBtn');
+  if (panel) panel.classList.remove('speech-open');
+  if (btn) { btn.classList.remove('active'); btn.textContent = 'Talk/Type in Chat'; }
+  syncUnderlayOpacity();
 }
 
 function _fsShowControls() {
@@ -8964,11 +9020,8 @@ function _fsShowControls() {
   document.body.classList.remove('fs-controls-hidden');
   document.body.classList.add('fs-controls-visible');
   clearTimeout(_fsHideTimer);
-  // While the chat box (speech panel) is open, keep controls visible indefinitely —
-  // the user is actively typing. The timer resumes when SHOW CHAT is pressed.
-  if (!_speechVisible) {
-    _fsHideTimer = setTimeout(_fsHideControls, 10000);
-  }
+  // Hide the entire control and text-entry overlay after 20 seconds idle.
+  _fsHideTimer = setTimeout(_fsHideControls, 20000);
 }
 
 function _fsHideControls() {
@@ -8985,13 +9038,17 @@ function _fsOnActivity() {
 document.addEventListener('touchstart', _fsOnActivity, { passive: true });
 document.addEventListener('click',      _fsOnActivity);
 document.addEventListener('mousemove',  _fsOnActivity, { passive: true });
+document.addEventListener('keydown',    _fsOnActivity);
+document.addEventListener('input',      _fsOnActivity);
 
 function toggleFullScreen() {
   const btn = document.getElementById('fsChatBtn');
   const goingFs = !_fsIsActive();
 
   if (goingFs) {
+    _fsSpeechWasVisible = _speechVisible;
     document.body.classList.add('app-fullscreen');
+    _fsEnsureTextBox();
     if (btn) { btn.textContent = 'FS ON'; btn.classList.add('active'); }
     // Best-effort real Fullscreen API request (ignored if unsupported/denied)
     try {
@@ -9003,6 +9060,7 @@ function toggleFullScreen() {
   } else {
     document.body.classList.remove('app-fullscreen', 'fs-controls-hidden', 'fs-controls-visible');
     clearTimeout(_fsHideTimer);
+    _fsRestoreTextBox();
     if (btn) { btn.textContent = 'FS OFF'; btn.classList.remove('active'); }
     try {
       if (document.exitFullscreen)            document.exitFullscreen().catch(()=>{});
@@ -9022,6 +9080,7 @@ function _syncRealFsExit() {
     const btn = document.getElementById('fsChatBtn');
     document.body.classList.remove('app-fullscreen', 'fs-controls-hidden', 'fs-controls-visible');
     clearTimeout(_fsHideTimer);
+    _fsRestoreTextBox();
     if (btn) { btn.textContent = 'FS OFF'; btn.classList.remove('active'); }
   }
 }
