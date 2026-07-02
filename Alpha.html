@@ -2720,7 +2720,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.70-test30s-barry-message-pi-chat';   // paired build: Barry auto-message plus Pi Blob/byte chat decoding
+const VERSION = '8.71-test30s-corrected-barry-message';   // paired build: corrected Barry answering message
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -8124,7 +8124,7 @@ function _onCallConnected() {
   _vmCallStart = Date.now();
   if (_answeringMachineMode && !_autoAnswerMessageSent) {
     _autoAnswerMessageSent = true;
-    sendChat("HI This is Barry, I can't get to the phone right now. Leave a message at the beep and I will back to you unless this has a glitch.");
+    sendChat("HI This is Barry, I can't get to the phone right now. Leave a message at the beep and I will get back to you unless this has a glitch.");
   }
   const remoteAudio = document.getElementById('remoteAudio');
   const remoteVideo = document.getElementById('remoteVideo');
