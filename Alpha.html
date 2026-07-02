@@ -1,3 +1,4 @@
+
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
@@ -2720,7 +2721,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.72-test30s-pi-alpha-vm-record';   // paired build: Bravo no longer falsely cancels Alpha voicemail on Pi
+const VERSION = '8.75-test30s-bravo-return-waiting';   // paired build: Bravo returns to waiting after Alpha message call ends
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -3612,6 +3613,14 @@ function clearLocalChatDisplayForTakeover() {
   _vmCountdownNoticeEl = null;
   ttsStopAll();
   morseStopAll();
+}
+
+let _liveCuePlayed = false;
+function playLiveCueOnce() {
+  if (_liveCuePlayed) return;
+  _liveCuePlayed = true;
+  playTone('vm_end');
+  setTimeout(() => playTone('vm_end'), 450);
 }
 
 function updateChatVideoViewBtn() {
@@ -6574,6 +6583,7 @@ function attachDataConn(dc) {
         _stopRemoteRingTone();
         _stopRing();
         clearLocalChatDisplayForTakeover();
+        playLiveCueOnce();
         if (_answeringMachineMode) _markAttended();
         if (linked) {
           setStatus('linked');
@@ -7901,7 +7911,7 @@ function _fireLocalRing() {
 
 function _armVmTimeout() {
   if (!_ringing || _vmActive || _attended || _bravoRequestedLive || _liveTakeoverRequested) return;
-  _startVmCountdown(Math.round(RING_TIMEOUT_MS / 1000));
+  _startVmCountdown(Math.round(RING_TIMEOUT_MS / 1000), true);
   try { dcSend({ __control: 'voicemailCountdown', active: true, seconds: Math.round(RING_TIMEOUT_MS / 1000) }); } catch(e) {}
   _ringTimeoutTimer = setTimeout(() => {
     if (!_ringing || _vmActive || _attended || _bravoRequestedLive || _liveTakeoverRequested) return;
@@ -7960,6 +7970,7 @@ document.addEventListener('pointerdown', event => {
     _bravoAnsweringAvailable = false;
     _bravoRequestedLive = true;
     clearLocalChatDisplayForTakeover();
+    playLiveCueOnce();
     dcSend({ __control: 'liveSession', active: true, station: 'ALPHA' });
     setStatus('linked');
     duplexBar.textContent = _noMediaMode ? 'LIVE (data only)' : 'LIVE';
@@ -7976,6 +7987,7 @@ function _markAttended(event, suppressCamera) {
   _liveTakeoverRequested = true;
   if (_attended) return;
   _attended = true;
+  playLiveCueOnce();
   if (_answeringMachineMode && (_ringing || _vmActive)) clearLocalChatDisplayForTakeover();
   if (!suppressCamera && !loginDisableVideoFlag) _setCameraActive(true, 'live session');
   _stopRing(); // answering live cancels any remaining rings and the VM timer
@@ -8124,7 +8136,10 @@ function _onCallConnected() {
   _vmCallStart = Date.now();
   if (_answeringMachineMode && !_autoAnswerMessageSent) {
     _autoAnswerMessageSent = true;
-    sendChat("HI This is Barry, I can't get to the phone right now. Leave a message at the beep and I will get back to you unless this has a glitch.");
+    const greeting = "HI This is Barry, I can't get to the phone right now. Leave a message at the beep and I will get back to you unless this has a glitch.";
+    saveMessage(greeting, true);
+    if (dataConn && dataConn.open) dcSend(greeting);
+    else _pendingChatMsg = greeting;
   }
   const remoteAudio = document.getElementById('remoteAudio');
   const remoteVideo = document.getElementById('remoteVideo');
@@ -8169,6 +8184,7 @@ function _onCallEnded() {
     }
   }
   _attended = false;
+  _liveCuePlayed = false;
   _autoAnswerMessageSent = false;
   _bravoRequestedLive = false;
   _bravoAnsweringAvailable = false;
