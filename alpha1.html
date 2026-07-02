@@ -1,4 +1,5 @@
 
+<!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -10,6 +11,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="screen-orientation" content="any">
 <meta name="google" content="notranslate">
+<script>try{if(localStorage.getItem('alpha_pi_mode')==='1')document.documentElement.classList.add('is-pi');}catch(e){}</script>
 <title>ALPHA — Field Radio v6</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌐</text></svg>">
 <style>
@@ -849,10 +851,15 @@
   }
   #speechPanel > .speech-status { display: none; }
   body.is-android #speechPanel > .speech-status { display: block; }
-  body.is-pi #speechBtnRow2 .sbr-label,
-  body.is-pi #speechLangSelect,
-  body.is-pi #speechOriginalBtn { display: none; }
-  body.is-pi #speechStatus { display: none; }
+  html.is-pi #speechBtnRow2 .sbr-label,
+  html.is-pi #speechLangSelect,
+  html.is-pi #speechOriginalBtn,
+  html.is-pi #speechStatus,
+  html.is-pi #speechListenBtn,
+  html.is-pi #speechBtnRow3,
+  html.is-pi #ttsBtn,
+  html.is-pi #ttsBtn2,
+  html.is-pi #ttsChatBtn { display: none !important; }
   #speechPanel > .speech-status {
     font-size: 11px; letter-spacing: 1px; padding: 2px 4px;
     color: #ffffff !important; font-family: monospace; word-break: break-all;
@@ -1890,6 +1897,58 @@
   }
 
   /* ── Button label color: yellow, leaving Record buttons untouched ──────── */
+  /* Fullscreen video is the canvas; controls overlay it instead of reserving space. */
+  body.app-fullscreen .tab-content,
+  body.app-fullscreen #paneChat { background: transparent !important; }
+  body.app-fullscreen #chatPanel {
+    position: fixed; inset: 0; z-index: 1000;
+    width: 100vw; height: 100vh; padding: 0; margin: 0; background: #000;
+  }
+  body.app-fullscreen #chatUnderlay {
+    width: 100vw; height: 100vh; border-radius: 0;
+  }
+  body.app-fullscreen header,
+  body.app-fullscreen .tab-bar,
+  body.app-fullscreen #paneChat .chat-find-bar,
+  body.app-fullscreen #paneChat .chat-btn-bar-row,
+  body.app-fullscreen #paneChat .gain-row,
+  body.app-fullscreen #paneChat .zoom-row,
+  body.app-fullscreen #paneChat #speechPanel,
+  body.app-fullscreen #paneChat #chatToolsWrap,
+  body.app-fullscreen #paneChat #translateBar {
+    background-color: rgba(0, 0, 0, 0.58) !important;
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+  }
+  body.app-fullscreen #paneChat #speechPanel.speech-open {
+    display: flex !important;
+    position: fixed !important;
+    top: auto !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    width: 100vw;
+    height: min(42vh, 360px);
+    min-height: 190px;
+    box-sizing: border-box;
+    z-index: 1004;
+    border-radius: 10px 10px 0 0;
+    transform: translateY(0);
+    transition: transform 0.35s ease, opacity 0.3s ease;
+  }
+  body.app-fullscreen.fs-controls-hidden #paneChat #speechPanel.speech-open {
+    display: flex !important;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(105%);
+  }
+  body.app-fullscreen.fs-controls-visible #paneChat #speechPanel.speech-open {
+    display: flex !important;
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+
   .media-btn,
   .speech-top-btn,
   .log-action-btn,
@@ -2190,8 +2249,8 @@ window.addEventListener('orientationchange', function() {
       </div>
       <div class="gain-row">
         <div class="gain-label"><span>SPKR</span><span>VOL</span></div>
-        <input type="range" id="remoteGainSlider" min="0" max="3" step="0.05" value="1.15" oninput="applyRemoteGain(this.value)">
-        <span class="gain-val" id="remoteGainVal">1.15×</span>
+        <input type="range" id="remoteGainSlider" min="0" max="3" step="0.05" value="2.25" oninput="applyRemoteGain(this.value)">
+        <span class="gain-val" id="remoteGainVal">75%</span>
       </div>
       <div class="video-panel">
         <div class="panel-label">REMOTE — BRAVO</div>
@@ -2243,8 +2302,8 @@ window.addEventListener('orientationchange', function() {
       </div>
       <div class="gain-row" style="flex-shrink:0;">
         <div class="gain-label"><span>SPKR</span><span>VOL</span></div>
-        <input type="range" id="remoteGainSliderChat" min="0" max="3" step="0.05" value="1.15" oninput="applyRemoteGain(this.value)" style="flex:1; min-width:0;">
-        <span class="gain-val" id="remoteGainValChat">1.15×</span>
+        <input type="range" id="remoteGainSliderChat" min="0" max="3" step="0.05" value="2.25" oninput="applyRemoteGain(this.value)" style="flex:1; min-width:0;">
+        <span class="gain-val" id="remoteGainValChat">75%</span>
       </div>
       <div class="zoom-row" style="display:none;">
         <span>ZOOM LOCAL</span>
@@ -2256,10 +2315,10 @@ window.addEventListener('orientationchange', function() {
           <span class="sbr-label">CHAT:</span>
           <button class="speech-top-btn" onclick="saveChatToFile()" id="saveChatBtn" title="Save chat as HTML">💾 SAVE</button>
           <button class="speech-top-btn" onclick="exportSessionChat()" id="exportSessionBtn" title="Export a past session as HTML">EXPORT</button>
-          <button class="speech-top-btn" onclick="answerOwnVoicemailLive()" id="ownerLiveBtn" title="Save the current voicemail and answer live" style="display:none;">ANSWER LIVE</button>
-          <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';ttsStopAll();morseStopAll();entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR</button>
           <button class="speech-top-btn" onclick="restoreChat()" id="restoreChatBtn" title="Restore previous session chat">↩ RESTORE</button>
+          <button class="speech-top-btn" onclick="refreshChatScreenOnly()" id="screenRefreshChatBtn" title="Clear only this screen; saved chat and voicemail remain">📺 Scr. Refresh</button>
           <button class="speech-top-btn" id="findChatBtn" title="Find in chat">🔍 FIND</button>
+          <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';ttsStopAll();morseStopAll();entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR !</button>
         </div>
         <div class="vm-box" id="vmBox">
           <div class="vm-box-header" onclick="toggleVmBox()" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleVmBox();}">
@@ -2478,6 +2537,7 @@ window.addEventListener('orientationchange', function() {
 
 <button id="audioUnlockBtn" onclick="unlockRemoteAudio()" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(0,200,120,0.92);color:#000;border:none;border-radius:8px;padding:12px 28px;font-size:15px;font-family:monospace;font-weight:bold;letter-spacing:1px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,0.5);">▶ TAP TO HEAR AUDIO</button>
 <audio id="remoteAudio" autoplay="" playsinline="" webkit-playsinline=""></audio>
+<audio id="answeringMachineIntro" preload="auto" src="answering-machine-intro.mp3" playsinline></audio>
 <div id="fsHint">TAP TO SHOW CONTROLS</div>
 <div id="lightbox"><img id="lightboxImg" src="" alt=""></div>
 
@@ -2526,7 +2586,7 @@ const _tones = {
   linked:       { freqs:[523,659,784],    durs:[0.10,0.10,0.18],  wave:'triangle', vol:0.18 },
   dropped:      { freqs:[660,440,330],    durs:[0.10,0.10,0.18],  wave:'sine',     vol:0.16 },
   radio_online: { freqs:[440,550],        durs:[0.06,0.10],       wave:'sine',     vol:0.13 },
-  call_in:      { freqs:[880,880,880],    durs:[0.08,0.05,0.13],  wave:'square',   vol:0.10 },
+  call_in:      { freqs:[440,480,440,480],durs:[0.12,0.12,0.12,0.18],wave:'triangle',vol:0.16 },
   file_in:      { freqs:[660,880],        durs:[0.08,0.14],       wave:'triangle', vol:0.14 },
   error:        { freqs:[300,250],        durs:[0.12,0.18],       wave:'sawtooth', vol:0.14 },
   vm_end:       { freqs:[660,660],        durs:[0.14,0.14],       wave:'sine',     vol:0.30 },
@@ -2662,7 +2722,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.37-test30s-login-camera-off';   // paired build: Video Off login never opens camera hardware
+const VERSION = '8.79-test30s-five-rings-mp3-countdown';   // paired build: synchronized five ringtone beeps, MP3, countdown, voicemail
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -2827,17 +2887,30 @@ function startSession() {
   const _uln = document.getElementById('userLeftNotice'); if (_uln) _uln.classList.remove('visible');
   leftPermanently = false;
   remotePeerLeft = false;
+  _clearAnsweringModeTimer();
+  _answeringMachineMode = false;
+  _attended = false;
+  _bravoRequestedLive = false;
+  _bravoAnsweringAvailable = false;
+  _liveTakeoverRequested = false;
   document.getElementById('qualityDisplay').style.display = 'flex';
   setStatus('calling');
   duplexBar.textContent = '● CALLING BRAVO…';
   duplexBar.className = 'duplex-overlay';
+  // Start the answering deadline at login, not at PeerJS "open". If the
+  // signalling service is slow or unavailable, Alpha must still become an
+  // answering machine after 30 seconds instead of remaining CALLING forever.
+  _armAnsweringModeTimer();
+  _armHardAnswerDeadline();
   if (usingPreReg) {
     entry('Using pre-registered peer — acquiring media only', 'sys');
     initMediaOnly();
   } else {
     init();
   }
-  setTimeout(loadHistory, 100);
+  // Start every login with a clean visible chat. Stored sessions remain
+  // available through RESTORE and EXPORT.
+  document.getElementById('chat').innerHTML = '';
 }
 
 // ── Pre-fill last used code + checkbox states on load ────────
@@ -3127,6 +3200,7 @@ document.addEventListener('click', () => {
 
 function setPiMode(on) {
   try { localStorage.setItem('alpha_pi_mode', on ? '1' : '0'); } catch(e) {}
+  document.documentElement.classList.toggle('is-pi', on);
   document.body.classList.toggle('is-pi', on);
   updateSpeechPlaceholder();
 }
@@ -3381,13 +3455,43 @@ function scrollToBottom(force) {
 function setStatus(state) {
   entry('STATUS: ' + state, 'sys');
   linkLed.className = 'led';
-  if (state === 'answering')      { linkLed.classList.add('on-cyan');   statusEl.textContent = 'ANSWERING';    document.title = '📼 ANSWERING — ALPHA — Field Radio v6'; }
-  else if (state === 'calling')   { linkLed.classList.add('on-yellow'); statusEl.textContent = 'CALLING…';     document.title = '📡 CALLING… — ALPHA — Field Radio v6'; }
-  else if (state === 'connecting')  { linkLed.classList.add('on-blue');   statusEl.textContent = 'CONNECTING…'; document.title = '🔵 CONNECTING… — ALPHA — Field Radio v6'; }
-  else if (state === 'reachable') { linkLed.classList.add('on-amber-flash');  statusEl.textContent = 'WAITING';      document.title = '🟡 WAITING — ALPHA — Field Radio v6'; }
-  else if (state === 'linked')    { linkLed.classList.add('on-green');  statusEl.textContent = 'LIVE';         document.title = '🟢 LIVE — ALPHA — Field Radio v6'; }
-  else if (state === 'voicemail') { linkLed.classList.add('on-amber');  statusEl.textContent = '📼 VOICEMAIL'; document.title = '📼 VOICEMAIL — ALPHA — Field Radio v6'; }
-  else                            { statusEl.textContent = ''; document.title = 'ALPHA — Field Radio v6'; }
+  if (state === 'answering')      { linkLed.classList.add('on-cyan');   statusEl.textContent = 'ANSWERING';     document.title = 'ANSWERING - ALPHA - Field Radio v6'; }
+  else if (state === 'calling')   { linkLed.classList.add('on-yellow'); statusEl.textContent = 'CALLING...';    document.title = 'CALLING... - ALPHA - Field Radio v6'; }
+  else if (state === 'connecting'){ linkLed.classList.add('on-blue');   statusEl.textContent = 'CONNECTING...'; document.title = 'CONNECTING... - ALPHA - Field Radio v6'; }
+  else if (state === 'reachable') { linkLed.classList.add('on-amber-flash'); statusEl.textContent = 'WAITING';  document.title = 'WAITING - ALPHA - Field Radio v6'; }
+  else if (state === 'linked')    { linkLed.classList.add('on-green');  statusEl.textContent = 'LIVE';          document.title = 'LIVE - ALPHA - Field Radio v6'; }
+  else if (state === 'voicemail') { linkLed.classList.add('on-amber');  statusEl.textContent = 'VOICEMAIL';     document.title = 'VOICEMAIL - ALPHA - Field Radio v6'; }
+  else                            { statusEl.textContent = ''; document.title = 'ALPHA - Field Radio v6'; }
+}
+
+let _vmCountdownTicker = null;
+let _vmCountdownEndsAt = 0;
+let _vmCountdownNoticeEl = null;
+function _startVmCountdown(seconds, showCallerNotice) {
+  _stopVmCountdown();
+  _vmCountdownEndsAt = Date.now() + Math.max(1, Number(seconds) || 30) * 1000;
+  if (showCallerNotice) {
+    _vmCountdownNoticeEl = _vmNotice('VOICEMAIL RECORDING WILL START IN ' + (Number(seconds) || 30) + ' SECONDS');
+  }
+  const render = () => {
+    const left = Math.max(0, Math.ceil((_vmCountdownEndsAt - Date.now()) / 1000));
+    const clock = String(Math.floor(left / 60)).padStart(2, '0') + ':' + String(left % 60).padStart(2, '0');
+    linkLed.className = 'led on-amber-flash';
+    statusEl.textContent = 'WAITING ' + clock;
+    document.title = 'WAITING ' + clock + ' - ALPHA - Field Radio';
+    if (_vmCountdownNoticeEl) {
+      _vmCountdownNoticeEl.textContent = 'VOICEMAIL RECORDING WILL START IN ' + left + (left === 1 ? ' SECOND' : ' SECONDS');
+    }
+    if (left <= 0) _stopVmCountdown();
+  };
+  render();
+  _vmCountdownTicker = setInterval(render, 250);
+}
+function _stopVmCountdown() {
+  clearInterval(_vmCountdownTicker);
+  _vmCountdownTicker = null;
+  _vmCountdownEndsAt = 0;
+  _vmCountdownNoticeEl = null;
 }
 
 let activeTab = 'chat';
@@ -3464,6 +3568,24 @@ function syncChatUnderlay() {
   }
 }
 
+function refreshChatScreenOnly() {
+  const el = document.getElementById('chatUnderlay');
+  if (!el) return;
+  const chatEl = document.getElementById('chat');
+  if (chatEl) chatEl.innerHTML = '';
+  ttsStopAll();
+  morseStopAll();
+  _vmCountdownNoticeEl = null;
+  el.srcObject = null;
+  syncChatUnderlay();
+  syncChatMiniOverlay();
+  try { el.play().catch(() => {}); } catch(e) {}
+  const rv = document.getElementById('remoteVideo');
+  const lv = document.getElementById('localVideo');
+  [rv, lv].forEach(v => { try { if (v && v.srcObject) v.play().catch(() => {}); } catch(e) {} });
+  entry('Local chat screen cleared and video view refreshed; saved history retained', 'sys');
+}
+
 function syncChatMiniOverlay() {
   const miniChatVideo = document.getElementById('miniChatVideo');
   if (!miniChatVideo) return;
@@ -3484,6 +3606,22 @@ function syncChatMiniOverlay() {
     if (lbl) lbl.textContent = 'LOCAL';
     if (overlay) overlay.classList.toggle('no-video', !stream);
   }
+}
+
+function clearLocalChatDisplayForTakeover() {
+  const chatEl = document.getElementById('chat');
+  if (chatEl) chatEl.innerHTML = '';
+  _vmCountdownNoticeEl = null;
+  ttsStopAll();
+  morseStopAll();
+}
+
+let _liveCuePlayed = false;
+function playLiveCueOnce() {
+  if (_liveCuePlayed) return;
+  _liveCuePlayed = true;
+  playTone('vm_end');
+  setTimeout(() => playTone('vm_end'), 450);
 }
 
 function updateChatVideoViewBtn() {
@@ -4291,6 +4429,7 @@ function setupTooltips() {
     audioBtn2: 'Toggle microphone',
     refreshBtn: 'Reconnect the remote screen',
     refreshBtnLocal: 'Reconnect the remote screen',
+    screenRefreshChatBtn: 'Clear only this screen; saved chat and voicemail remain',
     flipBtn: 'Switch camera',
     flipBtn2: 'Switch camera',
     recBtn: 'Record local video (with mini overlay if shown)',
@@ -4344,7 +4483,6 @@ function openHelpPanel() {
       ['CAMERA',   'Choose the camera used for video and local recording'],
       ['VOICEMAIL BOX','Play stored voicemail recordings'],
       ['VM SAVE / X','Download a voicemail / delete its browser copy'],
-      ['ANSWER LIVE','Stop voicemail recording and begin a live session'],
       ['MY LANGUAGE','Choose chat translation and speech language'],
       ['Talk/Type in Chat', 'Open the speech and text input panel'],
       ['TALK',    'Hold to dictate via speech-to-text'],
@@ -4370,7 +4508,7 @@ function openHelpPanel() {
       ['VIDEO',    'Turn the camera on or off at any time'],
       ['Mike On',  'Mute or unmute your microphone'],
       ['MIKE GAIN','Slider — adjust outgoing microphone level (0–3×)'],
-      ['SPKR VOL', 'Slider — adjust incoming speaker volume (0–3×)'],
+      ['SPKR VOL', 'Slider — adjust incoming speaker volume (0–100%)'],
       ['Sys Audio','Mix computer audio output into transmitted signal'],
       ['Share Off','Share your screen'],
       ['SEE REMOTE','Toggle between remote and local video view in chat'],
@@ -4395,13 +4533,13 @@ function openHelpPanel() {
       ['TALK/TYPE','Open the speech and text input panel'],
       ['CHAT SAVE','Save the current chat as an HTML file'],
       ['EXPORT','Choose and export a stored chat session'],
-      ['CHAT CLEAR','Clear chat history'],
       ['RESTORE','Restore a previous chat session'],
+      ['SCR. REFRESH','Clear only this screen; saved chat and voicemail remain'],
       ['FIND','Find text in chat'],
+      ['CHAT CLEAR !','Clear chat history'],
       ['VOICEMAIL BOX','Play stored voicemail recordings'],
       ['MY LANGUAGE','Choose chat translation and speech language'],
       ['ORIGINAL','Reset speech language to the system default'],
-      ['ANSWER LIVE','Stop voicemail and begin a live session'],
       ['ATTACH','Attach a file, photo or video'],
       ['LOAD','Load a text file into the input box'],
       ['INPUT SAVE','Save input-box text to a file'],
@@ -5524,7 +5662,10 @@ function setSpeechStatus(txt) {
 // Enable/disable send btn as user types in the speech edit box
 document.addEventListener('DOMContentLoaded', () => {
   if (/android/i.test(navigator.userAgent)) document.body.classList.add('is-android');
-  if (localStorage.getItem('alpha_pi_mode') === '1') document.body.classList.add('is-pi');
+  if (localStorage.getItem('alpha_pi_mode') === '1') {
+    document.documentElement.classList.add('is-pi');
+    document.body.classList.add('is-pi');
+  }
   updateSpeechPlaceholder();
   entry('UA: ' + navigator.userAgent, 'sys');
   switchTab('chat');
@@ -5765,6 +5906,27 @@ function _saveCameraLabel(label) {
   try { localStorage.setItem('alpha_camera_label', label); } catch(e) {}
 }
 
+function attachAndStartLocalPreview(stream) {
+  const video = document.getElementById('localVideo');
+  if (!video) return;
+  video.muted = true;
+  video.autoplay = true;
+  video.playsInline = true;
+  if (video.srcObject !== stream) video.srcObject = stream;
+  const start = () => {
+    if (!video.srcObject) return;
+    const attempt = video.play();
+    if (attempt && attempt.catch) attempt.catch(() => {});
+  };
+  if (video.readyState >= 1) start();
+  else video.addEventListener('loadedmetadata', start, { once: true });
+  requestAnimationFrame(start);
+  setTimeout(start, 250);
+  ['pointerdown', 'touchstart', 'keydown'].forEach(type =>
+    window.addEventListener(type, start, { once: true, passive: true })
+  );
+}
+
 async function initMediaOnly() {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     entry('Mic/camera API not available — data channel only', 'sys');
@@ -5790,7 +5952,7 @@ async function initMediaOnly() {
     if (loginDisableVideoFlag) _parkCameraStream(stream);
     _forceAspectRatio169(stream.getVideoTracks()[0]);
     setupMicGainNode(stream);
-    document.getElementById('localVideo').srcObject = stream;
+    attachAndStartLocalPreview(stream);
     entry('Media ready - camera follows login preference', 'ok');
     syncMiniVideos();
     initFlipCamUI();
@@ -5914,7 +6076,7 @@ async function init() {
     if (loginDisableVideoFlag) _parkCameraStream(stream);
     _forceAspectRatio169(stream.getVideoTracks()[0]);
     setupMicGainNode(stream);
-    document.getElementById('localVideo').srcObject = stream;
+    attachAndStartLocalPreview(stream);
     entry('Media ready - camera follows login preference', 'ok');
     syncMiniVideos();
     initFlipCamUI();
@@ -6044,6 +6206,32 @@ let _answeringMachineMode = false;
 let _answeringModeTimer = null;
 let _answeringModeWatchdog = null;
 let _answeringDeadlineAt = 0;
+let _hardAnswerDeadlineAt = 0;
+let _hardAnswerTimer = null;
+let _hardAnswerWatchdog = null;
+
+function _clearHardAnswerDeadline() {
+  clearTimeout(_hardAnswerTimer);
+  clearInterval(_hardAnswerWatchdog);
+  _hardAnswerTimer = null;
+  _hardAnswerWatchdog = null;
+  _hardAnswerDeadlineAt = 0;
+}
+
+function _checkHardAnswerDeadline() {
+  if (!_hardAnswerDeadlineAt || _answeringMachineMode || leftPermanently) return;
+  if (!linked && Date.now() >= _hardAnswerDeadlineAt) {
+    entry('FAILSAFE: login answering deadline reached while not live', 'sys');
+    _enterAnsweringMachineMode();
+  }
+}
+
+function _armHardAnswerDeadline() {
+  _clearHardAnswerDeadline();
+  _hardAnswerDeadlineAt = Date.now() + ANSWERING_MODE_DELAY_MS;
+  _hardAnswerTimer = setTimeout(_checkHardAnswerDeadline, ANSWERING_MODE_DELAY_MS + 50);
+  _hardAnswerWatchdog = setInterval(_checkHardAnswerDeadline, 1000);
+}
 
 function _clearAnsweringModeTimer() {
   clearTimeout(_answeringModeTimer);
@@ -6077,6 +6265,7 @@ function _armAnsweringModeTimer() {
 }
 
 function _enterAnsweringMachineMode() {
+  _clearHardAnswerDeadline();
   clearTimeout(_answeringModeTimer);
   clearInterval(_answeringModeWatchdog);
   _answeringModeTimer = null;
@@ -6110,9 +6299,15 @@ function _enterAnsweringMachineMode() {
 }
 
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') _checkAnsweringModeDeadline();
+  if (document.visibilityState === 'visible') {
+    _checkAnsweringModeDeadline();
+    _checkHardAnswerDeadline();
+  }
 });
-window.addEventListener('focus', _checkAnsweringModeDeadline);
+window.addEventListener('focus', () => {
+  _checkAnsweringModeDeadline();
+  _checkHardAnswerDeadline();
+});
 
 function startPeer() {
   // Guard: PeerJS CDN may still be loading on slow mobile connections
@@ -6358,6 +6553,12 @@ function attachDataConn(dc) {
     // after Alpha had already interacted with the call.
     if (_answeringMachineMode) {
       dcSend({ __control: 'answeringMode', active: !_attended, station: 'ALPHA' });
+      if (_ringStartPending) {
+        _ringStartPending = false;
+        _startRing();
+      } else if (_ringing && _localRingCount < _LOCAL_RING_TIMES) {
+        dcSend({ __control: 'ring', active: true });
+      }
     }
     if (_pendingChatMsg) {
       const queued = _pendingChatMsg; _pendingChatMsg = null;
@@ -6367,7 +6568,11 @@ function attachDataConn(dc) {
   dc.on('open', onDcOpen);
   // Android/WebView fallback: 'open' sometimes fires before the handler is attached
   if (dc.open) { setTimeout(onDcOpen, 0); }
-  dc.on('data', msg => {
+  dc.on('data', async msg => {
+    if (msg instanceof Blob) {
+      try { msg = await msg.text(); }
+      catch(e) { entry('Could not decode Blob chat packet: ' + e.message, 'err'); return; }
+    }
     const decoded = dcDecode(msg);
     if (!decoded) return;
     const { text, obj } = decoded;
@@ -6379,13 +6584,20 @@ function attachDataConn(dc) {
       if (f.__control === 'deleteMsg') { deleteBubble(f.ts, false); return; }
       if (f.__control === 'liveSession') {
         _bravoRequestedLive = true;
-        if (_answeringMachineMode && linked) {
-          _markAttended();
+        _bravoAnsweringAvailable = false;
+        _liveTakeoverRequested = true;
+        _stopVmCountdown();
+        _stopRemoteRingTone();
+        _stopRing();
+        clearLocalChatDisplayForTakeover();
+        playLiveCueOnce();
+        if (_answeringMachineMode) _markAttended();
+        if (linked) {
           setStatus('linked');
           duplexBar.textContent = _noMediaMode ? '● LIVE (data only)' : '● LIVE';
           duplexBar.className = 'duplex-overlay live';
           syncControls();
-          _vmNotice('— ● BRAVO ANSWERED — LIVE SESSION —');
+          entry('Bravo answered - live session started', 'ok');
         }
         return;
       }
@@ -6395,14 +6607,41 @@ function attachDataConn(dc) {
         if (f.active) { _startRemoteRingTone(); } else { _stopRemoteRingTone(); }
         return;
       }
-      if (f.__control === 'voicemail') {
+      if (f.__control === 'voicemailCountdown') {
         if (f.active) {
+          // A live takeover wins over any countdown packet already in transit.
+          if (_bravoRequestedLive || _attended) {
+            _bravoAnsweringAvailable = false;
+            _stopVmCountdown();
+            return;
+          }
+          _bravoAnsweringAvailable = true;
+          const seconds = Number(f.seconds) || 30;
+          _startVmCountdown(seconds, true);
+          entry('Bravo voicemail starts in ' + seconds + ' seconds', 'sys');
+        } else _stopVmCountdown();
+        return;
+      }
+      if (f.__control === 'voicemail') {
+        _stopVmCountdown();
+        if (f.active) {
+          if (_bravoRequestedLive || _attended) {
+            _bravoAnsweringAvailable = false;
+            return;
+          }
+          _bravoAnsweringAvailable = true;
           setStatus('voicemail');
           _vmNotice('— 📼 BRAVO RECORDING VOICEMAIL —');
           // These tones play only on the caller receiving this control message.
           _stopRemoteRingTone();
           playTone('vm_start');
         } else {
+          if (_bravoRequestedLive || !_bravoAnsweringAvailable) {
+            _bravoAnsweringAvailable = false;
+            setStatus('linked');
+            return;
+          }
+          _bravoAnsweringAvailable = false;
           setStatus('linked');
           _vmNotice('— 📼 VOICEMAIL SAVED —');
           playTone('vm_end');
@@ -6441,8 +6680,10 @@ function attachDataConn(dc) {
       }
       // Control packets are application signalling, never chat content.
       if (f.__control) { entry('Ignored unknown control: ' + f.__control, 'sys'); return; }
+      if (containsControlPacket(f)) { entry('Suppressed wrapped control packet', 'sys'); return; }
       addBubble(JSON.stringify(f), false);
     } else {
+      if (containsControlPacket(text)) { entry('Suppressed text-encoded control packet', 'sys'); return; }
       addBubble(text, false);
       ttsSpeak(text, _myLang);
     }
@@ -6606,9 +6847,28 @@ function decodeEmbeddedControl(value) {
   return null;
 }
 
+function containsControlPacket(value, depth = 0) {
+  if (depth > 4 || value == null) return false;
+  if (typeof value === 'string') return /["']__control["']\s*:/.test(value);
+  if (typeof value !== 'object') return false;
+  if (Object.prototype.hasOwnProperty.call(value, '__control')) return true;
+  try { return Object.values(value).some(item => containsControlPacket(item, depth + 1)); }
+  catch(e) { return false; }
+}
+
 function dcDecode(raw) {
+  if (Array.isArray(raw)) raw = new Uint8Array(raw);
+  if (raw && typeof raw === 'object' && !(raw instanceof ArrayBuffer) && !(raw instanceof Blob) && !ArrayBuffer.isView(raw)) {
+    if (raw.__control || raw.__chat || raw.__file || raw.__chunk || raw.__morse) return { obj: raw };
+    if (Object.prototype.hasOwnProperty.call(raw, 'data')) {
+      const data = Array.isArray(raw.data) ? new Uint8Array(raw.data) : raw.data;
+      return dcDecode(data);
+    }
+    return { obj: raw };
+  }
   let s;
   if (raw instanceof ArrayBuffer)   s = new TextDecoder().decode(raw);
+  else if (ArrayBuffer.isView(raw)) s = new TextDecoder().decode(raw);
   else if (raw instanceof Blob)     return null; // handle async elsewhere if needed
   else                              s = String(raw);
 
@@ -6658,7 +6918,6 @@ function answerCall(c) {
   clearTimeout(retryTimer);
   clearTimeout(_dialWatchdogTimer); _dialWatchdogTimer = null;
   if (_answeringMachineMode) {
-    _startRing();
     _peerGeneration++; // cancel outbound work left from the calling phase
     if (call && call !== c) {
       try { call.off('close'); call.off('error'); call.close(); } catch(e) {}
@@ -7013,6 +7272,7 @@ function attachCall(c) {
             if (_tracks.length) {
               const _rs = new MediaStream(_tracks);
               _ra.srcObject = _rs;
+              setupRemoteGainNode(_rs);
               const _rv = document.getElementById('remoteVideo');
               if (_rv && !_rv.srcObject) _rv.srcObject = _rs;
               const _cu = document.getElementById('chatUnderlay');
@@ -7177,6 +7437,7 @@ function leaveSession() {
 
 function _doLeave() {
   _clearAnsweringModeTimer();
+  _clearHardAnswerDeadline();
   _stopRing();
   _stopVoicemail();
   saveRecordingIfActive(true);
@@ -7393,6 +7654,8 @@ let _vmFinalizeResolve = null;
 let _vmCapturedStream = null;
 let _attended = false;
 let _bravoRequestedLive = false;
+let _bravoAnsweringAvailable = false;
+let _liveTakeoverRequested = false;
 let _ownerTakeoverPending = false;
 let _ringTimer = null;
 let _ringTimeoutTimer = null;
@@ -7401,7 +7664,7 @@ let _vmCallStart = 0;
 
 function _vmNotice(text, blobUrl, filename) {
   const chatEl = document.getElementById('chat');
-  if (!chatEl) return;
+  if (!chatEl) return null;
   const d = document.createElement('div');
   d.className = 'bubble vm-notice';
   if (blobUrl) {
@@ -7425,6 +7688,7 @@ function _vmNotice(text, blobUrl, filename) {
     if (history.length > HISTORY_MAX) history.splice(0, history.length - HISTORY_MAX);
     localStorage.setItem(key, JSON.stringify(history));
   } catch(e) {}
+  return d;
 }
 
 const _VM_DB_NAME = 'fieldradio-voicemails-v1';
@@ -7522,7 +7786,7 @@ function _vmBoxAddEntry(ts, blobUrl, filename, blob) {
   if (blob) {
     item.persistPromise = _vmWriteStored({ id, station: _VM_STATION, ts, filename, blob }).then(() => {
       item.stored = true;
-    }).catch(e => entry('Voicemail saved as download only: ' + e.message, 'sys'));
+    }).catch(e => entry('Voicemail browser storage failed: ' + e.message, 'err'));
   }
 }
 
@@ -7624,6 +7888,7 @@ if (document.readyState === 'loading') {
 const _LOCAL_RING_TIMES   = 5;     // how many telephone-style beeps to ring locally
 const _LOCAL_RING_GAP_MS  = 2000;  // gap between successive local rings
 let _localRingCount = 0;
+let _ringStartPending = false;
 
 function _startRing() {
   _stopRing();
@@ -7645,15 +7910,36 @@ function _fireLocalRing() {
     // but keep this call in the unanswered/ringing state while the voicemail
     // countdown runs.
     try { dcSend({ __control: 'ring', active: false }); } catch(e) {}
-    // Give the last beep a moment to finish before starting the VM timer.
-    _ringTimer = setTimeout(_armVmTimeout, 600);
+    // After ring five, play the recorded greeting, then begin the countdown.
+    _ringTimer = setTimeout(() => {
+      if (!_ringing || _attended || _bravoRequestedLive || _liveTakeoverRequested) return;
+      const intro = document.getElementById('answeringMachineIntro');
+      let countdownStarted = false;
+      const startCountdown = () => {
+        if (countdownStarted) return;
+        countdownStarted = true;
+        if (!linked || !_ringing || _attended || _bravoRequestedLive || _liveTakeoverRequested) return;
+        _armVmTimeout();
+      };
+      if (intro) {
+        try { intro.currentTime = 0; } catch(e) {}
+        intro.onended = startCountdown;
+        intro.onerror = startCountdown;
+        attachMediaToCallAudio(intro)
+          .then(() => intro.play())
+          .catch(e => { entry('Answering intro could not play: ' + e.message, 'err'); startCountdown(); });
+        setTimeout(startCountdown, 20000);
+      } else startCountdown();
+    }, 600);
   }
 }
 
 function _armVmTimeout() {
-  if (!_ringing || _vmActive) return;
+  if (!_ringing || _vmActive || _attended || _bravoRequestedLive || _liveTakeoverRequested) return;
+  _startVmCountdown(Math.round(RING_TIMEOUT_MS / 1000), true);
+  try { dcSend({ __control: 'voicemailCountdown', active: true, seconds: Math.round(RING_TIMEOUT_MS / 1000) }); } catch(e) {}
   _ringTimeoutTimer = setTimeout(() => {
-    if (!_ringing || _vmActive) return;
+    if (!_ringing || _vmActive || _attended || _bravoRequestedLive || _liveTakeoverRequested) return;
     entry('📼 No answer after 30s — starting voicemail', 'sys');
     const remoteAudio = document.getElementById('remoteAudio');
     const remoteVideo = document.getElementById('remoteVideo');
@@ -7666,9 +7952,12 @@ function _armVmTimeout() {
 }
 
 function _stopRing() {
+  _ringStartPending = false;
+  _stopVmCountdown();
   clearTimeout(_ringTimer); _ringTimer = null;
   clearTimeout(_ringTimeoutTimer); _ringTimeoutTimer = null;
   if (_ringing) { try { dcSend({ __control: 'ring', active: false }); } catch(e) {} }
+  try { dcSend({ __control: 'voicemailCountdown', active: false }); } catch(e) {}
   _ringing = false;
 }
 
@@ -7689,7 +7978,7 @@ function _finishOwnerLiveTakeover() {
   duplexBar.className = 'duplex-overlay live';
   syncControls();
   entry('Voicemail saved — live session started', 'ok');
-  _vmNotice('— ● VOICEMAIL SAVED — LIVE SESSION —');
+  clearLocalChatDisplayForTakeover();
 }
 
 function answerOwnVoicemailLive() {
@@ -7700,10 +7989,32 @@ function answerOwnVoicemailLive() {
   if (!wasRecording) _finishOwnerLiveTakeover();
 }
 
+document.addEventListener('pointerdown', event => {
+  const target = event.target;
+  if (target && target.closest && target.closest('button,a,input,select,textarea,audio,[role="button"]')) return;
+  if (linked && _bravoAnsweringAvailable) {
+    _bravoAnsweringAvailable = false;
+    _bravoRequestedLive = true;
+    clearLocalChatDisplayForTakeover();
+    playLiveCueOnce();
+    dcSend({ __control: 'liveSession', active: true, station: 'ALPHA' });
+    setStatus('linked');
+    duplexBar.textContent = _noMediaMode ? 'LIVE (data only)' : 'LIVE';
+    duplexBar.className = 'duplex-overlay live';
+    syncControls();
+    entry('Live session requested - Bravo voicemail cancelled', 'ok');
+    return;
+  }
+  if (linked && _answeringMachineMode && !_attended) _markAttended(event);
+});
+
 function _markAttended(event, suppressCamera) {
-  if (event && event.target && event.target.closest && event.target.closest('#ownerLiveBtn')) return;
+  if (event && event.target && event.target.closest && event.target.closest('button,a,input,select,textarea,audio,[role="button"]')) return;
+  _liveTakeoverRequested = true;
   if (_attended) return;
   _attended = true;
+  playLiveCueOnce();
+  if (_answeringMachineMode && (_ringing || _vmActive)) clearLocalChatDisplayForTakeover();
   if (!suppressCamera && !loginDisableVideoFlag) _setCameraActive(true, 'live session');
   _stopRing(); // answering live cancels any remaining rings and the VM timer
   clearTimeout(_vmTimer); _vmTimer = null;
@@ -7717,11 +8028,17 @@ function _markAttended(event, suppressCamera) {
     _stopVoicemail();
   } else {
     entry('Call attended — voicemail suppressed', 'sys');
+    if (linked) {
+      setStatus('linked');
+      duplexBar.textContent = _noMediaMode ? 'LIVE (data only)' : 'LIVE';
+      duplexBar.className = 'duplex-overlay live';
+      syncControls();
+    }
   }
 }
 
 async function _startVoicemail() {
-  if (_vmActive || !_answeringMachineMode) return;
+  if (_vmActive || !_answeringMachineMode || _attended || _bravoRequestedLive || _liveTakeoverRequested) return;
   _setOwnerLiveAvailable(true);
   let audioTracks = [];
   const pc = call && (call.peerConnection || call._pc);
@@ -7791,14 +8108,16 @@ async function _startVoicemail() {
       entry('📼 Voicemail saved', 'ok');
       try { dcSend({ __control: 'voicemail', active: false }); } catch(e) {}
       const blobUrl = URL.createObjectURL(blob);
-      _vmNotice('— 📼 VOICEMAIL RECORDED —', blobUrl, filename);
       _vmBoxAddEntry(Date.now(), blobUrl, filename, blob);
-      downloadBlob(blob, filename);
+      // Complete any live-takeover screen clear before adding the player so
+      // the newly recorded voicemail bubble remains visible.
+      _finishOwnerLiveTakeover();
+      _vmNotice('— 📼 VOICEMAIL RECORDED —', blobUrl, filename);
     } else {
       entry('Voicemail empty — nothing saved', 'sys');
       try { dcSend({ __control: 'voicemail', active: false }); } catch(e) {}
     }
-    _finishOwnerLiveTakeover();
+    if (!_vmChunks.length) _finishOwnerLiveTakeover();
     if (_vmResetPending) {
       _vmResetPending = false;
       clearTimeout(dropTimer);
@@ -7842,8 +8161,12 @@ function _stopVoicemail() {
 }
 
 function _onCallConnected() {
-  _attended = false;
+  if (!_liveTakeoverRequested) _attended = false;
   _vmCallStart = Date.now();
+  if (_answeringMachineMode) {
+    if (dataConn && dataConn.open) _startRing();
+    else _ringStartPending = true;
+  }
   const remoteAudio = document.getElementById('remoteAudio');
   const remoteVideo = document.getElementById('remoteVideo');
   _vmCapturedStream = (remoteAudio && remoteAudio.srcObject)
@@ -7855,8 +8178,8 @@ function _onCallConnected() {
   ['keydown', 'pointerdown', 'touchstart'].forEach(ev =>
     window.addEventListener(ev, _markAttended, { once: true, passive: true })
   );
-  _setOwnerLiveAvailable(_answeringMachineMode && !_bravoRequestedLive);
-  if (_bravoRequestedLive) _markAttended();
+  _setOwnerLiveAvailable(_answeringMachineMode && !_bravoRequestedLive && !_liveTakeoverRequested);
+  if (_bravoRequestedLive || _liveTakeoverRequested) _markAttended();
 }
 
 function _onCallEnded() {
@@ -7887,7 +8210,10 @@ function _onCallEnded() {
     }
   }
   _attended = false;
+  _liveCuePlayed = false;
   _bravoRequestedLive = false;
+  _bravoAnsweringAvailable = false;
+  _liveTakeoverRequested = false;
   _ownerTakeoverPending = false;
   _setOwnerLiveAvailable(false);
   _vmCallStart = 0;
@@ -9325,9 +9651,37 @@ async function selectCamera(deviceId) {
 // configurations silently reject or no-op requestFullscreen(). The real
 // Fullscreen API is still requested as a bonus when available.
 let _fsHideTimer = null;
+let _fsSpeechWasVisible = false;
 
 function _fsIsActive() {
   return document.body.classList.contains('app-fullscreen');
+}
+
+function _fsEnsureTextBox() {
+  const panel = document.getElementById('speechPanel');
+  const btn = document.getElementById('speechToggleBtn');
+  if (_syslogVisible) {
+    _syslogVisible = false;
+    const logPanel = document.getElementById('logPanel');
+    if (logPanel) { logPanel.classList.remove('syslog-open'); logPanel.classList.add('collapsed'); }
+    const logBtn = document.getElementById('syslogToggleBtn');
+    if (logBtn) logBtn.classList.remove('active');
+  }
+  _speechVisible = true;
+  if (panel) panel.classList.add('speech-open');
+  if (btn) { btn.classList.add('active'); btn.textContent = 'SHOW CHAT'; }
+  updateSpeechSendBtn();
+  syncUnderlayOpacity();
+}
+
+function _fsRestoreTextBox() {
+  if (_fsSpeechWasVisible) return;
+  _speechVisible = false;
+  const panel = document.getElementById('speechPanel');
+  const btn = document.getElementById('speechToggleBtn');
+  if (panel) panel.classList.remove('speech-open');
+  if (btn) { btn.classList.remove('active'); btn.textContent = 'Talk/Type in Chat'; }
+  syncUnderlayOpacity();
 }
 
 function _fsShowControls() {
@@ -9335,11 +9689,8 @@ function _fsShowControls() {
   document.body.classList.remove('fs-controls-hidden');
   document.body.classList.add('fs-controls-visible');
   clearTimeout(_fsHideTimer);
-  // While the chat box (speech panel) is open, keep controls visible indefinitely —
-  // the user is actively typing. The timer resumes when SHOW CHAT is pressed.
-  if (!_speechVisible) {
-    _fsHideTimer = setTimeout(_fsHideControls, 10000);
-  }
+  // Hide the entire control and text-entry overlay after 20 seconds idle.
+  _fsHideTimer = setTimeout(_fsHideControls, 20000);
 }
 
 function _fsHideControls() {
@@ -9356,13 +9707,17 @@ function _fsOnActivity() {
 document.addEventListener('touchstart', _fsOnActivity, { passive: true });
 document.addEventListener('click',      _fsOnActivity);
 document.addEventListener('mousemove',  _fsOnActivity, { passive: true });
+document.addEventListener('keydown',    _fsOnActivity);
+document.addEventListener('input',      _fsOnActivity);
 
 function toggleFullScreen() {
   const btn = document.getElementById('fsChatBtn');
   const goingFs = !_fsIsActive();
 
   if (goingFs) {
+    _fsSpeechWasVisible = _speechVisible;
     document.body.classList.add('app-fullscreen');
+    _fsEnsureTextBox();
     if (btn) { btn.textContent = 'FS ON'; btn.classList.add('active'); }
     // Best-effort real Fullscreen API request (ignored if unsupported/denied)
     try {
@@ -9374,6 +9729,7 @@ function toggleFullScreen() {
   } else {
     document.body.classList.remove('app-fullscreen', 'fs-controls-hidden', 'fs-controls-visible');
     clearTimeout(_fsHideTimer);
+    _fsRestoreTextBox();
     if (btn) { btn.textContent = 'FS OFF'; btn.classList.remove('active'); }
     try {
       if (document.exitFullscreen)            document.exitFullscreen().catch(()=>{});
@@ -9393,6 +9749,7 @@ function _syncRealFsExit() {
     const btn = document.getElementById('fsChatBtn');
     document.body.classList.remove('app-fullscreen', 'fs-controls-hidden', 'fs-controls-visible');
     clearTimeout(_fsHideTimer);
+    _fsRestoreTextBox();
     if (btn) { btn.textContent = 'FS OFF'; btn.classList.remove('active'); }
   }
 }
@@ -9511,7 +9868,7 @@ async function switchMicrophone(deviceId) {
   }
 }
 
-let _micGainCtx = null, _micGainNode = null, _micGainDest = null, _micRawTrack = null, _micProcessedTrack = null;
+let _micGainCtx = null, _micGainNode = null, _micLimiterNode = null, _micGainDest = null, _micRawTrack = null, _micProcessedTrack = null;
 
 function teardownMicGain() {
   // Stop the raw mic track that was swapped out by setupMicGainNode — without
@@ -9524,10 +9881,13 @@ function teardownMicGain() {
   }
   _micProcessedTrack = null;
   if (_micGainNode) { try { _micGainNode.disconnect(); } catch(e) {} _micGainNode = null; }
+  if (_micLimiterNode) { try { _micLimiterNode.disconnect(); } catch(e) {} _micLimiterNode = null; }
   if (_micGainCtx) { try { _micGainCtx.close(); } catch(e) {} _micGainCtx = null; }
 }
 
-function applyMicGain(val) {  const v = parseFloat(val);
+function applyMicGain(val) {
+  const parsed = parseFloat(val);
+  const v = isFinite(parsed) ? Math.max(0, Math.min(3, parsed)) : 1;
   // Sync all gain labels and sliders (primary + chat-tab copy)
   ['micGainVal', 'micGainValChat'].forEach(id => {
     const lbl = document.getElementById(id);
@@ -9558,15 +9918,31 @@ function _activateProcessedMicTrack() {
 
 function setupMicGainNode(stream) {
   try {
+    const rawMic = stream.getAudioTracks()[0] || null;
+    if (/Macintosh|Mac OS X/i.test(navigator.userAgent) && rawMic) {
+      _micProcessedTrack = null;
+      _micRawTrack = null;
+      realAudioTrack = rawMic;
+      realAudioTrack.enabled = !audioMuted;
+      entry('Mac audio: using native microphone track (Web Audio resampling bypassed)', 'sys');
+      return;
+    }
     if (!_micGainCtx) _micGainCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (_micGainCtx.state === 'suspended') _micGainCtx.resume().catch(() => {});
     const src = _micGainCtx.createMediaStreamSource(stream);
     _micGainNode = _micGainCtx.createGain();
+    _micLimiterNode = _micGainCtx.createDynamicsCompressor();
+    _micLimiterNode.threshold.value = -3;
+    _micLimiterNode.knee.value = 0;
+    _micLimiterNode.ratio.value = 20;
+    _micLimiterNode.attack.value = 0.003;
+    _micLimiterNode.release.value = 0.15;
     _micGainDest = _micGainCtx.createMediaStreamDestination();
     const savedGain = (() => { const r = localStorage.getItem('alpha_mic_gain'); return r !== null ? parseFloat(r) : 1.35; })();
     _micGainNode.gain.value = isFinite(savedGain) ? savedGain : 1;
     src.connect(_micGainNode);
-    _micGainNode.connect(_micGainDest);
+    _micGainNode.connect(_micLimiterNode);
+    _micLimiterNode.connect(_micGainDest);
     // Replace audio track in localStream with the gained version
     const gainedAudio = _micGainDest.stream.getAudioTracks()[0];
     if (gainedAudio) {
@@ -9601,40 +9977,29 @@ function setupMicGainNode(stream) {
 let _remoteGainCtx = null, _remoteGainNode = null;
 
 function setupRemoteGainNode(stream) {
-  // Tear down any previous node before rebuilding
   teardownRemoteGain();
   try {
-    _remoteGainCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const src  = _remoteGainCtx.createMediaStreamSource(stream);
-    _remoteGainNode = _remoteGainCtx.createGain();
-    const dest = _remoteGainCtx.createMediaStreamDestination();
-    const saved = parseFloat(localStorage.getItem('alpha_remote_gain') || '1.15');
-    _remoteGainNode.gain.value = isFinite(saved) ? saved : 1;
-    src.connect(_remoteGainNode);
-    _remoteGainNode.connect(dest);
-    // Use the raw stream immediately so a suspended AudioContext can never
-    // silence incoming speech. Switch to the gained stream once it is running.
+    let saved = parseFloat(localStorage.getItem('alpha_remote_gain') || '1.15');
+    if (localStorage.getItem('alpha_remote_volume_v2') !== '1') {
+      saved = Math.max(0, Math.min(3, saved * (2.25 / 1.15)));
+      localStorage.setItem('alpha_remote_gain', String(saved));
+      localStorage.setItem('alpha_remote_volume_v2', '1');
+    }
+    const initialGain = isFinite(saved) ? Math.max(0, Math.min(3, saved)) : 2.25;
     const ra = document.getElementById('remoteAudio');
-    if (ra) ra.srcObject = stream;
-    const activateGainPath = () => {
-      if (_remoteGainCtx && _remoteGainCtx.state === 'running' && ra) {
-        ra.srcObject = dest.stream;
-        scheduleRemoteAudioPlay();
-      }
-    };
-    if (_remoteGainCtx.state === 'running') activateGainPath();
-    else _remoteGainCtx.resume().then(activateGainPath).catch(() => {
-      if (ra) ra.srcObject = stream;
-    });
-    // Sync sliders to saved value
+    if (ra) {
+      ra.srcObject = stream;
+      ra.volume = initialGain / 3;
+    }
     ['remoteGainSlider','remoteGainSliderChat'].forEach(id => {
       const el = document.getElementById(id);
-      if (el) el.value = _remoteGainNode.gain.value;
+      if (el) el.value = initialGain;
     });
     ['remoteGainVal','remoteGainValChat'].forEach(id => {
       const el = document.getElementById(id);
-      if (el) el.textContent = _remoteGainNode.gain.value.toFixed(2) + '×';
+      if (el) el.textContent = Math.round(initialGain / 3 * 100) + '%';
     });
+    scheduleRemoteAudioPlay();
   } catch(e) { console.warn('Remote gain setup failed:', e); }
 }
 
@@ -9644,16 +10009,18 @@ function teardownRemoteGain() {
 }
 
 function applyRemoteGain(val) {
-  const v = parseFloat(val);
+  const parsed = parseFloat(val);
+  const v = isFinite(parsed) ? Math.max(0, Math.min(3, parsed)) : 1;
   ['remoteGainVal','remoteGainValChat'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.textContent = v.toFixed(2) + '×';
+    if (el) el.textContent = Math.round(v / 3 * 100) + '%';
   });
   ['remoteGainSlider','remoteGainSliderChat'].forEach(id => {
     const el = document.getElementById(id);
     if (el && el.value !== String(val)) el.value = val;
   });
-  if (_remoteGainNode) _remoteGainNode.gain.setTargetAtTime(v, _remoteGainCtx.currentTime, 0.01);
+  const ra = document.getElementById('remoteAudio');
+  if (ra) ra.volume = v / 3;
   try { localStorage.setItem('alpha_remote_gain', String(v)); } catch(e) {}
 }
 
