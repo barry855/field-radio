@@ -2538,7 +2538,7 @@ const _tones = {
   linked:       { freqs:[523,659,784],    durs:[0.10,0.10,0.18],  wave:'triangle', vol:0.18 },
   dropped:      { freqs:[660,440,330],    durs:[0.10,0.10,0.18],  wave:'sine',     vol:0.16 },
   radio_online: { freqs:[440,550],        durs:[0.06,0.10],       wave:'sine',     vol:0.13 },
-  call_in:      { freqs:[440,480,440,480],durs:[0.12,0.12,0.12,0.18],wave:'triangle',vol:0.16 },
+  call_in:      { freqs:[880,880,880],    durs:[0.08,0.05,0.13],  wave:'square',   vol:0.10 },
   file_in:      { freqs:[660,880],        durs:[0.08,0.14],       wave:'triangle', vol:0.14 },
   error:        { freqs:[300,250],        durs:[0.12,0.18],       wave:'sawtooth', vol:0.14 },
   vm_end:       { freqs:[660,660],        durs:[0.14,0.14],       wave:'sine',     vol:0.30 },
@@ -2672,7 +2672,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.81-test30s-vm-live-monitor';   // paired build: answering machine monitors caller audio while recording
+const VERSION = '8.78-mp3-on-connect-30s-vm';   // paired build: MP3 intro plays immediately on connect, then 30s countdown to voicemail; no auto chat greeting
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -6191,6 +6191,7 @@ function _answerInboundAlphaCall(incoming, waitedMs) {
     return;
   }
   _answeringCallReceiver = true;
+  _startRing();
   clearTimeout(retryTimer);
   clearTimeout(_dialWatchdogTimer); _dialWatchdogTimer = null;
   if (call) {
@@ -6337,12 +6338,6 @@ function attachDataConn(dc) {
     const sb = document.getElementById('sendBtn'); if (sb) sb.disabled = false;
     const cw = document.getElementById('cwSendBtn'); if (cw) cw.disabled = false;
     sendVideoState();
-    if (_answeringCallReceiver && _ringStartPending) {
-      _ringStartPending = false;
-      _startRing();
-    } else if (_answeringCallReceiver && _ringing && _localRingCount < _LOCAL_RING_TIMES) {
-      dcSend({ __control: 'ring', active: true });
-    }
     if (_pendingChatMsg) {
       const queued = _pendingChatMsg; _pendingChatMsg = null;
       try { dcSend(queued); entry('Queued message sent', 'sys'); } catch(e) {}
@@ -7334,6 +7329,7 @@ let _ringTimer   = null;   // repeating ring interval
 let _ringTimeoutTimer = null; // fires RING_TIMEOUT_MS after ringing starts → voicemail
 let _ringing     = false;  // ring was triggered this call cycle
 let _vmCallStart = 0;      // Date.now() at markLinked
+let _autoAnswerMessageSent = false;
 let _answeringCallReceiver = false;
 
 function _vmNotice(text, blobUrl, filename) {
@@ -7560,7 +7556,6 @@ if (document.readyState === 'loading') {
 const _LOCAL_RING_TIMES   = 5;     // how many telephone-style beeps to ring locally
 const _LOCAL_RING_GAP_MS  = 2000;  // gap between successive local rings
 let _localRingCount = 0;
-let _ringStartPending = false;
 
 function _startRing() {
   _stopRing();
@@ -7578,62 +7573,66 @@ function _fireLocalRing() {
   if (_localRingCount < _LOCAL_RING_TIMES) {
     _ringTimer = setTimeout(_fireLocalRing, _LOCAL_RING_GAP_MS);
   } else {
-    // Exactly 5 rings are complete.  Stop the caller-side repeating tone now,
-    // but keep this call in the unanswered/ringing state while the voicemail
-    // countdown runs.
+    // Exactly 5 rings are complete. Stop the caller-side repeating tone now.
     try { dcSend({ __control: 'ring', active: false }); } catch(e) {}
-    // After ring five, play the recorded greeting, then begin the countdown.
-    _ringTimer = setTimeout(() => {
-      if (!_ringing || _attended) return;
-      const intro = document.getElementById('answeringMachineIntro');
-      let countdownStarted = false;
-      const startCountdown = () => {
-        if (countdownStarted) return;
-        countdownStarted = true;
-        if (!linked || !_ringing || _attended) return;
-        _armVmTimeout();
-      };
-      if (intro) {
-        try { intro.currentTime = 0; } catch(e) {}
-        intro.onended = startCountdown;
-        intro.onerror = startCountdown;
-        attachMediaToCallAudio(intro, false)
-          .then(() => intro.play())
-          .catch(e => { entry('Answering intro could not play: ' + e.message, 'err'); startCountdown(); });
-        setTimeout(startCountdown, 20000);
-      } else startCountdown();
-    }, 600);
+    _ringing = false;
+    // If the call connected while we were still ringing, the intro/countdown
+    // sequence was deferred — start it now that all 5 rings have finished.
+    if (_armVmPending) { _armVmPending = false; _armVmTimeout(); }
   }
 }
 
+// Fires once, right when the call connects. If the 5-ring sequence is still
+// in progress, defers itself until those rings finish (so the intro MP3
+// never overlaps the rings). Once clear to proceed, plays the intro MP3 —
+// audible to the caller only, not locally on this answering machine — then
+// (once it finishes) starts a 30-second countdown; if still unanswered when
+// the countdown hits zero, voicemail recording begins.
 function _armVmTimeout() {
-  if (!_ringing || _attended) return; // already answered or dropped
-  if (_vmActive)  return;         // voicemail already running
-  _startVmCountdown(Math.round(RING_TIMEOUT_MS / 1000), true);
-  try { dcSend({ __control: 'voicemailCountdown', active: true, seconds: Math.round(RING_TIMEOUT_MS / 1000) }); } catch(e) {}
-  // Auto-advance to voicemail if caller doesn't hang up after RING_TIMEOUT_MS
-  _ringTimeoutTimer = setTimeout(() => {
-    if (!_ringing || _attended) return; // already answered or dropped
-    if (_vmActive)  return;         // voicemail already running
-    entry('📼 No answer after ' + (RING_TIMEOUT_MS / 1000) + 's — starting voicemail', 'sys');
-    // Snapshot remote stream now (mirrors what _onCallConnected does)
-    const remoteAudio = document.getElementById('remoteAudio');
-    const remoteVideo = document.getElementById('remoteVideo');
-    _vmCapturedStream = (remoteAudio && remoteAudio.srcObject)
-                     || (remoteVideo && remoteVideo.srcObject)
-                     || null;
-    _stopRing();
-    _startVoicemail();
-  }, RING_TIMEOUT_MS);
+  if (_attended) return; // already answered live
+  if (_vmActive)  return; // voicemail already running
+  if (_ringing) { _armVmPending = true; return; } // wait for the 5 rings to finish first
+  _armVmPending = false;
+  _stopRing(); // the machine is picking up now — clear any leftover ring/countdown state
+  // Snapshot remote stream now (mirrors what _onCallConnected does)
+  const remoteAudio = document.getElementById('remoteAudio');
+  const remoteVideo = document.getElementById('remoteVideo');
+  _vmCapturedStream = (remoteAudio && remoteAudio.srcObject)
+                   || (remoteVideo && remoteVideo.srcObject)
+                   || _vmCapturedStream;
+  const intro = document.getElementById('answeringMachineIntro');
+  const startCountdown = () => {
+    if (_attended || _vmActive) return; // already answered or dropped
+    _startVmCountdown(Math.round(RING_TIMEOUT_MS / 1000), true);
+    try { dcSend({ __control: 'voicemailCountdown', active: true, seconds: Math.round(RING_TIMEOUT_MS / 1000) }); } catch(e) {}
+    // Auto-advance to voicemail if caller doesn't hang up after RING_TIMEOUT_MS
+    _ringTimeoutTimer = setTimeout(() => {
+      if (_attended || _vmActive) return; // already answered or dropped
+      entry('📼 No answer after ' + (RING_TIMEOUT_MS / 1000) + 's — starting voicemail', 'sys');
+      if (!linked) return;
+      _startVoicemail();
+    }, RING_TIMEOUT_MS);
+  };
+  if (intro) {
+    try { intro.currentTime = 0; } catch(e) {}
+    intro.onended = startCountdown;
+    intro.onerror = startCountdown;
+    // localMonitor:false — the intro plays into the outgoing call stream only,
+    // so the caller hears it but this answering machine does not.
+    attachMediaToCallAudio(intro, { localMonitor: false })
+      .then(() => intro.play())
+      .catch(e => { entry('Answering intro could not play: ' + e.message, 'err'); startCountdown(); });
+  } else startCountdown();
 }
+let _armVmPending = false; // true when _armVmTimeout was called mid-ring and is waiting for rings to finish
 function _stopRing() {
-  _ringStartPending = false;
   _stopVmCountdown();
   clearTimeout(_ringTimer);   _ringTimer = null;
   clearTimeout(_ringTimeoutTimer); _ringTimeoutTimer = null;
   if (_ringing) { try { dcSend({ __control: 'ring', active: false }); } catch(e) {} }
   try { dcSend({ __control: 'voicemailCountdown', active: false }); } catch(e) {}
   _ringing = false;
+  _armVmPending = false;
 }
 function _playRingTone() {
   // Ensure _mixCtx exists (created lazily — may not exist yet at first ring)
@@ -7722,12 +7721,6 @@ function _markAttended(event, suppressCamera) {
 async function _startVoicemail() {
   if (_vmActive || _attended) return;
   _setOwnerLiveAvailable(true);
-  // Play the caller's live incoming audio locally while it is recorded.
-  const monitorAudio = document.getElementById('remoteAudio');
-  if (monitorAudio) {
-    monitorAudio.muted = false;
-    ensureRemoteAudioPlaying();
-  }
   // Get remote audio tracks directly from WebRTC receivers — this works even on
   // Android where ontrack fires without ev.streams and srcObject may be null.
   let audioTracks = [];
@@ -7856,9 +7849,9 @@ function _stopVoicemail() {
 function _onCallConnected() {
   _attended = false;
   _vmCallStart = Date.now();
-  if (_answeringCallReceiver) {
-    if (dataConn && dataConn.open) _startRing();
-    else _ringStartPending = true;
+  if (_answeringCallReceiver && !_autoAnswerMessageSent) {
+    _autoAnswerMessageSent = true;
+    _armVmTimeout();   // connection has occurred — play the intro MP3, then start the 30s countdown
   }
   // Capture the remote stream NOW while srcObject is guaranteed to be set.
   // The ring sequence will use this snapshot if the VM timer expires later.
@@ -7916,6 +7909,7 @@ function _onCallEnded() {
   _setAnswerLiveAvailable(false);
   _alphaLiveTakeoverRequested = false;
   _liveCuePlayed = false;
+  _autoAnswerMessageSent = false;
   _answeringCallReceiver = false;
   // If voicemail onstop is pending, it owns the remaining reset
   if (_vmResetPending) { _attended = false; _vmCallStart = 0; return; }
@@ -8760,16 +8754,17 @@ async function _deactivateMix() {
   _mixOutTrack = null;
 }
 
-async function attachMediaToCallAudio(mediaEl, playLocally = true) {
+async function attachMediaToCallAudio(mediaEl, opts) {
   // Note: audioMuted only gates the local mic input — sys audio and chat
   // media mixing are independent and must remain active regardless.
+  const localMonitor = !opts || opts.localMonitor !== false;
   _ensureMixContext();
   if (_mixCtx.state === 'suspended') await _mixCtx.resume();
   if (!_mixSourceNodes.has(mediaEl)) {
     try {
       const src = _mixCtx.createMediaElementSource(mediaEl);
       src.connect(_mixDest);
-      if (playLocally) src.connect(_mixCtx.destination); // optional local speakers
+      if (localMonitor) src.connect(_mixCtx.destination); // → local speakers
       _mixSourceNodes.set(mediaEl, src);
       entry('Media element wired into mix', 'sys');
     } catch(e) { entry('Media wire warn: ' + e.message, 'sys'); return; }
