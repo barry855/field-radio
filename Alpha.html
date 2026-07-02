@@ -1,3 +1,4 @@
+
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
@@ -2720,7 +2721,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.75-test30s-bravo-return-waiting';   // paired build: Bravo returns to waiting after Alpha message call ends
+const VERSION = '8.76-test30s-vm-player-visible';   // paired build: voicemail player is added after takeover screen cleanup
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -8081,13 +8082,16 @@ async function _startVoicemail() {
       entry('📼 Voicemail saved', 'ok');
       try { dcSend({ __control: 'voicemail', active: false }); } catch(e) {}
       const blobUrl = URL.createObjectURL(blob);
-      _vmNotice('— 📼 VOICEMAIL RECORDED —', blobUrl, filename);
       _vmBoxAddEntry(Date.now(), blobUrl, filename, blob);
+      // Complete any live-takeover screen clear before adding the player so
+      // the newly recorded voicemail bubble remains visible.
+      _finishOwnerLiveTakeover();
+      _vmNotice('— 📼 VOICEMAIL RECORDED —', blobUrl, filename);
     } else {
       entry('Voicemail empty — nothing saved', 'sys');
       try { dcSend({ __control: 'voicemail', active: false }); } catch(e) {}
     }
-    _finishOwnerLiveTakeover();
+    if (!_vmChunks.length) _finishOwnerLiveTakeover();
     if (_vmResetPending) {
       _vmResetPending = false;
       clearTimeout(dropTimer);
