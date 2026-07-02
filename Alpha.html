@@ -2720,7 +2720,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.67-test30s-login-answer-deadline';   // paired build: Alpha answering deadline starts at login even if signalling stalls
+const VERSION = '8.68-test30s-pi-answer-failsafe';   // paired build: uncancellable elapsed-time answering failsafe for Pi
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -2899,6 +2899,7 @@ function startSession() {
   // signalling service is slow or unavailable, Alpha must still become an
   // answering machine after 30 seconds instead of remaining CALLING forever.
   _armAnsweringModeTimer();
+  _armHardAnswerDeadline();
   if (usingPreReg) {
     entry('Using pre-registered peer — acquiring media only', 'sys');
     initMediaOnly();
@@ -6195,6 +6196,32 @@ let _answeringMachineMode = false;
 let _answeringModeTimer = null;
 let _answeringModeWatchdog = null;
 let _answeringDeadlineAt = 0;
+let _hardAnswerDeadlineAt = 0;
+let _hardAnswerTimer = null;
+let _hardAnswerWatchdog = null;
+
+function _clearHardAnswerDeadline() {
+  clearTimeout(_hardAnswerTimer);
+  clearInterval(_hardAnswerWatchdog);
+  _hardAnswerTimer = null;
+  _hardAnswerWatchdog = null;
+  _hardAnswerDeadlineAt = 0;
+}
+
+function _checkHardAnswerDeadline() {
+  if (!_hardAnswerDeadlineAt || _answeringMachineMode || leftPermanently) return;
+  if (!linked && Date.now() >= _hardAnswerDeadlineAt) {
+    entry('FAILSAFE: login answering deadline reached while not live', 'sys');
+    _enterAnsweringMachineMode();
+  }
+}
+
+function _armHardAnswerDeadline() {
+  _clearHardAnswerDeadline();
+  _hardAnswerDeadlineAt = Date.now() + ANSWERING_MODE_DELAY_MS;
+  _hardAnswerTimer = setTimeout(_checkHardAnswerDeadline, ANSWERING_MODE_DELAY_MS + 50);
+  _hardAnswerWatchdog = setInterval(_checkHardAnswerDeadline, 1000);
+}
 
 function _clearAnsweringModeTimer() {
   clearTimeout(_answeringModeTimer);
@@ -6228,6 +6255,7 @@ function _armAnsweringModeTimer() {
 }
 
 function _enterAnsweringMachineMode() {
+  _clearHardAnswerDeadline();
   clearTimeout(_answeringModeTimer);
   clearInterval(_answeringModeWatchdog);
   _answeringModeTimer = null;
@@ -6261,9 +6289,15 @@ function _enterAnsweringMachineMode() {
 }
 
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') _checkAnsweringModeDeadline();
+  if (document.visibilityState === 'visible') {
+    _checkAnsweringModeDeadline();
+    _checkHardAnswerDeadline();
+  }
 });
-window.addEventListener('focus', _checkAnsweringModeDeadline);
+window.addEventListener('focus', () => {
+  _checkAnsweringModeDeadline();
+  _checkHardAnswerDeadline();
+});
 
 function startPeer() {
   // Guard: PeerJS CDN may still be loading on slow mobile connections
@@ -7379,6 +7413,7 @@ function leaveSession() {
 
 function _doLeave() {
   _clearAnsweringModeTimer();
+  _clearHardAnswerDeadline();
   _stopRing();
   _stopVoicemail();
   saveRecordingIfActive(true);
