@@ -2670,7 +2670,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.71-test30s-corrected-barry-message';   // paired build: corrected Barry answering message
+const VERSION = '8.72-test30s-pi-alpha-vm-record';   // paired build: Bravo no longer falsely cancels Alpha voicemail on Pi
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -6369,9 +6369,14 @@ function attachDataConn(dc) {
             _stopVmCountdown();
             return;
           }
+          // Alpha is the receiver/answering machine. Cancel Bravo's own
+          // receiver ring state without treating this as a user live takeover.
+          // Calling _markAttended() here used to send liveSession back to Alpha
+          // and prevented Alpha's voicemail recorder from ever starting.
+          _stopRing();
+          _attended = false;
           _setAnswerLiveAvailable(true);
           if (!(recLocal && recLocal.state === 'recording')) _setCameraActive(false, 'answering mode');
-          if (linked) _markAttended();
           entry('Alpha answering mode detected — leave a message after the cue or click a blank area to go live', 'sys');
           _vmNotice('— 📼 ALPHA ANSWERING — WAIT FOR THE VOICEMAIL CUE —');
           if (linked) _applyBravoLinkedDisplay(false);
