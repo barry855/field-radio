@@ -2722,7 +2722,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.79-test30s-five-rings-mp3-countdown';   // paired build: synchronized five ringtone beeps, MP3, countdown, voicemail
+const VERSION = '8.81-test30s-vm-live-monitor';   // paired build: answering machine monitors caller audio while recording
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -7925,7 +7925,7 @@ function _fireLocalRing() {
         try { intro.currentTime = 0; } catch(e) {}
         intro.onended = startCountdown;
         intro.onerror = startCountdown;
-        attachMediaToCallAudio(intro)
+        attachMediaToCallAudio(intro, false)
           .then(() => intro.play())
           .catch(e => { entry('Answering intro could not play: ' + e.message, 'err'); startCountdown(); });
         setTimeout(startCountdown, 20000);
@@ -8040,6 +8040,12 @@ function _markAttended(event, suppressCamera) {
 async function _startVoicemail() {
   if (_vmActive || !_answeringMachineMode || _attended || _bravoRequestedLive || _liveTakeoverRequested) return;
   _setOwnerLiveAvailable(true);
+  // Play the caller's live incoming audio locally while it is recorded.
+  const monitorAudio = document.getElementById('remoteAudio');
+  if (monitorAudio) {
+    monitorAudio.muted = false;
+    ensureRemoteAudioPlaying();
+  }
   let audioTracks = [];
   const pc = call && (call.peerConnection || call._pc);
   if (pc) {
@@ -9168,7 +9174,7 @@ async function _deactivateMix() {
 }
 
 // Called on every 'play' event from a chat media element.
-async function attachMediaToCallAudio(mediaEl) {
+async function attachMediaToCallAudio(mediaEl, playLocally = true) {
   // Note: audioMuted only gates the local mic input — sys audio and chat
   // media mixing are independent and must remain active regardless.
 
@@ -9181,7 +9187,7 @@ async function attachMediaToCallAudio(mediaEl) {
     try {
       const src = _mixCtx.createMediaElementSource(mediaEl);
       src.connect(_mixDest);           // → call stream
-      src.connect(_mixCtx.destination); // → local speakers
+      if (playLocally) src.connect(_mixCtx.destination); // optional local speakers
       _mixSourceNodes.set(mediaEl, src);
       entry('Media element wired into mix', 'sys');
     } catch(e) {
