@@ -2537,6 +2537,7 @@ window.addEventListener('orientationchange', function() {
 
 <button id="audioUnlockBtn" onclick="unlockRemoteAudio()" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(0,200,120,0.92);color:#000;border:none;border-radius:8px;padding:12px 28px;font-size:15px;font-family:monospace;font-weight:bold;letter-spacing:1px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,0.5);">▶ TAP TO HEAR AUDIO</button>
 <audio id="remoteAudio" autoplay="" playsinline="" webkit-playsinline=""></audio>
+<audio id="answeringMachineIntro" preload="auto" src="answering-machine-intro.mp3" playsinline></audio>
 <div id="fsHint">TAP TO SHOW CONTROLS</div>
 <div id="lightbox"><img id="lightboxImg" src="" alt=""></div>
 
@@ -2721,7 +2722,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.76-test30s-vm-player-visible';   // paired build: voicemail player is added after takeover screen cleanup
+const VERSION = '8.77-test30s-mp3-answering-intro';   // paired build: bundled MP3 greeting plays through call before voicemail beep
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -7922,7 +7923,23 @@ function _armVmTimeout() {
                      || (remoteVideo && remoteVideo.srcObject)
                      || null;
     _stopRing();
-    _startVoicemail();
+    const intro = document.getElementById('answeringMachineIntro');
+    let recordingStarted = false;
+    const startRecording = () => {
+      if (recordingStarted) return;
+      recordingStarted = true;
+      if (!linked) return;
+      _startVoicemail();
+    };
+    if (intro) {
+      try { intro.currentTime = 0; } catch(e) {}
+      intro.onended = startRecording;
+      intro.onerror = startRecording;
+      attachMediaToCallAudio(intro)
+        .then(() => intro.play())
+        .catch(e => { entry('Answering intro could not play: ' + e.message, 'err'); startRecording(); });
+      setTimeout(startRecording, 20000);
+    } else startRecording();
   }, RING_TIMEOUT_MS);
 }
 
@@ -8141,8 +8158,9 @@ function _onCallConnected() {
     _autoAnswerMessageSent = true;
     const greeting = "HI This is Barry, I can't get to the phone right now. Leave a message at the beep and I will get back to you unless this has a glitch.";
     saveMessage(greeting, true);
-    if (dataConn && dataConn.open) dcSend(greeting);
-    else _pendingChatMsg = greeting;
+    const greetingPacket = { __chat: true, text: greeting };
+    if (dataConn && dataConn.open) dcSend(greetingPacket);
+    else _pendingChatMsg = greetingPacket;
   }
   const remoteAudio = document.getElementById('remoteAudio');
   const remoteVideo = document.getElementById('remoteVideo');
