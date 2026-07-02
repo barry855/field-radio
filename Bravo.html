@@ -2670,7 +2670,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.72-test30s-pi-alpha-vm-record';   // paired build: Bravo no longer falsely cancels Alpha voicemail on Pi
+const VERSION = '8.73-test30s-hidden-greeting-live-beeps';   // paired build: hidden saved greeting and two-beep live cue
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -3580,6 +3580,14 @@ function clearLocalChatDisplayForTakeover() {
   _vmCountdownNoticeEl = null;
   ttsStopAll();
   morseStopAll();
+}
+
+let _liveCuePlayed = false;
+function playLiveCueOnce() {
+  if (_liveCuePlayed) return;
+  _liveCuePlayed = true;
+  playTone('vm_end');
+  setTimeout(() => playTone('vm_end'), 450);
 }
 
 function updateChatVideoViewBtn() {
@@ -6133,6 +6141,7 @@ function _startAlphaRolePoll() {
 
 // ── Dial Alpha (mirrors Alpha's dial logic) ───────────────────────────────────
 function dial() {
+  _answeringCallReceiver = false;
   clearTimeout(retryTimer);
   if (linked || !localStream) return;
   if (call) {
@@ -6179,6 +6188,7 @@ function _answerInboundAlphaCall(incoming, waitedMs) {
     setTimeout(() => _answerInboundAlphaCall(incoming, waitedMs + 100), 100);
     return;
   }
+  _answeringCallReceiver = true;
   _startRing();
   clearTimeout(retryTimer);
   clearTimeout(_dialWatchdogTimer); _dialWatchdogTimer = null;
@@ -6353,6 +6363,7 @@ function attachDataConn(dc) {
         _stopRemoteRingTone();
         _stopRing();
         clearLocalChatDisplayForTakeover();
+        playLiveCueOnce();
         _setAnswerLiveAvailable(false);
         _markAttended();
         setStatus('linked');
@@ -6387,6 +6398,7 @@ function attachDataConn(dc) {
           _stopVmCountdown();
           _stopRemoteRingTone();
           if (wasWaitingForAlpha) clearLocalChatDisplayForTakeover();
+          if (wasWaitingForAlpha) playLiveCueOnce();
           if (linked && !loginDisableVideoFlag) _setCameraActive(true, 'live session');
           if (linked) _applyBravoLinkedDisplay(false);
         }
@@ -7306,6 +7318,7 @@ let _ringTimeoutTimer = null; // fires RING_TIMEOUT_MS after ringing starts → 
 let _ringing     = false;  // ring was triggered this call cycle
 let _vmCallStart = 0;      // Date.now() at markLinked
 let _autoAnswerMessageSent = false;
+let _answeringCallReceiver = false;
 
 function _vmNotice(text, blobUrl, filename) {
   const chatEl = document.getElementById('chat');
@@ -7645,6 +7658,7 @@ function _markAttended(event, suppressCamera) {
   if (_attended) return;
   const ownerWasAnswering = _ringing || _vmActive;
   _attended = true;
+  playLiveCueOnce();
   if (ownerWasAnswering) {
     clearLocalChatDisplayForTakeover();
     try { dcSend({ __control: 'liveSession', active: true, station: 'BRAVO' }); } catch(e) {}
@@ -7797,9 +7811,12 @@ function _stopVoicemail() {
 function _onCallConnected() {
   _attended = false;
   _vmCallStart = Date.now();
-  if (!_alphaAnsweringAvailable && !_autoAnswerMessageSent) {
+  if (_answeringCallReceiver && !_autoAnswerMessageSent) {
     _autoAnswerMessageSent = true;
-    sendChat("HI This is Barry, I can't get to the phone right now. Leave a message at the beep and I will get back to you unless this has a glitch.");
+    const greeting = "HI This is Barry, I can't get to the phone right now. Leave a message at the beep and I will get back to you unless this has a glitch.";
+    saveMessage(greeting, true);
+    if (dataConn && dataConn.open) dcSend(greeting);
+    else _pendingChatMsg = greeting;
   }
   // Capture the remote stream NOW while srcObject is guaranteed to be set.
   // The ring sequence will use this snapshot if the VM timer expires later.
@@ -7856,7 +7873,9 @@ function _onCallEnded() {
   }
   _setAnswerLiveAvailable(false);
   _alphaLiveTakeoverRequested = false;
+  _liveCuePlayed = false;
   _autoAnswerMessageSent = false;
+  _answeringCallReceiver = false;
   // If voicemail onstop is pending, it owns the remaining reset
   if (_vmResetPending) { _attended = false; _vmCallStart = 0; return; }
   _attended = false;
