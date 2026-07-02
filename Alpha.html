@@ -2720,7 +2720,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.68-test30s-pi-answer-failsafe';   // paired build: uncancellable elapsed-time answering failsafe for Pi
+const VERSION = '8.70-test30s-barry-message-pi-chat';   // paired build: Barry auto-message plus Pi Blob/byte chat decoding
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -6552,7 +6552,11 @@ function attachDataConn(dc) {
   dc.on('open', onDcOpen);
   // Android/WebView fallback: 'open' sometimes fires before the handler is attached
   if (dc.open) { setTimeout(onDcOpen, 0); }
-  dc.on('data', msg => {
+  dc.on('data', async msg => {
+    if (msg instanceof Blob) {
+      try { msg = await msg.text(); }
+      catch(e) { entry('Could not decode Blob chat packet: ' + e.message, 'err'); return; }
+    }
     const decoded = dcDecode(msg);
     if (!decoded) return;
     const { text, obj } = decoded;
@@ -6836,9 +6840,13 @@ function containsControlPacket(value, depth = 0) {
 }
 
 function dcDecode(raw) {
+  if (Array.isArray(raw)) raw = new Uint8Array(raw);
   if (raw && typeof raw === 'object' && !(raw instanceof ArrayBuffer) && !(raw instanceof Blob) && !ArrayBuffer.isView(raw)) {
     if (raw.__control || raw.__chat || raw.__file || raw.__chunk || raw.__morse) return { obj: raw };
-    if (Object.prototype.hasOwnProperty.call(raw, 'data')) return dcDecode(raw.data);
+    if (Object.prototype.hasOwnProperty.call(raw, 'data')) {
+      const data = Array.isArray(raw.data) ? new Uint8Array(raw.data) : raw.data;
+      return dcDecode(data);
+    }
     return { obj: raw };
   }
   let s;
@@ -7637,6 +7645,7 @@ let _ringTimer = null;
 let _ringTimeoutTimer = null;
 let _ringing = false;
 let _vmCallStart = 0;
+let _autoAnswerMessageSent = false;
 
 function _vmNotice(text, blobUrl, filename) {
   const chatEl = document.getElementById('chat');
@@ -8113,6 +8122,10 @@ function _stopVoicemail() {
 function _onCallConnected() {
   if (!_liveTakeoverRequested) _attended = false;
   _vmCallStart = Date.now();
+  if (_answeringMachineMode && !_autoAnswerMessageSent) {
+    _autoAnswerMessageSent = true;
+    sendChat("HI This is Barry, I can't get to the phone right now. Leave a message at the beep and I will back to you unless this has a glitch.");
+  }
   const remoteAudio = document.getElementById('remoteAudio');
   const remoteVideo = document.getElementById('remoteVideo');
   _vmCapturedStream = (remoteAudio && remoteAudio.srcObject)
@@ -8156,6 +8169,7 @@ function _onCallEnded() {
     }
   }
   _attended = false;
+  _autoAnswerMessageSent = false;
   _bravoRequestedLive = false;
   _bravoAnsweringAvailable = false;
   _liveTakeoverRequested = false;
