@@ -2671,7 +2671,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.75-test30s-bravo-return-waiting';   // paired build: Bravo returns to waiting after Alpha message call ends
+const VERSION = '8.76-test30s-vm-player-visible';   // paired build: voicemail player is added after takeover screen cleanup
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -7783,9 +7783,11 @@ async function _startVoicemail() {
     entry('📼 Voicemail saved', 'ok');
     try { dcSend({ __control: 'voicemail', active: false }); } catch(e) {}
     const _vmBlobUrl = URL.createObjectURL(blob);
-    _vmNotice('— 📼 VOICEMAIL RECORDED —', _vmBlobUrl, _vmFilename);
     _vmBoxAddEntry(Date.now(), _vmBlobUrl, _vmFilename, blob);
+    // Complete any live-takeover screen clear before adding the player so
+    // the newly recorded voicemail bubble remains visible.
     _finishOwnerLiveTakeover();
+    _vmNotice('— 📼 VOICEMAIL RECORDED —', _vmBlobUrl, _vmFilename);
     // If Alpha left while we were recording, do the reset now that the save is done.
     // onDrop has already run teardown — just re-register for the next caller.
     if (_vmResetPending) {
