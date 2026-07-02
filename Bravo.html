@@ -1,4 +1,4 @@
-<!-- redeploy -->
+
 <!DOCTYPE html>
 <!-- Field Radio v6 — BRAVO -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -2199,8 +2199,8 @@ window.addEventListener('orientationchange', function() {
       </div>
       <div class="gain-row">
         <div class="gain-label"><span>SPKR</span><span>VOL</span></div>
-        <input type="range" id="remoteGainSlider" min="0" max="3" step="0.05" value="1.15" oninput="applyRemoteGain(this.value)">
-        <span class="gain-val" id="remoteGainVal">1.15×</span>
+        <input type="range" id="remoteGainSlider" min="0" max="3" step="0.05" value="2.25" oninput="applyRemoteGain(this.value)">
+        <span class="gain-val" id="remoteGainVal">75%</span>
       </div>
       <div class="video-panel">
         <div class="panel-label">REMOTE — ALPHA</div>
@@ -2252,8 +2252,8 @@ window.addEventListener('orientationchange', function() {
       </div>
       <div class="gain-row" style="flex-shrink:0;">
         <div class="gain-label"><span>SPKR</span><span>VOL</span></div>
-        <input type="range" id="remoteGainSliderChat" min="0" max="3" step="0.05" value="1.15" oninput="applyRemoteGain(this.value)" style="flex:1; min-width:0;">
-        <span class="gain-val" id="remoteGainValChat">1.15×</span>
+        <input type="range" id="remoteGainSliderChat" min="0" max="3" step="0.05" value="2.25" oninput="applyRemoteGain(this.value)" style="flex:1; min-width:0;">
+        <span class="gain-val" id="remoteGainValChat">75%</span>
       </div>
       <div class="zoom-row" style="display:none;">
         <span>ZOOM LOCAL</span>
@@ -2670,7 +2670,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.65-test30s-mic-limiter';   // paired build: peak-limited microphone gain prevents Mac transmit clipping
+const VERSION = '8.66-test30s-mac-raw-audio-volume';   // paired build: Mac raw mic bypass plus direct 0-100% speaker volume
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -9357,6 +9357,15 @@ function _activateProcessedMicTrack() {
 
 function setupMicGainNode(stream) {
   try {
+    const rawMic = stream.getAudioTracks()[0] || null;
+    if (/Macintosh|Mac OS X/i.test(navigator.userAgent) && rawMic) {
+      _micProcessedTrack = null;
+      _micRawTrack = null;
+      realAudioTrack = rawMic;
+      realAudioTrack.enabled = !audioMuted;
+      entry('Mac audio: using native microphone track (Web Audio resampling bypassed)', 'sys');
+      return;
+    }
     if (!_micGainCtx) _micGainCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (_micGainCtx.state === 'suspended') _micGainCtx.resume().catch(() => {});
     const src = _micGainCtx.createMediaStreamSource(stream);
@@ -9404,38 +9413,27 @@ let _remoteGainCtx = null, _remoteGainNode = null;
 function setupRemoteGainNode(stream) {
   teardownRemoteGain();
   try {
-    _remoteGainCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const src  = _remoteGainCtx.createMediaStreamSource(stream);
-    _remoteGainNode = _remoteGainCtx.createGain();
-    const dest = _remoteGainCtx.createMediaStreamDestination();
-    const saved = parseFloat(localStorage.getItem('bravo_remote_gain') || '1.15');
-    const initialGain = isFinite(saved) ? Math.max(0, Math.min(3, saved)) : 1;
-    _remoteGainNode.gain.value = initialGain > 1 ? initialGain : 1;
-    src.connect(_remoteGainNode);
-    _remoteGainNode.connect(dest);
+    let saved = parseFloat(localStorage.getItem('bravo_remote_gain') || '1.15');
+    if (localStorage.getItem('bravo_remote_volume_v2') !== '1') {
+      saved = Math.max(0, Math.min(3, saved * (2.25 / 1.15)));
+      localStorage.setItem('bravo_remote_gain', String(saved));
+      localStorage.setItem('bravo_remote_volume_v2', '1');
+    }
+    const initialGain = isFinite(saved) ? Math.max(0, Math.min(3, saved)) : 2.25;
     const ra = document.getElementById('remoteAudio');
     if (ra) {
       ra.srcObject = stream;
-      ra.volume = Math.min(initialGain, 1);
+      ra.volume = initialGain / 3;
     }
-    const activateGainPath = () => {
-      if (_remoteGainCtx && _remoteGainCtx.state === 'running' && ra) {
-        ra.srcObject = dest.stream;
-        scheduleRemoteAudioPlay();
-      }
-    };
-    if (_remoteGainCtx.state === 'running') activateGainPath();
-    else _remoteGainCtx.resume().then(activateGainPath).catch(() => {
-      if (ra) ra.srcObject = stream;
-    });
     ['remoteGainSlider','remoteGainSliderChat'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = initialGain;
     });
     ['remoteGainVal','remoteGainValChat'].forEach(id => {
       const el = document.getElementById(id);
-      if (el) el.textContent = initialGain.toFixed(2) + '×';
+      if (el) el.textContent = Math.round(initialGain / 3 * 100) + '%';
     });
+    scheduleRemoteAudioPlay();
   } catch(e) { console.warn('Remote gain setup failed:', e); }
 }
 
@@ -9449,18 +9447,14 @@ function applyRemoteGain(val) {
   const v = isFinite(parsed) ? Math.max(0, Math.min(3, parsed)) : 1;
   ['remoteGainVal','remoteGainValChat'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.textContent = v.toFixed(2) + '×';
+    if (el) el.textContent = Math.round(v / 3 * 100) + '%';
   });
   ['remoteGainSlider','remoteGainSliderChat'].forEach(id => {
     const el = document.getElementById(id);
     if (el && el.value !== String(val)) el.value = val;
   });
   const ra = document.getElementById('remoteAudio');
-  if (ra) ra.volume = Math.min(v, 1);
-  if (_remoteGainCtx && _remoteGainCtx.state === 'suspended') _remoteGainCtx.resume().catch(() => {});
-  if (_remoteGainNode && _remoteGainCtx) {
-    _remoteGainNode.gain.setTargetAtTime(v > 1 ? v : 1, _remoteGainCtx.currentTime, 0.01);
-  }
+  if (ra) ra.volume = v / 3;
   try { localStorage.setItem('bravo_remote_gain', String(v)); } catch(e) {}
 }
 
