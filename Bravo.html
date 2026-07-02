@@ -1,4 +1,5 @@
 
+<!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — BRAVO -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -2670,7 +2671,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.73-test30s-hidden-greeting-live-beeps';   // paired build: hidden saved greeting and two-beep live cue
+const VERSION = '8.75-test30s-bravo-return-waiting';   // paired build: Bravo returns to waiting after Alpha message call ends
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -7224,12 +7225,19 @@ function handleRemoteLeave() {
     _stopVoicemail();
     return;
   }
-  // If onDrop already fired first and is handling the reset (voicemail onstop
-  // in-flight, or _onCallEnded's 1200ms startPeer already scheduled), do nothing.
-  if (_vmResetPending || remotePeerLeft) return;
-  // No voicemail, onDrop hasn't fired yet — reset for next caller after onDrop lands.
-  entry('Answering machine: resetting for next caller…', 'sys');
-  setTimeout(() => { remotePeerLeft = false; if (!leftPermanently) startPeer(); }, 800);
+  if (_vmResetPending) return;
+  // This side did not leave. Return to WAITING and register for the next Alpha
+  // call even when the explicit leave packet arrives before WebRTC onDrop.
+  setStatus('calling');
+  duplexBar.textContent = 'WAITING FOR ALPHA';
+  duplexBar.className = 'duplex-overlay';
+  syncControls();
+  entry('Receiver resetting for the next Alpha call…', 'sys');
+  clearTimeout(dropTimer);
+  dropTimer = setTimeout(() => {
+    remotePeerLeft = false;
+    if (!leftPermanently) startPeer();
+  }, 800);
 }
 
 function onDrop() {
@@ -7266,7 +7274,10 @@ function onDrop() {
   document.getElementById('remoteWrap').classList.add('stale');
   // Mark mini remote overlays as stale too
   
-  setStatus('standby');
+  setStatus('calling');
+  duplexBar.textContent = 'WAITING FOR ALPHA';
+  duplexBar.className = 'duplex-overlay';
+  syncControls();
   if (leftPermanently) return; // permanent leave handled by leaveSession()
   if (remotePeerLeft) return;  // remote sent leave signal — already resetting
   if (_vmResetPending) return; // voicemail still saving — onstop will handle next state
