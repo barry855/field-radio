@@ -1,3 +1,4 @@
+
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
@@ -2721,7 +2722,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.92-deliberate-live-click';   // paired build: mouse movement/hover cannot trigger answering-mode takeover
+const VERSION = '8.94-alt-x-leave';   // paired build: Alt+X safely leaves outside text-entry controls
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -7514,6 +7515,15 @@ function leaveSession() {
   setTimeout(_doLeave, 1500);
 }
 
+document.addEventListener('keydown', event => {
+  if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.key.toLowerCase() !== 'x') return;
+  const target = event.target;
+  if (target && ((target.matches && target.matches('input,textarea,select')) || target.isContentEditable)) return;
+  event.preventDefault();
+  event.stopPropagation();
+  if (!leftPermanently) leaveSession();
+});
+
 function _doLeave() {
   _clearAnsweringModeTimer();
   _clearHardAnswerDeadline();
@@ -8070,13 +8080,13 @@ function answerOwnVoicemailLive() {
   if (!wasRecording) _finishOwnerLiveTakeover();
 }
 
-function _isDeliberateLivePointer(event) {
-  return !!(event && event.isTrusted && event.type === 'pointerdown' &&
-    event.isPrimary !== false && event.button === 0 && (event.buttons & 1) === 1);
+function _isDeliberateLiveClick(event) {
+  return !!(event && event.isTrusted && event.type === 'click' &&
+    event.button === 0 && event.detail > 0);
 }
 
-document.addEventListener('pointerdown', event => {
-  if (!_isDeliberateLivePointer(event)) return;
+document.addEventListener('click', event => {
+  if (!_isDeliberateLiveClick(event)) return;
   const target = event.target;
   if (target && target.closest && target.closest('button,a,input,select,textarea,audio,[role="button"]')) return;
   if (linked && _bravoAnsweringAvailable) {
@@ -8096,7 +8106,7 @@ document.addEventListener('pointerdown', event => {
 });
 
 function _markAttended(event, suppressCamera) {
-  if (event && !_isDeliberateLivePointer(event)) return;
+  if (event && !_isDeliberateLiveClick(event)) return;
   if (event && event.target && event.target.closest && event.target.closest('button,a,input,select,textarea,audio,[role="button"]')) return;
   _liveTakeoverRequested = true;
   if (_attended) return;
@@ -8273,9 +8283,6 @@ function _onCallConnected() {
   // _startRing() owns the unattended flow.  Its five telephone beeps must
   // finish before it arms the voicemail timer; do not start a competing
   // connection-time timer here.
-  ['keydown', 'pointerdown', 'touchstart'].forEach(ev =>
-    window.addEventListener(ev, _markAttended, { once: true, passive: true })
-  );
   _setOwnerLiveAvailable(_answeringMachineMode && !_bravoRequestedLive && !_liveTakeoverRequested);
   if (_bravoRequestedLive || _liveTakeoverRequested) _markAttended();
 }
@@ -8291,9 +8298,6 @@ function _onCallEnded() {
   _stopVoicemail();
   clearTimeout(_vmTimer); _vmTimer = null;
   _vmCapturedStream = null;
-  ['keydown', 'pointerdown', 'touchstart'].forEach(ev =>
-    window.removeEventListener(ev, _markAttended)
-  );
   if (wasRinging) {
     const time = new Date().toTimeString().slice(0, 5);
     if (!_vmCallStart || Date.now() - _vmCallStart < 3000) {
