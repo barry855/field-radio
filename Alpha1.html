@@ -2722,7 +2722,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.90-fresh-peer-redial';   // paired build: immediately abandons an unfinished call to a replaced peer ID
+const VERSION = '8.91-greeting-level';   // paired build: boosts quiet MP3 transmission while preserving receiver volume control
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -9272,7 +9272,15 @@ async function attachMediaToCallAudio(mediaEl, playLocally = true) {
   if (!_mixSourceNodes.has(mediaEl)) {
     try {
       const src = _mixCtx.createMediaElementSource(mediaEl);
-      src.connect(_mixDest);           // → call stream
+      if (mediaEl.id === 'answeringMachineIntro') {
+        const greetingGain = _mixCtx.createGain();
+        greetingGain.gain.value = 2.0;
+        src.connect(greetingGain);
+        greetingGain.connect(_mixDest);
+        entry('Answering greeting transmit level boosted 2x', 'sys');
+      } else {
+        src.connect(_mixDest);         // normal chat media → call stream
+      }
       if (playLocally) src.connect(_mixCtx.destination); // optional local speakers
       _mixSourceNodes.set(mediaEl, src);
       entry('Media element wired into mix', 'sys');
