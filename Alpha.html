@@ -1,3 +1,4 @@
+
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
@@ -2721,7 +2722,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.85-ring-and-vm-end-cues';   // paired build: unlocks Alpha rings and cues both sides when VM ends
+const VERSION = '8.86-control-bubble-guard';   // paired build: control signalling can never render as chat
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -4223,6 +4224,12 @@ function _toggleLock(wrap) {
 }
 
 function addBubble(text, mine, ts, save = true, restoredStatus = null, orig = null, isCw = false) {
+  // Final rendering guard for Pi/PeerJS serialization variants. Signalling is
+  // never user chat and must not be displayed or written into chat history.
+  if (containsControlPacket(text) || containsControlPacket(orig)) {
+    entry('Suppressed control packet at chat renderer', 'sys');
+    return null;
+  }
   if (save) saveMessage(text, mine);
   const now = ts || Date.now();
   const wrap = document.createElement('div');
