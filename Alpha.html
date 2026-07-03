@@ -1,3 +1,4 @@
+
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
@@ -2585,7 +2586,7 @@ const _tones = {
   linked:       { freqs:[523,659,784],    durs:[0.10,0.10,0.18],  wave:'triangle', vol:0.18 },
   dropped:      { freqs:[660,440,330],    durs:[0.10,0.10,0.18],  wave:'sine',     vol:0.16 },
   radio_online: { freqs:[440,550],        durs:[0.06,0.10],       wave:'sine',     vol:0.13 },
-  call_in:      { freqs:[440,480,440,480],durs:[0.12,0.12,0.12,0.18],wave:'triangle',vol:0.16 },
+  call_in:      { freqs:[440,480],durs:[0.22,0.30],wave:'triangle',vol:0.16 },
   file_in:      { freqs:[660,880],        durs:[0.08,0.14],       wave:'triangle', vol:0.14 },
   error:        { freqs:[300,250],        durs:[0.12,0.18],       wave:'sawtooth', vol:0.14 },
   vm_end:       { freqs:[660,660],        durs:[0.14,0.14],       wave:'sine',     vol:0.30 },
@@ -2721,7 +2722,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.82-five-ring-sequence';   // paired build: guarantees caller and answering machine complete all five rings
+const VERSION = '8.84-two-tone-ring';   // paired build: five telephone rings, each formed from two tones
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -6600,10 +6601,28 @@ function attachDataConn(dc) {
         }
         return;
       }
+      if (f.__control === 'answeringMode' && f.station === 'BRAVO') {
+        if (f.active) {
+          _bravoAnsweringAvailable = true;
+          setStatus('reachable');
+          duplexBar.textContent = 'WAITING FOR BRAVO - TELEPHONE RINGING';
+          duplexBar.className = 'duplex-overlay waiting';
+          syncControls();
+        } else if (!_bravoRequestedLive) {
+          _bravoAnsweringAvailable = false;
+        }
+        return;
+      }
       if (f.__control === 'ring') {
         // Ringing is silent on the answering machine — the tone plays only here,
         // on the caller's end, while Bravo decides whether to answer or go to voicemail.
-        if (f.active) { _startRemoteRingTone(); } else { _stopRemoteRingTone(); }
+        if (f.active) {
+          _bravoAnsweringAvailable = true;
+          setStatus('reachable');
+          duplexBar.textContent = 'WAITING FOR BRAVO - TELEPHONE RINGING';
+          duplexBar.className = 'duplex-overlay waiting';
+          _startRemoteRingTone();
+        } else { _stopRemoteRingTone(); }
         return;
       }
       if (f.__control === 'voicemailCountdown') {
@@ -7126,6 +7145,13 @@ function markLinked() {
     duplexBar.textContent = '● LIVE';
   }
   duplexBar.className = 'duplex-overlay live';
+  // The data-channel role announcement may arrive before the media stream.
+  // Preserve WAITING instead of overwriting it with the normal LIVE display.
+  if (_bravoAnsweringAvailable) {
+    setStatus('reachable');
+    duplexBar.textContent = 'WAITING FOR BRAVO - TELEPHONE RINGING';
+    duplexBar.className = 'duplex-overlay waiting';
+  }
   // Log the ICE path type (host / srflx / relay) so we know how we connected
   (async () => {
     try {
