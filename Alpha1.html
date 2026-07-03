@@ -2722,7 +2722,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.88-pi-control-decoder';   // paired build: decodes nested Pi/PeerJS control packets
+const VERSION = '8.89-cross-platform-connect';   // paired build: online peers cannot be cancelled by Alpha's 30s offline failsafe
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -6186,20 +6186,24 @@ async function init() {
 // Module-level: refreshes REMOTE_ID from Firebase (BRAVO's suffixed peer ID).
 // Must be module-level so startPeer's peer.on('open') closure can reference it.
 let _remoteIdConfirmed = false; // true once Firebase has returned a valid peerId for BRAVO
+let _bravoPresenceFreshUntil = 0;
 async function _refreshRemoteId() {
   try {
     const _code = MY_ID ? MY_ID.replace(/^alpha-/, '').replace(/-[0-9a-f]{4}$/, '') : '';
     const _bravoPollKey = 'bravo-' + _code;
     if (!_code || _bravoPollKey === 'bravo-') return;
-    const _r = await fetch(FB_URL + '/presence/' + _bravoPollKey + '.json');
+    const _r = await fetch(FB_URL + '/presence/' + _bravoPollKey + '.json?cb=' + Date.now(), { cache: 'no-store' });
     const _env = await _r.json();
     const _d = _env ? await _decryptPresence(_code, _env) : null;
-    if (_d && _d.peerId) {
+    if (_d && _d.peerId && _d.ts && (Date.now() - _d.ts) < PRESENCE_STALE_MS) {
+      _bravoPresenceFreshUntil = Date.now() + PRESENCE_STALE_MS;
       if (_d.peerId !== REMOTE_ID) {
         entry('BRAVO peer ID: ' + _d.peerId, 'sys');
         REMOTE_ID = _d.peerId;
       }
       _remoteIdConfirmed = true;
+    } else {
+      _remoteIdConfirmed = false;
     }
   } catch(e) {}
 }
@@ -6233,6 +6237,11 @@ function _clearHardAnswerDeadline() {
 function _checkHardAnswerDeadline() {
   if (!_hardAnswerDeadlineAt || _answeringMachineMode || leftPermanently) return;
   if (!linked && Date.now() >= _hardAnswerDeadlineAt) {
+    if (_bravoPresenceFreshUntil > Date.now()) {
+      _hardAnswerDeadlineAt = Date.now() + 10000;
+      entry('BRAVO is online - extending connection attempt before answering mode', 'sys');
+      return;
+    }
     entry('FAILSAFE: login answering deadline reached while not live', 'sys');
     _enterAnsweringMachineMode();
   }
@@ -6257,6 +6266,11 @@ function _checkAnsweringModeDeadline() {
   if (_answeringMachineMode || linked || leftPermanently || !_answeringDeadlineAt) return;
   const remaining = _answeringDeadlineAt - Date.now();
   if (remaining <= 0) {
+    if (_bravoPresenceFreshUntil > Date.now()) {
+      _answeringDeadlineAt = Date.now() + 10000;
+      entry('BRAVO heartbeat is fresh - continuing connection attempt', 'sys');
+      return;
+    }
     _enterAnsweringMachineMode();
     return;
   }
