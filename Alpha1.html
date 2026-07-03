@@ -2722,7 +2722,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.91-greeting-level';   // paired build: boosts quiet MP3 transmission while preserving receiver volume control
+const VERSION = '8.92-deliberate-live-click';   // paired build: mouse movement/hover cannot trigger answering-mode takeover
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -8071,7 +8071,13 @@ function answerOwnVoicemailLive() {
   if (!wasRecording) _finishOwnerLiveTakeover();
 }
 
+function _isDeliberateLivePointer(event) {
+  return !!(event && event.isTrusted && event.type === 'pointerdown' &&
+    event.isPrimary !== false && event.button === 0 && (event.buttons & 1) === 1);
+}
+
 document.addEventListener('pointerdown', event => {
+  if (!_isDeliberateLivePointer(event)) return;
   const target = event.target;
   if (target && target.closest && target.closest('button,a,input,select,textarea,audio,[role="button"]')) return;
   if (linked && _bravoAnsweringAvailable) {
@@ -8091,6 +8097,7 @@ document.addEventListener('pointerdown', event => {
 });
 
 function _markAttended(event, suppressCamera) {
+  if (event && !_isDeliberateLivePointer(event)) return;
   if (event && event.target && event.target.closest && event.target.closest('button,a,input,select,textarea,audio,[role="button"]')) return;
   _liveTakeoverRequested = true;
   if (_attended) return;
