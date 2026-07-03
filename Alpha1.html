@@ -2722,7 +2722,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.89-cross-platform-connect';   // paired build: online peers cannot be cancelled by Alpha's 30s offline failsafe
+const VERSION = '8.90-fresh-peer-redial';   // paired build: immediately abandons an unfinished call to a replaced peer ID
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -6197,9 +6197,22 @@ async function _refreshRemoteId() {
     const _d = _env ? await _decryptPresence(_code, _env) : null;
     if (_d && _d.peerId && _d.ts && (Date.now() - _d.ts) < PRESENCE_STALE_MS) {
       _bravoPresenceFreshUntil = Date.now() + PRESENCE_STALE_MS;
-      if (_d.peerId !== REMOTE_ID) {
+      if (_d.peerId !== REMOTE_ID && !linked) {
+        const previousRemoteId = REMOTE_ID;
         entry('BRAVO peer ID: ' + _d.peerId, 'sys');
         REMOTE_ID = _d.peerId;
+        // A receiver can restart and publish a new suffixed ID while Alpha is
+        // still negotiating with the old one. Do not wait for the 90s watchdog.
+        if (call && previousRemoteId) {
+          entry('BRAVO peer ID changed during connection - replacing stale call immediately', 'sys');
+          try { call.off('close'); call.off('error'); call.close(); } catch(e) {}
+          call = null;
+          if (dataConn) { try { dataConn.close(); } catch(e) {} dataConn = null; }
+          pendingDC = false;
+          clearTimeout(_dialWatchdogTimer); _dialWatchdogTimer = null;
+          clearTimeout(retryTimer);
+          retryTimer = setTimeout(() => { if (!linked && !_answeringMachineMode) dial(); }, 150);
+        }
       }
       _remoteIdConfirmed = true;
     } else {
