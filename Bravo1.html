@@ -2672,7 +2672,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.89-cross-platform-connect';   // paired build: rejects stale cached peer IDs on every platform
+const VERSION = '8.90-fresh-peer-redial';   // paired build: immediately abandons an unfinished call to a replaced peer ID
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -6115,9 +6115,21 @@ async function _refreshRemoteId() {
     const _env = await _r.json();
     const _d = _env ? await _decryptPresence(_code, _env) : null;
     if (_d && _d.peerId && _d.ts && (Date.now() - _d.ts) < PRESENCE_STALE_MS) {
-      if (_d.peerId !== REMOTE_ID) {
+      if (_d.peerId !== REMOTE_ID && !linked) {
+        const previousRemoteId = REMOTE_ID;
         entry('ALPHA peer ID: ' + _d.peerId, 'sys');
         REMOTE_ID = _d.peerId;
+        // If Alpha restarted while Bravo was calling its answering machine,
+        // discard the obsolete negotiation; the role poll below redials now.
+        if (call && previousRemoteId) {
+          entry('ALPHA peer ID changed during connection - replacing stale call immediately', 'sys');
+          try { call.off('close'); call.off('error'); call.close(); } catch(e) {}
+          call = null;
+          if (dataConn) { try { dataConn.close(); } catch(e) {} dataConn = null; }
+          pendingDC = false;
+          clearTimeout(_dialWatchdogTimer); _dialWatchdogTimer = null;
+          clearTimeout(retryTimer);
+        }
       }
       _remoteIdConfirmed = true;
       const answeringNow = _d.answering === true;
