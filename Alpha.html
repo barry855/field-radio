@@ -1,3 +1,4 @@
+
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
@@ -2721,7 +2722,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.87-alpha-answering-status';   // paired build: Alpha cannot display LIVE during unattended answering
+const VERSION = '8.88-pi-control-decoder';   // paired build: decodes nested Pi/PeerJS control packets
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -6861,24 +6862,31 @@ function dcSend(payload) {
 // dcDecode — inverse of dcSend; returns { text } or { obj } or null
 function decodeEmbeddedControl(value) {
   if (typeof value !== 'string') return null;
-  let s = value.trim();
+  let s = value.replace(/\u0000/g, '').replace(/^\uFEFF/, '').trim();
   // Accommodate legacy peers that sent a control object as text, including
-  // one extra JSON-stringification layer.
-  for (let depth = 0; depth < 2; depth++) {
-    if (!s.startsWith('{') && !s.startsWith('"')) return null;
+  // nested JSON-stringification and repeated T:/J: transport prefixes seen on Pi.
+  for (let depth = 0; depth < 6; depth++) {
+    while (s.startsWith('T:') || s.startsWith('J:')) s = s.slice(2).trim();
     try {
       const parsed = JSON.parse(s);
       if (parsed && typeof parsed === 'object' && parsed.__control) return parsed;
       if (typeof parsed !== 'string') return null;
       s = parsed.trim();
-    } catch(e) { return null; }
+    } catch(e) {
+      const first = s.indexOf('{'), last = s.lastIndexOf('}');
+      if (first < 0 || last <= first) return null;
+      try {
+        const embedded = JSON.parse(s.slice(first, last + 1));
+        return embedded && embedded.__control ? embedded : null;
+      } catch(ignore) { return null; }
+    }
   }
   return null;
 }
 
 function containsControlPacket(value, depth = 0) {
   if (depth > 4 || value == null) return false;
-  if (typeof value === 'string') return /["']__control["']\s*:/.test(value);
+  if (typeof value === 'string') return value.indexOf('__control') !== -1;
   if (typeof value !== 'object') return false;
   if (Object.prototype.hasOwnProperty.call(value, '__control')) return true;
   try { return Object.values(value).some(item => containsControlPacket(item, depth + 1)); }
@@ -6911,12 +6919,15 @@ function dcDecode(raw) {
       const parsed = JSON.parse(s.slice(2));
       const control = decodeEmbeddedControl(parsed);
       return { obj: control || parsed };
-    } catch(e) { return { text: s }; }
+    } catch(e) {
+      const control = decodeEmbeddedControl(s);
+      return control ? { obj: control } : { text: s };
+    }
   }
   // Legacy fallback — other side may still use json serialization mode
-  if (s.startsWith('{')) {
-    try { return { obj: JSON.parse(s) }; } catch(e) {}
-  }
+  const embeddedControl = decodeEmbeddedControl(s);
+  if (embeddedControl) return { obj: embeddedControl };
+  if (s.startsWith('{')) { try { return { obj: JSON.parse(s) }; } catch(e) {} }
   return { text: s };
 }
 
