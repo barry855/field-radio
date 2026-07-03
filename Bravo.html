@@ -2672,7 +2672,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.88-pi-control-decoder';   // paired build: decodes nested Pi/PeerJS control packets
+const VERSION = '8.92-deliberate-live-click';   // paired build: mouse movement/hover cannot trigger answering-mode takeover
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -3459,7 +3459,13 @@ function requestLiveSession(suppressCamera) {
   entry('Live session requested — Alpha voicemail cancelled', 'ok');
 }
 
+function _isDeliberateLivePointer(event) {
+  return !!(event && event.isTrusted && event.type === 'pointerdown' &&
+    event.isPrimary !== false && event.button === 0 && (event.buttons & 1) === 1);
+}
+
 document.addEventListener('pointerdown', event => {
+  if (!_isDeliberateLivePointer(event)) return;
   const target = event.target;
   if (target && target.closest && target.closest('button,a,input,select,textarea,audio,[role="button"]')) return;
   if (linked && _alphaAnsweringAvailable) {
@@ -6111,13 +6117,25 @@ async function _refreshRemoteId() {
   try {
     const _code = MY_ID ? MY_ID.replace(/^bravo-/, '').replace(/-[0-9a-f]{4}$/, '') : '';
     if (!_code) return;
-    const _r = await fetch(FB_URL + '/presence/alpha-' + _code + '.json');
+    const _r = await fetch(FB_URL + '/presence/alpha-' + _code + '.json?cb=' + Date.now(), { cache: 'no-store' });
     const _env = await _r.json();
     const _d = _env ? await _decryptPresence(_code, _env) : null;
-    if (_d && _d.peerId) {
-      if (_d.peerId !== REMOTE_ID) {
+    if (_d && _d.peerId && _d.ts && (Date.now() - _d.ts) < PRESENCE_STALE_MS) {
+      if (_d.peerId !== REMOTE_ID && !linked) {
+        const previousRemoteId = REMOTE_ID;
         entry('ALPHA peer ID: ' + _d.peerId, 'sys');
         REMOTE_ID = _d.peerId;
+        // If Alpha restarted while Bravo was calling its answering machine,
+        // discard the obsolete negotiation; the role poll below redials now.
+        if (call && previousRemoteId) {
+          entry('ALPHA peer ID changed during connection - replacing stale call immediately', 'sys');
+          try { call.off('close'); call.off('error'); call.close(); } catch(e) {}
+          call = null;
+          if (dataConn) { try { dataConn.close(); } catch(e) {} dataConn = null; }
+          pendingDC = false;
+          clearTimeout(_dialWatchdogTimer); _dialWatchdogTimer = null;
+          clearTimeout(retryTimer);
+        }
       }
       _remoteIdConfirmed = true;
       const answeringNow = _d.answering === true;
@@ -6127,6 +6145,9 @@ async function _refreshRemoteId() {
           ? 'Alpha answering machine available — Bravo will call'
           : 'Alpha is the active caller — Bravo will wait', 'sys');
       }
+    } else {
+      _remoteIdConfirmed = false;
+      _alphaAnsweringAvailable = false;
     }
   } catch(e) {}
 }
@@ -7714,6 +7735,7 @@ function answerOwnVoicemailLive() {
 }
 
 function _markAttended(event, suppressCamera) {
+  if (event && !_isDeliberateLivePointer(event)) return;
   if (event && event.target && event.target.closest && event.target.closest('button,a,input,select,textarea,audio,[role="button"]')) return;
   if (_attended) return;
   const ownerWasAnswering = _ringing || _vmActive;
@@ -8795,7 +8817,15 @@ async function attachMediaToCallAudio(mediaEl, playLocally = true) {
   if (!_mixSourceNodes.has(mediaEl)) {
     try {
       const src = _mixCtx.createMediaElementSource(mediaEl);
-      src.connect(_mixDest);
+      if (mediaEl.id === 'answeringMachineIntro') {
+        const greetingGain = _mixCtx.createGain();
+        greetingGain.gain.value = 2.0;
+        src.connect(greetingGain);
+        greetingGain.connect(_mixDest);
+        entry('Answering greeting transmit level boosted 2x', 'sys');
+      } else {
+        src.connect(_mixDest);
+      }
       if (playLocally) src.connect(_mixCtx.destination); // optional local speakers
       _mixSourceNodes.set(mediaEl, src);
       entry('Media element wired into mix', 'sys');
