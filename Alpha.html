@@ -2722,7 +2722,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.86-control-bubble-guard';   // paired build: control signalling can never render as chat
+const VERSION = '8.87-alpha-answering-status';   // paired build: Alpha cannot display LIVE during unattended answering
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -7162,6 +7162,12 @@ function markLinked() {
   if (_bravoAnsweringAvailable) {
     setStatus('reachable');
     duplexBar.textContent = 'WAITING FOR BRAVO - TELEPHONE RINGING';
+    duplexBar.className = 'duplex-overlay waiting';
+  } else if (_answeringMachineMode && !_attended) {
+    // _onCallConnected() has started Alpha's unattended ring/VM sequence.
+    // Do not let the generic media-connected display mislabel it as LIVE.
+    setStatus('answering');
+    duplexBar.textContent = 'ANSWERING - INCOMING CALL';
     duplexBar.className = 'duplex-overlay waiting';
   }
   // Log the ICE path type (host / srflx / relay) so we know how we connected
