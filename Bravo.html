@@ -1,3 +1,4 @@
+
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — BRAVO -->
@@ -2671,7 +2672,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.84-two-tone-ring';   // paired build: five telephone rings, each formed from two tones
+const VERSION = '8.85-ring-and-vm-end-cues';   // paired build: unlocks Alpha rings and cues both sides when VM ends
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -7799,6 +7800,10 @@ async function _startVoicemail() {
   _vmRec.ondataavailable = e => { if (e.data.size > 0) _vmChunks.push(e.data); };
   _vmRec.onstop = async () => {
     _vmActive = false;
+    // The caller receives the matching control cue; play it locally as well so
+    // both machines confirm that voicemail recording has finished.
+    playTone('vm_end');
+    setTimeout(() => playTone('vm_end'), 450);
     if (_vmACtx) { try { _vmACtx.close(); } catch(e) {} _vmACtx = null; }
     if (!_vmChunks.length) {
       entry('Voicemail empty — nothing saved', 'sys');
