@@ -2722,7 +2722,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.88-pi-control-decoder';   // paired build: decodes nested Pi/PeerJS control packets
+const VERSION = '8.92-deliberate-live-click';   // paired build: mouse movement/hover cannot trigger answering-mode takeover
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -6186,20 +6186,37 @@ async function init() {
 // Module-level: refreshes REMOTE_ID from Firebase (BRAVO's suffixed peer ID).
 // Must be module-level so startPeer's peer.on('open') closure can reference it.
 let _remoteIdConfirmed = false; // true once Firebase has returned a valid peerId for BRAVO
+let _bravoPresenceFreshUntil = 0;
 async function _refreshRemoteId() {
   try {
     const _code = MY_ID ? MY_ID.replace(/^alpha-/, '').replace(/-[0-9a-f]{4}$/, '') : '';
     const _bravoPollKey = 'bravo-' + _code;
     if (!_code || _bravoPollKey === 'bravo-') return;
-    const _r = await fetch(FB_URL + '/presence/' + _bravoPollKey + '.json');
+    const _r = await fetch(FB_URL + '/presence/' + _bravoPollKey + '.json?cb=' + Date.now(), { cache: 'no-store' });
     const _env = await _r.json();
     const _d = _env ? await _decryptPresence(_code, _env) : null;
-    if (_d && _d.peerId) {
-      if (_d.peerId !== REMOTE_ID) {
+    if (_d && _d.peerId && _d.ts && (Date.now() - _d.ts) < PRESENCE_STALE_MS) {
+      _bravoPresenceFreshUntil = Date.now() + PRESENCE_STALE_MS;
+      if (_d.peerId !== REMOTE_ID && !linked) {
+        const previousRemoteId = REMOTE_ID;
         entry('BRAVO peer ID: ' + _d.peerId, 'sys');
         REMOTE_ID = _d.peerId;
+        // A receiver can restart and publish a new suffixed ID while Alpha is
+        // still negotiating with the old one. Do not wait for the 90s watchdog.
+        if (call && previousRemoteId) {
+          entry('BRAVO peer ID changed during connection - replacing stale call immediately', 'sys');
+          try { call.off('close'); call.off('error'); call.close(); } catch(e) {}
+          call = null;
+          if (dataConn) { try { dataConn.close(); } catch(e) {} dataConn = null; }
+          pendingDC = false;
+          clearTimeout(_dialWatchdogTimer); _dialWatchdogTimer = null;
+          clearTimeout(retryTimer);
+          retryTimer = setTimeout(() => { if (!linked && !_answeringMachineMode) dial(); }, 150);
+        }
       }
       _remoteIdConfirmed = true;
+    } else {
+      _remoteIdConfirmed = false;
     }
   } catch(e) {}
 }
@@ -6233,6 +6250,11 @@ function _clearHardAnswerDeadline() {
 function _checkHardAnswerDeadline() {
   if (!_hardAnswerDeadlineAt || _answeringMachineMode || leftPermanently) return;
   if (!linked && Date.now() >= _hardAnswerDeadlineAt) {
+    if (_bravoPresenceFreshUntil > Date.now()) {
+      _hardAnswerDeadlineAt = Date.now() + 10000;
+      entry('BRAVO is online - extending connection attempt before answering mode', 'sys');
+      return;
+    }
     entry('FAILSAFE: login answering deadline reached while not live', 'sys');
     _enterAnsweringMachineMode();
   }
@@ -6257,6 +6279,11 @@ function _checkAnsweringModeDeadline() {
   if (_answeringMachineMode || linked || leftPermanently || !_answeringDeadlineAt) return;
   const remaining = _answeringDeadlineAt - Date.now();
   if (remaining <= 0) {
+    if (_bravoPresenceFreshUntil > Date.now()) {
+      _answeringDeadlineAt = Date.now() + 10000;
+      entry('BRAVO heartbeat is fresh - continuing connection attempt', 'sys');
+      return;
+    }
     _enterAnsweringMachineMode();
     return;
   }
@@ -8044,7 +8071,13 @@ function answerOwnVoicemailLive() {
   if (!wasRecording) _finishOwnerLiveTakeover();
 }
 
+function _isDeliberateLivePointer(event) {
+  return !!(event && event.isTrusted && event.type === 'pointerdown' &&
+    event.isPrimary !== false && event.button === 0 && (event.buttons & 1) === 1);
+}
+
 document.addEventListener('pointerdown', event => {
+  if (!_isDeliberateLivePointer(event)) return;
   const target = event.target;
   if (target && target.closest && target.closest('button,a,input,select,textarea,audio,[role="button"]')) return;
   if (linked && _bravoAnsweringAvailable) {
@@ -8064,6 +8097,7 @@ document.addEventListener('pointerdown', event => {
 });
 
 function _markAttended(event, suppressCamera) {
+  if (event && !_isDeliberateLivePointer(event)) return;
   if (event && event.target && event.target.closest && event.target.closest('button,a,input,select,textarea,audio,[role="button"]')) return;
   _liveTakeoverRequested = true;
   if (_attended) return;
@@ -9245,7 +9279,15 @@ async function attachMediaToCallAudio(mediaEl, playLocally = true) {
   if (!_mixSourceNodes.has(mediaEl)) {
     try {
       const src = _mixCtx.createMediaElementSource(mediaEl);
-      src.connect(_mixDest);           // → call stream
+      if (mediaEl.id === 'answeringMachineIntro') {
+        const greetingGain = _mixCtx.createGain();
+        greetingGain.gain.value = 2.0;
+        src.connect(greetingGain);
+        greetingGain.connect(_mixDest);
+        entry('Answering greeting transmit level boosted 2x', 'sys');
+      } else {
+        src.connect(_mixDest);         // normal chat media → call stream
+      }
       if (playLocally) src.connect(_mixCtx.destination); // optional local speakers
       _mixSourceNodes.set(mediaEl, src);
       entry('Media element wired into mix', 'sys');
