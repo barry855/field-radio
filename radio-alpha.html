@@ -1,3 +1,5 @@
+
+<!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -9,6 +11,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="screen-orientation" content="any">
 <meta name="google" content="notranslate">
+<script>try{if(localStorage.getItem('alpha_pi_mode')==='1')document.documentElement.classList.add('is-pi');}catch(e){}</script>
 <title>ALPHA — Field Radio v6</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌐</text></svg>">
 <style>
@@ -261,6 +264,60 @@
     max-width: 90%;
     pointer-events: none;
   }
+  .bubble.vm-notice.vm-has-recording {
+    pointer-events: auto;
+    letter-spacing: 1px;
+  }
+
+  .vm-box {
+    flex-shrink: 0; border: 1px solid rgba(0,212,255,0.28);
+    border-radius: 5px; margin-top: 4px; overflow: hidden;
+  }
+  .vm-box-header {
+    display: flex; align-items: center; gap: 8px; padding: 4px 8px;
+    background: rgba(0,212,255,0.08); cursor: pointer; user-select: none;
+    font-size: 10px; letter-spacing: 2px; font-weight: bold; color: var(--accent);
+  }
+  .vm-box-header:hover { background: rgba(0,212,255,0.15); }
+  .vm-box-summary { margin-left: auto; color: var(--text-dim); font-size: 9px; letter-spacing: 0; }
+  .vm-box-body { display: none; padding: 4px 6px; max-height: 180px; overflow-y: auto; }
+  .vm-box.open .vm-box-body { display: block; }
+  .vm-box-arrow { transition: transform 0.2s; }
+  .vm-box.open .vm-box-arrow { transform: rotate(90deg); }
+  .vm-box-entry {
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    padding: 4px 2px; border-bottom: 1px solid rgba(255,255,255,0.07);
+    font-size: 10px; color: #ccc;
+  }
+  .vm-box-entry:last-child { border-bottom: none; }
+  .vm-box-entry audio { height: 24px; flex: 1; min-width: 120px; }
+  .vm-box-dl { color: var(--accent); text-decoration: underline; white-space: nowrap; }
+  .vm-box-ts { color: #fff; white-space: nowrap; }
+  .vm-box-del { color: #f55; background: none; border: 0; padding: 2px; cursor: pointer; font-size: 12px; margin-left: auto; flex-shrink: 0; }
+  .vm-box-empty { color: #666; font-size: 10px; padding: 6px 4px; letter-spacing: 1px; }
+  .vm-picker-overlay {
+    display: none; position: fixed; inset: 0; z-index: 12000;
+    align-items: center; justify-content: center; padding: 16px;
+    background: rgba(0,0,0,0.78);
+  }
+  .vm-picker-overlay.open { display: flex; }
+  .vm-picker-panel {
+    width: min(680px, 96vw); max-height: min(78vh, 640px);
+    display: flex; flex-direction: column; overflow: hidden;
+    background: var(--panel); border: 1px solid var(--accent); border-radius: 6px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+  }
+  .vm-picker-head {
+    display: flex; align-items: center; gap: 8px; padding: 10px 12px;
+    border-bottom: 1px solid var(--border); color: var(--accent);
+  }
+  .vm-picker-head h3 { margin: 0; font-size: 12px; letter-spacing: 2px; }
+  .vm-picker-count { margin-left: auto; color: var(--text-dim); font-size: 10px; }
+  .vm-picker-close {
+    width: 28px; height: 28px; padding: 0; border: 1px solid var(--border);
+    border-radius: 4px; background: var(--btn-bg); color: var(--text); cursor: pointer;
+  }
+  .vm-picker-body { padding: 8px 10px; overflow-y: auto; min-height: 90px; }
 
   /* connection quality */
   .quality-item {
@@ -688,6 +745,10 @@
   .flip-cam-select-chat {
     height: auto; padding: 4px 8px;
   }
+  .mic-input-select {
+    flex: 0 1 155px; min-width: 105px; max-width: 180px;
+    height: 30px; padding: 0 7px;
+  }
   .leave-btn {
     flex: 0 0 auto; height: 36px; padding: 0 10px;
     background: rgba(0,212,255,0.15); border: 1px solid var(--accent);
@@ -790,10 +851,15 @@
   }
   #speechPanel > .speech-status { display: none; }
   body.is-android #speechPanel > .speech-status { display: block; }
-  body.is-pi #speechBtnRow2 .sbr-label,
-  body.is-pi #speechLangSelect,
-  body.is-pi #speechOriginalBtn { display: none; }
-  body.is-pi #speechStatus { display: none; }
+  html.is-pi #speechBtnRow2 .sbr-label,
+  html.is-pi #speechLangSelect,
+  html.is-pi #speechOriginalBtn,
+  html.is-pi #speechStatus,
+  html.is-pi #speechListenBtn,
+  html.is-pi #speechBtnRow3,
+  html.is-pi #ttsBtn,
+  html.is-pi #ttsBtn2,
+  html.is-pi #ttsChatBtn { display: none !important; }
   #speechPanel > .speech-status {
     font-size: 11px; letter-spacing: 1px; padding: 2px 4px;
     color: #ffffff !important; font-family: monospace; word-break: break-all;
@@ -1314,14 +1380,12 @@
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 
     /* ── Overall page — flex column so notes fills remaining space ── */
-    html {
-      height: 100% !important;
-    }
+    html { height: auto !important; }
     body {
-      height: 100% !important; min-height: 0 !important;
+      height: auto !important; min-height: 0 !important;
       overflow: visible !important;
       background: #fff !important; margin: 0 !important;
-      display: flex !important; flex-direction: column !important;
+      display: block !important;
     }
     .shell {
       gap: 4px !important; padding: 6px !important;
@@ -1333,15 +1397,16 @@
     .tab-content, .tab-pane {
       height: auto !important; overflow: visible !important;
       min-height: 0 !important; max-height: none !important;
+      flex: 0 0 auto !important;
     }
 
     /* ── Overall page — flex column ── */
-    html { height: 100% !important; }
+    html { height: auto !important; }
     body {
-      height: 100% !important; min-height: 0 !important;
+      height: auto !important; min-height: 0 !important;
       overflow: visible !important;
       background: #fff !important; margin: 0 !important;
-      display: flex !important; flex-direction: column !important;
+      display: block !important;
     }
     .shell {
       gap: 4px !important; padding: 6px !important;
@@ -1353,12 +1418,13 @@
     .tab-content, .tab-pane {
       height: auto !important; overflow: visible !important;
       min-height: 0 !important; max-height: none !important;
+      flex: 0 0 auto !important;
     }
-    /* Hide the chat pane entirely — all children hidden, just collapses the container */
     #paneChat {
       height: auto !important; min-height: 0 !important;
-      overflow: hidden !important; padding: 0 !important;
-      gap: 0 !important;
+      overflow: visible !important;
+      gap: 10px !important;
+      flex: 0 0 auto !important;
     }
 
     /* ── Header / logo bar — light grey ── */
@@ -1404,6 +1470,7 @@
       background: #fff !important; color: #000 !important;
       border: 1px solid #555 !important;
     }
+    #vmPickerBtn, #ownerLiveBtn, #vmBox, #vmPickerOverlay { display: none !important; }
     /* Row 1: TTS Off | Flip Cam | FS OFF | MINI CAM OFF */
     #ttsChatBtn, #flipChatBtn, #fsChatBtn, #miniChatBtn { display: inline-flex !important; }
     /* Row 2: See Remote | RECORD | Video Off | Mike On | Sys Audio Off | Share Off */
@@ -1434,7 +1501,8 @@
     }
     .gain-row .gain-label span { color: #000 !important; }
     .gain-row .gain-val { color: #000 !important; }
-    .gain-row input[type=range] { display: block !important; flex: 1 !important; border: 1px solid #999 !important; -webkit-appearance: auto !important; appearance: auto !important; }
+    .gain-row input[type=range] { display: block !important; flex: 1 !important; border: 1px solid #999 !important; accent-color: var(--accent) !important; -webkit-appearance: auto !important; appearance: auto !important; }
+    #remoteGainSliderChat { accent-color: var(--accent2) !important; }
     /* Talk/Type in Chat button in gain row */
     #speechToggleBtn { display: inline-flex !important; background: #fff !important; color: #000 !important; border: 1px solid #555 !important; }
 
@@ -1463,6 +1531,13 @@
     .chat-find-bar { display: none !important; height: 0 !important; overflow: hidden !important; }
     .mini-video-overlay { display: none !important; }
     .zoom-row { display: none !important; height: 0 !important; overflow: hidden !important; }
+    /* speechPanel is moved to body before printing; collapse its old flex parent. */
+    #chatPanel {
+      display: none !important; flex: none !important;
+      height: 0 !important; min-height: 0 !important;
+      margin: 0 !important; padding: 0 !important; border: 0 !important;
+      overflow: hidden !important;
+    }
 
     /* ── Video elements — hidden, no space ── */
     #chatUnderlay { display: none !important; }
@@ -1480,6 +1555,7 @@
       overflow: visible !important; height: auto !important;
       max-height: none !important; gap: 6px !important;
       flex-shrink: 0 !important;
+      page-break-inside: avoid !important; break-inside: avoid-page !important;
     }
     #speechEditWrap { display: none !important; }
     #speechStatus { display: none !important; }
@@ -1507,12 +1583,21 @@
       max-width: 100% !important; padding: 8px 10px !important;
       margin: 0 !important; overflow: visible !important;
       height: auto !important; max-height: none !important;
+      page-break-inside: avoid !important; break-inside: avoid-page !important;
     }
     #helpPanelRows {
       overflow: visible !important; height: auto !important;
       max-height: none !important;
     }
     .help-row { page-break-inside: avoid !important; break-inside: avoid !important; }
+    #helpPanelInner { padding: 6px 8px !important; }
+    #helpPanelInner h3 { margin: 0 0 4px !important; font-size: 13px !important; }
+    #helpPanelRows { gap: 0 10px !important; }
+    .help-row { padding: 1px 0 !important; gap: 5px !important; line-height: 1.08 !important; }
+    .help-name { flex-basis: 96px !important; padding: 1px 4px !important; font-size: 8px !important; }
+    .help-desc { font-size: 8.5px !important; line-height: 1.08 !important; }
+    #speechPanel { padding: 5px 8px !important; margin-top: 4px !important; gap: 3px !important; }
+    #speechPanel .speech-btn-row { gap: 3px !important; }
     .help-name {
       background: #fff !important; color: #000 !important;
       border: 1px solid #333 !important;
@@ -1530,33 +1615,6 @@
   }
   @media print {
     /* ── Notes area — ruled lines, fills remaining page space ── */
-    #printNotesArea {
-      display: block !important;
-      border: 1px solid #999;
-      border-radius: 4px;
-      margin-top: 8px;
-      padding: 8px 10px 0;
-      min-height: 0;
-      flex: 1 1 auto;
-      page-break-inside: auto;
-      break-inside: auto;
-      background-image: repeating-linear-gradient(
-        to bottom,
-        transparent,
-        transparent 23px,
-        #ccc 23px,
-        #ccc 24px
-      ) !important;
-      background-position: 0 30px !important;
-    }
-    #printNotesArea p {
-      margin: 0 0 6px;
-      font-size: 10px;
-      color: #666;
-      font-family: 'Share Tech Mono', monospace;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-    }
   }
 
   /* new-message badge */
@@ -1702,6 +1760,7 @@
     flex: 1; accent-color: var(--accent);
     height: 4px; cursor: pointer;
   }
+  #remoteGainSliderChat { accent-color: var(--accent2); }
   .gain-row .gain-val {
     min-width: 38px; text-align: right;
     color: #ffffff; font-family: 'Orbitron', sans-serif;
@@ -1838,6 +1897,58 @@
   }
 
   /* ── Button label color: yellow, leaving Record buttons untouched ──────── */
+  /* Fullscreen video is the canvas; controls overlay it instead of reserving space. */
+  body.app-fullscreen .tab-content,
+  body.app-fullscreen #paneChat { background: transparent !important; }
+  body.app-fullscreen #chatPanel {
+    position: fixed; inset: 0; z-index: 1000;
+    width: 100vw; height: 100vh; padding: 0; margin: 0; background: #000;
+  }
+  body.app-fullscreen #chatUnderlay {
+    width: 100vw; height: 100vh; border-radius: 0;
+  }
+  body.app-fullscreen header,
+  body.app-fullscreen .tab-bar,
+  body.app-fullscreen #paneChat .chat-find-bar,
+  body.app-fullscreen #paneChat .chat-btn-bar-row,
+  body.app-fullscreen #paneChat .gain-row,
+  body.app-fullscreen #paneChat .zoom-row,
+  body.app-fullscreen #paneChat #speechPanel,
+  body.app-fullscreen #paneChat #chatToolsWrap,
+  body.app-fullscreen #paneChat #translateBar {
+    background-color: rgba(0, 0, 0, 0.58) !important;
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+  }
+  body.app-fullscreen #paneChat #speechPanel.speech-open {
+    display: flex !important;
+    position: fixed !important;
+    top: auto !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    width: 100vw;
+    height: min(42vh, 360px);
+    min-height: 190px;
+    box-sizing: border-box;
+    z-index: 1004;
+    border-radius: 10px 10px 0 0;
+    transform: translateY(0);
+    transition: transform 0.35s ease, opacity 0.3s ease;
+  }
+  body.app-fullscreen.fs-controls-hidden #paneChat #speechPanel.speech-open {
+    display: flex !important;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(105%);
+  }
+  body.app-fullscreen.fs-controls-visible #paneChat #speechPanel.speech-open {
+    display: flex !important;
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+
   .media-btn,
   .speech-top-btn,
   .log-action-btn,
@@ -2133,13 +2244,13 @@ window.addEventListener('orientationchange', function() {
       </div>
       <div class="gain-row">
         <div class="gain-label"><span>MIKE</span><span>GAIN</span></div>
-        <input type="range" id="micGainSlider" min="0" max="3" step="0.05" value="1" oninput="applyMicGain(this.value)">
-        <span class="gain-val" id="micGainVal">1.00×</span>
+        <input type="range" id="micGainSlider" min="0" max="3" step="0.05" value="1.35" oninput="applyMicGain(this.value)">
+        <span class="gain-val" id="micGainVal">1.35×</span>
       </div>
       <div class="gain-row">
         <div class="gain-label"><span>SPKR</span><span>VOL</span></div>
-        <input type="range" id="remoteGainSlider" min="0" max="3" step="0.05" value="1" oninput="applyRemoteGain(this.value)">
-        <span class="gain-val" id="remoteGainVal">1.00×</span>
+        <input type="range" id="remoteGainSlider" min="0" max="3" step="0.05" value="2.25" oninput="applyRemoteGain(this.value)">
+        <span class="gain-val" id="remoteGainVal">75%</span>
       </div>
       <div class="video-panel">
         <div class="panel-label">REMOTE — BRAVO</div>
@@ -2184,14 +2295,15 @@ window.addEventListener('orientationchange', function() {
       </div>
       <div class="gain-row" style="flex-shrink:0;">
         <div class="gain-label"><span>MIKE</span><span>GAIN</span></div>
-        <input type="range" id="micGainSliderChat" min="0" max="3" step="0.05" value="1" oninput="applyMicGain(this.value)" style="flex:1; min-width:0;">
-        <span class="gain-val" id="micGainValChat">1.00×</span>
+        <select id="micInputSelect" class="flip-cam-select mic-input-select" title="Microphone input" onchange="switchMicrophone(this.value)"><option value="">MIC: DEFAULT</option></select>
+        <input type="range" id="micGainSliderChat" min="0" max="3" step="0.05" value="1.35" oninput="applyMicGain(this.value)" style="flex:1; min-width:0;">
+        <span class="gain-val" id="micGainValChat">1.35×</span>
         <button class="speech-top-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input" style="flex-shrink:0; white-space:nowrap;">Talk/Type in Chat</button>
       </div>
       <div class="gain-row" style="flex-shrink:0;">
         <div class="gain-label"><span>SPKR</span><span>VOL</span></div>
-        <input type="range" id="remoteGainSliderChat" min="0" max="3" step="0.05" value="1" oninput="applyRemoteGain(this.value)" style="flex:1; min-width:0;">
-        <span class="gain-val" id="remoteGainValChat">1.00×</span>
+        <input type="range" id="remoteGainSliderChat" min="0" max="3" step="0.05" value="2.25" oninput="applyRemoteGain(this.value)" style="flex:1; min-width:0;">
+        <span class="gain-val" id="remoteGainValChat">75%</span>
       </div>
       <div class="zoom-row" style="display:none;">
         <span>ZOOM LOCAL</span>
@@ -2202,9 +2314,33 @@ window.addEventListener('orientationchange', function() {
         <div style="display:flex; flex-wrap:wrap; align-items:center; gap:4px;">
           <span class="sbr-label">CHAT:</span>
           <button class="speech-top-btn" onclick="saveChatToFile()" id="saveChatBtn" title="Save chat as HTML">💾 SAVE</button>
+          <button class="speech-top-btn" onclick="exportSessionChat()" id="exportSessionBtn" title="Export a past session as HTML">EXPORT</button>
           <button class="speech-top-btn" onclick="restoreChat()" id="restoreChatBtn" title="Restore previous session chat">↩ RESTORE</button>
-          <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';ttsStopAll();morseStopAll();entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR</button>
+          <button class="speech-top-btn" onclick="refreshChatScreenOnly()" id="screenRefreshChatBtn" title="Clear only this screen; saved chat and voicemail remain">📺 Scr. Refresh</button>
           <button class="speech-top-btn" id="findChatBtn" title="Find in chat">🔍 FIND</button>
+          <button class="speech-top-btn" onclick="clearHistory();document.getElementById('chat').innerHTML='';ttsStopAll();morseStopAll();entry('Chat history cleared','sys');" id="clearChatBtn" title="Clear chat history">🗑 CLEAR !</button>
+        </div>
+        <div class="vm-box" id="vmBox">
+          <div class="vm-box-header" onclick="toggleVmBox()" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleVmBox();}">
+            <span>VOICEMAIL BOX</span>
+            <span class="vm-box-summary" id="vmBoxSummary"></span>
+            <span class="vm-box-arrow">▶</span>
+          </div>
+          <div class="vm-box-body" id="vmBoxBody">
+            <div class="vm-box-empty" id="vmBoxEmpty">No voicemails saved.</div>
+          </div>
+        </div>
+        <div class="vm-picker-overlay" id="vmPickerOverlay" onclick="if(event.target===this)closeVoicemailPicker()">
+          <section class="vm-picker-panel" role="dialog" aria-modal="true" aria-labelledby="vmPickerTitle">
+            <div class="vm-picker-head">
+              <h3 id="vmPickerTitle">RECEIVED VOICEMAILS</h3>
+              <span class="vm-picker-count" id="vmPickerCount"></span>
+              <button class="vm-picker-close" type="button" onclick="closeVoicemailPicker()" title="Close voicemail picker" aria-label="Close voicemail picker">X</button>
+            </div>
+            <div class="vm-picker-body" id="vmPickerBody">
+              <div class="vm-box-empty" id="vmPickerEmpty">No voicemails saved in this browser.</div>
+            </div>
+          </section>
         </div>
         <div id="translateBar">
     <label>🗣 MY LANGUAGE</label>
@@ -2401,6 +2537,7 @@ window.addEventListener('orientationchange', function() {
 
 <button id="audioUnlockBtn" onclick="unlockRemoteAudio()" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(0,200,120,0.92);color:#000;border:none;border-radius:8px;padding:12px 28px;font-size:15px;font-family:monospace;font-weight:bold;letter-spacing:1px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,0.5);">▶ TAP TO HEAR AUDIO</button>
 <audio id="remoteAudio" autoplay="" playsinline="" webkit-playsinline=""></audio>
+<audio id="answeringMachineIntro" preload="auto" src="answering-machine-intro.mp3" playsinline></audio>
 <div id="fsHint">TAP TO SHOW CONTROLS</div>
 <div id="lightbox"><img id="lightboxImg" src="" alt=""></div>
 
@@ -2449,10 +2586,11 @@ const _tones = {
   linked:       { freqs:[523,659,784],    durs:[0.10,0.10,0.18],  wave:'triangle', vol:0.18 },
   dropped:      { freqs:[660,440,330],    durs:[0.10,0.10,0.18],  wave:'sine',     vol:0.16 },
   radio_online: { freqs:[440,550],        durs:[0.06,0.10],       wave:'sine',     vol:0.13 },
-  call_in:      { freqs:[880,880,880],    durs:[0.08,0.05,0.13],  wave:'square',   vol:0.10 },
+  call_in:      { freqs:[440,480],durs:[0.22,0.30],wave:'triangle',vol:0.16 },
   file_in:      { freqs:[660,880],        durs:[0.08,0.14],       wave:'triangle', vol:0.14 },
   error:        { freqs:[300,250],        durs:[0.12,0.18],       wave:'sawtooth', vol:0.14 },
-  vm_start:     { freqs:[880,880,880],    durs:[0.10,0.10,0.10],  wave:'sine',     vol:0.30 },
+  vm_end:       { freqs:[660,660],        durs:[0.14,0.14],       wave:'sine',     vol:0.30 },
+  vm_start:     { freqs:[1000],           durs:[0.55],             wave:'sine',     vol:0.65 },
 };
 var _actx = null;
 function playTone(name) {
@@ -2479,6 +2617,22 @@ function playTone(name) {
     };
     if (_actx.state === 'suspended') { _actx.resume().then(play); } else { play(); }
   } catch(e) { console.warn('playTone:', e); }
+}
+// Caller-side ring tone — played here in response to a remote 'ring' control
+// message, never locally on the answering machine itself.
+let _remoteRingTimer = null;
+function _startRemoteRingTone() {
+  _stopRemoteRingTone();
+  let count = 1;
+  playTone('call_in');
+  _remoteRingTimer = setInterval(() => {
+    if (count >= 5) { _stopRemoteRingTone(); return; }
+    playTone('call_in');
+    count++;
+  }, 2000);
+}
+function _stopRemoteRingTone() {
+  if (_remoteRingTimer) { clearInterval(_remoteRingTimer); _remoteRingTimer = null; }
 }
 // Unlock on first user gesture — also retries remote audio play if it was
 // blocked by Android's autoplay policy and the stream arrived before a gesture.
@@ -2568,7 +2722,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.4';   // ← bump this on each deploy
+const VERSION = '8.92-deliberate-live-click';   // paired build: mouse movement/hover cannot trigger answering-mode takeover
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -2602,6 +2756,8 @@ let silentCtx = null;
 let silentTrack = null;
 
 let peer, call, dataConn, localStream, linked = false, retryTimer;
+let _dialWatchdogTimer = null; // separate from short retry timers; prevents orphaned 90s callbacks
+const _failedRemoteIds = Object.create(null);
 let _iceReady = false;   // ICE connected but stream not yet confirmed — not truly LIVE yet
 let _streamArrived = false; // at least one remote track/stream has arrived
 let _noMediaMode = false;   // true when we're running without real mic/camera
@@ -2685,6 +2841,18 @@ function startSession() {
   stopPresencePolling();
   const code = document.getElementById('sessionCode').value.trim().toUpperCase().replace(/\s+/g,'');
   if (!code) { document.getElementById('sessionCode').focus(); return; }
+  // Create and resume the tone context during the login gesture. Without this,
+  // unattended rings can remain silent when Alpha has not previously made sound.
+  try {
+    if (!_actx) _actx = new (window.AudioContext || window.webkitAudioContext)();
+    if (_actx.state === 'suspended') _actx.resume().catch(() => {});
+  } catch(e) {}
+  // Create the microphone processing context inside the login gesture. Chrome
+  // may otherwise create it suspended after getUserMedia resolves.
+  try {
+    if (!_micGainCtx || _micGainCtx.state === 'closed') _micGainCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (_micGainCtx.state === 'suspended') _micGainCtx.resume().catch(() => {});
+  } catch(e) {}
   const usingPreReg = _preRegistered && _preRegCode === code;
   if (!usingPreReg) {
     MY_ID     = 'alpha-' + code;
@@ -2725,14 +2893,30 @@ function startSession() {
   const _uln = document.getElementById('userLeftNotice'); if (_uln) _uln.classList.remove('visible');
   leftPermanently = false;
   remotePeerLeft = false;
+  _clearAnsweringModeTimer();
+  _answeringMachineMode = false;
+  _attended = false;
+  _bravoRequestedLive = false;
+  _bravoAnsweringAvailable = false;
+  _liveTakeoverRequested = false;
   document.getElementById('qualityDisplay').style.display = 'flex';
+  setStatus('calling');
+  duplexBar.textContent = '● CALLING BRAVO…';
+  duplexBar.className = 'duplex-overlay';
+  // Start the answering deadline at login, not at PeerJS "open". If the
+  // signalling service is slow or unavailable, Alpha must still become an
+  // answering machine after 30 seconds instead of remaining CALLING forever.
+  _armAnsweringModeTimer();
+  _armHardAnswerDeadline();
   if (usingPreReg) {
     entry('Using pre-registered peer — acquiring media only', 'sys');
     initMediaOnly();
   } else {
     init();
   }
-  setTimeout(loadHistory, 100);
+  // Start every login with a clean visible chat. Stored sessions remain
+  // available through RESTORE and EXPORT.
+  document.getElementById('chat').innerHTML = '';
 }
 
 // ── Pre-fill last used code + checkbox states on load ────────
@@ -2793,7 +2977,11 @@ async function _decryptPresence(code, env) {
 async function presenceWrite(myKey) {
   try {
     const code = presenceCode || myKey.split('-').slice(1).join('-');
-    const env  = await _encryptPresence(code, { ts: Date.now(), peerId: MY_ID });
+    const env  = await _encryptPresence(code, {
+      ts: Date.now(),
+      peerId: MY_ID,
+      answering: _answeringMachineMode === true
+    });
     await fetch(FB_URL + '/presence/' + myKey + '.json', {
       method: 'PUT',
       body: JSON.stringify(env)
@@ -3018,6 +3206,7 @@ document.addEventListener('click', () => {
 
 function setPiMode(on) {
   try { localStorage.setItem('alpha_pi_mode', on ? '1' : '0'); } catch(e) {}
+  document.documentElement.classList.toggle('is-pi', on);
   document.body.classList.toggle('is-pi', on);
   updateSpeechPlaceholder();
 }
@@ -3040,13 +3229,16 @@ function prefillLogin() {
     document.getElementById('loginPiMode').checked = localStorage.getItem('alpha_pi_mode') === '1';
     if (last) document.getElementById('sessionCode').value = last;
     setTimeout(() => entry('PREFILL: code=' + last + ' vid=' + disVid + ' aud=' + disAud, 'sys'), 500);
-    // Start presence polling immediately if code was pre-filled
-    if (last) startPresencePolling(last);
-    // Pre-register peer immediately if saved code is exactly 6 chars
-    if (last && last.length === 6) preRegister(last);
+    // Connection work starts only after login. Pre-registering here used to
+    // overlap PeerJS startup with media acquisition and could freeze the page.
     // Prefill mic gain slider from saved value
     const _rawGain = localStorage.getItem('alpha_mic_gain');
-    const savedGain = _rawGain !== null ? parseFloat(_rawGain) : 1;
+    let savedGain = _rawGain !== null ? parseFloat(_rawGain) : 1.35;
+    if (savedGain === 1 && localStorage.getItem('alpha_gain_135_migrated') !== '1') {
+      savedGain = 1.35;
+      localStorage.setItem('alpha_mic_gain', '1.35');
+      localStorage.setItem('alpha_gain_135_migrated', '1');
+    }
     const gSlider = document.getElementById('micGainSlider');
     const gLabel  = document.getElementById('micGainVal');
     if (gSlider && isFinite(savedGain)) { gSlider.value = savedGain; }
@@ -3197,12 +3389,7 @@ if (!_loginTimeoutStarted && document.getElementById('sessionOverlay').style.dis
     if (code === _lastCode) return;
     _lastCode = code;
     updateCodeStrength(code);
-    startPresencePolling(code);
-    if (code.length === 6) {
-      preRegister(code);
-    } else {
-      cancelPreRegister();
-    }
+    // Do not open signalling/presence connections while the user is typing.
     // Suspend auto-login countdown while user is typing
     clearInterval(loginTimeoutInterval);
     clearTimeout(_resumeTimer);
@@ -3271,25 +3458,46 @@ function scrollToBottom(force) {
 
 
 
-function _vmNotice(text) {
-  const chatEl = document.getElementById('chat');
-  if (!chatEl) return;
-  const d = document.createElement('div');
-  d.className = 'bubble vm-notice';
-  d.textContent = text;
-  chatEl.appendChild(d);
-  chatEl.scrollTop = chatEl.scrollHeight;
-}
-
 function setStatus(state) {
   entry('STATUS: ' + state, 'sys');
   linkLed.className = 'led';
-  if (state === 'calling')        { linkLed.classList.add('on-yellow'); statusEl.textContent = 'CALLING…';     document.title = '📡 CALLING… — ALPHA — Field Radio v6'; }
-  else if (state === 'connecting')  { linkLed.classList.add('on-blue');   statusEl.textContent = 'CONNECTING…'; document.title = '🔵 CONNECTING… — ALPHA — Field Radio v6'; }
-  else if (state === 'reachable') { linkLed.classList.add('on-amber-flash');  statusEl.textContent = 'WAITING';      document.title = '🟡 WAITING — ALPHA — Field Radio v6'; }
-  else if (state === 'linked')    { linkLed.classList.add('on-green');  statusEl.textContent = 'LIVE';         document.title = '🟢 LIVE — ALPHA — Field Radio v6'; }
-  else if (state === 'voicemail') { linkLed.classList.add('on-amber');  statusEl.textContent = '📼 VOICEMAIL'; document.title = '📼 VOICEMAIL — ALPHA — Field Radio v6'; }
-  else                            { statusEl.textContent = ''; document.title = 'ALPHA — Field Radio v6'; }
+  if (state === 'answering')      { linkLed.classList.add('on-cyan');   statusEl.textContent = 'ANSWERING';     document.title = 'ANSWERING - ALPHA - Field Radio v6'; }
+  else if (state === 'calling')   { linkLed.classList.add('on-yellow'); statusEl.textContent = 'CALLING...';    document.title = 'CALLING... - ALPHA - Field Radio v6'; }
+  else if (state === 'connecting'){ linkLed.classList.add('on-blue');   statusEl.textContent = 'CONNECTING...'; document.title = 'CONNECTING... - ALPHA - Field Radio v6'; }
+  else if (state === 'reachable') { linkLed.classList.add('on-amber-flash'); statusEl.textContent = 'WAITING';  document.title = 'WAITING - ALPHA - Field Radio v6'; }
+  else if (state === 'linked')    { linkLed.classList.add('on-green');  statusEl.textContent = 'LIVE';          document.title = 'LIVE - ALPHA - Field Radio v6'; }
+  else if (state === 'voicemail') { linkLed.classList.add('on-amber');  statusEl.textContent = 'VOICEMAIL';     document.title = 'VOICEMAIL - ALPHA - Field Radio v6'; }
+  else                            { statusEl.textContent = ''; document.title = 'ALPHA - Field Radio v6'; }
+}
+
+let _vmCountdownTicker = null;
+let _vmCountdownEndsAt = 0;
+let _vmCountdownNoticeEl = null;
+function _startVmCountdown(seconds, showCallerNotice) {
+  _stopVmCountdown();
+  _vmCountdownEndsAt = Date.now() + Math.max(1, Number(seconds) || 30) * 1000;
+  if (showCallerNotice) {
+    _vmCountdownNoticeEl = _vmNotice('VOICEMAIL RECORDING WILL START IN ' + (Number(seconds) || 30) + ' SECONDS');
+  }
+  const render = () => {
+    const left = Math.max(0, Math.ceil((_vmCountdownEndsAt - Date.now()) / 1000));
+    const clock = String(Math.floor(left / 60)).padStart(2, '0') + ':' + String(left % 60).padStart(2, '0');
+    linkLed.className = 'led on-amber-flash';
+    statusEl.textContent = 'WAITING ' + clock;
+    document.title = 'WAITING ' + clock + ' - ALPHA - Field Radio';
+    if (_vmCountdownNoticeEl) {
+      _vmCountdownNoticeEl.textContent = 'VOICEMAIL RECORDING WILL START IN ' + left + (left === 1 ? ' SECOND' : ' SECONDS');
+    }
+    if (left <= 0) _stopVmCountdown();
+  };
+  render();
+  _vmCountdownTicker = setInterval(render, 250);
+}
+function _stopVmCountdown() {
+  clearInterval(_vmCountdownTicker);
+  _vmCountdownTicker = null;
+  _vmCountdownEndsAt = 0;
+  _vmCountdownNoticeEl = null;
 }
 
 let activeTab = 'chat';
@@ -3366,6 +3574,24 @@ function syncChatUnderlay() {
   }
 }
 
+function refreshChatScreenOnly() {
+  const el = document.getElementById('chatUnderlay');
+  if (!el) return;
+  const chatEl = document.getElementById('chat');
+  if (chatEl) chatEl.innerHTML = '';
+  ttsStopAll();
+  morseStopAll();
+  _vmCountdownNoticeEl = null;
+  el.srcObject = null;
+  syncChatUnderlay();
+  syncChatMiniOverlay();
+  try { el.play().catch(() => {}); } catch(e) {}
+  const rv = document.getElementById('remoteVideo');
+  const lv = document.getElementById('localVideo');
+  [rv, lv].forEach(v => { try { if (v && v.srcObject) v.play().catch(() => {}); } catch(e) {} });
+  entry('Local chat screen cleared and video view refreshed; saved history retained', 'sys');
+}
+
 function syncChatMiniOverlay() {
   const miniChatVideo = document.getElementById('miniChatVideo');
   if (!miniChatVideo) return;
@@ -3386,6 +3612,22 @@ function syncChatMiniOverlay() {
     if (lbl) lbl.textContent = 'LOCAL';
     if (overlay) overlay.classList.toggle('no-video', !stream);
   }
+}
+
+function clearLocalChatDisplayForTakeover() {
+  const chatEl = document.getElementById('chat');
+  if (chatEl) chatEl.innerHTML = '';
+  _vmCountdownNoticeEl = null;
+  ttsStopAll();
+  morseStopAll();
+}
+
+let _liveCuePlayed = false;
+function playLiveCueOnce() {
+  if (_liveCuePlayed) return;
+  _liveCuePlayed = true;
+  playTone('vm_end');
+  setTimeout(() => playTone('vm_end'), 450);
 }
 
 function updateChatVideoViewBtn() {
@@ -3674,6 +3916,49 @@ function clearHistory() {
   try { localStorage.removeItem(HISTORY_KEY()); } catch(e) {}
 }
 
+function exportSessionChat() {
+  try {
+    const code = presenceCode || 'unknown';
+    const index = JSON.parse(localStorage.getItem(historyIndexKey(code)) || '[]');
+    if (!index.length) { entry('No previous session history for this code.', 'sys'); return; }
+    const format = ts => new Date(ts).toLocaleString();
+    const choice = index.length === 1 ? '1' : window.prompt(
+      'Export which session?\n' + index.map((ts, i) => (i + 1) + '. ' + format(ts)).join('\n')
+    );
+    if (choice === null) return;
+    const selected = parseInt(choice, 10);
+    if (!selected || selected < 1 || selected > index.length) { entry('Export selection is not valid.', 'sys'); return; }
+    const slotTs = index[selected - 1];
+    const slot = JSON.parse(localStorage.getItem(historySlotKey(code, slotTs)) || 'null');
+    if (!slot || !Array.isArray(slot.msgs) || !slot.msgs.length) { entry('Selected session is empty.', 'sys'); return; }
+    const escapeHtml = value => String(value == null ? '' : value)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const rows = slot.msgs.map(message => {
+      const mine = !!message.mine;
+      const time = message.ts ? new Date(message.ts).toLocaleTimeString() : '';
+      const status = mine ? ((message.status === 'seen' || message.status === 'delivered') ? ' &#10003;&#10003;' : ' &#10003;') : '';
+      return '<div class="row ' + (mine ? 'mine' : 'theirs') + '"><div class="message">' +
+        '<div class="meta">' + (mine ? 'ALPHA' : 'BRAVO') + ' &middot; ' + escapeHtml(time) + status + '</div>' +
+        '<div>' + escapeHtml(message.text).replace(/\n/g, '<br>') + '</div></div></div>';
+    }).join('\n');
+    const safeCode = escapeHtml(code);
+    const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Field Radio - ' + safeCode + '</title>' +
+      '<style>body{background:#111;color:#eee;font-family:Arial,sans-serif;max-width:700px;margin:0 auto;padding:20px}' +
+      'h2{font-size:13px;color:#aaa;letter-spacing:2px;border-bottom:1px solid #444;padding-bottom:8px}' +
+      '.row{display:flex;margin:6px 0}.mine{justify-content:flex-end}.theirs{justify-content:flex-start}' +
+      '.message{max-width:75%;border:1px solid #00d4ff;border-radius:8px;padding:8px 12px;font-size:13px}' +
+      '.theirs .message{border-color:#00ff9f}.meta{font-size:9px;color:#999;margin-bottom:3px}</style></head><body>' +
+      '<h2>FIELD RADIO &middot; CODE: ' + safeCode + ' &middot; SESSION: ' + escapeHtml(format(slotTs)) + '</h2>' + rows + '</body></html>';
+    const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'fieldradio-' + code.replace(/[^A-Z0-9_-]/gi, '-') + '-' + new Date(slotTs).toISOString().slice(0, 10) + '.html';
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    entry('Exported session from ' + format(slotTs), 'ok');
+  } catch(e) { entry('Export failed: ' + e.message, 'err'); }
+}
+
 function saveChatToFile() {
   const chatEl = document.getElementById('chat');
   if (!chatEl) return;
@@ -3939,6 +4224,12 @@ function _toggleLock(wrap) {
 }
 
 function addBubble(text, mine, ts, save = true, restoredStatus = null, orig = null, isCw = false) {
+  // Final rendering guard for Pi/PeerJS serialization variants. Signalling is
+  // never user chat and must not be displayed or written into chat history.
+  if (containsControlPacket(text) || containsControlPacket(orig)) {
+    entry('Suppressed control packet at chat renderer', 'sys');
+    return null;
+  }
   if (save) saveMessage(text, mine);
   const now = ts || Date.now();
   const wrap = document.createElement('div');
@@ -4150,6 +4441,7 @@ function setupTooltips() {
     audioBtn2: 'Toggle microphone',
     refreshBtn: 'Reconnect the remote screen',
     refreshBtnLocal: 'Reconnect the remote screen',
+    screenRefreshChatBtn: 'Clear only this screen; saved chat and voicemail remain',
     flipBtn: 'Switch camera',
     flipBtn2: 'Switch camera',
     recBtn: 'Record local video (with mini overlay if shown)',
@@ -4199,6 +4491,11 @@ function openHelpPanel() {
   const rows = document.getElementById('helpPanelRows');
   if (rows && !rows.dataset.built) {
     const items = [
+      ['EXPORT',   'Choose and export a previously stored chat session'],
+      ['CAMERA',   'Choose the camera used for video and local recording'],
+      ['VOICEMAIL BOX','Play stored voicemail recordings'],
+      ['VM SAVE / X','Download a voicemail / delete its browser copy'],
+      ['MY LANGUAGE','Choose chat translation and speech language'],
       ['Talk/Type in Chat', 'Open the speech and text input panel'],
       ['TALK',    'Hold to dictate via speech-to-text'],
       ['SEND',    'Send typed or dictated text to chat'],
@@ -4220,16 +4517,54 @@ function openHelpPanel() {
       ['↩ RESTORE','Restore a previous session\'s chat'],
       ['🗑 CLEAR', 'Clear chat history'],
       ['🔍 FIND',  'Find text in the chat'],
-      ['Video Off','Toggle your camera on/off'],
+      ['VIDEO',    'Turn the camera on or off at any time'],
       ['Mike On',  'Mute or unmute your microphone'],
       ['MIKE GAIN','Slider — adjust outgoing microphone level (0–3×)'],
-      ['SPKR VOL', 'Slider — adjust incoming speaker volume (0–3×)'],
+      ['SPKR VOL', 'Slider — adjust incoming speaker volume (0–100%)'],
       ['Sys Audio','Mix computer audio output into transmitted signal'],
       ['Share Off','Share your screen'],
       ['SEE REMOTE','Toggle between remote and local video view in chat'],
       ['Pi Mode',  'Compact mode — hides STT controls (for Raspberry Pi)'],
     ];
-    rows.innerHTML = items.map(([n,d]) =>
+    const screenOrder = [
+      ['REFRESH','Reconnect the remote screen'],
+      ['LEAVE','End the session'],
+      ['?','Open this Button Guide'],
+      ['TTS','Toggle automatic speech for incoming messages'],
+      ['CAMERA','Choose the camera used for video and recording'],
+      ['FS','Toggle full screen'],
+      ['MINI CAM','Toggle the picture-in-picture camera'],
+      ['SEE REMOTE','Switch the chat video between remote and local'],
+      ['RECORD','Record the current local or remote view'],
+      ['VIDEO','Turn the camera on or off at any time'],
+      ['MIKE','Mute or unmute the microphone'],
+      ['SYS AUDIO','Mix computer audio into the transmitted signal'],
+      ['SHARE','Share the screen or return to camera'],
+      ['MIKE GAIN','Adjust outgoing microphone level'],
+      ['SPKR VOL','Adjust incoming speaker volume'],
+      ['TALK/TYPE','Open the speech and text input panel'],
+      ['CHAT SAVE','Save the current chat as an HTML file'],
+      ['EXPORT','Choose and export a stored chat session'],
+      ['RESTORE','Restore a previous chat session'],
+      ['SCR. REFRESH','Clear only this screen; saved chat and voicemail remain'],
+      ['FIND','Find text in chat'],
+      ['CHAT CLEAR !','Clear chat history'],
+      ['VOICEMAIL BOX','Play stored voicemail recordings'],
+      ['MY LANGUAGE','Choose chat translation and speech language'],
+      ['ORIGINAL','Reset speech language to the system default'],
+      ['ATTACH','Attach a file, photo or video'],
+      ['LOAD','Load a text file into the input box'],
+      ['INPUT SAVE','Save input-box text to a file'],
+      ['COPY','Copy input-box text to the clipboard'],
+      ['INPUT CLEAR','Clear the input box'],
+      ['CW','Send input text as Morse-code audio'],
+      ['TALK','Dictate using speech-to-text'],
+      ['SEND','Send typed or dictated text'],
+      ['VM SAVE / X','Download a voicemail / delete its browser copy'],
+      ['SYS LOG','Toggle the diagnostic log'],
+      ['PI MODE','Use the compact Raspberry Pi layout']
+    ];
+    rows.innerHTML = screenOrder.map(([n,d]) =>
       `<div class="help-row"><span class="help-name">${n}</span><span class="help-desc">${d}</span></div>`
     ).join('');
     rows.dataset.built = '1';
@@ -5339,7 +5674,10 @@ function setSpeechStatus(txt) {
 // Enable/disable send btn as user types in the speech edit box
 document.addEventListener('DOMContentLoaded', () => {
   if (/android/i.test(navigator.userAgent)) document.body.classList.add('is-android');
-  if (localStorage.getItem('alpha_pi_mode') === '1') document.body.classList.add('is-pi');
+  if (localStorage.getItem('alpha_pi_mode') === '1') {
+    document.documentElement.classList.add('is-pi');
+    document.body.classList.add('is-pi');
+  }
   updateSpeechPlaceholder();
   entry('UA: ' + navigator.userAgent, 'sys');
   switchTab('chat');
@@ -5580,6 +5918,27 @@ function _saveCameraLabel(label) {
   try { localStorage.setItem('alpha_camera_label', label); } catch(e) {}
 }
 
+function attachAndStartLocalPreview(stream) {
+  const video = document.getElementById('localVideo');
+  if (!video) return;
+  video.muted = true;
+  video.autoplay = true;
+  video.playsInline = true;
+  if (video.srcObject !== stream) video.srcObject = stream;
+  const start = () => {
+    if (!video.srcObject) return;
+    const attempt = video.play();
+    if (attempt && attempt.catch) attempt.catch(() => {});
+  };
+  if (video.readyState >= 1) start();
+  else video.addEventListener('loadedmetadata', start, { once: true });
+  requestAnimationFrame(start);
+  setTimeout(start, 250);
+  ['pointerdown', 'touchstart', 'keydown'].forEach(type =>
+    window.addEventListener(type, start, { once: true, passive: true })
+  );
+}
+
 async function initMediaOnly() {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     entry('Mic/camera API not available — data channel only', 'sys');
@@ -5596,18 +5955,20 @@ async function initMediaOnly() {
     return;
   }
   const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
-  const videoConstraint = isMobile ? { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16/9 } } : { width: { ideal: 1920 }, height: { ideal: 1080 }, aspectRatio: { ideal: 16/9 } };
+  const videoConstraint = isMobile ? { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16/9 } } : { width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16/9 } };
   const _savedCamId = await _getSavedCameraDeviceId();
   if (_savedCamId) videoConstraint.deviceId = { exact: _savedCamId };
 
   function applyAndDial(stream) {
     localStream = stream;
+    if (loginDisableVideoFlag) _parkCameraStream(stream);
     _forceAspectRatio169(stream.getVideoTracks()[0]);
     setupMicGainNode(stream);
-    document.getElementById('localVideo').srcObject = stream;
-    entry('Mic + camera ready', 'ok');
+    attachAndStartLocalPreview(stream);
+    entry('Media ready - camera follows login preference', 'ok');
     syncMiniVideos();
     initFlipCamUI();
+    initMicInputUI();
     updateLocalVideoState();
     if (loginDisableVideoFlag) {
       const vt = stream.getVideoTracks()[0];
@@ -5630,7 +5991,7 @@ async function initMediaOnly() {
 
   navigator.mediaDevices.getUserMedia({
     audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
-    video: videoConstraint
+    video: loginDisableVideoFlag ? false : videoConstraint
   })
   .then(applyAndDial)
   .catch(e => {
@@ -5640,7 +6001,7 @@ async function initMediaOnly() {
       delete fallbackConstraint.deviceId;
       navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
-        video: fallbackConstraint
+        video: loginDisableVideoFlag ? false : fallbackConstraint
       }).then(applyAndDial).catch(e2 => {
         entry('Media error (' + e2.name + ') — falling back to audio-only', 'sys');
         navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false } })
@@ -5718,18 +6079,20 @@ async function init() {
   // Acquire mic + camera — facingMode only used as a soft hint on mobile,
   // omitted on desktop to avoid OverconstrainedError on macOS.
   const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
-  const videoConstraint = isMobile ? { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16/9 } } : { width: { ideal: 1920 }, height: { ideal: 1080 }, aspectRatio: { ideal: 16/9 } };
+  const videoConstraint = isMobile ? { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16/9 } } : { width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16/9 } };
   const _savedCamId = await _getSavedCameraDeviceId();
   if (_savedCamId) videoConstraint.deviceId = { exact: _savedCamId };
 
   function applyStreamFlags(stream) {
     localStream = stream;
+    if (loginDisableVideoFlag) _parkCameraStream(stream);
     _forceAspectRatio169(stream.getVideoTracks()[0]);
     setupMicGainNode(stream);
-    document.getElementById('localVideo').srcObject = stream;
-    entry('Mic + camera ready', 'ok');
+    attachAndStartLocalPreview(stream);
+    entry('Media ready - camera follows login preference', 'ok');
     syncMiniVideos();
     initFlipCamUI();
+    initMicInputUI();
     updateLocalVideoState();
     if (loginDisableVideoFlag) {
       const vt = stream.getVideoTracks()[0];
@@ -5791,7 +6154,7 @@ async function init() {
 
   navigator.mediaDevices.getUserMedia({
     audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
-    video: videoConstraint
+    video: loginDisableVideoFlag ? false : videoConstraint
   })
   .then(applyStreamFlags)
   .catch(e => {
@@ -5801,7 +6164,7 @@ async function init() {
       delete fallbackConstraint.deviceId;
       navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
-        video: fallbackConstraint
+        video: loginDisableVideoFlag ? false : fallbackConstraint
       }).then(applyStreamFlags).catch(handleMediaError);
       return;
     }
@@ -5823,20 +6186,37 @@ async function init() {
 // Module-level: refreshes REMOTE_ID from Firebase (BRAVO's suffixed peer ID).
 // Must be module-level so startPeer's peer.on('open') closure can reference it.
 let _remoteIdConfirmed = false; // true once Firebase has returned a valid peerId for BRAVO
+let _bravoPresenceFreshUntil = 0;
 async function _refreshRemoteId() {
   try {
     const _code = MY_ID ? MY_ID.replace(/^alpha-/, '').replace(/-[0-9a-f]{4}$/, '') : '';
     const _bravoPollKey = 'bravo-' + _code;
     if (!_code || _bravoPollKey === 'bravo-') return;
-    const _r = await fetch(FB_URL + '/presence/' + _bravoPollKey + '.json');
+    const _r = await fetch(FB_URL + '/presence/' + _bravoPollKey + '.json?cb=' + Date.now(), { cache: 'no-store' });
     const _env = await _r.json();
     const _d = _env ? await _decryptPresence(_code, _env) : null;
-    if (_d && _d.peerId) {
-      if (_d.peerId !== REMOTE_ID) {
+    if (_d && _d.peerId && _d.ts && (Date.now() - _d.ts) < PRESENCE_STALE_MS) {
+      _bravoPresenceFreshUntil = Date.now() + PRESENCE_STALE_MS;
+      if (_d.peerId !== REMOTE_ID && !linked) {
+        const previousRemoteId = REMOTE_ID;
         entry('BRAVO peer ID: ' + _d.peerId, 'sys');
         REMOTE_ID = _d.peerId;
+        // A receiver can restart and publish a new suffixed ID while Alpha is
+        // still negotiating with the old one. Do not wait for the 90s watchdog.
+        if (call && previousRemoteId) {
+          entry('BRAVO peer ID changed during connection - replacing stale call immediately', 'sys');
+          try { call.off('close'); call.off('error'); call.close(); } catch(e) {}
+          call = null;
+          if (dataConn) { try { dataConn.close(); } catch(e) {} dataConn = null; }
+          pendingDC = false;
+          clearTimeout(_dialWatchdogTimer); _dialWatchdogTimer = null;
+          clearTimeout(retryTimer);
+          retryTimer = setTimeout(() => { if (!linked && !_answeringMachineMode) dial(); }, 150);
+        }
       }
       _remoteIdConfirmed = true;
+    } else {
+      _remoteIdConfirmed = false;
     }
   } catch(e) {}
 }
@@ -5850,6 +6230,124 @@ function _setupRemoteIdPoll(bravoPollKey) {
 let _unavailIdRetries = 0;
 let _peerDestroyPending = false;
 let _peerGeneration = 0;  // incremented each startPeer() — cancels stale _pollAndDial loops
+const ANSWERING_MODE_DELAY_MS = 30 * 1000;
+let _answeringMachineMode = false;
+let _answeringModeTimer = null;
+let _answeringModeWatchdog = null;
+let _answeringDeadlineAt = 0;
+let _hardAnswerDeadlineAt = 0;
+let _hardAnswerTimer = null;
+let _hardAnswerWatchdog = null;
+
+function _clearHardAnswerDeadline() {
+  clearTimeout(_hardAnswerTimer);
+  clearInterval(_hardAnswerWatchdog);
+  _hardAnswerTimer = null;
+  _hardAnswerWatchdog = null;
+  _hardAnswerDeadlineAt = 0;
+}
+
+function _checkHardAnswerDeadline() {
+  if (!_hardAnswerDeadlineAt || _answeringMachineMode || leftPermanently) return;
+  if (!linked && Date.now() >= _hardAnswerDeadlineAt) {
+    if (_bravoPresenceFreshUntil > Date.now()) {
+      _hardAnswerDeadlineAt = Date.now() + 10000;
+      entry('BRAVO is online - extending connection attempt before answering mode', 'sys');
+      return;
+    }
+    entry('FAILSAFE: login answering deadline reached while not live', 'sys');
+    _enterAnsweringMachineMode();
+  }
+}
+
+function _armHardAnswerDeadline() {
+  _clearHardAnswerDeadline();
+  _hardAnswerDeadlineAt = Date.now() + ANSWERING_MODE_DELAY_MS;
+  _hardAnswerTimer = setTimeout(_checkHardAnswerDeadline, ANSWERING_MODE_DELAY_MS + 50);
+  _hardAnswerWatchdog = setInterval(_checkHardAnswerDeadline, 1000);
+}
+
+function _clearAnsweringModeTimer() {
+  clearTimeout(_answeringModeTimer);
+  clearInterval(_answeringModeWatchdog);
+  _answeringModeTimer = null;
+  _answeringModeWatchdog = null;
+  _answeringDeadlineAt = 0;
+}
+
+function _checkAnsweringModeDeadline() {
+  if (_answeringMachineMode || linked || leftPermanently || !_answeringDeadlineAt) return;
+  const remaining = _answeringDeadlineAt - Date.now();
+  if (remaining <= 0) {
+    if (_bravoPresenceFreshUntil > Date.now()) {
+      _answeringDeadlineAt = Date.now() + 10000;
+      entry('BRAVO heartbeat is fresh - continuing connection attempt', 'sys');
+      return;
+    }
+    _enterAnsweringMachineMode();
+    return;
+  }
+  clearTimeout(_answeringModeTimer);
+  _answeringModeTimer = setTimeout(_checkAnsweringModeDeadline, Math.min(remaining, 30000));
+}
+
+function _armAnsweringModeTimer() {
+  if (_answeringMachineMode || linked || leftPermanently) return;
+  if (!_answeringDeadlineAt) {
+    _answeringDeadlineAt = Date.now() + ANSWERING_MODE_DELAY_MS;
+    entry('TEST: answering machine will arm in 30 seconds if BRAVO remains offline', 'sys');
+  }
+  if (!_answeringModeWatchdog) {
+    _answeringModeWatchdog = setInterval(_checkAnsweringModeDeadline, 5000);
+  }
+  _checkAnsweringModeDeadline();
+}
+
+function _enterAnsweringMachineMode() {
+  _clearHardAnswerDeadline();
+  clearTimeout(_answeringModeTimer);
+  clearInterval(_answeringModeWatchdog);
+  _answeringModeTimer = null;
+  _answeringModeWatchdog = null;
+  _answeringDeadlineAt = 0;
+  if (linked || leftPermanently || _answeringMachineMode) return;
+  _answeringMachineMode = true;
+  _peerGeneration++; // stop any active presence-poll-and-dial loop
+  clearTimeout(retryTimer);
+  clearTimeout(_dialWatchdogTimer); _dialWatchdogTimer = null;
+  clearTimeout(_dcWatchdog);
+  if (call) {
+    try { call.off('close'); call.off('error'); call.close(); } catch(e) {}
+    call = null;
+  }
+  if (dataConn) { try { dataConn.close(); } catch(e) {} dataConn = null; }
+  pendingDC = false;
+  linked = false;
+  _iceReady = false;
+  _streamArrived = false;
+  setStatus('answering');
+  duplexBar.textContent = 'ANSWERING MACHINE';
+  duplexBar.className = 'duplex-overlay';
+  syncControls();
+  entry('TEST: no BRAVO after 30 seconds — answering machine ready', 'ok');
+  _vmNotice('— 📼 ANSWERING MACHINE READY —');
+  // Publish the role handoff immediately so a late BRAVO knows it must place
+  // the call to ALPHA's answering machine instead of waiting indefinitely.
+  const presenceCodeNow = MY_ID ? MY_ID.replace(/^alpha-/, '').replace(/-[0-9a-f]{4}$/, '') : '';
+  if (presenceCodeNow) presenceWrite('alpha-' + presenceCodeNow);
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    _checkAnsweringModeDeadline();
+    _checkHardAnswerDeadline();
+  }
+});
+window.addEventListener('focus', () => {
+  _checkAnsweringModeDeadline();
+  _checkHardAnswerDeadline();
+});
+
 function startPeer() {
   // Guard: PeerJS CDN may still be loading on slow mobile connections
   if (typeof Peer === 'undefined') {
@@ -5882,7 +6380,20 @@ function startPeer() {
   peer.on('open', () => {
     _unavailIdRetries = 0; // ID claimed — reset backoff
     entry('Radio online', 'ok');
-    setStatus('calling');
+    _armAnsweringModeTimer();
+    if (_answeringMachineMode) {
+      setStatus('answering');
+      duplexBar.textContent = 'ANSWERING MACHINE';
+      duplexBar.className = 'duplex-overlay';
+      syncControls();
+      return;
+    }
+    setStatus(_waitingAfterRemoteLeave ? 'reachable' : 'calling');
+    if (_waitingAfterRemoteLeave) {
+      duplexBar.textContent = 'WAITING';
+      duplexBar.className = 'duplex-overlay';
+      syncControls();
+    }
     // Poll Firebase until BRAVO's suffixed peer ID appears, then dial.
     // _thisGen captures the generation at the time this peer was created; if
     // startPeer() runs again (unavailable-id restart) _peerGeneration changes
@@ -5892,9 +6403,9 @@ function startPeer() {
     const _thisGen = _peerGeneration;
     let _dialPollCount = 0;
     function _pollAndDial() {
-      if (_peerGeneration !== _thisGen || linked) return; // stale or already linked
+      if (_peerGeneration !== _thisGen || linked || _answeringMachineMode) return; // stale, linked or now waiting
       _refreshRemoteId().then(() => {
-        if (_peerGeneration !== _thisGen || linked) return;
+        if (_peerGeneration !== _thisGen || linked || _answeringMachineMode) return;
         _dialPollCount++;
         if (_remoteIdConfirmed) {
           dial();
@@ -5924,6 +6435,7 @@ function startPeer() {
   });
 
   peer.on('call', incoming => {
+    _waitingAfterRemoteLeave = false;
     entry('Inbound call from Bravo', 'info');
     answerCall(incoming);
   });
@@ -5939,15 +6451,23 @@ function startPeer() {
     entry('Peer error [' + e.type + ']: ' + e.message, 'err');
     if (e.type === 'browser-incompatible') return;
     if (e.type === 'peer-unavailable') {
-      entry('Bravo offline — retry in 5s', 'sys');
+      if (_answeringMachineMode) return;
+      const failedId = REMOTE_ID;
+      _failedRemoteIds[failedId] = Date.now() + 20000;
+      _remoteIdConfirmed = false;
+      clearTimeout(_dialWatchdogTimer); _dialWatchdogTimer = null;
+      clearTimeout(retryTimer);
+      entry('Bravo ID unavailable (' + failedId + ') — checking for a fresh receiver ID', 'sys');
       // Close the dead outgoing call so its 'close' event doesn't trigger a
       // competing onDrop → retryTimer chain alongside this one
-      if (call) { try { call.close(); } catch(ex) {} call = null; }
+      if (call) { try { call.off('close'); call.off('error'); call.close(); } catch(ex) {} call = null; }
       // Clear stale pendingDC so the next dial() can open a fresh data channel
       if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
       pendingDC = false;
       // Refresh BRAVO's peer ID — it may have re-registered with a new suffix
-      retryTimer = setTimeout(() => _refreshRemoteId().then(dial), 5000);
+      retryTimer = setTimeout(() => {
+        if (!_answeringMachineMode) _refreshRemoteId().then(dial);
+      }, 1000);
       return;
     }
     if (e.type === 'unavailable-id') {
@@ -5977,6 +6497,8 @@ function startPeer() {
     }
     // network / server-error / socket-error / socket-closed
     entry('Retrying in 6s…', 'sys');
+    clearTimeout(_dialWatchdogTimer); _dialWatchdogTimer = null;
+    clearTimeout(retryTimer);
     retryTimer = setTimeout(() => { _peerDestroyPending = true; peer.destroy(); startPeer(); }, 6000);
   });
 }
@@ -5988,15 +6510,28 @@ function getCallStream() {
     tracks.push(getSilentTrack());
     entry('STREAM: using silent audio track', 'sys');
   } else {
-    tracks.push(...localStream.getAudioTracks());
-    entry('STREAM: using real audio track', 'sys');
+    const processedTrack = (_micProcessedTrack && _micProcessedTrack.readyState !== 'ended')
+      ? _micProcessedTrack
+      : localStream.getAudioTracks().find(t => t.readyState !== 'ended');
+    const rawTrack = _micRawTrack && _micRawTrack.readyState !== 'ended' ? _micRawTrack : null;
+    const liveAudioTrack = (_micGainCtx && _micGainCtx.state === 'running')
+      ? processedTrack
+      : (rawTrack || processedTrack);
+    if (liveAudioTrack) tracks.push(liveAudioTrack);
+    entry('STREAM: using ' + (liveAudioTrack === rawTrack ? 'raw fallback' : 'processed') + ' audio track', 'sys');
   }
   return new MediaStream(tracks);
 }
 
 function dial() {
   clearTimeout(retryTimer);
-  if (linked || !localStream) return;
+  if (linked || !localStream || _answeringMachineMode) return;
+  const failedUntil = _failedRemoteIds[REMOTE_ID] || 0;
+  if (failedUntil > Date.now()) {
+    retryTimer = setTimeout(() => _refreshRemoteId().then(dial), 1000);
+    return;
+  }
+  _armAnsweringModeTimer();
   // Close stale outgoing call before redialling — prevents its 'close' event
   // from triggering a competing onDrop → retryTimer race
   if (call) {
@@ -6018,15 +6553,19 @@ function dial() {
   }
 
   entry('Calling Bravo…', 'info');
+  _waitingAfterRemoteLeave = false;
+  setStatus('calling');
   const _cs = getCallStream();
   entry('DIAG: calling with ' + _cs.getTracks().length + ' tracks (audio=' + _cs.getAudioTracks().length + ' video=' + _cs.getVideoTracks().length + ')', 'sys');
   const c = peer.call(REMOTE_ID, _cs);
   attachCall(c);
   openDataConn();
-  // Watchdog: if no stream arrives within 90s, close and redial
-  clearTimeout(retryTimer);
-  retryTimer = setTimeout(() => {
-    if (!linked) {
+  // Watchdog: if no stream arrives within 90s, close and redial. This has its
+  // own handle so short peer-unavailable retries cannot orphan old watchdogs.
+  clearTimeout(_dialWatchdogTimer);
+  _dialWatchdogTimer = setTimeout(() => {
+    _dialWatchdogTimer = null;
+    if (!linked && !_answeringMachineMode) {
       entry('No answer after 90s — redialling…', 'sys');
       if (call) { try { call.off('close', onDrop); call.close(); } catch(e){} call = null; }
       if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
@@ -6048,6 +6587,18 @@ function attachDataConn(dc) {
     const sb = document.getElementById('sendBtn'); if (sb) sb.disabled = false;
     const cw = document.getElementById('cwSendBtn'); if (cw) cw.disabled = false;
     sendVideoState();
+    // Tell Bravo whether this connected call is being handled unattended.
+    // Include the current attendance state in case the data channel opened
+    // after Alpha had already interacted with the call.
+    if (_answeringMachineMode) {
+      dcSend({ __control: 'answeringMode', active: !_attended, station: 'ALPHA' });
+      if (_ringStartPending) {
+        _ringStartPending = false;
+        _startRing();
+      } else if (_ringing && _localRingCount < _LOCAL_RING_TIMES) {
+        dcSend({ __control: 'ring', active: true });
+      }
+    }
     if (_pendingChatMsg) {
       const queued = _pendingChatMsg; _pendingChatMsg = null;
       try { dcSend(queued); entry('Queued message sent', 'sys'); } catch(e) {}
@@ -6056,26 +6607,102 @@ function attachDataConn(dc) {
   dc.on('open', onDcOpen);
   // Android/WebView fallback: 'open' sometimes fires before the handler is attached
   if (dc.open) { setTimeout(onDcOpen, 0); }
-  dc.on('data', msg => {
+  dc.on('data', async msg => {
+    if (msg instanceof Blob) {
+      try { msg = await msg.text(); }
+      catch(e) { entry('Could not decode Blob chat packet: ' + e.message, 'err'); return; }
+    }
     const decoded = dcDecode(msg);
     if (!decoded) return;
     const { text, obj } = decoded;
-    const f = obj || null;
+    const f = obj || decodeEmbeddedControl(text);
     if (f) {
       if (f.__control === 'video') { updateRemoteVideoState(f.enabled, f.hasTrack !== false); return; }
       if (f.__control === 'leave') { handleRemoteLeave(); return; }
       // clearChat control intentionally not handled — CLEAR is local-only on each unit.
       if (f.__control === 'deleteMsg') { deleteBubble(f.ts, false); return; }
-      if (f.__control === 'voicemail') {
+      if (f.__control === 'liveSession') {
+        _bravoRequestedLive = true;
+        _bravoAnsweringAvailable = false;
+        _liveTakeoverRequested = true;
+        _stopVmCountdown();
+        _stopRemoteRingTone();
+        _stopRing();
+        clearLocalChatDisplayForTakeover();
+        playLiveCueOnce();
+        if (_answeringMachineMode) _markAttended();
+        if (linked) {
+          setStatus('linked');
+          duplexBar.textContent = _noMediaMode ? '● LIVE (data only)' : '● LIVE';
+          duplexBar.className = 'duplex-overlay live';
+          syncControls();
+          entry('Bravo answered - live session started', 'ok');
+        }
+        return;
+      }
+      if (f.__control === 'answeringMode' && f.station === 'BRAVO') {
         if (f.active) {
+          _bravoAnsweringAvailable = true;
+          setStatus('reachable');
+          duplexBar.textContent = 'WAITING FOR BRAVO - TELEPHONE RINGING';
+          duplexBar.className = 'duplex-overlay waiting';
+          syncControls();
+        } else if (!_bravoRequestedLive) {
+          _bravoAnsweringAvailable = false;
+        }
+        return;
+      }
+      if (f.__control === 'ring') {
+        // Ringing is silent on the answering machine — the tone plays only here,
+        // on the caller's end, while Bravo decides whether to answer or go to voicemail.
+        if (f.active) {
+          _bravoAnsweringAvailable = true;
+          setStatus('reachable');
+          duplexBar.textContent = 'WAITING FOR BRAVO - TELEPHONE RINGING';
+          duplexBar.className = 'duplex-overlay waiting';
+          _startRemoteRingTone();
+        } else { _stopRemoteRingTone(); }
+        return;
+      }
+      if (f.__control === 'voicemailCountdown') {
+        if (f.active) {
+          // A live takeover wins over any countdown packet already in transit.
+          if (_bravoRequestedLive || _attended) {
+            _bravoAnsweringAvailable = false;
+            _stopVmCountdown();
+            return;
+          }
+          _bravoAnsweringAvailable = true;
+          const seconds = Number(f.seconds) || 30;
+          _startVmCountdown(seconds, true);
+          entry('Bravo voicemail starts in ' + seconds + ' seconds', 'sys');
+        } else _stopVmCountdown();
+        return;
+      }
+      if (f.__control === 'voicemail') {
+        _stopVmCountdown();
+        if (f.active) {
+          if (_bravoRequestedLive || _attended) {
+            _bravoAnsweringAvailable = false;
+            return;
+          }
+          _bravoAnsweringAvailable = true;
           setStatus('voicemail');
           _vmNotice('— 📼 BRAVO RECORDING VOICEMAIL —');
-          // 2 beeps to alert Alpha they are now in voicemail
+          // These tones play only on the caller receiving this control message.
+          _stopRemoteRingTone();
           playTone('vm_start');
-          setTimeout(() => playTone('vm_start'), 400);
         } else {
+          if (_bravoRequestedLive || !_bravoAnsweringAvailable) {
+            _bravoAnsweringAvailable = false;
+            setStatus('linked');
+            return;
+          }
+          _bravoAnsweringAvailable = false;
           setStatus('linked');
           _vmNotice('— 📼 VOICEMAIL SAVED —');
+          playTone('vm_end');
+          setTimeout(() => playTone('vm_end'), 450);
         }
         return;
       }
@@ -6108,8 +6735,12 @@ function attachDataConn(dc) {
         }
         return;
       }
+      // Control packets are application signalling, never chat content.
+      if (f.__control) { entry('Ignored unknown control: ' + f.__control, 'sys'); return; }
+      if (containsControlPacket(f)) { entry('Suppressed wrapped control packet', 'sys'); return; }
       addBubble(JSON.stringify(f), false);
     } else {
+      if (containsControlPacket(text)) { entry('Suppressed text-encoded control packet', 'sys'); return; }
       addBubble(text, false);
       ttsSpeak(text, _myLang);
     }
@@ -6256,20 +6887,74 @@ function dcSend(payload) {
 }
 
 // dcDecode — inverse of dcSend; returns { text } or { obj } or null
+function decodeEmbeddedControl(value) {
+  if (typeof value !== 'string') return null;
+  let s = value.replace(/\u0000/g, '').replace(/^\uFEFF/, '').trim();
+  // Accommodate legacy peers that sent a control object as text, including
+  // nested JSON-stringification and repeated T:/J: transport prefixes seen on Pi.
+  for (let depth = 0; depth < 6; depth++) {
+    while (s.startsWith('T:') || s.startsWith('J:')) s = s.slice(2).trim();
+    try {
+      const parsed = JSON.parse(s);
+      if (parsed && typeof parsed === 'object' && parsed.__control) return parsed;
+      if (typeof parsed !== 'string') return null;
+      s = parsed.trim();
+    } catch(e) {
+      const first = s.indexOf('{'), last = s.lastIndexOf('}');
+      if (first < 0 || last <= first) return null;
+      try {
+        const embedded = JSON.parse(s.slice(first, last + 1));
+        return embedded && embedded.__control ? embedded : null;
+      } catch(ignore) { return null; }
+    }
+  }
+  return null;
+}
+
+function containsControlPacket(value, depth = 0) {
+  if (depth > 4 || value == null) return false;
+  if (typeof value === 'string') return value.indexOf('__control') !== -1;
+  if (typeof value !== 'object') return false;
+  if (Object.prototype.hasOwnProperty.call(value, '__control')) return true;
+  try { return Object.values(value).some(item => containsControlPacket(item, depth + 1)); }
+  catch(e) { return false; }
+}
+
 function dcDecode(raw) {
+  if (Array.isArray(raw)) raw = new Uint8Array(raw);
+  if (raw && typeof raw === 'object' && !(raw instanceof ArrayBuffer) && !(raw instanceof Blob) && !ArrayBuffer.isView(raw)) {
+    if (raw.__control || raw.__chat || raw.__file || raw.__chunk || raw.__morse) return { obj: raw };
+    if (Object.prototype.hasOwnProperty.call(raw, 'data')) {
+      const data = Array.isArray(raw.data) ? new Uint8Array(raw.data) : raw.data;
+      return dcDecode(data);
+    }
+    return { obj: raw };
+  }
   let s;
   if (raw instanceof ArrayBuffer)   s = new TextDecoder().decode(raw);
+  else if (ArrayBuffer.isView(raw)) s = new TextDecoder().decode(raw);
   else if (raw instanceof Blob)     return null; // handle async elsewhere if needed
   else                              s = String(raw);
 
-  if (s.startsWith('T:')) return { text: s.slice(2) };
+  if (s.startsWith('T:')) {
+    const text = s.slice(2);
+    const control = decodeEmbeddedControl(text);
+    return control ? { obj: control } : { text };
+  }
   if (s.startsWith('J:')) {
-    try { return { obj: JSON.parse(s.slice(2)) }; } catch(e) { return { text: s }; }
+    try {
+      const parsed = JSON.parse(s.slice(2));
+      const control = decodeEmbeddedControl(parsed);
+      return { obj: control || parsed };
+    } catch(e) {
+      const control = decodeEmbeddedControl(s);
+      return control ? { obj: control } : { text: s };
+    }
   }
   // Legacy fallback — other side may still use json serialization mode
-  if (s.startsWith('{')) {
-    try { return { obj: JSON.parse(s) }; } catch(e) {}
-  }
+  const embeddedControl = decodeEmbeddedControl(s);
+  if (embeddedControl) return { obj: embeddedControl };
+  if (s.startsWith('{')) { try { return { obj: JSON.parse(s) }; } catch(e) {} }
   return { text: s };
 }
 
@@ -6298,6 +6983,17 @@ function openDataConn() {
 
 function answerCall(c) {
   clearTimeout(retryTimer);
+  clearTimeout(_dialWatchdogTimer); _dialWatchdogTimer = null;
+  if (_answeringMachineMode) {
+    _peerGeneration++; // cancel outbound work left from the calling phase
+    if (call && call !== c) {
+      try { call.off('close'); call.off('error'); call.close(); } catch(e) {}
+    }
+    linked = false;
+    _iceReady = false;
+    _streamArrived = false;
+    entry('Answering BRAVO in answering-machine mode', 'sys');
+  }
   c.answer(getCallStream());
   attachCall(c);
 }
@@ -6359,6 +7055,8 @@ function startAudioWatchdog() {
       _mixCtx.resume().catch(() => {});
       entry('Audio watchdog: _mixCtx was suspended — resuming', 'sys');
     }
+    if (_micGainCtx && _micGainCtx.state === 'suspended') _micGainCtx.resume().catch(() => {});
+    if (_remoteGainCtx && _remoteGainCtx.state === 'suspended') _remoteGainCtx.resume().catch(() => {});
     if (silentCtx && silentCtx.state === 'suspended') {
       silentCtx.resume().catch(() => {});
     }
@@ -6441,8 +7139,9 @@ function updateLocalVideoState() {
   const track = localStream && localStream.getVideoTracks()[0];
   if (!wrap) return;
   wrap.classList.toggle('no-video', !track);
-  wrap.classList.toggle('video-off', !!track && !track.enabled);
-  if (track) setVideoButtons(track.enabled);
+  const cameraActive = !!(track && track.enabled && !track._fieldRadioStandby);
+  wrap.classList.toggle('video-off', !cameraActive);
+  setVideoButtons(cameraActive);
 }
 
 function updateRemoteVideoState(enabled, hasTrack = true) {
@@ -6462,8 +7161,8 @@ function sendVideoState() {
   try {
     dcSend({
       __control: 'video',
-      enabled: !!(track && track.enabled),
-      hasTrack: !!track
+      enabled: !!(track && track.enabled && !track._fieldRadioStandby),
+      hasTrack: !!(track && !track._fieldRadioStandby)
     });
   } catch(e) {}
 }
@@ -6471,8 +7170,16 @@ function sendVideoState() {
 function markLinked() {
   if (linked) return;
   linked = true;
+  if (!_answeringMachineMode && !loginDisableVideoFlag) _setCameraActive(true, 'live session');
+  _clearAnsweringModeTimer();
+  if (_answeringMachineMode) {
+    // Keep the receiver ringing after WebRTC connects so all five beeps can
+    // complete before the voicemail countdown is armed.
+    _onCallConnected();
+  }
   restoreSpeechDraft();
-  clearTimeout(retryTimer);  // cancel 90s watchdog and any pending redial
+  clearTimeout(retryTimer);  // cancel any pending short redial
+  clearTimeout(_dialWatchdogTimer); _dialWatchdogTimer = null;
   clearTimeout(dropTimer);   // cancel onDrop grace-period before reconnect screen shows
   // If the reconnect countdown is already running, cancel it and hide the overlay
   clearInterval(_reconnectCountdownTimer);
@@ -6487,6 +7194,19 @@ function markLinked() {
     duplexBar.textContent = '● LIVE';
   }
   duplexBar.className = 'duplex-overlay live';
+  // The data-channel role announcement may arrive before the media stream.
+  // Preserve WAITING instead of overwriting it with the normal LIVE display.
+  if (_bravoAnsweringAvailable) {
+    setStatus('reachable');
+    duplexBar.textContent = 'WAITING FOR BRAVO - TELEPHONE RINGING';
+    duplexBar.className = 'duplex-overlay waiting';
+  } else if (_answeringMachineMode && !_attended) {
+    // _onCallConnected() has started Alpha's unattended ring/VM sequence.
+    // Do not let the generic media-connected display mislabel it as LIVE.
+    setStatus('answering');
+    duplexBar.textContent = 'ANSWERING - INCOMING CALL';
+    duplexBar.className = 'duplex-overlay waiting';
+  }
   // Log the ICE path type (host / srflx / relay) so we know how we connected
   (async () => {
     try {
@@ -6632,6 +7352,7 @@ function attachCall(c) {
             if (_tracks.length) {
               const _rs = new MediaStream(_tracks);
               _ra.srcObject = _rs;
+              setupRemoteGainNode(_rs);
               const _rv = document.getElementById('remoteVideo');
               if (_rv && !_rv.srcObject) _rv.srcObject = _rs;
               const _cu = document.getElementById('chatUnderlay');
@@ -6728,6 +7449,8 @@ function attachCall(c) {
       if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
       pendingDC = false;
       entry('Call rejected before link — redialling in 3s…', 'sys');
+      clearTimeout(_dialWatchdogTimer); _dialWatchdogTimer = null;
+      clearTimeout(retryTimer);
       retryTimer = setTimeout(dial, 3000);
     } else {
       onDrop();
@@ -6737,7 +7460,7 @@ function attachCall(c) {
 }
 
 // ── Save recordings if a disconnection interrupts them ────────
-function saveRecordingIfActive() {
+function saveRecordingIfActive(includeLocal = false) {
   if (recRemote && recRemote.state === 'recording') {
     entry('Connection lost — auto-saving remote recording…', 'sys');
     const btn2 = document.getElementById('recBtn2');
@@ -6745,7 +7468,7 @@ function saveRecordingIfActive() {
     recRemoteBusy = true;
     recRemote.stop();
   }
-  if (recLocal && recLocal.state === 'recording') {
+  if (includeLocal && recLocal && recLocal.state === 'recording') {
     entry('Connection lost — auto-saving local recording…', 'sys');
     const btn = document.getElementById('recBtn');
     if (btn) { btn.textContent = '➤ RECORD'; btn.classList.remove('recording'); }
@@ -6766,6 +7489,7 @@ function saveRecordingIfActive() {
 let leftPermanently = false;
 let remotePeerLeft = false;
 let peerRefreshing  = false;  // true when either side is doing a refresh-reload
+let _waitingAfterRemoteLeave = false;
 
 function exportSysLog() {
   try {
@@ -6792,7 +7516,11 @@ function leaveSession() {
 }
 
 function _doLeave() {
-  saveRecordingIfActive();
+  _clearAnsweringModeTimer();
+  _clearHardAnswerDeadline();
+  _stopRing();
+  _stopVoicemail();
+  saveRecordingIfActive(true);
   clearTimeout(_raPlayTimer); _raPlayTimer = null;  // cancel any pending audio play attempt
   ttsStopAll();
   morseStopAll();
@@ -6850,6 +7578,7 @@ function handleRemoteLeave() {
   clearTimeout(dropTimer);  // prevent onDrop's grace-period timer from showing reconnect screen
   leftPermanently = false; // we haven't left yet, remote did
   remotePeerLeft = true;
+  if (!(recLocal && recLocal.state === 'recording')) _setCameraActive(false, 'live session');
   // Clear remote video immediately
   ['remoteVideo','miniRemoteVideo'].forEach(id => {
     const el = document.getElementById(id);
@@ -6868,17 +7597,59 @@ function handleRemoteLeave() {
   stopQualityPolling();
   stopAudioWatchdog();
   entry('Remote user left the session', 'sys');
-  // End this session immediately so both sides close at the same time
-  _doLeave();
+  if (_answeringMachineMode) {
+    if (_vmActive) {
+      _vmResetPending = true;
+      _stopVoicemail();
+      return;
+    }
+    clearTimeout(dropTimer);
+    dropTimer = setTimeout(() => {
+      remotePeerLeft = false;
+      if (!leftPermanently) startPeer();
+    }, 800);
+    return;
+  }
+  // Bravo leaving must not end Alpha's page. Clean up only the remote session,
+  // then keep Alpha online and waiting for Bravo to return.
+  saveRecordingIfActive();
+  linked = false;
+  _iceReady = false;
+  _streamArrived = false;
+  clearTimeout(retryTimer);
+  clearTimeout(_dialWatchdogTimer); _dialWatchdogTimer = null;
+  clearTimeout(_dcWatchdog);
+  if (call) {
+    try { call.off('close'); call.off('error'); call.close(); } catch(e) {}
+    call = null;
+  }
+  if (dataConn) { try { dataConn.close(); } catch(e) {} dataConn = null; }
+  pendingDC = false;
+  duplexBar.textContent = 'WAITING';
+  duplexBar.className = 'duplex-overlay';
+  setStatus('reachable');
+  if (rw) { rw.classList.remove('stale', 'video-off', 'no-video'); rw.classList.add('waiting'); }
+  syncControls();
+  _waitingAfterRemoteLeave = true;
+  entry('Alpha ready and waiting for Bravo to return', 'ok');
+  clearTimeout(dropTimer);
+  dropTimer = setTimeout(() => {
+    remotePeerLeft = false;
+    if (!leftPermanently) startPeer();
+  }, 800);
 }
 
 function onDrop() {
+  _stopRemoteRingTone(); // safety: stop caller-side ring if link drops mid-ring
+  if (_answeringMachineMode) _onCallEnded();
   saveSpeechDraft();
   clearTimeout(retryTimer);
+  clearTimeout(_dialWatchdogTimer); _dialWatchdogTimer = null;
   clearTimeout(_raPlayTimer); _raPlayTimer = null;  // cancel any pending audio play attempt
   if (call && call._iceDropTimer) { clearTimeout(call._iceDropTimer); call._iceDropTimer = null; }
   saveRecordingIfActive();
   linked = false;
+  if (!(recLocal && recLocal.state === 'recording')) _setCameraActive(false, 'live session');
   _iceReady = false; _streamArrived = false;
   call = null;
   // Reset data channel state so it re-opens cleanly on next dial
@@ -6904,6 +7675,21 @@ function onDrop() {
     const el = document.getElementById(id);
     if (el) { el.classList.remove('no-video'); el.classList.add('stale'); }
   });
+  if (_answeringMachineMode) {
+    setStatus('answering');
+    duplexBar.textContent = 'ANSWERING MACHINE';
+    duplexBar.className = 'duplex-overlay';
+    syncControls();
+    if (leftPermanently || _vmResetPending) return;
+    clearTimeout(dropTimer);
+    dropTimer = setTimeout(() => {
+      if (_vmResetPending || _vmActive || leftPermanently || peerRefreshing) return;
+      remotePeerLeft = false;
+      entry('Answering machine: resetting for next caller…', 'sys');
+      startPeer();
+    }, 1200);
+    return;
+  }
   setStatus('calling');
   if (leftPermanently) return; // permanent leave handled by leaveSession()
   if (remotePeerLeft) return;  // remote sent leave signal — stay on leave screen
@@ -6933,6 +7719,604 @@ function resetLockTimer() { /* inactivity lock disabled */ }
 // ── Video+Mixed Audio Recording ───────────────────────────────
 let recRemote = null, recRemoteChunks = [], recRemoteBusy = false;
 let recLocal  = null, recLocalChunks  = [], recLocalBusy  = false;
+let _cameraForcedForLocalRecording = false;
+
+// ── Answering machine ─────────────────────────────────────────
+const RING_TIMEOUT_MS = 30000;
+let _vmTimer = null;
+let _vmMaxTimer = null;
+let _vmActive = false;
+let _vmResetPending = false;
+let _vmRec = null;
+let _vmChunks = [];
+let _vmFinalizePromise = Promise.resolve();
+let _vmFinalizeResolve = null;
+let _vmCapturedStream = null;
+let _attended = false;
+let _bravoRequestedLive = false;
+let _bravoAnsweringAvailable = false;
+let _liveTakeoverRequested = false;
+let _ownerTakeoverPending = false;
+let _ringTimer = null;
+let _ringTimeoutTimer = null;
+let _ringing = false;
+let _vmCallStart = 0;
+
+function _vmNotice(text, blobUrl, filename) {
+  const chatEl = document.getElementById('chat');
+  if (!chatEl) return null;
+  const d = document.createElement('div');
+  d.className = 'bubble vm-notice';
+  if (blobUrl) {
+    d.classList.add('vm-has-recording');
+    const span = document.createElement('span');
+    span.textContent = text + ' ';
+    const audio = document.createElement('audio');
+    audio.controls = true;
+    audio.src = blobUrl;
+    audio.style.cssText = 'display:block;margin-top:6px;width:100%;max-width:320px;';
+    d.append(span, audio);
+  } else {
+    d.textContent = text;
+  }
+  chatEl.appendChild(d);
+  chatEl.scrollTop = chatEl.scrollHeight;
+  try {
+    const key = HISTORY_KEY();
+    const history = JSON.parse(localStorage.getItem(key) || '[]');
+    history.push({ text, vmNotice: true, ts: Date.now(), filename: filename || null });
+    if (history.length > HISTORY_MAX) history.splice(0, history.length - HISTORY_MAX);
+    localStorage.setItem(key, JSON.stringify(history));
+  } catch(e) {}
+  return d;
+}
+
+const _VM_DB_NAME = 'fieldradio-voicemails-v1';
+const _VM_DB_STORE = 'messages';
+const _VM_STATION = 'ALPHA';
+const _vmEntries = [];
+let _vmMissedCount = 0;
+let _vmLoaded = false;
+
+function _vmOpenDb() {
+  return new Promise((resolve, reject) => {
+    if (!window.indexedDB) { reject(new Error('browser storage unavailable')); return; }
+    const request = indexedDB.open(_VM_DB_NAME, 1);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(_VM_DB_STORE)) {
+        const store = db.createObjectStore(_VM_DB_STORE, { keyPath: 'id' });
+        store.createIndex('station', 'station', { unique: false });
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error('voicemail storage failed'));
+    request.onblocked = () => reject(new Error('voicemail storage blocked by another tab'));
+  });
+}
+
+async function _vmReadStored() {
+  const db = await _vmOpenDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(_VM_DB_STORE, 'readonly');
+    const request = tx.objectStore(_VM_DB_STORE).index('station').getAll(_VM_STATION);
+    request.onsuccess = () => resolve(request.result || []);
+    request.onerror = () => reject(request.error || new Error('could not read voicemails'));
+    tx.oncomplete = () => db.close();
+    tx.onerror = () => { db.close(); reject(tx.error || new Error('could not read voicemails')); };
+  });
+}
+
+async function _vmWriteStored(record) {
+  const db = await _vmOpenDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(_VM_DB_STORE, 'readwrite');
+    tx.objectStore(_VM_DB_STORE).put(record);
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror = () => { db.close(); reject(tx.error || new Error('could not save voicemail')); };
+  });
+}
+
+async function _vmDeleteStored(id) {
+  const db = await _vmOpenDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(_VM_DB_STORE, 'readwrite');
+    tx.objectStore(_VM_DB_STORE).delete(id);
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror = () => { db.close(); reject(tx.error || new Error('could not delete voicemail')); };
+  });
+}
+
+function _vmUpdateSummary() {
+  const parts = [];
+  if (_vmEntries.length) parts.push(_vmEntries.length + ' saved');
+  if (_vmMissedCount) parts.push(_vmMissedCount + ' missed');
+  const summary = document.getElementById('vmBoxSummary');
+  const pickerCount = document.getElementById('vmPickerCount');
+  if (summary) summary.textContent = parts.join(' | ');
+  if (pickerCount) pickerCount.textContent = _vmEntries.length + (_vmEntries.length === 1 ? ' message' : ' messages');
+}
+
+async function _vmLoadStored() {
+  if (_vmLoaded) return;
+  _vmLoaded = true;
+  try {
+    const records = await _vmReadStored();
+    records.sort((a, b) => b.ts - a.ts);
+    records.forEach(record => {
+      if (_vmEntries.some(item => item.id === record.id) || !record.blob) return;
+      _vmEntries.push({
+        id: record.id, ts: record.ts, filename: record.filename,
+        blobUrl: URL.createObjectURL(record.blob), stored: true
+      });
+    });
+    _vmEntries.sort((a, b) => b.ts - a.ts);
+    _vmBoxRender();
+  } catch(e) {
+    _vmLoaded = false;
+    entry('Voicemail picker storage unavailable: ' + e.message, 'sys');
+  }
+}
+
+function _vmBoxAddEntry(ts, blobUrl, filename, blob) {
+  const id = _VM_STATION + '-' + ts + '-' + Math.random().toString(36).slice(2, 8);
+  const item = { id, ts, blobUrl, filename, stored: false };
+  _vmEntries.unshift(item);
+  _vmBoxRender();
+  if (blob) {
+    item.persistPromise = _vmWriteStored({ id, station: _VM_STATION, ts, filename, blob }).then(() => {
+      item.stored = true;
+    }).catch(e => entry('Voicemail browser storage failed: ' + e.message, 'err'));
+  }
+}
+
+function _vmRecordMissedCall() {
+  _vmMissedCount++;
+  _vmUpdateSummary();
+}
+
+async function _vmRemoveEntry(item) {
+  const index = _vmEntries.indexOf(item);
+  if (index !== -1) _vmEntries.splice(index, 1);
+  try { if (item.blobUrl) URL.revokeObjectURL(item.blobUrl); } catch(e) {}
+  _vmBoxRender();
+  try {
+    if (item.persistPromise) await item.persistPromise;
+    await _vmDeleteStored(item.id);
+  } catch(e) { entry('Could not remove stored voicemail: ' + e.message, 'sys'); }
+}
+
+function _vmCreateRow(item) {
+  const row = document.createElement('div');
+  row.className = 'vm-box-entry';
+  const time = document.createElement('span');
+  time.className = 'vm-box-ts';
+  time.textContent = new Date(item.ts).toLocaleString();
+  const audio = document.createElement('audio');
+  audio.controls = true;
+  audio.preload = 'metadata';
+  audio.src = item.blobUrl;
+  const download = document.createElement('a');
+  download.className = 'vm-box-dl';
+  download.href = item.blobUrl;
+  download.download = item.filename || ('voicemail-' + item.ts + '.webm');
+  download.textContent = 'SAVE';
+  download.title = 'Save voicemail';
+  const remove = document.createElement('button');
+  remove.type = 'button';
+  remove.className = 'vm-box-del';
+  remove.textContent = 'X';
+  remove.title = 'Remove voicemail';
+  remove.onclick = () => _vmRemoveEntry(item);
+  row.append(time, audio, download, remove);
+  return row;
+}
+
+function _vmBoxRender() {
+  [
+    ['vmBoxBody', 'vmBoxEmpty'],
+    ['vmPickerBody', 'vmPickerEmpty']
+  ].forEach(([bodyId, emptyId]) => {
+    const body = document.getElementById(bodyId);
+    const empty = document.getElementById(emptyId);
+    if (!body) return;
+    body.querySelectorAll('.vm-box-entry').forEach(node => node.remove());
+    if (empty) empty.style.display = _vmEntries.length ? 'none' : '';
+    _vmEntries.forEach(item => body.appendChild(_vmCreateRow(item)));
+  });
+  _vmUpdateSummary();
+}
+
+function toggleVmBox() {
+  const box = document.getElementById('vmBox');
+  if (!box) return;
+  const opening = !box.classList.contains('open');
+  box.classList.toggle('open');
+  if (opening) { _vmMissedCount = 0; _vmUpdateSummary(); }
+}
+
+async function openVoicemailPicker() {
+  // MediaRecorder.stop() completes asynchronously. Wait for its final data
+  // event so the newest voicemail is present before rendering the picker.
+  await _vmFinalizePromise;
+  await _vmLoadStored();
+  _vmMissedCount = 0;
+  _vmBoxRender();
+  const overlay = document.getElementById('vmPickerOverlay');
+  if (!overlay) return;
+  overlay.classList.add('open');
+  const close = overlay.querySelector('.vm-picker-close');
+  if (close) close.focus();
+}
+
+function closeVoicemailPicker() {
+  const overlay = document.getElementById('vmPickerOverlay');
+  if (!overlay) return;
+  overlay.querySelectorAll('audio').forEach(audio => audio.pause());
+  overlay.classList.remove('open');
+}
+
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape') closeVoicemailPicker();
+});
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', _vmLoadStored, { once: true });
+} else {
+  _vmLoadStored();
+}
+
+const _LOCAL_RING_TIMES   = 5;     // how many telephone-style beeps to ring locally
+const _LOCAL_RING_GAP_MS  = 2000;  // gap between successive local rings
+let _localRingCount = 0;
+let _ringStartPending = false;
+
+function _startRing() {
+  _stopRing();
+  _ringing = true;
+  entry('📞 Ringing locally (' + _LOCAL_RING_TIMES + 'x) — VM timer starts after', 'sys');
+  try { dcSend({ __control: 'ring', active: true }); } catch(e) {}
+  _localRingCount = 0;
+  _fireLocalRing();
+}
+
+function _fireLocalRing() {
+  if (!_ringing) return;
+  playTone('call_in'); // telephone-like beep, rings the receiver locally
+  _localRingCount++;
+  if (_localRingCount < _LOCAL_RING_TIMES) {
+    _ringTimer = setTimeout(_fireLocalRing, _LOCAL_RING_GAP_MS);
+  } else {
+    // Exactly 5 rings are complete.  Stop the caller-side repeating tone now,
+    // but keep this call in the unanswered/ringing state while the voicemail
+    // countdown runs.
+    // After ring five, play the recorded greeting, then begin the countdown.
+    _ringTimer = setTimeout(() => {
+      // Leave enough time for the caller's fifth scheduled ring to sound before
+      // its repeating-ring control is stopped.
+      try { dcSend({ __control: 'ring', active: false }); } catch(e) {}
+      if (!_ringing || _attended || _bravoRequestedLive || _liveTakeoverRequested) return;
+      const intro = document.getElementById('answeringMachineIntro');
+      let countdownStarted = false;
+      const startCountdown = () => {
+        if (countdownStarted) return;
+        countdownStarted = true;
+        if (!linked || !_ringing || _attended || _bravoRequestedLive || _liveTakeoverRequested) return;
+        _armVmTimeout();
+      };
+      if (intro) {
+        try { intro.currentTime = 0; } catch(e) {}
+        intro.onended = startCountdown;
+        intro.onerror = startCountdown;
+        attachMediaToCallAudio(intro, false)
+          .then(() => intro.play())
+          .catch(e => { entry('Answering intro could not play: ' + e.message, 'err'); startCountdown(); });
+        setTimeout(startCountdown, 20000);
+      } else startCountdown();
+    }, 600);
+  }
+}
+
+function _armVmTimeout() {
+  if (!_ringing || _vmActive || _attended || _bravoRequestedLive || _liveTakeoverRequested) return;
+  _startVmCountdown(Math.round(RING_TIMEOUT_MS / 1000), true);
+  try { dcSend({ __control: 'voicemailCountdown', active: true, seconds: Math.round(RING_TIMEOUT_MS / 1000) }); } catch(e) {}
+  _ringTimeoutTimer = setTimeout(() => {
+    if (!_ringing || _vmActive || _attended || _bravoRequestedLive || _liveTakeoverRequested) return;
+    entry('📼 No answer after 30s — starting voicemail', 'sys');
+    const remoteAudio = document.getElementById('remoteAudio');
+    const remoteVideo = document.getElementById('remoteVideo');
+    _vmCapturedStream = (remoteAudio && remoteAudio.srcObject)
+                     || (remoteVideo && remoteVideo.srcObject)
+                     || null;
+    _stopRing();
+    _startVoicemail();
+  }, RING_TIMEOUT_MS);
+}
+
+function _stopRing() {
+  _ringStartPending = false;
+  _stopVmCountdown();
+  clearTimeout(_ringTimer); _ringTimer = null;
+  clearTimeout(_ringTimeoutTimer); _ringTimeoutTimer = null;
+  if (_ringing) { try { dcSend({ __control: 'ring', active: false }); } catch(e) {} }
+  try { dcSend({ __control: 'voicemailCountdown', active: false }); } catch(e) {}
+  _ringing = false;
+}
+
+function _setOwnerLiveAvailable(available) {
+  const button = document.getElementById('ownerLiveBtn');
+  if (button) button.style.display = available ? '' : 'none';
+}
+
+function _finishOwnerLiveTakeover() {
+  if (!_ownerTakeoverPending) return;
+  _ownerTakeoverPending = false;
+  _setOwnerLiveAvailable(false);
+  if (_answeringMachineMode) {
+    try { dcSend({ __control: 'answeringMode', active: false, station: 'ALPHA' }); } catch(e) {}
+  }
+  setStatus('linked');
+  duplexBar.textContent = _noMediaMode ? '● LIVE (data only)' : '● LIVE';
+  duplexBar.className = 'duplex-overlay live';
+  syncControls();
+  entry('Voicemail saved — live session started', 'ok');
+  clearLocalChatDisplayForTakeover();
+}
+
+function answerOwnVoicemailLive() {
+  if (!linked) return;
+  const wasRecording = _vmActive;
+  _ownerTakeoverPending = true;
+  _markAttended();
+  if (!wasRecording) _finishOwnerLiveTakeover();
+}
+
+function _isDeliberateLivePointer(event) {
+  return !!(event && event.isTrusted && event.type === 'pointerdown' &&
+    event.isPrimary !== false && event.button === 0 && (event.buttons & 1) === 1);
+}
+
+document.addEventListener('pointerdown', event => {
+  if (!_isDeliberateLivePointer(event)) return;
+  const target = event.target;
+  if (target && target.closest && target.closest('button,a,input,select,textarea,audio,[role="button"]')) return;
+  if (linked && _bravoAnsweringAvailable) {
+    _bravoAnsweringAvailable = false;
+    _bravoRequestedLive = true;
+    clearLocalChatDisplayForTakeover();
+    playLiveCueOnce();
+    dcSend({ __control: 'liveSession', active: true, station: 'ALPHA' });
+    setStatus('linked');
+    duplexBar.textContent = _noMediaMode ? 'LIVE (data only)' : 'LIVE';
+    duplexBar.className = 'duplex-overlay live';
+    syncControls();
+    entry('Live session requested - Bravo voicemail cancelled', 'ok');
+    return;
+  }
+  if (linked && _answeringMachineMode && !_attended) _markAttended(event);
+});
+
+function _markAttended(event, suppressCamera) {
+  if (event && !_isDeliberateLivePointer(event)) return;
+  if (event && event.target && event.target.closest && event.target.closest('button,a,input,select,textarea,audio,[role="button"]')) return;
+  _liveTakeoverRequested = true;
+  if (_attended) return;
+  _attended = true;
+  playLiveCueOnce();
+  if (_answeringMachineMode && (_ringing || _vmActive)) clearLocalChatDisplayForTakeover();
+  if (!suppressCamera && !loginDisableVideoFlag) _setCameraActive(true, 'live session');
+  _stopRing(); // answering live cancels any remaining rings and the VM timer
+  clearTimeout(_vmTimer); _vmTimer = null;
+  _setOwnerLiveAvailable(false);
+  if (_vmActive) _ownerTakeoverPending = true;
+  if (_answeringMachineMode && !_ownerTakeoverPending) {
+    try { dcSend({ __control: 'answeringMode', active: false, station: 'ALPHA' }); } catch(e) {}
+  }
+  if (_vmActive) {
+    entry('Call attended — stopping voicemail recording', 'sys');
+    _stopVoicemail();
+  } else {
+    entry('Call attended — voicemail suppressed', 'sys');
+    if (linked) {
+      setStatus('linked');
+      duplexBar.textContent = _noMediaMode ? 'LIVE (data only)' : 'LIVE';
+      duplexBar.className = 'duplex-overlay live';
+      syncControls();
+    }
+  }
+}
+
+async function _startVoicemail() {
+  if (_vmActive || !_answeringMachineMode || _attended || _bravoRequestedLive || _liveTakeoverRequested) return;
+  _setOwnerLiveAvailable(true);
+  // Play the caller's live incoming audio locally while it is recorded.
+  const monitorAudio = document.getElementById('remoteAudio');
+  if (monitorAudio) {
+    monitorAudio.muted = false;
+    ensureRemoteAudioPlaying();
+  }
+  let audioTracks = [];
+  const pc = call && (call.peerConnection || call._pc);
+  if (pc) {
+    try {
+      audioTracks = pc.getReceivers()
+        .map(r => r.track)
+        .filter(t => t && t.kind === 'audio' && t.readyState !== 'ended');
+    } catch(e) {}
+  }
+  if (!audioTracks.length) {
+    const remoteAudio = document.getElementById('remoteAudio');
+    const remoteVideo = document.getElementById('remoteVideo');
+    const remoteStream = _vmCapturedStream
+                      || (remoteAudio && remoteAudio.srcObject)
+                      || (remoteVideo && remoteVideo.srcObject)
+                      || null;
+    audioTracks = remoteStream ? remoteStream.getAudioTracks().filter(t => t.readyState !== 'ended') : [];
+  }
+  entry('DIAG: _startVoicemail — audioTracks=' + audioTracks.length, 'sys');
+  if (!audioTracks.length) {
+    entry('Voicemail: no remote audio track — cannot record', 'err');
+    return;
+  }
+
+  const remoteTracksStream = new MediaStream(audioTracks.map(t => t.clone()));
+  const localTracks = getLocalAudioTracksForRec();
+  const localForMix = localTracks.length ? new MediaStream(localTracks) : null;
+  let vmAudioContext = null;
+  let recordStream;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    await ctx.resume();
+    const dest = ctx.createMediaStreamDestination();
+    [remoteTracksStream, localForMix].forEach((stream, index) => {
+      if (!stream) return;
+      const src = ctx.createMediaStreamSource(stream);
+      const gain = ctx.createGain();
+      gain.gain.value = index === 1 ? 2.0 : 1.0;
+      src.connect(gain);
+      gain.connect(dest);
+    });
+    vmAudioContext = ctx;
+    recordStream = dest.stream;
+  } catch(e) {
+    entry('VM audio mix failed, using raw tracks: ' + e.message, 'sys');
+    recordStream = new MediaStream([
+      ...audioTracks.map(t => t.clone()),
+      ...getLocalAudioTracksForRec()
+    ]);
+  }
+
+  const mimeType = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm']
+    .find(t => MediaRecorder.isTypeSupported(t)) || 'audio/webm';
+  _vmChunks = [];
+  _vmRec = new MediaRecorder(recordStream, { mimeType });
+  _vmFinalizePromise = new Promise(resolve => { _vmFinalizeResolve = resolve; });
+  _vmRec.ondataavailable = e => { if (e.data.size > 0) _vmChunks.push(e.data); };
+  _vmRec.onstop = () => {
+    _vmActive = false;
+    // The caller receives the matching control cue; play it locally as well so
+    // both machines confirm that voicemail recording has finished.
+    playTone('vm_end');
+    setTimeout(() => playTone('vm_end'), 450);
+    if (vmAudioContext) { try { vmAudioContext.close(); } catch(e) {} }
+    if (_vmChunks.length) {
+      const blob = new Blob(_vmChunks, { type: mimeType });
+      const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const ext = /mp4/.test(mimeType) ? 'mp4' : 'webm';
+      const filename = `alpha-voicemail-${ts}.${ext}`;
+      entry('📼 Voicemail saved', 'ok');
+      try { dcSend({ __control: 'voicemail', active: false }); } catch(e) {}
+      const blobUrl = URL.createObjectURL(blob);
+      _vmBoxAddEntry(Date.now(), blobUrl, filename, blob);
+      // Complete any live-takeover screen clear before adding the player so
+      // the newly recorded voicemail bubble remains visible.
+      _finishOwnerLiveTakeover();
+      _vmNotice('— 📼 VOICEMAIL RECORDED —', blobUrl, filename);
+    } else {
+      entry('Voicemail empty — nothing saved', 'sys');
+      try { dcSend({ __control: 'voicemail', active: false }); } catch(e) {}
+    }
+    if (!_vmChunks.length) _finishOwnerLiveTakeover();
+    if (_vmResetPending) {
+      _vmResetPending = false;
+      clearTimeout(dropTimer);
+      remotePeerLeft = false;
+      entry('Answering machine: resetting for next caller…', 'sys');
+      if (!leftPermanently) startPeer();
+    }
+    _vmRec = null;
+    if (_vmFinalizeResolve) { _vmFinalizeResolve(); _vmFinalizeResolve = null; }
+  };
+  _vmRec.onerror = event => {
+    entry('Voicemail recorder error: ' + ((event.error && event.error.message) || 'unknown error'), 'err');
+    if (_vmFinalizeResolve) { _vmFinalizeResolve(); _vmFinalizeResolve = null; }
+  };
+  _vmRec.start(1000);
+  _vmActive = true;
+  _vmMaxTimer = setTimeout(() => {
+    if (_vmActive) {
+      entry('📼 Voicemail: 2-minute limit reached — stopping', 'sys');
+      _stopVoicemail();
+    }
+  }, 120000);
+  try { dcSend({ __control: 'voicemail', active: true }); } catch(e) {}
+  setStatus('voicemail');
+  entry('📼 Unattended — voicemail recording started', 'sys');
+  _vmNotice('— 📼 RECORDING VOICEMAIL… —');
+}
+
+function _stopVoicemail() {
+  clearTimeout(_vmTimer); _vmTimer = null;
+  clearTimeout(_vmMaxTimer); _vmMaxTimer = null;
+  if (_vmRec && (_vmRec.state === 'recording' || _vmRec.state === 'paused')) {
+    // Flush the partial final timeslice before stop; without this, a quick
+    // hang-up can produce no last chunk on some Chromium builds.
+    try { _vmRec.requestData(); } catch(e) {}
+    try { _vmRec.stop(); } catch(e) {
+      entry('Could not finalize voicemail: ' + e.message, 'err');
+      if (_vmFinalizeResolve) { _vmFinalizeResolve(); _vmFinalizeResolve = null; }
+    }
+  }
+}
+
+function _onCallConnected() {
+  if (!_liveTakeoverRequested) _attended = false;
+  _vmCallStart = Date.now();
+  if (_answeringMachineMode) {
+    if (dataConn && dataConn.open) _startRing();
+    else _ringStartPending = true;
+  }
+  const remoteAudio = document.getElementById('remoteAudio');
+  const remoteVideo = document.getElementById('remoteVideo');
+  _vmCapturedStream = (remoteAudio && remoteAudio.srcObject)
+                   || (remoteVideo && remoteVideo.srcObject)
+                   || null;
+  // _startRing() owns the unattended flow.  Its five telephone beeps must
+  // finish before it arms the voicemail timer; do not start a competing
+  // connection-time timer here.
+  ['keydown', 'pointerdown', 'touchstart'].forEach(ev =>
+    window.addEventListener(ev, _markAttended, { once: true, passive: true })
+  );
+  _setOwnerLiveAvailable(_answeringMachineMode && !_bravoRequestedLive && !_liveTakeoverRequested);
+  if (_bravoRequestedLive || _liveTakeoverRequested) _markAttended();
+}
+
+function _onCallEnded() {
+  const wasRinging = _ringing || (_vmCallStart > 0);
+  const wasRecording = _vmActive;
+  _stopRing();
+  if (wasRecording && !_vmResetPending) {
+    _vmResetPending = true;
+    remotePeerLeft = true;
+  }
+  _stopVoicemail();
+  clearTimeout(_vmTimer); _vmTimer = null;
+  _vmCapturedStream = null;
+  ['keydown', 'pointerdown', 'touchstart'].forEach(ev =>
+    window.removeEventListener(ev, _markAttended)
+  );
+  if (wasRinging) {
+    const time = new Date().toTimeString().slice(0, 5);
+    if (!_vmCallStart || Date.now() - _vmCallStart < 3000) {
+      _vmNotice('— 📞 MISSED CALL — ' + time + ' —');
+      _vmRecordMissedCall();
+    } else {
+      const seconds = Math.round((Date.now() - _vmCallStart) / 1000);
+      const mins = Math.floor(seconds / 60);
+      const remainder = seconds % 60;
+      const duration = mins ? mins + 'm ' + remainder + 's' : remainder + 's';
+      _vmNotice('— 📞 CALL ENDED — ' + time + ' — ' + duration + ' —');
+    }
+  }
+  _attended = false;
+  _liveCuePlayed = false;
+  _bravoRequestedLive = false;
+  _bravoAnsweringAvailable = false;
+  _liveTakeoverRequested = false;
+  _ownerTakeoverPending = false;
+  _setOwnerLiveAvailable(false);
+  _vmCallStart = 0;
+}
 
 // ── Combined-session accumulator ──────────────────────────────
 // When the user switches between local and remote recording mid-session,
@@ -7034,7 +8418,16 @@ function preferredMime() {
 // Return the local mic audio tracks for recording — raw, no Web Audio involved.
 // Clone + force-enable so mute state on the live call track doesn't affect the recording.
 function getLocalAudioTracksForRec() {
-  const src = realAudioTrack || (localStream && localStream.getAudioTracks()[0]) || null;
+  // Record the gained track whenever its context is running, with raw capture
+  // as the reliability fallback.
+  const gained = _micGainCtx && _micGainCtx.state === 'running'
+              && _micProcessedTrack && _micProcessedTrack.readyState !== 'ended'
+              ? _micProcessedTrack : null;
+  const src = gained
+           || (_micRawTrack && _micRawTrack.readyState !== 'ended' && _micRawTrack)
+           || (realAudioTrack && realAudioTrack.readyState !== 'ended' && realAudioTrack)
+           || (localStream && localStream.getAudioTracks().find(t => t.readyState !== 'ended'))
+           || null;
   if (!src) return [];
   const clone = src.clone();
   clone.enabled = true;
@@ -7080,7 +8473,12 @@ function buildCompositeStream(mainVideo, overlayVideo, audioTracks) {
   const showPip = !!overlayVideo; // only draw PiP if caller explicitly passed a video el
   let afId;
   function draw() {
-    c.drawImage(mainVideo, 0, 0, W, H);
+    if (mainVideo && mainVideo.readyState >= 2) {
+      try { c.drawImage(mainVideo, 0, 0, W, H); } catch(e) {}
+    } else {
+      c.fillStyle = '#000';
+      c.fillRect(0, 0, W, H);
+    }
     if (showPip && overlayVideo.readyState >= 2) {
       c.save();
       c.beginPath();
@@ -7268,6 +8666,44 @@ async function toggleRecordLocal() {
   if (!localStream || !localStream.getVideoTracks().length) {
     entry('No local video to record', 'err'); return;
   }
+  const localCameraTrack = localStream.getVideoTracks()[0];
+  _cameraForcedForLocalRecording = !localCameraTrack.enabled || !!localCameraTrack._fieldRadioStandby;
+  if (_cameraForcedForLocalRecording) {
+    let cameraReady = linked
+      ? await _setCameraActive(true, 'local recording')
+      : await _activateOfflineRecordingCamera();
+    let activeCameraTrack = localStream.getVideoTracks()[0] || null;
+    if (!cameraReady || !activeCameraTrack || activeCameraTrack._fieldRadioStandby || activeCameraTrack.readyState === 'ended') {
+      entry('Primary camera path unavailable - trying local-only camera', 'sys');
+      cameraReady = await _activateOfflineRecordingCamera();
+      activeCameraTrack = localStream.getVideoTracks()[0] || null;
+    }
+    if (!cameraReady || !activeCameraTrack || activeCameraTrack._fieldRadioStandby) return;
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const preview = document.getElementById('localVideo');
+    if (preview && preview.readyState < 2) {
+      await new Promise(resolve => {
+        const done = () => resolve();
+        preview.addEventListener('loadeddata', done, { once: true });
+        setTimeout(done, 1000);
+      });
+    }
+    if (preview && (preview.readyState < 2 || !preview.videoWidth)) {
+      entry('No camera frame received - retrying local-only camera', 'sys');
+      cameraReady = await _activateOfflineRecordingCamera();
+      if (!cameraReady) return;
+      await new Promise(resolve => {
+        const done = () => resolve();
+        preview.addEventListener('loadeddata', done, { once: true });
+        setTimeout(done, 1200);
+      });
+      if (preview.readyState < 2 || !preview.videoWidth) {
+        entry('Camera opened but supplied no video frames', 'err');
+        await _setCameraActive(false, 'failed local recording');
+        return;
+      }
+    }
+  }
 
   const remoteAudio = document.getElementById('remoteAudio');
   const remoteVideo = document.getElementById('remoteVideo');
@@ -7275,25 +8711,30 @@ async function toggleRecordLocal() {
   let stopLoop = null, recStream, aCtx = null;
   const withMini = !!miniVideoVisible;   // snapshot the flag right now
 
-  if (withMini) {
-    // Composite: local video + remote mini PiP — needs Web Audio for canvas mix
-    const remoteStream = (remoteAudio && remoteAudio.srcObject) || (remoteVideo && remoteVideo.srcObject) || null;
-    const { ctx, dest: aDest } = await buildAudioMix(getLocalAudioTracksForRec(), remoteStream);
-    aCtx = ctx;
-    const localVideo      = document.getElementById('localVideo');
-    const miniRemoteVideo = document.getElementById('miniRemoteVideo');
-    const comp = buildCompositeStream(localVideo, miniRemoteVideo, aDest.stream.getAudioTracks());
-    recStream = comp.stream; stopLoop = comp.stopLoop;
-  } else {
-    // Plain: raw tracks directly — no Web Audio, no WASAPI interference
-    const remoteStream = (remoteAudio && remoteAudio.srcObject) || (remoteVideo && remoteVideo.srcObject) || null;
-    const remoteAudioTracks = remoteStream ? remoteStream.getAudioTracks() : [];
-    recStream = new MediaStream([
-      ...localStream.getVideoTracks(),
-      ...getLocalAudioTracksForRec(),
-      ...remoteAudioTracks
-    ]);
+  // Always render the local camera through canvas. Chromium's native MP4
+  // recorder can emit audio-only files when given a camera track plus multiple
+  // audio tracks, especially while the page is in answering-machine mode.
+  // Canvas guarantees one video track; buildAudioMix guarantees one audio track.
+  const remoteStream = (remoteAudio && remoteAudio.srcObject) || (remoteVideo && remoteVideo.srcObject) || null;
+  const { ctx, dest: aDest } = await buildAudioMix(getLocalAudioTracksForRec(), remoteStream);
+  aCtx = ctx;
+  const localVideo = document.getElementById('localVideo');
+  const miniRemoteVideo = withMini ? document.getElementById('miniRemoteVideo') : null;
+  const comp = buildCompositeStream(localVideo, miniRemoteVideo, aDest.stream.getAudioTracks());
+  recStream = comp.stream;
+  stopLoop = comp.stopLoop;
+
+  const recVideoTracks = recStream.getVideoTracks();
+  const recAudioTracks = recStream.getAudioTracks();
+  if (!recVideoTracks.length || !recAudioTracks.length) {
+    if (stopLoop) stopLoop();
+    if (aCtx) aCtx.close();
+    if (_cameraForcedForLocalRecording) await _setCameraActive(false, 'local recording');
+    _cameraForcedForLocalRecording = false;
+    entry('Local recording could not start — video or audio track missing', 'err');
+    return;
   }
+  entry('Local recorder tracks: video=' + recVideoTracks.length + ' audio=' + recAudioTracks.length, 'sys');
 
   recLocalChunks = [];
   recLocal = new MediaRecorder(recStream, { mimeType });
@@ -7302,6 +8743,8 @@ async function toggleRecordLocal() {
     if (stopLoop) stopLoop();
     if (aCtx) aCtx.close();
     await saveRec(recLocalChunks, mimeType, 'local');
+    if (_cameraForcedForLocalRecording) await _setCameraActive(false, 'local recording');
+    _cameraForcedForLocalRecording = false;
     recLocalBusy = false;
     btn.disabled = false; btn.textContent = '➤ RECORD';
   };
@@ -7497,23 +8940,119 @@ async function toggleRecordChat() {
 // Legacy no-op — buttons now call specific functions directly
 function toggleRecord() {}
 
-function toggleVideo() {
+let _standbyVideoCanvas = null;
+let _standbyVideoTrack = null;
+function _getStandbyVideoTrack() {
+  if (_standbyVideoTrack && _standbyVideoTrack.readyState !== 'ended') return _standbyVideoTrack;
+  _standbyVideoCanvas = document.createElement('canvas');
+  _standbyVideoCanvas.width = 640; _standbyVideoCanvas.height = 360;
+  const ctx = _standbyVideoCanvas.getContext('2d');
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, 640, 360);
+  _standbyVideoTrack = _standbyVideoCanvas.captureStream(1).getVideoTracks()[0];
+  _standbyVideoTrack._fieldRadioStandby = true;
+  return _standbyVideoTrack;
+}
+
+function _parkCameraStream(stream) {
+  if (!stream) return;
+  const standby = _getStandbyVideoTrack();
+  stream.getVideoTracks().forEach(track => {
+    if (track === standby) return;
+    stream.removeTrack(track);
+    try { track.stop(); } catch(e) {}
+  });
+  if (!stream.getVideoTracks().includes(standby)) stream.addTrack(standby);
+}
+
+async function _setCameraActive(active, reason) {
+  if (!localStream) return false;
+  const current = localStream.getVideoTracks()[0] || null;
+  if (active && current && !current._fieldRadioStandby && current.readyState !== 'ended') {
+    current.enabled = true; updateLocalVideoState(); sendVideoState(); return true;
+  }
+  try {
+    let replacement;
+    if (active) {
+      const savedId = await _getSavedCameraDeviceId();
+      const video = { facingMode: currentFacingMode || 'user', width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16/9 } };
+      if (savedId) video.deviceId = { exact: savedId };
+      let cam;
+      try { cam = await navigator.mediaDevices.getUserMedia({ video, audio: false }); }
+      catch(e) { delete video.deviceId; cam = await navigator.mediaDevices.getUserMedia({ video, audio: false }); }
+      replacement = cam.getVideoTracks()[0];
+      _forceAspectRatio169(replacement);
+    } else {
+      replacement = _getStandbyVideoTrack();
+    }
+    const pc = call && (call.peerConnection || call._pc);
+    const sender = pc && pc.getSenders ? pc.getSenders().find(s => s.track && s.track.kind === 'video') : null;
+    if (sender) {
+      try { await sender.replaceTrack(replacement); }
+      catch(e) {
+        if (linked) throw e;
+        entry('Camera ready locally; stale disconnected video sender ignored', 'sys');
+      }
+    }
+    if (current && current !== replacement) localStream.removeTrack(current);
+    if (!localStream.getVideoTracks().includes(replacement)) localStream.addTrack(replacement);
+    const localVideo = document.getElementById('localVideo');
+    if (localVideo) { localVideo.srcObject = localStream; try { await localVideo.play(); } catch(e) {} }
+    if (current && current !== replacement && !current._fieldRadioStandby) { try { current.stop(); } catch(e) {} }
+    updateLocalVideoState(); syncMiniVideos(); sendVideoState();
+    if (reason) entry('Camera ' + (active ? 'enabled for ' : 'released after ') + reason, 'sys');
+    return true;
+  } catch(e) {
+    entry('Camera ' + (active ? 'start' : 'stop') + ' failed: ' + e.message, 'err');
+    updateLocalVideoState();
+    return false;
+  }
+}
+
+async function _activateOfflineRecordingCamera() {
+  if (!localStream || !navigator.mediaDevices) return false;
+  try {
+    const current = localStream.getVideoTracks()[0] || null;
+    if (current && !current._fieldRadioStandby) {
+      const oldPreview = document.getElementById('localVideo');
+      if (oldPreview) oldPreview.srcObject = null;
+      localStream.removeTrack(current);
+      try { current.stop(); } catch(e) {}
+      await new Promise(resolve => setTimeout(resolve, 250));
+    }
+    let cameraStream;
+    try {
+      cameraStream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false
+      });
+    } catch(e) {
+      cameraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    }
+    const replacement = cameraStream.getVideoTracks()[0];
+    replacement.enabled = true;
+    if (current) localStream.removeTrack(current);
+    localStream.addTrack(replacement);
+    const localVideo = document.getElementById('localVideo');
+    if (localVideo) { localVideo.srcObject = localStream; try { await localVideo.play(); } catch(e) {} }
+    updateLocalVideoState(); syncMiniVideos();
+    entry('Camera enabled for offline local recording', 'sys');
+    return true;
+  } catch(e) {
+    entry('Offline recording camera failed: ' + e.name + ' - ' + e.message, 'err');
+    return false;
+  }
+}
+
+async function toggleVideo() {
   if (!localStream) return;
   const track = localStream.getVideoTracks()[0];
-  if (!track) return;
-  if (track.enabled) {
-    track.enabled = false;
-    setVideoButtons(false);
+  const active = !!(track && track.enabled && !track._fieldRadioStandby);
+  if (active) {
+    if (!await _setCameraActive(false, 'manual video off')) return;
     try { localStorage.setItem('alpha_disable_video', '1'); document.getElementById('loginDisableVideo').checked = true; } catch(e) {}
-    entry('Local video disabled', 'sys');
   } else {
-    track.enabled = true;
-    setVideoButtons(true);
+    if (!await _setCameraActive(true, 'manual video on')) return;
     try { localStorage.setItem('alpha_disable_video', '0'); document.getElementById('loginDisableVideo').checked = false; } catch(e) {}
-    entry('Local video enabled', 'sys');
   }
-  updateLocalVideoState();
-  sendVideoState();
 }
 
 // ── Screen Share ──────────────────────────────────────────────
@@ -7728,7 +9267,7 @@ async function _deactivateMix() {
 }
 
 // Called on every 'play' event from a chat media element.
-async function attachMediaToCallAudio(mediaEl) {
+async function attachMediaToCallAudio(mediaEl, playLocally = true) {
   // Note: audioMuted only gates the local mic input — sys audio and chat
   // media mixing are independent and must remain active regardless.
 
@@ -7740,8 +9279,16 @@ async function attachMediaToCallAudio(mediaEl) {
   if (!_mixSourceNodes.has(mediaEl)) {
     try {
       const src = _mixCtx.createMediaElementSource(mediaEl);
-      src.connect(_mixDest);           // → call stream
-      src.connect(_mixCtx.destination); // → local speakers
+      if (mediaEl.id === 'answeringMachineIntro') {
+        const greetingGain = _mixCtx.createGain();
+        greetingGain.gain.value = 2.0;
+        src.connect(greetingGain);
+        greetingGain.connect(_mixDest);
+        entry('Answering greeting transmit level boosted 2x', 'sys');
+      } else {
+        src.connect(_mixDest);         // normal chat media → call stream
+      }
+      if (playLocally) src.connect(_mixCtx.destination); // optional local speakers
       _mixSourceNodes.set(mediaEl, src);
       entry('Media element wired into mix', 'sys');
     } catch(e) {
@@ -8211,9 +9758,37 @@ async function selectCamera(deviceId) {
 // configurations silently reject or no-op requestFullscreen(). The real
 // Fullscreen API is still requested as a bonus when available.
 let _fsHideTimer = null;
+let _fsSpeechWasVisible = false;
 
 function _fsIsActive() {
   return document.body.classList.contains('app-fullscreen');
+}
+
+function _fsEnsureTextBox() {
+  const panel = document.getElementById('speechPanel');
+  const btn = document.getElementById('speechToggleBtn');
+  if (_syslogVisible) {
+    _syslogVisible = false;
+    const logPanel = document.getElementById('logPanel');
+    if (logPanel) { logPanel.classList.remove('syslog-open'); logPanel.classList.add('collapsed'); }
+    const logBtn = document.getElementById('syslogToggleBtn');
+    if (logBtn) logBtn.classList.remove('active');
+  }
+  _speechVisible = true;
+  if (panel) panel.classList.add('speech-open');
+  if (btn) { btn.classList.add('active'); btn.textContent = 'SHOW CHAT'; }
+  updateSpeechSendBtn();
+  syncUnderlayOpacity();
+}
+
+function _fsRestoreTextBox() {
+  if (_fsSpeechWasVisible) return;
+  _speechVisible = false;
+  const panel = document.getElementById('speechPanel');
+  const btn = document.getElementById('speechToggleBtn');
+  if (panel) panel.classList.remove('speech-open');
+  if (btn) { btn.classList.remove('active'); btn.textContent = 'Talk/Type in Chat'; }
+  syncUnderlayOpacity();
 }
 
 function _fsShowControls() {
@@ -8221,11 +9796,8 @@ function _fsShowControls() {
   document.body.classList.remove('fs-controls-hidden');
   document.body.classList.add('fs-controls-visible');
   clearTimeout(_fsHideTimer);
-  // While the chat box (speech panel) is open, keep controls visible indefinitely —
-  // the user is actively typing. The timer resumes when SHOW CHAT is pressed.
-  if (!_speechVisible) {
-    _fsHideTimer = setTimeout(_fsHideControls, 10000);
-  }
+  // Hide the entire control and text-entry overlay after 20 seconds idle.
+  _fsHideTimer = setTimeout(_fsHideControls, 20000);
 }
 
 function _fsHideControls() {
@@ -8242,13 +9814,17 @@ function _fsOnActivity() {
 document.addEventListener('touchstart', _fsOnActivity, { passive: true });
 document.addEventListener('click',      _fsOnActivity);
 document.addEventListener('mousemove',  _fsOnActivity, { passive: true });
+document.addEventListener('keydown',    _fsOnActivity);
+document.addEventListener('input',      _fsOnActivity);
 
 function toggleFullScreen() {
   const btn = document.getElementById('fsChatBtn');
   const goingFs = !_fsIsActive();
 
   if (goingFs) {
+    _fsSpeechWasVisible = _speechVisible;
     document.body.classList.add('app-fullscreen');
+    _fsEnsureTextBox();
     if (btn) { btn.textContent = 'FS ON'; btn.classList.add('active'); }
     // Best-effort real Fullscreen API request (ignored if unsupported/denied)
     try {
@@ -8260,6 +9836,7 @@ function toggleFullScreen() {
   } else {
     document.body.classList.remove('app-fullscreen', 'fs-controls-hidden', 'fs-controls-visible');
     clearTimeout(_fsHideTimer);
+    _fsRestoreTextBox();
     if (btn) { btn.textContent = 'FS OFF'; btn.classList.remove('active'); }
     try {
       if (document.exitFullscreen)            document.exitFullscreen().catch(()=>{});
@@ -8279,6 +9856,7 @@ function _syncRealFsExit() {
     const btn = document.getElementById('fsChatBtn');
     document.body.classList.remove('app-fullscreen', 'fs-controls-hidden', 'fs-controls-visible');
     clearTimeout(_fsHideTimer);
+    _fsRestoreTextBox();
     if (btn) { btn.textContent = 'FS OFF'; btn.classList.remove('active'); }
   }
 }
@@ -8322,7 +9900,82 @@ async function toggleSpeaker() {
 
 // ── Microphone Gain Control ───────────────────────────────────
 // Web Audio API gain node inserted between mic source and outgoing stream.
-let _micGainCtx = null, _micGainNode = null, _micGainDest = null, _micRawTrack = null;
+async function initMicInputUI() {
+  const select = document.getElementById('micInputSelect');
+  if (!select || !navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+  try {
+    const devices = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'audioinput');
+    let savedLabel = '';
+    try { savedLabel = localStorage.getItem('alpha_mic_label') || ''; } catch(e) {}
+    const currentTrack = _micRawTrack || (localStream && localStream.getAudioTracks()[0]);
+    const currentId = currentTrack && currentTrack.getSettings ? currentTrack.getSettings().deviceId : '';
+    select.innerHTML = '';
+    devices.forEach((device, index) => {
+      const option = document.createElement('option');
+      option.value = device.deviceId;
+      option.textContent = 'MIC: ' + (device.label || ('Microphone ' + (index + 1)));
+      if ((savedLabel && device.label === savedLabel) || (!savedLabel && device.deviceId === currentId)) option.selected = true;
+      select.appendChild(option);
+    });
+    if (!devices.length) {
+      const option = document.createElement('option');
+      option.textContent = 'MIC: NONE';
+      select.appendChild(option);
+      select.disabled = true;
+    } else {
+      select.disabled = false;
+    }
+  } catch(e) { entry('Microphone list unavailable: ' + e.message, 'sys'); }
+}
+
+function _rewireMixMicrophone() {
+  if (!_mixCtx || !_mixDest || !localStream) return;
+  try {
+    if (_mixMicNode) _mixMicNode.disconnect();
+    if (_mixMicGain) _mixMicGain.disconnect();
+    const tracks = localStream.getAudioTracks();
+    if (!tracks.length) return;
+    _mixMicNode = _mixCtx.createMediaStreamSource(new MediaStream(tracks));
+    _mixMicGain = _mixCtx.createGain();
+    _mixMicGain.gain.value = audioMuted ? 0.0 : 1.0;
+    _mixMicNode.connect(_mixMicGain);
+    _mixMicGain.connect(_mixDest);
+  } catch(e) { entry('Microphone mix rewire failed: ' + e.message, 'sys'); }
+}
+
+async function switchMicrophone(deviceId) {
+  const select = document.getElementById('micInputSelect');
+  if (!deviceId || !localStream || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+  if (select) select.disabled = true;
+  try {
+    const replacement = await navigator.mediaDevices.getUserMedia({
+      audio: { deviceId: { exact: deviceId }, echoCancellation: true, noiseSuppression: true, autoGainControl: false },
+      video: false
+    });
+    const rawTrack = replacement.getAudioTracks()[0];
+    if (!rawTrack) throw new Error('Selected microphone supplied no audio track');
+    localStream.getAudioTracks().forEach(track => localStream.removeTrack(track));
+    teardownMicGain();
+    localStream.addTrack(rawTrack);
+    setupMicGainNode(localStream);
+    _rewireMixMicrophone();
+    const selectedTrack = localStream.getAudioTracks()[0];
+    realAudioTrack = selectedTrack || rawTrack;
+    realAudioTrack.enabled = !audioMuted;
+    if (!_mixOutTrack) await _setCallAudioTrack(audioMuted ? getSilentTrack() : realAudioTrack);
+    const option = select && select.options[select.selectedIndex];
+    const label = rawTrack.label || (option ? option.textContent.replace(/^MIC:\s*/, '') : '');
+    try { localStorage.setItem('alpha_mic_label', label); } catch(e) {}
+    entry('Microphone changed to ' + (label || 'selected device'), 'ok');
+  } catch(e) {
+    entry('Microphone change failed: ' + e.message, 'err');
+    await initMicInputUI();
+  } finally {
+    if (select) select.disabled = false;
+  }
+}
+
+let _micGainCtx = null, _micGainNode = null, _micLimiterNode = null, _micGainDest = null, _micRawTrack = null, _micProcessedTrack = null;
 
 function teardownMicGain() {
   // Stop the raw mic track that was swapped out by setupMicGainNode — without
@@ -8333,11 +9986,15 @@ function teardownMicGain() {
     try { _micGainDest.stream.getTracks().forEach(t => t.stop()); } catch(e) {}
     _micGainDest = null;
   }
+  _micProcessedTrack = null;
   if (_micGainNode) { try { _micGainNode.disconnect(); } catch(e) {} _micGainNode = null; }
+  if (_micLimiterNode) { try { _micLimiterNode.disconnect(); } catch(e) {} _micLimiterNode = null; }
   if (_micGainCtx) { try { _micGainCtx.close(); } catch(e) {} _micGainCtx = null; }
 }
 
-function applyMicGain(val) {  const v = parseFloat(val);
+function applyMicGain(val) {
+  const parsed = parseFloat(val);
+  const v = isFinite(parsed) ? Math.max(0, Math.min(3, parsed)) : 1;
   // Sync all gain labels and sliders (primary + chat-tab copy)
   ['micGainVal', 'micGainValChat'].forEach(id => {
     const lbl = document.getElementById(id);
@@ -8350,19 +10007,49 @@ function applyMicGain(val) {  const v = parseFloat(val);
   if (_micGainNode) {
     _micGainNode.gain.setTargetAtTime(v, _micGainCtx.currentTime, 0.01);
   }
+  const activate = () => _activateProcessedMicTrack();
+  if (_micGainCtx && _micGainCtx.state === 'suspended') _micGainCtx.resume().then(activate).catch(() => {});
+  else activate();
   try { localStorage.setItem('alpha_mic_gain', String(v)); } catch(e) {}
+}
+
+function _activateProcessedMicTrack() {
+  if (!_micProcessedTrack || _micProcessedTrack.readyState === 'ended') return;
+  realAudioTrack = _micProcessedTrack;
+  realAudioTrack.enabled = !audioMuted;
+  if (linked && !audioMuted && !_mixOutTrack) {
+    _setCallAudioTrack(_micProcessedTrack).catch(() => {});
+    entry('Microphone gain applied to live call', 'sys');
+  }
 }
 
 function setupMicGainNode(stream) {
   try {
+    const rawMic = stream.getAudioTracks()[0] || null;
+    if (/Macintosh|Mac OS X/i.test(navigator.userAgent) && rawMic) {
+      _micProcessedTrack = null;
+      _micRawTrack = null;
+      realAudioTrack = rawMic;
+      realAudioTrack.enabled = !audioMuted;
+      entry('Mac audio: using native microphone track (Web Audio resampling bypassed)', 'sys');
+      return;
+    }
     if (!_micGainCtx) _micGainCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (_micGainCtx.state === 'suspended') _micGainCtx.resume().catch(() => {});
     const src = _micGainCtx.createMediaStreamSource(stream);
     _micGainNode = _micGainCtx.createGain();
+    _micLimiterNode = _micGainCtx.createDynamicsCompressor();
+    _micLimiterNode.threshold.value = -3;
+    _micLimiterNode.knee.value = 0;
+    _micLimiterNode.ratio.value = 20;
+    _micLimiterNode.attack.value = 0.003;
+    _micLimiterNode.release.value = 0.15;
     _micGainDest = _micGainCtx.createMediaStreamDestination();
-    const savedGain = (() => { const r = localStorage.getItem('alpha_mic_gain'); return r !== null ? parseFloat(r) : 1; })();
+    const savedGain = (() => { const r = localStorage.getItem('alpha_mic_gain'); return r !== null ? parseFloat(r) : 1.35; })();
     _micGainNode.gain.value = isFinite(savedGain) ? savedGain : 1;
     src.connect(_micGainNode);
-    _micGainNode.connect(_micGainDest);
+    _micGainNode.connect(_micLimiterNode);
+    _micLimiterNode.connect(_micGainDest);
     // Replace audio track in localStream with the gained version
     const gainedAudio = _micGainDest.stream.getAudioTracks()[0];
     if (gainedAudio) {
@@ -8375,6 +10062,9 @@ function setupMicGainNode(stream) {
         _micRawTrack = oldAudio;
       }
       stream.addTrack(gainedAudio);
+      _micProcessedTrack = gainedAudio;
+      realAudioTrack = gainedAudio;
+      realAudioTrack.enabled = !audioMuted;
     }
     // Update slider & label to saved value (primary + chat-tab copy)
     const slider = document.getElementById('micGainSlider');
@@ -8394,29 +10084,29 @@ function setupMicGainNode(stream) {
 let _remoteGainCtx = null, _remoteGainNode = null;
 
 function setupRemoteGainNode(stream) {
-  // Tear down any previous node before rebuilding
   teardownRemoteGain();
   try {
-    _remoteGainCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const src  = _remoteGainCtx.createMediaStreamSource(stream);
-    _remoteGainNode = _remoteGainCtx.createGain();
-    const dest = _remoteGainCtx.createMediaStreamDestination();
-    const saved = parseFloat(localStorage.getItem('alpha_remote_gain') || '1');
-    _remoteGainNode.gain.value = isFinite(saved) ? saved : 1;
-    src.connect(_remoteGainNode);
-    _remoteGainNode.connect(dest);
-    // Route the gained stream to remoteAudio instead of the raw stream
+    let saved = parseFloat(localStorage.getItem('alpha_remote_gain') || '1.15');
+    if (localStorage.getItem('alpha_remote_volume_v2') !== '1') {
+      saved = Math.max(0, Math.min(3, saved * (2.25 / 1.15)));
+      localStorage.setItem('alpha_remote_gain', String(saved));
+      localStorage.setItem('alpha_remote_volume_v2', '1');
+    }
+    const initialGain = isFinite(saved) ? Math.max(0, Math.min(3, saved)) : 2.25;
     const ra = document.getElementById('remoteAudio');
-    if (ra) ra.srcObject = dest.stream;
-    // Sync sliders to saved value
+    if (ra) {
+      ra.srcObject = stream;
+      ra.volume = initialGain / 3;
+    }
     ['remoteGainSlider','remoteGainSliderChat'].forEach(id => {
       const el = document.getElementById(id);
-      if (el) el.value = _remoteGainNode.gain.value;
+      if (el) el.value = initialGain;
     });
     ['remoteGainVal','remoteGainValChat'].forEach(id => {
       const el = document.getElementById(id);
-      if (el) el.textContent = _remoteGainNode.gain.value.toFixed(2) + '×';
+      if (el) el.textContent = Math.round(initialGain / 3 * 100) + '%';
     });
+    scheduleRemoteAudioPlay();
   } catch(e) { console.warn('Remote gain setup failed:', e); }
 }
 
@@ -8426,16 +10116,18 @@ function teardownRemoteGain() {
 }
 
 function applyRemoteGain(val) {
-  const v = parseFloat(val);
+  const parsed = parseFloat(val);
+  const v = isFinite(parsed) ? Math.max(0, Math.min(3, parsed)) : 1;
   ['remoteGainVal','remoteGainValChat'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.textContent = v.toFixed(2) + '×';
+    if (el) el.textContent = Math.round(v / 3 * 100) + '%';
   });
   ['remoteGainSlider','remoteGainSliderChat'].forEach(id => {
     const el = document.getElementById(id);
     if (el && el.value !== String(val)) el.value = val;
   });
-  if (_remoteGainNode) _remoteGainNode.gain.setTargetAtTime(v, _remoteGainCtx.currentTime, 0.01);
+  const ra = document.getElementById('remoteAudio');
+  if (ra) ra.volume = v / 3;
   try { localStorage.setItem('alpha_remote_gain', String(v)); } catch(e) {}
 }
 
@@ -8873,8 +10565,7 @@ function ttsSpeak(text, lang) {
     var sp    = document.getElementById('speechPanel');
     var hp    = document.getElementById('helpPanel');
     var hpi   = document.getElementById('helpPanelInner');
-    var notes = document.getElementById('printNotesArea');
-    if (!sp || !hp || !hpi || !notes) return;
+    if (!sp || !hp || !hpi) return;
 
     _spOrigParent  = sp.parentNode;
     _spOrigNext    = sp.nextSibling;
@@ -8886,7 +10577,7 @@ function ttsSpeak(text, lang) {
 
     // Inject <style> into <head> for Safari — most authoritative way to hide fixed overlay
     _printStyleEl = document.createElement('style');
-    _printStyleEl.textContent = '#helpPanel,#helpPanel.open{display:none!important;visibility:hidden!important;}';
+    _printStyleEl.textContent = 'html,body{height:auto!important;min-height:0!important;}body{display:block!important;}#helpPanel,#helpPanel.open{display:none!important;visibility:hidden!important;}';
     document.head.appendChild(_printStyleEl);
 
     // Move hpi and sp to body (outside shell) to avoid shell border clipping in Chrome
@@ -8900,8 +10591,8 @@ function ttsSpeak(text, lang) {
     hpi.scrollTop = 0;
 
     // Force in-flow rendering via inline styles
-    hpi.style.cssText = 'position:static !important;display:block !important;border:1px solid #999 !important;border-radius:4px !important;max-width:100% !important;padding:8px 10px !important;margin:6px 0 0 0 !important;overflow:visible !important;height:auto !important;max-height:none !important;background:#fff !important;color:#000 !important;';
-    sp.style.cssText  = 'position:static !important;display:flex !important;flex-direction:column !important;background:none !important;border:1px solid #999 !important;border-radius:4px !important;padding:8px 10px !important;margin-top:6px !important;overflow:visible !important;height:auto !important;max-height:none !important;gap:6px !important;flex-shrink:0 !important;';
+    hpi.style.cssText = 'position:static !important;display:block !important;border:1px solid #999 !important;border-radius:4px !important;max-width:100% !important;padding:6px 8px !important;margin:4px 0 0 0 !important;overflow:visible !important;height:auto !important;max-height:none !important;background:#fff !important;color:#000 !important;page-break-inside:avoid !important;break-inside:avoid-page !important;';
+    sp.style.cssText  = 'position:static !important;display:flex !important;flex-direction:column !important;background:none !important;border:1px solid #999 !important;border-radius:4px !important;padding:5px 8px !important;margin-top:4px !important;overflow:visible !important;height:auto !important;max-height:none !important;gap:3px !important;flex-shrink:0 !important;page-break-inside:avoid !important;break-inside:avoid-page !important;';
 
     // Explicitly zero out help-btn-bar — Chrome may reserve space for display:none elements
     var hbb = document.querySelector('.help-btn-bar');
@@ -8976,4 +10667,4 @@ function ttsSpeak(text, lang) {
 
 
 <div id="helpPanel" role="dialog" aria-modal="true" aria-label="Button guide"><div id="helpPanelInner"><div class="help-btn-bar"><button onclick="closeHelpPanel()">✕ Close</button><button onclick="window.print()">⎙ Print</button></div><h3>Button Guide</h3><div id="helpPanelRows"></div><button id="helpCloseBtn" onclick="closeHelpPanel()">✕ Close</button></div></div>
-<div id="printNotesArea" style="display:none"><p>Notes</p></div></div></body></html>
+</div></body></html>
