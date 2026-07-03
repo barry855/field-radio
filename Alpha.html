@@ -2722,7 +2722,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.84-two-tone-ring';   // paired build: five telephone rings, each formed from two tones
+const VERSION = '8.85-ring-and-vm-end-cues';   // paired build: unlocks Alpha rings and cues both sides when VM ends
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -2841,6 +2841,12 @@ function startSession() {
   stopPresencePolling();
   const code = document.getElementById('sessionCode').value.trim().toUpperCase().replace(/\s+/g,'');
   if (!code) { document.getElementById('sessionCode').focus(); return; }
+  // Create and resume the tone context during the login gesture. Without this,
+  // unattended rings can remain silent when Alpha has not previously made sound.
+  try {
+    if (!_actx) _actx = new (window.AudioContext || window.webkitAudioContext)();
+    if (_actx.state === 'suspended') _actx.resume().catch(() => {});
+  } catch(e) {}
   // Create the microphone processing context inside the login gesture. Chrome
   // may otherwise create it suspended after getUserMedia resolves.
   try {
@@ -8132,6 +8138,10 @@ async function _startVoicemail() {
   _vmRec.ondataavailable = e => { if (e.data.size > 0) _vmChunks.push(e.data); };
   _vmRec.onstop = () => {
     _vmActive = false;
+    // The caller receives the matching control cue; play it locally as well so
+    // both machines confirm that voicemail recording has finished.
+    playTone('vm_end');
+    setTimeout(() => playTone('vm_end'), 450);
     if (vmAudioContext) { try { vmAudioContext.close(); } catch(e) {} }
     if (_vmChunks.length) {
       const blob = new Blob(_vmChunks, { type: mimeType });
