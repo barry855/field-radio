@@ -2541,7 +2541,7 @@ window.addEventListener('orientationchange', function() {
 
 <button id="audioUnlockBtn" onclick="unlockRemoteAudio()" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(0,200,120,0.92);color:#000;border:none;border-radius:8px;padding:12px 28px;font-size:15px;font-family:monospace;font-weight:bold;letter-spacing:1px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,0.5);">▶ TAP TO HEAR AUDIO</button>
 <audio id="remoteAudio" autoplay="" playsinline="" webkit-playsinline=""></audio>
-<audio id="answeringMachineIntro" preload="auto" src="answering-machine-intro.mp3" playsinline></audio>
+<audio id="answeringMachineIntro" preload="auto" src="answering-machine-intro.mp3?v=8.95.6-security" playsinline></audio>
 <div id="fsHint">TAP TO SHOW CONTROLS</div>
 <div id="lightbox"><img id="lightboxImg" src="" alt=""></div>
 
@@ -2726,7 +2726,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.95.5-security';    // immediate fullscreen control toggle plus prior fixes
+const VERSION = '8.95.6-security';    // cache-busted answering greeting plus prior fixes
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -8088,9 +8088,13 @@ function _fireLocalRing() {
         _armVmTimeout();
       };
       if (intro) {
-        try { intro.currentTime = 0; } catch(e) {}
+        try { intro.load(); intro.currentTime = 0; } catch(e) {}
         intro.onended = startCountdown;
-        intro.onerror = startCountdown;
+        intro.onerror = () => {
+          const code = intro.error ? intro.error.code : 'unknown';
+          entry('Answering intro media error (code ' + code + ', networkState ' + intro.networkState + ')', 'err');
+          startCountdown();
+        };
         attachMediaToCallAudio(intro, false)
           .then(() => intro.play())
           .catch(e => { entry('Answering intro could not play: ' + e.message, 'err'); startCountdown(); });
