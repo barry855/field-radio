@@ -2166,12 +2166,12 @@ window.addEventListener('orientationchange', function() {
       </div>
       <div class="user-left-notice" id="userLeftNotice">
         <span>User left chat</span>
-        <button class="leave-chat-btn" onclick="leaveSession()">Leave Chat</button>
+        <button class="leave-chat-btn" onclick="leaveSession()">Hang Up</button>
       </div>
     </div>
     <div class="header-right-btns">
       <button class="header-action-btn" onclick="refreshScreen()" title="Refresh / Reconnect">↺ Refresh</button>
-      <button class="header-action-btn leave-style" id="leaveChatBtn" onclick="leaveSession()" title="Leave session">✕ Leave</button>
+      <button class="header-action-btn leave-style" id="leaveChatBtn" onclick="leaveSession()" title="Hang up session">✕ Hang Up</button>
       <button id="helpTouchBtn" onclick="openHelpPanel()" aria-label="Button guide">?</button>
     </div>
   </header>
@@ -2726,7 +2726,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.95.2-security';    // definitive fullscreen brightness fix plus security hardening
+const VERSION = '8.95.3-security';    // all hang-up labels plus fullscreen and security fixes
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -4512,7 +4512,7 @@ function openHelpPanel() {
       ['TTS',     'Toggle auto-speak for incoming messages'],
       ['ORIGINAL','Reset speech language to system default'],
       ['↺',       'Refresh / reconnect'],
-      ['✕ Leave', 'End the session'],
+      ['✕ Hang Up', 'End the session'],
       ['RECORD',  'Record the current call'],
       ['MINI CAM','Toggle picture-in-picture camera overlay'],
       ['FS',      'Toggle full screen'],
