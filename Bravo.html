@@ -1857,6 +1857,7 @@
   }
   body.app-fullscreen #chatUnderlay {
     width: 100vw; height: 100vh; border-radius: 0;
+    opacity: 1;
   }
   body.app-fullscreen header,
   body.app-fullscreen .tab-bar,
@@ -2146,7 +2147,7 @@ window.addEventListener('orientationchange', function() {
           <button class="media-btn" id="sysAudioBtn" onclick="toggleSysAudio()" title="Capture computer output and mix into transmitted audio (use headphones!)">Sys Audio Off</button>          <button class="media-btn" id="ttsBtn" onclick="toggleTts()" title="Toggle auto-speak for incoming messages">TTS Off</button><span id="flipWrap"><button class="media-btn" id="flipBtn" onclick="flipCamera()">⟳ Flip Cam</button></span>
           <button class="media-btn" id="screenBtn" onclick="toggleScreenShare()">Share Off</button>
           <button class="speaker-btn speaker-on" id="speakerBtnLocal" onclick="toggleSpeaker()">🔊 Speaker</button>
-          <button class="leave-btn" id="leaveBtn" onclick="leaveSession()">✕ Leave</button>
+          <button class="leave-btn" id="leaveBtn" onclick="leaveSession()">✕ Hang Up</button>
           <button class="media-btn" id="refreshBtnLocal" onclick="refreshScreen()" style="margin-left:auto;">↺ Refresh</button>
         </div>
       </div>
@@ -2189,7 +2190,7 @@ window.addEventListener('orientationchange', function() {
           <button class="media-btn" id="ttsBtn2" onclick="toggleTts()" title="Toggle auto-speak for incoming messages">TTS Off</button><span id="flipWrap2"><button class="media-btn" id="flipBtn2" onclick="flipCamera()">⟳ Flip Cam</button></span>
           <button class="media-btn" id="screenBtn2" onclick="toggleScreenShare()">Share Off</button>
           <button class="speaker-btn speaker-on" id="speakerBtnRemote" onclick="toggleSpeaker()">🔊 Speaker</button>
-          <button class="leave-btn" id="leaveBtn2" onclick="leaveSession()">✕ Leave</button>
+          <button class="leave-btn" id="leaveBtn2" onclick="leaveSession()">✕ Hang Up</button>
           <button class="media-btn" id="refreshBtn" onclick="refreshScreen()" style="margin-left:auto;">↺ Refresh</button>
         </div>
       </div>
@@ -2672,7 +2673,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.95-security';      // hardened file-transfer validation and rendering
+const VERSION = '8.95.1-security';    // fullscreen opacity fix plus hardened file transfers
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
