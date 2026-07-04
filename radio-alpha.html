@@ -1,11 +1,13 @@
 
-
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="theme-color" content="#4b5563">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -1907,6 +1909,7 @@
   }
   body.app-fullscreen #chatUnderlay {
     width: 100vw; height: 100vh; border-radius: 0;
+    opacity: 1 !important;
   }
   body.app-fullscreen header,
   body.app-fullscreen .tab-bar,
@@ -2196,7 +2199,7 @@ window.addEventListener('orientationchange', function() {
           <button class="media-btn" id="ttsBtn" onclick="toggleTts()" title="Toggle auto-speak for incoming messages">TTS Off</button><span id="flipWrap"><button class="media-btn" id="flipBtn" onclick="flipCamera()">⟳ Flip Cam</button></span>
           <button class="media-btn" id="screenBtn" onclick="toggleScreenShare()">Share Off</button>
           <button class="speaker-btn speaker-on" id="speakerBtnLocal" onclick="toggleSpeaker()">🔊 Speaker</button>
-          <button class="leave-btn" id="leaveBtn" onclick="leaveSession()">✕ Leave</button>
+          <button class="leave-btn" id="leaveBtn" onclick="leaveSession()">✕ Hang Up</button>
           <button class="media-btn" id="refreshBtnLocal" onclick="refreshScreen()" style="margin-left:auto;">↺ Refresh</button>
         </div>
       </div>
@@ -2239,7 +2242,7 @@ window.addEventListener('orientationchange', function() {
           <button class="media-btn" id="ttsBtn2" onclick="toggleTts()" title="Toggle auto-speak for incoming messages">TTS Off</button><span id="flipWrap2"><button class="media-btn" id="flipBtn2" onclick="flipCamera()">⟳ Flip Cam</button></span>
           <button class="media-btn" id="screenBtn2" onclick="toggleScreenShare()">Share Off</button>
           <button class="speaker-btn speaker-on" id="speakerBtnRemote" onclick="toggleSpeaker()">🔊 Speaker</button>
-          <button class="leave-btn" id="leaveBtn2" onclick="leaveSession()">✕ Leave</button>
+          <button class="leave-btn" id="leaveBtn2" onclick="leaveSession()">✕ Hang Up</button>
           <button class="media-btn" id="refreshBtn" onclick="refreshScreen()" style="margin-left:auto;">↺ Refresh</button>
         </div>
       </div>
@@ -2723,7 +2726,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.94-alt-x-leave';   // paired build: Alt+X safely leaves outside text-entry controls
+const VERSION = '8.95.2-security';    // definitive fullscreen brightness fix plus security hardening
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -4696,6 +4699,10 @@ function fileIcon(type) {
 
 // ── Send pending files over data channel (chunked) ───────────
 const FILE_CHUNK = 8 * 1024; // 8KB base64 chars — safe for all platforms incl. Android WebView
+const MAX_FILE_BYTES = 20 * 1024 * 1024;
+const MAX_ENCODED_FILE_BYTES = Math.ceil(MAX_FILE_BYTES * 4 / 3) + 1024;
+const MAX_FILE_CHUNKS = Math.ceil(MAX_ENCODED_FILE_BYTES / FILE_CHUNK);
+const MAX_INCOMING_TRANSFERS = 4;
 
 function sendPendingFiles() {
   [...pendingFiles].forEach(item => sendFileChunked(item));
@@ -4708,6 +4715,10 @@ function sendPendingFiles() {
 
 function sendFileChunked(item) {
   const data  = item.dataUrl;
+  if (typeof data !== 'string' || data.length > MAX_ENCODED_FILE_BYTES) {
+    entry('File is too large or invalid: ' + item.file.name, 'err');
+    return;
+  }
   const total = Math.ceil(data.length / FILE_CHUNK);
   const id    = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   try {
@@ -4726,21 +4737,67 @@ function sendFileChunked(item) {
 }
 
 // ── Reassemble incoming file chunks ──────────────────────────
-const _incomingChunks = {}; // id → { name, type, total, parts[] }
+const _incomingChunks = {}; // id → { name, type, total, parts[], received, encodedBytes }
+
+function rejectIncomingTransfer(id, reason) {
+  if (typeof id === 'string') {
+    delete _incomingChunks[id];
+    removeTransferProgress(id);
+  }
+  entry('Rejected incoming file: ' + reason, 'err');
+}
+
+function isSafeReceivedFile(name, type, data) {
+  return typeof name === 'string' && name.length > 0 && name.length <= 255 &&
+    typeof type === 'string' && type.length <= 100 &&
+    typeof data === 'string' && data.length <= MAX_ENCODED_FILE_BYTES &&
+    /^data:[^,]{0,200},/i.test(data);
+}
 
 function receiveChunk(f) {
+  if (!f || typeof f.id !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(f.id) ||
+      typeof f.name !== 'string' || f.name.length < 1 || f.name.length > 255 ||
+      typeof f.type !== 'string' || f.type.length > 100 ||
+      !Number.isInteger(f.total) || f.total < 1 || f.total > MAX_FILE_CHUNKS ||
+      !Number.isInteger(f.index) || f.index < 0 || f.index >= f.total ||
+      typeof f.data !== 'string' || f.data.length > FILE_CHUNK) {
+    rejectIncomingTransfer(f && f.id, 'invalid transfer metadata');
+    return;
+  }
   if (!_incomingChunks[f.id]) {
-    _incomingChunks[f.id] = { name: f.name, type: f.type, total: f.total, parts: new Array(f.total) };
+    if (Object.keys(_incomingChunks).length >= MAX_INCOMING_TRANSFERS) {
+      rejectIncomingTransfer(null, 'too many simultaneous transfers');
+      return;
+    }
+    _incomingChunks[f.id] = { name: f.name, type: f.type, total: f.total, parts: new Array(f.total), received: 0, encodedBytes: 0 };
     addTransferProgress(f.id, f.name);
   }
   const rec = _incomingChunks[f.id];
-  rec.parts[f.index] = f.data;
-  const received = rec.parts.filter(Boolean).length;
-  updateTransferProgress(f.id, received, f.total);
-  if (received === f.total) {
+  if (rec.name !== f.name || rec.type !== f.type || rec.total !== f.total) {
+    rejectIncomingTransfer(f.id, 'metadata changed during transfer');
+    return;
+  }
+  if (rec.parts[f.index] === undefined) {
+    rec.parts[f.index] = f.data;
+    rec.received++;
+    rec.encodedBytes += f.data.length;
+  } else if (rec.parts[f.index] !== f.data) {
+    rejectIncomingTransfer(f.id, 'conflicting duplicate chunk');
+    return;
+  }
+  if (rec.encodedBytes > MAX_ENCODED_FILE_BYTES) {
+    rejectIncomingTransfer(f.id, 'file exceeds 20 MB limit');
+    return;
+  }
+  updateTransferProgress(f.id, rec.received, f.total);
+  if (rec.received === f.total) {
     const dataUrl = rec.parts.join('');
     delete _incomingChunks[f.id];
     removeTransferProgress(f.id);
+    if (!isSafeReceivedFile(rec.name, rec.type, dataUrl)) {
+      entry('Rejected incoming file: invalid file data', 'err');
+      return;
+    }
     addMediaBubble(rec.name, rec.type, dataUrl, false, f.id);
   }
 }
@@ -4750,7 +4807,17 @@ function addTransferProgress(id, name) {
   const el = document.createElement('div');
   el.className = 'bubble theirs transfer-progress';
   el.id = 'xfer-' + id;
-  el.innerHTML = '<div class="who">BRAVO</div><div class="xfer-label">📥 ' + name + ' — <span class="xfer-pct">0%</span></div>';
+  const who = document.createElement('div');
+  who.className = 'who';
+  who.textContent = 'BRAVO';
+  const label = document.createElement('div');
+  label.className = 'xfer-label';
+  label.append('📥 ' + name + ' — ');
+  const pct = document.createElement('span');
+  pct.className = 'xfer-pct';
+  pct.textContent = '0%';
+  label.appendChild(pct);
+  el.append(who, label);
   chat.appendChild(el);
   scrollToBottom();
 }
@@ -4847,7 +4914,10 @@ function toggleLogPanel() {
 function syncUnderlayOpacity() {
   const cu = document.getElementById('chatUnderlay');
   if (!cu) return;
-  cu.classList.toggle('dimmed', _syslogVisible || _speechVisible);
+  // Fullscreen controls are already translucent; keep the video at normal brightness.
+  const shouldDim = !document.body.classList.contains('app-fullscreen') &&
+    (_syslogVisible || _speechVisible);
+  cu.classList.toggle('dimmed', shouldDim);
 }
 
 // ── SYS LOG chat-bar toggle ──────────────────────────────────────────────────
@@ -6709,7 +6779,11 @@ function attachDataConn(dc) {
       }
       if (f.__control === 'refresh') { entry('Remote refreshed — reloading…', 'sys'); peerRefreshing = true; try { sessionStorage.setItem('fieldRadioRefreshing', '1'); } catch(e) {} setTimeout(() => window.location.reload(), 400); return; }
       if (f.__morse === true) { addBubble(f.text, false, null, true, null, null, true); playMorseAudio(f.text, f.wpm || 20); return; }
-      if (f.__file  === true)      { addMediaBubble(f.name, f.type, f.data, false); return; }
+      if (f.__file === true) {
+        if (isSafeReceivedFile(f.name, f.type, f.data)) addMediaBubble(f.name, f.type, f.data, false);
+        else entry('Rejected incoming file: invalid legacy transfer', 'err');
+        return;
+      }
       if (f.__chunk === true)      { receiveChunk(f); return; }
       // Language-learning chat message: translate from sender's lang to our lang
       if (f.__chat === true && f.text) {
