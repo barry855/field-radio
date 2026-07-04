@@ -2118,12 +2118,12 @@ window.addEventListener('orientationchange', function() {
       </div>
       <div class="user-left-notice" id="userLeftNotice">
         <span>User left chat</span>
-        <button class="leave-chat-btn" onclick="leaveSession()">Leave Chat</button>
+        <button class="leave-chat-btn" onclick="leaveSession()">Hang Up</button>
       </div>
     </div>
     <div class="header-right-btns">
       <button class="header-action-btn" onclick="refreshScreen()" title="Refresh / Reconnect">↺ Refresh</button>
-      <button class="header-action-btn leave-style" id="leaveChatBtn" onclick="leaveSession()" title="Leave session">✕ Leave</button>
+      <button class="header-action-btn leave-style" id="leaveChatBtn" onclick="leaveSession()" title="Hang up session">✕ Hang Up</button>
       <button id="helpTouchBtn" onclick="openHelpPanel()" aria-label="Button guide">?</button>
     </div>
   </header>
@@ -2676,7 +2676,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.95.2-security';    // definitive fullscreen brightness fix plus security hardening
+const VERSION = '8.95.3-security';    // all hang-up labels plus fullscreen and security fixes
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -4461,7 +4461,7 @@ setupTooltips();
 function openHelpPanel() {
   const rows = document.getElementById('helpPanelRows');
   if (rows && !rows.dataset.built) {
-    const items = [['Talk/Type in Chat','Open the speech and text input panel'],['TALK','Dictate via speech-to-text'],['SEND','Send typed or dictated text to chat'],['ATTACH','Attach a file to send'],['LOAD','Load a text file into the input box'],['SAVE','Save the input box text to a file'],['COPY','Copy the input box text to clipboard'],['CLEAR','Clear the input box'],['CW','Send input text as Morse code audio'],['TTS','Toggle auto-speak for incoming messages'],['ORIGINAL','Reset speech language to system default'],['↺','Refresh / reconnect'],['✕ Leave','End the session'],['RECORD','Record the current call'],['MINI CAM','Toggle picture-in-picture camera overlay'],['FS','Toggle full screen'],['SYS LOG','Toggle the system diagnostic log'],['💾 SAVE','Save chat history as an HTML file'],['↩ RESTORE','Restore a previous session chat'],['🗑 CLEAR','Clear chat history'],['🔍 FIND','Find text in the chat'],['Video Off','Toggle your camera on/off'],['Mic On/Off','Mute or unmute your microphone'],['Sys Audio','Mix computer audio into transmitted signal'],['Share Off','Share your screen'],['Pi Mode','Compact mode — hides STT controls']];
+    const items = [['Talk/Type in Chat','Open the speech and text input panel'],['TALK','Dictate via speech-to-text'],['SEND','Send typed or dictated text to chat'],['ATTACH','Attach a file to send'],['LOAD','Load a text file into the input box'],['SAVE','Save the input box text to a file'],['COPY','Copy the input box text to clipboard'],['CLEAR','Clear the input box'],['CW','Send input text as Morse code audio'],['TTS','Toggle auto-speak for incoming messages'],['ORIGINAL','Reset speech language to system default'],['↺','Refresh / reconnect'],['✕ Hang Up','End the session'],['RECORD','Record the current call'],['MINI CAM','Toggle picture-in-picture camera overlay'],['FS','Toggle full screen'],['SYS LOG','Toggle the system diagnostic log'],['💾 SAVE','Save chat history as an HTML file'],['↩ RESTORE','Restore a previous session chat'],['🗑 CLEAR','Clear chat history'],['🔍 FIND','Find text in the chat'],['Video Off','Toggle your camera on/off'],['Mic On/Off','Mute or unmute your microphone'],['Sys Audio','Mix computer audio into transmitted signal'],['Share Off','Share your screen'],['Pi Mode','Compact mode — hides STT controls']];
     items.unshift(
       ['EXPORT','Choose and export a previously stored chat session'],
       ['CAMERA','Choose the camera used for video and local recording'],
