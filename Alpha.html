@@ -5,6 +5,9 @@
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="theme-color" content="#4b5563">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -1906,7 +1909,7 @@
   }
   body.app-fullscreen #chatUnderlay {
     width: 100vw; height: 100vh; border-radius: 0;
-    opacity: 1;
+    opacity: 1 !important;
   }
   body.app-fullscreen header,
   body.app-fullscreen .tab-bar,
@@ -2723,7 +2726,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.95.1-security';    // fullscreen opacity fix plus hardened file transfers
+const VERSION = '8.95.2-security';    // definitive fullscreen brightness fix plus security hardening
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -4911,7 +4914,10 @@ function toggleLogPanel() {
 function syncUnderlayOpacity() {
   const cu = document.getElementById('chatUnderlay');
   if (!cu) return;
-  cu.classList.toggle('dimmed', _syslogVisible || _speechVisible);
+  // Fullscreen controls are already translucent; keep the video at normal brightness.
+  const shouldDim = !document.body.classList.contains('app-fullscreen') &&
+    (_syslogVisible || _speechVisible);
+  cu.classList.toggle('dimmed', shouldDim);
 }
 
 // ── SYS LOG chat-bar toggle ──────────────────────────────────────────────────
