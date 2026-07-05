@@ -1,5 +1,5 @@
 
-<!-- DEPLOY TIMESTAMP: 2026-07-05 09:22:24 Europe/London (BST, UTC+01:00) | ALPHA v8.96.0-security -->
+<!-- DEPLOY TIMESTAMP: 2026-07-05 10:33:02 Europe/London (BST, UTC+01:00) | ALPHA v8.96.1-security -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
@@ -2542,7 +2542,7 @@ window.addEventListener('orientationchange', function() {
 
 <button id="audioUnlockBtn" onclick="unlockRemoteAudio()" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(0,200,120,0.92);color:#000;border:none;border-radius:8px;padding:12px 28px;font-size:15px;font-family:monospace;font-weight:bold;letter-spacing:1px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,0.5);">▶ TAP TO HEAR AUDIO</button>
 <audio id="remoteAudio" autoplay="" playsinline="" webkit-playsinline=""></audio>
-<audio id="answeringMachineIntro" preload="auto" src="answering-machine-intro.mp3?v=8.96.0-security" playsinline></audio>
+<audio id="answeringMachineIntro" preload="auto" src="answering-machine-intro.mp3?v=8.96.1-security" playsinline></audio>
 <div id="fsHint">TAP TO SHOW CONTROLS</div>
 <div id="lightbox"><img id="lightboxImg" src="" alt=""></div>
 
@@ -2727,7 +2727,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.96.0-security';    // Bravo caller microphone remains live during Alpha answer wait
+const VERSION = '8.96.1-security';    // Alpha is receiver-only; Bravo always initiates the call
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -2869,6 +2869,9 @@ function startSession() {
     MY_ID     = 'alpha-' + code;
     REMOTE_ID = 'bravo-' + code;
   }
+  // Alpha owns the answering-machine role from login onward. It advertises
+  // that role immediately and never places the initial media or data call.
+  _answeringMachineMode = true;
   _preRegistered = false; _preRegCode = ''; // consumed
   // Keep writing our heartbeat for the whole session so Firebase shows us as online
   const myKey = 'alpha-' + code;
@@ -2905,20 +2908,16 @@ function startSession() {
   leftPermanently = false;
   remotePeerLeft = false;
   _clearAnsweringModeTimer();
-  _answeringMachineMode = false;
+  _answeringMachineMode = true;
   _attended = false;
   _bravoRequestedLive = false;
   _bravoAnsweringAvailable = false;
   _liveTakeoverRequested = false;
   document.getElementById('qualityDisplay').style.display = 'flex';
-  setStatus('calling');
-  duplexBar.textContent = '● CALLING BRAVO…';
+  setStatus('answering');
+  duplexBar.textContent = 'ANSWERING MACHINE — WAITING FOR BRAVO';
   duplexBar.className = 'duplex-overlay';
-  // Start the answering deadline at login, not at PeerJS "open". If the
-  // signalling service is slow or unavailable, Alpha must still become an
-  // answering machine after 30 seconds instead of remaining CALLING forever.
-  _armAnsweringModeTimer();
-  _armHardAnswerDeadline();
+  entry('Alpha receiver ready — waiting for Bravo to call', 'ok');
   if (usingPreReg) {
     entry('Using pre-registered peer — acquiring media only', 'sys');
     initMediaOnly();
