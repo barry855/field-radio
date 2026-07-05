@@ -1,5 +1,5 @@
 
-<!-- DEPLOY TIMESTAMP: 2026-07-05 08:57:02 Europe/London (BST, UTC+01:00) | BRAVO v8.95.9-security -->
+<!-- DEPLOY TIMESTAMP: 2026-07-05 09:22:24 Europe/London (BST, UTC+01:00) | BRAVO v8.96.0-security -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — BRAVO -->
@@ -2492,7 +2492,7 @@ window.addEventListener('orientationchange', function() {
 
 <button id="audioUnlockBtn" onclick="unlockRemoteAudio()" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(0,200,120,0.92);color:#000;border:none;border-radius:8px;padding:12px 28px;font-size:15px;font-family:monospace;font-weight:bold;letter-spacing:1px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,0.5);">▶ TAP TO HEAR AUDIO</button>
 <audio id="remoteAudio" autoplay="" playsinline="" webkit-playsinline=""></audio>
-<audio id="answeringMachineIntro" preload="auto" src="answering-machine-intro.mp3?v=8.95.9-security" playsinline></audio>
+<audio id="answeringMachineIntro" preload="auto" src="answering-machine-intro.mp3?v=8.96.0-security" playsinline></audio>
 <div id="fsHint">TAP TO SHOW CONTROLS</div>
 <div id="lightbox"><img id="lightboxImg" src="" alt=""></div>
 
@@ -2677,7 +2677,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.95.9-security';    // synchronized Alpha answering-machine role handoff
+const VERSION = '8.96.0-security';    // keep Bravo microphone live while Alpha rings
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -3439,8 +3439,33 @@ function _setAnswerLiveAvailable(available) {
   if (button) button.style.display = _alphaAnsweringAvailable ? '' : 'none';
 }
 
+let _callerMicLiveLogged = false;
+function _ensureCallerMicLiveDuringAnswerWait() {
+  if (audioMuted || !call) return;
+  try {
+    if (_micGainCtx && _micGainCtx.state === 'suspended') _micGainCtx.resume().catch(() => {});
+    if (_mixMicGain) _mixMicGain.gain.value = 1.0;
+    const pc = call.peerConnection || call._pc;
+    const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
+    const track = (_micProcessedTrack && _micProcessedTrack.readyState !== 'ended' && _micProcessedTrack)
+      || (realAudioTrack && realAudioTrack.readyState !== 'ended' && realAudioTrack)
+      || (_micRawTrack && _micRawTrack.readyState !== 'ended' && _micRawTrack)
+      || (localStream && localStream.getAudioTracks().find(t => t.readyState !== 'ended'));
+    if (!sender || !track) return;
+    track.enabled = true;
+    if (sender.track !== track) sender.replaceTrack(track).catch(e => entry('Caller microphone restore failed: ' + e.message, 'err'));
+    if (!_callerMicLiveLogged) {
+      _callerMicLiveLogged = true;
+      entry('Bravo microphone live while waiting for Alpha to answer', 'ok');
+    }
+  } catch(e) {
+    entry('Caller microphone safeguard: ' + e.message, 'sys');
+  }
+}
+
 function _applyBravoLinkedDisplay(logConnection) {
   if (_alphaAnsweringAvailable) {
+    _ensureCallerMicLiveDuringAnswerWait();
     setStatus('remote-answering');
     duplexBar.textContent = '● ALPHA ANSWERING — CLICK A BLANK AREA TO GO LIVE';
     if (logConnection) entry('Linked to Alpha answering machine — click a blank area to go live', 'ok');
@@ -6504,6 +6529,7 @@ function attachDataConn(dc) {
           _stopRing();
           _attended = false;
           _setAnswerLiveAvailable(true);
+          _ensureCallerMicLiveDuringAnswerWait();
           if (!(recLocal && recLocal.state === 'recording')) _setCameraActive(false, 'answering mode');
           entry('Alpha answering mode detected — leave a message after the cue or click a blank area to go live', 'sys');
           _vmNotice('— 📼 ALPHA ANSWERING — WAIT FOR THE VOICEMAIL CUE —');
@@ -6524,7 +6550,7 @@ function attachDataConn(dc) {
       if (f.__control === 'ring') {
         // Ringing is silent on the answering machine — the tone plays only here,
         // on the caller's end, while Alpha decides whether to answer or go to voicemail.
-        if (f.active) { _startRemoteRingTone(); } else { _stopRemoteRingTone(); }
+        if (f.active) { _ensureCallerMicLiveDuringAnswerWait(); _startRemoteRingTone(); } else { _stopRemoteRingTone(); }
         return;
       }
       if (f.__control === 'voicemailCountdown') {
@@ -6532,6 +6558,7 @@ function attachDataConn(dc) {
           // Ignore a countdown packet that was queued before GO LIVE.
           if (!_alphaAnsweringAvailable) { _stopVmCountdown(); return; }
           const seconds = Number(f.seconds) || 30;
+          _ensureCallerMicLiveDuringAnswerWait();
           _startVmCountdown(seconds, true);
           entry('Alpha voicemail starts in ' + seconds + ' seconds', 'sys');
         } else _stopVmCountdown();
