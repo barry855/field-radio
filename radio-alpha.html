@@ -1,5 +1,5 @@
 
-<!-- DEPLOY TIMESTAMP: 2026-07-05 16:38:21 Europe/London (BST, UTC+01:00) | ALPHA v8.96.6-security -->
+<!-- DEPLOY TIMESTAMP: 2026-07-05 18:33:37 Europe/London (BST, UTC+01:00) | ALPHA v8.96.7-security -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
@@ -2543,7 +2543,7 @@ window.addEventListener('orientationchange', function() {
 
 <button id="audioUnlockBtn" onclick="unlockRemoteAudio()" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(0,200,120,0.92);color:#000;border:none;border-radius:8px;padding:12px 28px;font-size:15px;font-family:monospace;font-weight:bold;letter-spacing:1px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,0.5);">▶ TAP TO HEAR AUDIO</button>
 <audio id="remoteAudio" autoplay="" playsinline="" webkit-playsinline=""></audio>
-<audio id="answeringMachineIntro" preload="auto" src="answering-machine-intro.mp3?v=8.96.6-security" playsinline></audio>
+<audio id="answeringMachineIntro" preload="auto" src="answering-machine-intro.mp3?v=8.96.7-security" playsinline></audio>
 <div id="fsHint">TAP FOR CONTROLS</div>
 <div id="lightbox"><img id="lightboxImg" src="" alt=""></div>
 
@@ -2728,7 +2728,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.96.6-security';    // suppress unattended acoustic echo; record caller only
+const VERSION = '8.96.7-security';    // Raspberry Pi native-track local recording
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -8831,6 +8831,30 @@ async function toggleRecordLocal() {
     }
   }
 
+  // Validate an actual camera frame even when Chromium reports the track as
+  // enabled. Raspberry Pi Chromium can leave an enabled track feeding a black
+  // or not-yet-started preview.
+  const recordingCameraTrack = localStream.getVideoTracks()[0] || null;
+  const recordingPreview = document.getElementById('localVideo');
+  if (!recordingCameraTrack || !recordingCameraTrack.enabled || recordingCameraTrack._fieldRadioStandby || recordingCameraTrack.readyState === 'ended') {
+    entry('Local recording camera track is not active', 'err');
+    return;
+  }
+  if (recordingPreview) {
+    try { await recordingPreview.play(); } catch(e) {}
+    if (recordingPreview.readyState < 2 || !recordingPreview.videoWidth) {
+      await new Promise(resolve => {
+        const done = () => resolve();
+        recordingPreview.addEventListener('loadeddata', done, { once: true });
+        setTimeout(done, 2500);
+      });
+    }
+    if (recordingPreview.readyState < 2 || !recordingPreview.videoWidth) {
+      entry('Local recording stopped — camera supplied no usable frame', 'err');
+      return;
+    }
+  }
+
   const remoteAudio = document.getElementById('remoteAudio');
   const remoteVideo = document.getElementById('remoteVideo');
   const mimeType = preferredMime();
@@ -8846,9 +8870,19 @@ async function toggleRecordLocal() {
   aCtx = ctx;
   const localVideo = document.getElementById('localVideo');
   const miniRemoteVideo = withMini ? document.getElementById('miniRemoteVideo') : null;
-  const comp = buildCompositeStream(localVideo, miniRemoteVideo, aDest.stream.getAudioTracks());
-  recStream = comp.stream;
-  stopLoop = comp.stopLoop;
+  const isLinuxArm = /Linux\s+(?:arm|aarch64)/i.test((navigator.userAgent || '') + ' ' + (navigator.platform || ''));
+  if (isLinuxArm) {
+    // Canvas capture can be black on Raspberry Pi hardware-video paths. Feed
+    // MediaRecorder the native camera track plus exactly one mixed audio track.
+    const nativeVideoTrack = recordingCameraTrack.clone();
+    recStream = new MediaStream([nativeVideoTrack, ...aDest.stream.getAudioTracks()]);
+    stopLoop = () => { try { nativeVideoTrack.stop(); } catch(e) {} };
+    entry('Raspberry Pi/Linux ARM recording — using native camera track', 'sys');
+  } else {
+    const comp = buildCompositeStream(localVideo, miniRemoteVideo, aDest.stream.getAudioTracks());
+    recStream = comp.stream;
+    stopLoop = comp.stopLoop;
+  }
 
   const recVideoTracks = recStream.getVideoTracks();
   const recAudioTracks = recStream.getAudioTracks();
