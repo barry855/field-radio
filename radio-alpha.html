@@ -1,5 +1,5 @@
 
-<!-- DEPLOY TIMESTAMP: 2026-07-05 10:33:02 Europe/London (BST, UTC+01:00) | ALPHA v8.96.1-security -->
+<!-- DEPLOY TIMESTAMP: 2026-07-05 10:52:42 Europe/London (BST, UTC+01:00) | ALPHA v8.96.2-security -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
@@ -1863,7 +1863,8 @@
     pointer-events: none; white-space: nowrap;
     transition: opacity 0.4s ease;
   }
-  body.app-fullscreen.fs-controls-hidden #fsHint { display: block; }
+  body.app-fullscreen.fs-controls-hidden #fsHint,
+  body.app-fullscreen.fs-controls-visible #fsHint { display: block; }
 
   /* ── LANDSCAPE: full-screen video only (mobile/touch only, ACTIVE CALL ONLY) ─── */
   @media (orientation: landscape) and (pointer: coarse) {
@@ -2542,8 +2543,8 @@ window.addEventListener('orientationchange', function() {
 
 <button id="audioUnlockBtn" onclick="unlockRemoteAudio()" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(0,200,120,0.92);color:#000;border:none;border-radius:8px;padding:12px 28px;font-size:15px;font-family:monospace;font-weight:bold;letter-spacing:1px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,0.5);">▶ TAP TO HEAR AUDIO</button>
 <audio id="remoteAudio" autoplay="" playsinline="" webkit-playsinline=""></audio>
-<audio id="answeringMachineIntro" preload="auto" src="answering-machine-intro.mp3?v=8.96.1-security" playsinline></audio>
-<div id="fsHint">TAP TO SHOW CONTROLS</div>
+<audio id="answeringMachineIntro" preload="auto" src="answering-machine-intro.mp3?v=8.96.2-security" playsinline></audio>
+<div id="fsHint">TAP FOR CONTROLS</div>
 <div id="lightbox"><img id="lightboxImg" src="" alt=""></div>
 
 <script>
@@ -2727,7 +2728,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.96.1-security';    // Alpha is receiver-only; Bravo always initiates the call
+const VERSION = '8.96.2-security';    // tap toggles fullscreen video and controls
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -8173,6 +8174,7 @@ function _isDeliberateLiveClick(event) {
 
 document.addEventListener('click', event => {
   if (!_isDeliberateLiveClick(event)) return;
+  if (document.body.classList.contains('app-fullscreen')) return; // fullscreen taps only toggle controls
   const target = event.target;
   if (target && target.closest && target.closest('button,a,input,select,textarea,audio,[role="button"]')) return;
   if (linked && _bravoAnsweringAvailable) {
@@ -9887,8 +9889,8 @@ function _fsShowControls() {
   document.body.classList.remove('fs-controls-hidden');
   document.body.classList.add('fs-controls-visible');
   clearTimeout(_fsHideTimer);
-  // Hide the entire control and text-entry overlay after 20 seconds idle.
-  _fsHideTimer = setTimeout(_fsHideControls, 20000);
+  const hint = document.getElementById('fsHint');
+  if (hint) hint.textContent = 'TAP TO RETURN TO FULL SCREEN';
 }
 
 function _fsHideControls() {
@@ -9896,10 +9898,17 @@ function _fsHideControls() {
   clearTimeout(_fsHideTimer);
   document.body.classList.remove('fs-controls-visible');
   document.body.classList.add('fs-controls-hidden');
+  const hint = document.getElementById('fsHint');
+  if (hint) hint.textContent = 'TAP FOR CONTROLS';
 }
 
-function _fsOnPress() {
+let _fsLastTouchAt = 0;
+function _fsOnPress(event) {
   if (!_fsIsActive() || Date.now() < _fsIgnorePressUntil) return;
+  if (event.type === 'touchstart') _fsLastTouchAt = Date.now();
+  if (event.type === 'click' && Date.now() - _fsLastTouchAt < 700) return;
+  if (document.body.classList.contains('fs-controls-visible') && event.target && event.target.closest &&
+      event.target.closest('button,a,input,select,textarea,audio,[role="button"]')) return;
   if (document.body.classList.contains('fs-controls-visible')) {
     _fsHideControls();
   } else {
@@ -9907,17 +9916,11 @@ function _fsOnPress() {
   }
 }
 
-function _fsOnMovement() {
-  if (_fsIsActive()) _fsShowControls();
-}
-
 // A tap/click toggles controls immediately.
-// The fullscreen hint remains visible while controls are hidden.
+// Interactive controls do not toggle the overlay, and touch-generated clicks
+// are suppressed so one tap cannot immediately toggle twice.
 document.addEventListener('touchstart', _fsOnPress, { passive: true });
 document.addEventListener('click',      _fsOnPress);
-document.addEventListener('mousemove',  _fsOnMovement, { passive: true });
-document.addEventListener('keydown',    _fsOnMovement);
-document.addEventListener('input',      _fsOnMovement);
 
 function toggleFullScreen() {
   const btn = document.getElementById('fsChatBtn');
@@ -9935,7 +9938,7 @@ function toggleFullScreen() {
       if (el.requestFullscreen)            el.requestFullscreen().catch(()=>{});
       else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
     } catch(e) {}
-    _fsShowControls();
+    _fsHideControls();
   } else {
     document.body.classList.remove('app-fullscreen', 'fs-controls-hidden', 'fs-controls-visible');
     clearTimeout(_fsHideTimer);
