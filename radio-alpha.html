@@ -1,5 +1,5 @@
 
-<!-- DEPLOY TIMESTAMP: 2026-07-05 15:45:29 Europe/London (BST, UTC+01:00) | ALPHA v8.96.4-security -->
+<!-- DEPLOY TIMESTAMP: 2026-07-05 15:51:05 Europe/London (BST, UTC+01:00) | ALPHA v8.96.5-security -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
@@ -2543,7 +2543,7 @@ window.addEventListener('orientationchange', function() {
 
 <button id="audioUnlockBtn" onclick="unlockRemoteAudio()" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(0,200,120,0.92);color:#000;border:none;border-radius:8px;padding:12px 28px;font-size:15px;font-family:monospace;font-weight:bold;letter-spacing:1px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,0.5);">▶ TAP TO HEAR AUDIO</button>
 <audio id="remoteAudio" autoplay="" playsinline="" webkit-playsinline=""></audio>
-<audio id="answeringMachineIntro" preload="auto" src="answering-machine-intro.mp3?v=8.96.4-security" playsinline></audio>
+<audio id="answeringMachineIntro" preload="auto" src="answering-machine-intro.mp3?v=8.96.5-security" playsinline></audio>
 <div id="fsHint">TAP FOR CONTROLS</div>
 <div id="lightbox"><img id="lightboxImg" src="" alt=""></div>
 
@@ -2728,7 +2728,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.96.4-security';    // reuse Alpha peer after calls; prevent duplicate ID registration
+const VERSION = '8.96.5-security';    // strict Alpha/Bravo peer-role validation
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -6499,6 +6499,12 @@ function startPeer() {
   });
 
   peer.on('connection', dc => {
+    const remoteId = dc && dc.peer ? String(dc.peer) : '';
+    if (!remoteId.startsWith('bravo-') || remoteId === MY_ID) {
+      entry('Blocked data channel from invalid peer: ' + (remoteId || 'unknown'), 'err');
+      try { dc.close(); } catch(e) {}
+      return;
+    }
     if (dataConn || pendingDC) { dc.close(); return; }
     // Collision: Bravo dialled us while we were dialling Bravo (pendingDC=true).
     // Accept Bravo's inbound DC and discard our stale outgoing one — it will
@@ -6513,6 +6519,12 @@ function startPeer() {
   });
 
   peer.on('call', incoming => {
+    const remoteId = incoming && incoming.peer ? String(incoming.peer) : '';
+    if (!remoteId.startsWith('bravo-') || remoteId === MY_ID) {
+      entry('Blocked call from invalid peer: ' + (remoteId || 'unknown'), 'err');
+      try { incoming.close(); } catch(e) {}
+      return;
+    }
     _waitingAfterRemoteLeave = false;
     entry('Inbound call from Bravo', 'info');
     answerCall(incoming);
