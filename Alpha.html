@@ -1,4 +1,4 @@
-
+<!-- DEPLOY TIMESTAMP: 2026-07-05 09:22:24 Europe/London (BST, UTC+01:00) | ALPHA v8.96.0-security -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
@@ -2166,12 +2166,12 @@ window.addEventListener('orientationchange', function() {
       </div>
       <div class="user-left-notice" id="userLeftNotice">
         <span>User left chat</span>
-        <button class="leave-chat-btn" onclick="leaveSession()">Leave Chat</button>
+        <button class="leave-chat-btn" onclick="leaveSession()">Hang Up</button>
       </div>
     </div>
     <div class="header-right-btns">
       <button class="header-action-btn" onclick="refreshScreen()" title="Refresh / Reconnect">↺ Refresh</button>
-      <button class="header-action-btn leave-style" id="leaveChatBtn" onclick="leaveSession()" title="Leave session">✕ Leave</button>
+      <button class="header-action-btn leave-style" id="leaveChatBtn" onclick="leaveSession()" title="Hang up session">✕ Hang Up</button>
       <button id="helpTouchBtn" onclick="openHelpPanel()" aria-label="Button guide">?</button>
     </div>
   </header>
@@ -2541,7 +2541,7 @@ window.addEventListener('orientationchange', function() {
 
 <button id="audioUnlockBtn" onclick="unlockRemoteAudio()" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(0,200,120,0.92);color:#000;border:none;border-radius:8px;padding:12px 28px;font-size:15px;font-family:monospace;font-weight:bold;letter-spacing:1px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,0.5);">▶ TAP TO HEAR AUDIO</button>
 <audio id="remoteAudio" autoplay="" playsinline="" webkit-playsinline=""></audio>
-<audio id="answeringMachineIntro" preload="auto" src="answering-machine-intro.mp3" playsinline></audio>
+<audio id="answeringMachineIntro" preload="auto" src="answering-machine-intro.mp3?v=8.96.0-security" playsinline></audio>
 <div id="fsHint">TAP TO SHOW CONTROLS</div>
 <div id="lightbox"><img id="lightboxImg" src="" alt=""></div>
 
@@ -2726,7 +2726,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.95.2-security';    // definitive fullscreen brightness fix plus security hardening
+const VERSION = '8.96.0-security';    // Bravo caller microphone remains live during Alpha answer wait
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -2856,6 +2856,12 @@ function startSession() {
   try {
     if (!_micGainCtx || _micGainCtx.state === 'closed') _micGainCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (_micGainCtx.state === 'suspended') _micGainCtx.resume().catch(() => {});
+  } catch(e) {}
+  // Unlock the call-media mixer during this user gesture. Creating/resuming it
+  // later from the unattended answering timer can be blocked by Chrome.
+  try {
+    _ensureMixContext();
+    if (_mixCtx.state === 'suspended') _mixCtx.resume().catch(() => {});
   } catch(e) {}
   const usingPreReg = _preRegistered && _preRegCode === code;
   if (!usingPreReg) {
@@ -4512,7 +4518,7 @@ function openHelpPanel() {
       ['TTS',     'Toggle auto-speak for incoming messages'],
       ['ORIGINAL','Reset speech language to system default'],
       ['↺',       'Refresh / reconnect'],
-      ['✕ Leave', 'End the session'],
+      ['✕ Hang Up', 'End the session'],
       ['RECORD',  'Record the current call'],
       ['MINI CAM','Toggle picture-in-picture camera overlay'],
       ['FS',      'Toggle full screen'],
@@ -6321,12 +6327,7 @@ function _clearHardAnswerDeadline() {
 function _checkHardAnswerDeadline() {
   if (!_hardAnswerDeadlineAt || _answeringMachineMode || leftPermanently) return;
   if (!linked && Date.now() >= _hardAnswerDeadlineAt) {
-    if (_bravoPresenceFreshUntil > Date.now()) {
-      _hardAnswerDeadlineAt = Date.now() + 10000;
-      entry('BRAVO is online - extending connection attempt before answering mode', 'sys');
-      return;
-    }
-    entry('FAILSAFE: login answering deadline reached while not live', 'sys');
+    entry('FAILSAFE: login answering deadline reached without a live link', 'sys');
     _enterAnsweringMachineMode();
   }
 }
@@ -6350,11 +6351,6 @@ function _checkAnsweringModeDeadline() {
   if (_answeringMachineMode || linked || leftPermanently || !_answeringDeadlineAt) return;
   const remaining = _answeringDeadlineAt - Date.now();
   if (remaining <= 0) {
-    if (_bravoPresenceFreshUntil > Date.now()) {
-      _answeringDeadlineAt = Date.now() + 10000;
-      entry('BRAVO heartbeat is fresh - continuing connection attempt', 'sys');
-      return;
-    }
     _enterAnsweringMachineMode();
     return;
   }
@@ -7321,6 +7317,7 @@ function attachCall(c) {
   // never fires when the remote stream has no video tracks or when addStream
   // isn't used. Hook ontrack directly so we never miss the connection.
   const _pcReady = () => {
+    if (call !== c) return; // ignore a superseded outbound call after role handoff
     const pc = c.peerConnection || c._pc;
     if (!pc) { entry('DIAG: peerConnection not ready — retrying…', 'sys'); setTimeout(_pcReady, 200); return; }
     entry('DIAG: RTCPeerConnection obtained, signalingState=' + pc.signalingState, 'sys');
@@ -7335,6 +7332,7 @@ function attachCall(c) {
       }
     });
     pc.addEventListener('iceconnectionstatechange', () => {
+      if (call !== c) return;
       entry('DIAG: ICE → ' + pc.iceConnectionState, 'sys');
       if ((pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') && !linked) {
         _iceReady = true;
@@ -7445,6 +7443,7 @@ function attachCall(c) {
       entry('DIAG: signaling → ' + pc.signalingState, 'sys');
     });
     pc.addEventListener('track', ev => {
+      if (call !== c) return;
       entry('DIAG: track received kind=' + ev.track.kind, 'sys');
       // Diagnostic: detect if the incoming track is actually one of our own
       // outgoing tracks (would indicate a media loopback).
@@ -7485,6 +7484,7 @@ function attachCall(c) {
   else { setTimeout(_pcReady, 0); }
 
   c.on('stream', stream => {
+    if (call !== c) return; // stale caller-side negotiation must not revive
     const remoteAudio = document.getElementById('remoteAudio');
     if (remoteAudio.srcObject !== stream) remoteAudio.srcObject = stream;
     // Route remote audio through gain node for speaker volume control;
@@ -7523,10 +7523,17 @@ function attachCall(c) {
       call = null;
       if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
       pendingDC = false;
-      entry('Call rejected before link — redialling in 3s…', 'sys');
       clearTimeout(_dialWatchdogTimer); _dialWatchdogTimer = null;
       clearTimeout(retryTimer);
-      retryTimer = setTimeout(dial, 3000);
+      if (_answeringMachineMode) {
+        entry('Answering-machine call ended before link — waiting for Bravo to call again', 'sys');
+        setStatus('answering');
+        duplexBar.textContent = 'ANSWERING MACHINE';
+        duplexBar.className = 'duplex-overlay';
+      } else {
+        entry('Call rejected before link — redialling in 3s…', 'sys');
+        retryTimer = setTimeout(dial, 3000);
+      }
     } else {
       onDrop();
     }
@@ -8088,9 +8095,13 @@ function _fireLocalRing() {
         _armVmTimeout();
       };
       if (intro) {
-        try { intro.currentTime = 0; } catch(e) {}
+        try { intro.load(); intro.currentTime = 0; } catch(e) {}
         intro.onended = startCountdown;
-        intro.onerror = startCountdown;
+        intro.onerror = () => {
+          const code = intro.error ? intro.error.code : 'unknown';
+          entry('Answering intro media error (code ' + code + ', networkState ' + intro.networkState + ')', 'err');
+          startCountdown();
+        };
         attachMediaToCallAudio(intro, false)
           .then(() => intro.play())
           .catch(e => { entry('Answering intro could not play: ' + e.message, 'err'); startCountdown(); });
@@ -9283,11 +9294,12 @@ let _sysAudioGain    = null;  // GainNode for sys audio in mix
 let   sysAudioActive = false; // toggle state
 
 function _ensureMixContext() {
-  if (_mixCtx) return; // already initialised
-  _mixCtx  = new (window.AudioContext || window.webkitAudioContext)();
-  _mixDest = _mixCtx.createMediaStreamDestination();
+  if (!_mixCtx) {
+    _mixCtx  = new (window.AudioContext || window.webkitAudioContext)();
+    _mixDest = _mixCtx.createMediaStreamDestination();
+  }
   // Wire the live mic into the permanent mix destination
-  if (localStream) {
+  if (localStream && !_mixMicNode) {
     try {
       _mixMicNode = _mixCtx.createMediaStreamSource(new MediaStream(localStream.getAudioTracks()));
       _mixMicGain = _mixCtx.createGain();
@@ -9837,6 +9849,7 @@ async function selectCamera(deviceId) {
 // Fullscreen API is still requested as a bonus when available.
 let _fsHideTimer = null;
 let _fsSpeechWasVisible = false;
+let _fsIgnorePressUntil = 0;
 
 function _fsIsActive() {
   return document.body.classList.contains('app-fullscreen');
@@ -9880,20 +9893,31 @@ function _fsShowControls() {
 
 function _fsHideControls() {
   if (!_fsIsActive()) return;
+  clearTimeout(_fsHideTimer);
   document.body.classList.remove('fs-controls-visible');
   document.body.classList.add('fs-controls-hidden');
 }
 
-function _fsOnActivity() {
+function _fsOnPress() {
+  if (!_fsIsActive() || Date.now() < _fsIgnorePressUntil) return;
+  if (document.body.classList.contains('fs-controls-visible')) {
+    _fsHideControls();
+  } else {
+    _fsShowControls();
+  }
+}
+
+function _fsOnMovement() {
   if (_fsIsActive()) _fsShowControls();
 }
 
-// Tap/click anywhere while in app-fullscreen → reveal controls
-document.addEventListener('touchstart', _fsOnActivity, { passive: true });
-document.addEventListener('click',      _fsOnActivity);
-document.addEventListener('mousemove',  _fsOnActivity, { passive: true });
-document.addEventListener('keydown',    _fsOnActivity);
-document.addEventListener('input',      _fsOnActivity);
+// A tap/click toggles controls immediately.
+// The fullscreen hint remains visible while controls are hidden.
+document.addEventListener('touchstart', _fsOnPress, { passive: true });
+document.addEventListener('click',      _fsOnPress);
+document.addEventListener('mousemove',  _fsOnMovement, { passive: true });
+document.addEventListener('keydown',    _fsOnMovement);
+document.addEventListener('input',      _fsOnMovement);
 
 function toggleFullScreen() {
   const btn = document.getElementById('fsChatBtn');
@@ -9901,6 +9925,7 @@ function toggleFullScreen() {
 
   if (goingFs) {
     _fsSpeechWasVisible = _speechVisible;
+    _fsIgnorePressUntil = Date.now() + 500;
     document.body.classList.add('app-fullscreen');
     _fsEnsureTextBox();
     if (btn) { btn.textContent = 'FS ON'; btn.classList.add('active'); }
@@ -9914,6 +9939,7 @@ function toggleFullScreen() {
   } else {
     document.body.classList.remove('app-fullscreen', 'fs-controls-hidden', 'fs-controls-visible');
     clearTimeout(_fsHideTimer);
+    _fsIgnorePressUntil = 0;
     _fsRestoreTextBox();
     if (btn) { btn.textContent = 'FS OFF'; btn.classList.remove('active'); }
     try {
