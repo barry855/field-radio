@@ -1,4 +1,5 @@
-<!-- DEPLOY TIMESTAMP: 2026-07-05 09:22:24 Europe/London (BST, UTC+01:00) | ALPHA v8.96.0-security -->
+
+<!-- DEPLOY TIMESTAMP: 2026-07-05 15:51:05 Europe/London (BST, UTC+01:00) | ALPHA v8.96.5-security -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
@@ -1862,7 +1863,8 @@
     pointer-events: none; white-space: nowrap;
     transition: opacity 0.4s ease;
   }
-  body.app-fullscreen.fs-controls-hidden #fsHint { display: block; }
+  body.app-fullscreen.fs-controls-hidden #fsHint,
+  body.app-fullscreen.fs-controls-visible #fsHint { display: block; }
 
   /* ── LANDSCAPE: full-screen video only (mobile/touch only, ACTIVE CALL ONLY) ─── */
   @media (orientation: landscape) and (pointer: coarse) {
@@ -2541,8 +2543,8 @@ window.addEventListener('orientationchange', function() {
 
 <button id="audioUnlockBtn" onclick="unlockRemoteAudio()" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(0,200,120,0.92);color:#000;border:none;border-radius:8px;padding:12px 28px;font-size:15px;font-family:monospace;font-weight:bold;letter-spacing:1px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,0.5);">▶ TAP TO HEAR AUDIO</button>
 <audio id="remoteAudio" autoplay="" playsinline="" webkit-playsinline=""></audio>
-<audio id="answeringMachineIntro" preload="auto" src="answering-machine-intro.mp3?v=8.96.0-security" playsinline></audio>
-<div id="fsHint">TAP TO SHOW CONTROLS</div>
+<audio id="answeringMachineIntro" preload="auto" src="answering-machine-intro.mp3?v=8.96.5-security" playsinline></audio>
+<div id="fsHint">TAP FOR CONTROLS</div>
 <div id="lightbox"><img id="lightboxImg" src="" alt=""></div>
 
 <script>
@@ -2726,7 +2728,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.96.0-security';    // Bravo caller microphone remains live during Alpha answer wait
+const VERSION = '8.96.5-security';    // strict Alpha/Bravo peer-role validation
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -2868,6 +2870,9 @@ function startSession() {
     MY_ID     = 'alpha-' + code;
     REMOTE_ID = 'bravo-' + code;
   }
+  // Alpha owns the answering-machine role from login onward. It advertises
+  // that role immediately and never places the initial media or data call.
+  _answeringMachineMode = true;
   _preRegistered = false; _preRegCode = ''; // consumed
   // Keep writing our heartbeat for the whole session so Firebase shows us as online
   const myKey = 'alpha-' + code;
@@ -2904,20 +2909,16 @@ function startSession() {
   leftPermanently = false;
   remotePeerLeft = false;
   _clearAnsweringModeTimer();
-  _answeringMachineMode = false;
+  _answeringMachineMode = true;
   _attended = false;
   _bravoRequestedLive = false;
   _bravoAnsweringAvailable = false;
   _liveTakeoverRequested = false;
   document.getElementById('qualityDisplay').style.display = 'flex';
-  setStatus('calling');
-  duplexBar.textContent = '● CALLING BRAVO…';
+  setStatus('answering');
+  duplexBar.textContent = 'ANSWERING MACHINE — WAITING FOR BRAVO';
   duplexBar.className = 'duplex-overlay';
-  // Start the answering deadline at login, not at PeerJS "open". If the
-  // signalling service is slow or unavailable, Alpha must still become an
-  // answering machine after 30 seconds instead of remaining CALLING forever.
-  _armAnsweringModeTimer();
-  _armHardAnswerDeadline();
+  entry('Alpha receiver ready — waiting for Bravo to call', 'ok');
   if (usingPreReg) {
     entry('Using pre-registered peer — acquiring media only', 'sys');
     initMediaOnly();
@@ -6422,6 +6423,16 @@ function startPeer() {
     setTimeout(startPeer, 500);
     return;
   }
+  // A completed or dropped media call does not require a new Peer instance.
+  // Reuse the registered ID, or reconnect its signalling socket, so Alpha
+  // cannot compete with itself and trigger unavailable-id/suffix churn.
+  if (peer && !peer.destroyed) {
+    if (peer.disconnected) {
+      entry('Answering machine: reconnecting existing signalling peer…', 'sys');
+      try { peer.reconnect(); } catch(e) { entry('Peer reconnect failed: ' + e.message, 'sys'); }
+    }
+    return;
+  }
   _peerDestroyPending = false;
   _peerGeneration++;           // invalidate any _pollAndDial loop from the previous peer
   _remoteIdConfirmed = false;  // reset so new peer waits for fresh Firebase confirmation
@@ -6488,7 +6499,13 @@ function startPeer() {
   });
 
   peer.on('connection', dc => {
-    if (dataConn) { dc.close(); return; }
+    const remoteId = dc && dc.peer ? String(dc.peer) : '';
+    if (!remoteId.startsWith('bravo-') || remoteId === MY_ID) {
+      entry('Blocked data channel from invalid peer: ' + (remoteId || 'unknown'), 'err');
+      try { dc.close(); } catch(e) {}
+      return;
+    }
+    if (dataConn || pendingDC) { dc.close(); return; }
     // Collision: Bravo dialled us while we were dialling Bravo (pendingDC=true).
     // Accept Bravo's inbound DC and discard our stale outgoing one — it will
     // never open anyway because Bravo rebuilt its peer before answering us.
@@ -6502,6 +6519,12 @@ function startPeer() {
   });
 
   peer.on('call', incoming => {
+    const remoteId = incoming && incoming.peer ? String(incoming.peer) : '';
+    if (!remoteId.startsWith('bravo-') || remoteId === MY_ID) {
+      entry('Blocked call from invalid peer: ' + (remoteId || 'unknown'), 'err');
+      try { incoming.close(); } catch(e) {}
+      return;
+    }
     _waitingAfterRemoteLeave = false;
     entry('Inbound call from Bravo', 'info');
     answerCall(incoming);
@@ -6826,9 +6849,11 @@ function attachDataConn(dc) {
     entry('Chat channel closed', 'sys');
     // Only reopen if the call is still live — re-check inside the timeout
     // so a concurrent onDrop() doesn't cause a ghost reconnect attempt
-    if (linked) {
+    if (linked && !_answeringMachineMode) {
       entry('Reopening data channel…', 'sys');
       setTimeout(() => { if (linked) openDataConn(); }, 500);
+    } else if (linked) {
+      entry('Waiting for Bravo to reopen the data channel…', 'sys');
     }
   });
   dc.on('error', e => {
@@ -6837,8 +6862,12 @@ function attachDataConn(dc) {
     // Only reopen if the call is still live
     if (linked && dataConn === dc) {
       dataConn = null;
-      entry('Reopening data channel after error…', 'sys');
-      setTimeout(() => { if (linked) openDataConn(); }, 500);
+      if (_answeringMachineMode) {
+        entry('Waiting for Bravo to reopen the data channel after error…', 'sys');
+      } else {
+        entry('Reopening data channel after error…', 'sys');
+        setTimeout(() => { if (linked) openDataConn(); }, 500);
+      }
     }
   });
 }
@@ -7031,6 +7060,9 @@ function dcDecode(raw) {
 
 let _dcWatchdog = null;
 function openDataConn() {
+  // Alpha is the receiver. Bravo owns data-channel creation so both peers do
+  // not repeatedly collide while the media call is already connected.
+  if (_answeringMachineMode) return;
   if (dataConn || pendingDC) return;
   pendingDC = true;
   entry('Opening data channel…', 'sys');
@@ -7305,7 +7337,7 @@ function markLinked() {
   })();
   syncControls();
   startQualityPolling();
-  openDataConn();
+  if (!_answeringMachineMode) openDataConn();
   applyMuteToSenders();
   startAudioWatchdog();
 }
@@ -7355,11 +7387,10 @@ function attachCall(c) {
           c._iceRelayTimer = setTimeout(() => {
             if (pc.iceConnectionState === 'checking' && call === c && !c._relayEscalated) {
               c._relayEscalated = true;
-              entry('ICE checking timeout — direct path failed, escalating to TURN relay-only', 'sys');
-              try {
-                pc.setConfiguration({ iceServers: ICE_SERVERS, iceTransportPolicy: 'relay', iceCandidatePoolSize: 4 });
-                pc.restartIce();
-              } catch(e2) { entry('Relay fallback failed: ' + e2.message, 'sys'); }
+              // Chrome forbids changing iceTransportPolicy after negotiation.
+              // Relay candidates are already present from ICE_SERVERS, so keep
+              // the current negotiation alive and allow ICE to select them.
+              entry('ICE checking timeout — TURN candidates already gathered; continuing checks', 'sys');
             }
           }, 8000);
         }
@@ -7367,15 +7398,13 @@ function attachCall(c) {
         clearTimeout(c._iceRelayTimer);
       }
       if (pc.iceConnectionState === 'failed') {
-        if (!c._relayEscalated) {
-          c._relayEscalated = true;
-          entry('DIAG: ICE FAILED — direct path failed, escalating to TURN relay-only', 'err');
-          try {
-            pc.setConfiguration({ iceServers: ICE_SERVERS, iceTransportPolicy: 'relay', iceCandidatePoolSize: 4 });
-            pc.restartIce();
-          } catch(e2) { entry('ICE restart unavailable: ' + e2.message, 'sys'); }
+        if (!c._iceRestartAttempted) {
+          c._iceRestartAttempted = true;
+          entry('DIAG: ICE FAILED — restarting with configured STUN/TURN candidates', 'err');
+          try { pc.restartIce(); }
+          catch(e2) { entry('ICE restart unavailable: ' + e2.message, 'sys'); }
         } else {
-          entry('DIAG: ICE FAILED after relay escalation — dropping', 'err');
+          entry('DIAG: ICE FAILED after restart — dropping', 'err');
         }
       }
       if (pc.iceConnectionState === 'disconnected' && linked && call === c) {
@@ -7776,8 +7805,17 @@ function onDrop() {
     dropTimer = setTimeout(() => {
       if (_vmResetPending || _vmActive || leftPermanently || peerRefreshing) return;
       remotePeerLeft = false;
-      entry('Answering machine: resetting for next caller…', 'sys');
-      startPeer();
+      if (peer && !peer.destroyed) {
+        if (peer.disconnected) {
+          entry('Answering machine: reconnecting for next caller…', 'sys');
+          try { peer.reconnect(); } catch(e) { entry('Peer reconnect failed: ' + e.message, 'sys'); }
+        } else {
+          entry('Answering machine ready for next caller', 'ok');
+        }
+      } else {
+        entry('Answering machine: rebuilding signalling peer…', 'sys');
+        startPeer();
+      }
     }, 1200);
     return;
   }
@@ -8173,6 +8211,7 @@ function _isDeliberateLiveClick(event) {
 
 document.addEventListener('click', event => {
   if (!_isDeliberateLiveClick(event)) return;
+  if (document.body.classList.contains('app-fullscreen')) return; // fullscreen taps only toggle controls
   const target = event.target;
   if (target && target.closest && target.closest('button,a,input,select,textarea,audio,[role="button"]')) return;
   if (linked && _bravoAnsweringAvailable) {
@@ -9887,8 +9926,8 @@ function _fsShowControls() {
   document.body.classList.remove('fs-controls-hidden');
   document.body.classList.add('fs-controls-visible');
   clearTimeout(_fsHideTimer);
-  // Hide the entire control and text-entry overlay after 20 seconds idle.
-  _fsHideTimer = setTimeout(_fsHideControls, 20000);
+  const hint = document.getElementById('fsHint');
+  if (hint) hint.textContent = 'TAP TO RETURN TO FULL SCREEN';
 }
 
 function _fsHideControls() {
@@ -9896,10 +9935,17 @@ function _fsHideControls() {
   clearTimeout(_fsHideTimer);
   document.body.classList.remove('fs-controls-visible');
   document.body.classList.add('fs-controls-hidden');
+  const hint = document.getElementById('fsHint');
+  if (hint) hint.textContent = 'TAP FOR CONTROLS';
 }
 
-function _fsOnPress() {
+let _fsLastTouchAt = 0;
+function _fsOnPress(event) {
   if (!_fsIsActive() || Date.now() < _fsIgnorePressUntil) return;
+  if (event.type === 'touchstart') _fsLastTouchAt = Date.now();
+  if (event.type === 'click' && Date.now() - _fsLastTouchAt < 700) return;
+  if (document.body.classList.contains('fs-controls-visible') && event.target && event.target.closest &&
+      event.target.closest('button,a,input,select,textarea,audio,[role="button"]')) return;
   if (document.body.classList.contains('fs-controls-visible')) {
     _fsHideControls();
   } else {
@@ -9907,17 +9953,11 @@ function _fsOnPress() {
   }
 }
 
-function _fsOnMovement() {
-  if (_fsIsActive()) _fsShowControls();
-}
-
 // A tap/click toggles controls immediately.
-// The fullscreen hint remains visible while controls are hidden.
+// Interactive controls do not toggle the overlay, and touch-generated clicks
+// are suppressed so one tap cannot immediately toggle twice.
 document.addEventListener('touchstart', _fsOnPress, { passive: true });
 document.addEventListener('click',      _fsOnPress);
-document.addEventListener('mousemove',  _fsOnMovement, { passive: true });
-document.addEventListener('keydown',    _fsOnMovement);
-document.addEventListener('input',      _fsOnMovement);
 
 function toggleFullScreen() {
   const btn = document.getElementById('fsChatBtn');
@@ -9935,7 +9975,7 @@ function toggleFullScreen() {
       if (el.requestFullscreen)            el.requestFullscreen().catch(()=>{});
       else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
     } catch(e) {}
-    _fsShowControls();
+    _fsHideControls();
   } else {
     document.body.classList.remove('app-fullscreen', 'fs-controls-hidden', 'fs-controls-visible');
     clearTimeout(_fsHideTimer);
