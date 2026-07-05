@@ -1,3 +1,5 @@
+
+<!-- DEPLOY TIMESTAMP: 2026-07-05 08:57:02 Europe/London (BST, UTC+01:00) | ALPHA v8.95.9-security -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
@@ -2540,7 +2542,7 @@ window.addEventListener('orientationchange', function() {
 
 <button id="audioUnlockBtn" onclick="unlockRemoteAudio()" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(0,200,120,0.92);color:#000;border:none;border-radius:8px;padding:12px 28px;font-size:15px;font-family:monospace;font-weight:bold;letter-spacing:1px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,0.5);">▶ TAP TO HEAR AUDIO</button>
 <audio id="remoteAudio" autoplay="" playsinline="" webkit-playsinline=""></audio>
-<audio id="answeringMachineIntro" preload="auto" src="answering-machine-intro.mp3?v=8.95.8-security" playsinline></audio>
+<audio id="answeringMachineIntro" preload="auto" src="answering-machine-intro.mp3?v=8.95.9-security" playsinline></audio>
 <div id="fsHint">TAP TO SHOW CONTROLS</div>
 <div id="lightbox"><img id="lightboxImg" src="" alt=""></div>
 
@@ -2725,7 +2727,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.95.8-security';    // enforce Alpha answering deadline even with stale Bravo presence
+const VERSION = '8.95.9-security';    // keep Alpha receiver-only after answering-machine handoff
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -7316,6 +7318,7 @@ function attachCall(c) {
   // never fires when the remote stream has no video tracks or when addStream
   // isn't used. Hook ontrack directly so we never miss the connection.
   const _pcReady = () => {
+    if (call !== c) return; // ignore a superseded outbound call after role handoff
     const pc = c.peerConnection || c._pc;
     if (!pc) { entry('DIAG: peerConnection not ready — retrying…', 'sys'); setTimeout(_pcReady, 200); return; }
     entry('DIAG: RTCPeerConnection obtained, signalingState=' + pc.signalingState, 'sys');
@@ -7330,6 +7333,7 @@ function attachCall(c) {
       }
     });
     pc.addEventListener('iceconnectionstatechange', () => {
+      if (call !== c) return;
       entry('DIAG: ICE → ' + pc.iceConnectionState, 'sys');
       if ((pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') && !linked) {
         _iceReady = true;
@@ -7440,6 +7444,7 @@ function attachCall(c) {
       entry('DIAG: signaling → ' + pc.signalingState, 'sys');
     });
     pc.addEventListener('track', ev => {
+      if (call !== c) return;
       entry('DIAG: track received kind=' + ev.track.kind, 'sys');
       // Diagnostic: detect if the incoming track is actually one of our own
       // outgoing tracks (would indicate a media loopback).
@@ -7480,6 +7485,7 @@ function attachCall(c) {
   else { setTimeout(_pcReady, 0); }
 
   c.on('stream', stream => {
+    if (call !== c) return; // stale caller-side negotiation must not revive
     const remoteAudio = document.getElementById('remoteAudio');
     if (remoteAudio.srcObject !== stream) remoteAudio.srcObject = stream;
     // Route remote audio through gain node for speaker volume control;
@@ -7518,10 +7524,17 @@ function attachCall(c) {
       call = null;
       if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
       pendingDC = false;
-      entry('Call rejected before link — redialling in 3s…', 'sys');
       clearTimeout(_dialWatchdogTimer); _dialWatchdogTimer = null;
       clearTimeout(retryTimer);
-      retryTimer = setTimeout(dial, 3000);
+      if (_answeringMachineMode) {
+        entry('Answering-machine call ended before link — waiting for Bravo to call again', 'sys');
+        setStatus('answering');
+        duplexBar.textContent = 'ANSWERING MACHINE';
+        duplexBar.className = 'duplex-overlay';
+      } else {
+        entry('Call rejected before link — redialling in 3s…', 'sys');
+        retryTimer = setTimeout(dial, 3000);
+      }
     } else {
       onDrop();
     }
