@@ -1,4 +1,5 @@
-<!-- DEPLOY TIMESTAMP: 2026-07-05 15:51:05 Europe/London (BST, UTC+01:00) | ALPHA v8.96.5-security -->
+
+<!-- DEPLOY TIMESTAMP: 2026-07-05 16:38:21 Europe/London (BST, UTC+01:00) | ALPHA v8.96.6-security -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
@@ -2542,7 +2543,7 @@ window.addEventListener('orientationchange', function() {
 
 <button id="audioUnlockBtn" onclick="unlockRemoteAudio()" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(0,200,120,0.92);color:#000;border:none;border-radius:8px;padding:12px 28px;font-size:15px;font-family:monospace;font-weight:bold;letter-spacing:1px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,0.5);">▶ TAP TO HEAR AUDIO</button>
 <audio id="remoteAudio" autoplay="" playsinline="" webkit-playsinline=""></audio>
-<audio id="answeringMachineIntro" preload="auto" src="answering-machine-intro.mp3?v=8.96.5-security" playsinline></audio>
+<audio id="answeringMachineIntro" preload="auto" src="answering-machine-intro.mp3?v=8.96.6-security" playsinline></audio>
 <div id="fsHint">TAP FOR CONTROLS</div>
 <div id="lightbox"><img id="lightboxImg" src="" alt=""></div>
 
@@ -2727,7 +2728,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.96.5-security';    // strict Alpha/Bravo peer-role validation
+const VERSION = '8.96.6-security';    // suppress unattended acoustic echo; record caller only
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -5733,7 +5734,7 @@ function stopListening() {
   else {
     // No sender was saved (STT started before call connected) — still restore
     // gain/track in case onstart muted them on an older code path.
-    if (!audioMuted) {
+    if (!audioMuted && !_answeringMicSuppressed) {
       if (_mixMicGain) { _mixMicGain.gain.value = _preTalkMicGain !== null ? _preTalkMicGain : 1.0; _preTalkMicGain = null; }
       if (realAudioTrack) { realAudioTrack.enabled = true; }
     }
@@ -7854,6 +7855,7 @@ const RING_TIMEOUT_MS = 30000;
 let _vmTimer = null;
 let _vmMaxTimer = null;
 let _vmActive = false;
+let _answeringMicSuppressed = false;
 let _vmResetPending = false;
 let _vmRec = null;
 let _vmChunks = [];
@@ -8235,6 +8237,7 @@ function _markAttended(event, suppressCamera) {
   _liveTakeoverRequested = true;
   if (_attended) return;
   _attended = true;
+  _setAnsweringMicSuppressed(false);
   playLiveCueOnce();
   if (_answeringMachineMode && (_ringing || _vmActive)) clearLocalChatDisplayForTakeover();
   if (!suppressCamera && !loginDisableVideoFlag) _setCameraActive(true, 'live session');
@@ -8293,19 +8296,17 @@ async function _startVoicemail() {
   }
 
   const remoteTracksStream = new MediaStream(audioTracks.map(t => t.clone()));
-  const localTracks = getLocalAudioTracksForRec();
-  const localForMix = localTracks.length ? new MediaStream(localTracks) : null;
   let vmAudioContext = null;
   let recordStream;
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     await ctx.resume();
     const dest = ctx.createMediaStreamDestination();
-    [remoteTracksStream, localForMix].forEach((stream, index) => {
+    [remoteTracksStream].forEach(stream => {
       if (!stream) return;
       const src = ctx.createMediaStreamSource(stream);
       const gain = ctx.createGain();
-      gain.gain.value = index === 1 ? 2.0 : 1.0;
+      gain.gain.value = 1.0;
       src.connect(gain);
       gain.connect(dest);
     });
@@ -8313,10 +8314,7 @@ async function _startVoicemail() {
     recordStream = dest.stream;
   } catch(e) {
     entry('VM audio mix failed, using raw tracks: ' + e.message, 'sys');
-    recordStream = new MediaStream([
-      ...audioTracks.map(t => t.clone()),
-      ...getLocalAudioTracksForRec()
-    ]);
+    recordStream = new MediaStream(audioTracks.map(t => t.clone()));
   }
 
   const mimeType = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm']
@@ -8396,6 +8394,7 @@ function _onCallConnected() {
   if (!_liveTakeoverRequested) _attended = false;
   _vmCallStart = Date.now();
   if (_answeringMachineMode) {
+    _setAnsweringMicSuppressed(true);
     if (dataConn && dataConn.open) _startRing();
     else _ringStartPending = true;
   }
@@ -9341,7 +9340,7 @@ function _ensureMixContext() {
     try {
       _mixMicNode = _mixCtx.createMediaStreamSource(new MediaStream(localStream.getAudioTracks()));
       _mixMicGain = _mixCtx.createGain();
-      _mixMicGain.gain.value = audioMuted ? 0.0 : 1.0;
+      _mixMicGain.gain.value = (audioMuted || _answeringMicSuppressed) ? 0.0 : 1.0;
       _mixMicNode.connect(_mixMicGain);
       _mixMicGain.connect(_mixDest);
     } catch(e) { entry('Mix mic init warn: ' + e.message, 'sys'); }
@@ -9369,6 +9368,27 @@ async function _setCallAudioTrack(track) {
   } catch(e) { entry('replaceTrack warn: ' + e.message, 'sys'); }
 }
 
+async function _setAnsweringMicSuppressed(suppressed) {
+  _answeringMicSuppressed = !!suppressed;
+  if (_mixMicGain) _mixMicGain.gain.value = _answeringMicSuppressed ? 0.0 : (audioMuted ? 0.0 : 1.0);
+  if (!call || !linked) return;
+  if (_answeringMicSuppressed) {
+    // During the greeting, retain the mixed sender but mute its microphone
+    // branch. At all other unattended times, transmit digital silence.
+    if (!_mixOutTrack) await _setCallAudioTrack(getSilentTrack());
+    entry('Alpha microphone suppressed during unattended answering', 'sys');
+  } else if (!audioMuted) {
+    const micTrack = (_micProcessedTrack && _micProcessedTrack.readyState !== 'ended' && _micProcessedTrack)
+      || (realAudioTrack && realAudioTrack.readyState !== 'ended' && realAudioTrack)
+      || (localStream && localStream.getAudioTracks().find(t => t.readyState !== 'ended'));
+    if (micTrack) {
+      micTrack.enabled = true;
+      await _setCallAudioTrack(micTrack);
+      entry('Alpha microphone restored for live session', 'sys');
+    }
+  }
+}
+
 async function _activateMix() {
   const track = _mixDest.stream.getAudioTracks()[0];
   if (track && track !== _mixOutTrack) {
@@ -9381,9 +9401,9 @@ async function _activateMix() {
 async function _deactivateMix() {
   // If the user has muted, restoring the raw mic track would un-mute them.
   // Put a silent track on the sender instead and let toggleAudio own the state.
-  if (audioMuted) {
+  if (audioMuted || _answeringMicSuppressed) {
     await _setCallAudioTrack(getSilentTrack());
-    entry('Call audio → silent (muted, mix stopped)', 'sys');
+    entry('Call audio → silent (muted/unattended, mix stopped)', 'sys');
   } else {
     const micTrack = localStream && localStream.getAudioTracks()[0];
     if (micTrack) {
@@ -9451,7 +9471,7 @@ function applyMuteToSenders() {
     const pc = call && (call.peerConnection || call._pc);
     const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
     if (!sender) return;
-    if (audioMuted) {
+    if (audioMuted || _answeringMicSuppressed) {
       if (_mixMicGain) {
         // Mix is active — silence the mic gain node; mix track stays on sender.
         _mixMicGain.gain.value = 0.0;
@@ -9461,7 +9481,7 @@ function applyMuteToSenders() {
     } else {
       if (_mixMicGain) {
         // Mix is active — restore mic gain; mix track stays on sender.
-        _mixMicGain.gain.value = 1.0;
+        _mixMicGain.gain.value = _answeringMicSuppressed ? 0.0 : 1.0;
       } else {
         // No mix — restore raw mic track only if sender doesn't already hold it.
         if (realAudioTrack && sender.track !== realAudioTrack) {
@@ -9624,16 +9644,18 @@ function toggleAudio() {
     entry('Local audio muted', 'sys');
   } else {
     audioMuted = false;
-    if (realAudioTrack) realAudioTrack.enabled = true;
+    if (realAudioTrack) realAudioTrack.enabled = !_answeringMicSuppressed;
     if (_mixMicGain) {
       // Restore mic gain in the mix graph — the mix track is already on the sender.
-      _mixMicGain.gain.value = 1.0;
+      _mixMicGain.gain.value = _answeringMicSuppressed ? 0.0 : 1.0;
     } else {
       // No mix active — restore the real mic track on the WebRTC sender directly.
       try {
         const pc = call && (call.peerConnection || call._pc);
         const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
-        if (sender && realAudioTrack) sender.replaceTrack(realAudioTrack).catch(() => {});
+        if (sender && (_answeringMicSuppressed || realAudioTrack)) {
+          sender.replaceTrack(_answeringMicSuppressed ? getSilentTrack() : realAudioTrack).catch(() => {});
+        }
       } catch(e) {}
     }
     btns.forEach(b => { if(b){ b.textContent = 'Mike On'; b.classList.remove('disabled-state'); b.classList.remove('active-on'); }});
@@ -10080,7 +10102,7 @@ function _rewireMixMicrophone() {
     if (!tracks.length) return;
     _mixMicNode = _mixCtx.createMediaStreamSource(new MediaStream(tracks));
     _mixMicGain = _mixCtx.createGain();
-    _mixMicGain.gain.value = audioMuted ? 0.0 : 1.0;
+    _mixMicGain.gain.value = (audioMuted || _answeringMicSuppressed) ? 0.0 : 1.0;
     _mixMicNode.connect(_mixMicGain);
     _mixMicGain.connect(_mixDest);
   } catch(e) { entry('Microphone mix rewire failed: ' + e.message, 'sys'); }
