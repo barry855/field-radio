@@ -1,5 +1,5 @@
 
-<!-- DEPLOY TIMESTAMP: 2026-07-05 15:45:29 Europe/London (BST, UTC+01:00) | BRAVO v8.96.4-security -->
+<!-- DEPLOY TIMESTAMP: 2026-07-05 15:51:05 Europe/London (BST, UTC+01:00) | BRAVO v8.96.5-security -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — BRAVO -->
@@ -2493,7 +2493,7 @@ window.addEventListener('orientationchange', function() {
 
 <button id="audioUnlockBtn" onclick="unlockRemoteAudio()" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(0,200,120,0.92);color:#000;border:none;border-radius:8px;padding:12px 28px;font-size:15px;font-family:monospace;font-weight:bold;letter-spacing:1px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,0.5);">▶ TAP TO HEAR AUDIO</button>
 <audio id="remoteAudio" autoplay="" playsinline="" webkit-playsinline=""></audio>
-<audio id="answeringMachineIntro" preload="auto" src="answering-machine-intro.mp3?v=8.96.4-security" playsinline></audio>
+<audio id="answeringMachineIntro" preload="auto" src="answering-machine-intro.mp3?v=8.96.5-security" playsinline></audio>
 <div id="fsHint">TAP FOR CONTROLS</div>
 <div id="lightbox"><img id="lightboxImg" src="" alt=""></div>
 
@@ -2678,7 +2678,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.96.4-security';    // synchronized with Alpha peer-reuse fix
+const VERSION = '8.96.5-security';    // strict Alpha/Bravo peer-role validation
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -6218,6 +6218,7 @@ let _peerGeneration = 0;  // incremented each startPeer() — cancels stale _pol
 
 // ── Remote ID refresh (reads Alpha's published peerId from Firebase) ──────────
 let _remoteIdConfirmed = false; // true once Firebase has returned a valid peerId for ALPHA
+let _lastRejectedRemoteId = '';
 async function _refreshRemoteId() {
   try {
     const _code = MY_ID ? MY_ID.replace(/^bravo-/, '').replace(/-[0-9a-f]{4}$/, '') : '';
@@ -6226,6 +6227,17 @@ async function _refreshRemoteId() {
     const _env = await _r.json();
     const _d = _env ? await _decryptPresence(_code, _env) : null;
     if (_d && _d.peerId && _d.ts && (Date.now() - _d.ts) < PRESENCE_STALE_MS) {
+      const candidateId = String(_d.peerId);
+      if (!candidateId.startsWith('alpha-') || candidateId === MY_ID) {
+        if (candidateId !== _lastRejectedRemoteId) {
+          _lastRejectedRemoteId = candidateId;
+          entry('Rejected invalid Alpha peer ID: ' + candidateId, 'err');
+        }
+        _remoteIdConfirmed = false;
+        _alphaAnsweringAvailable = false;
+        return;
+      }
+      _lastRejectedRemoteId = '';
       if (_d.peerId !== REMOTE_ID && !linked) {
         const previousRemoteId = REMOTE_ID;
         entry('ALPHA peer ID: ' + _d.peerId, 'sys');
@@ -6278,6 +6290,11 @@ function dial() {
   _answeringCallReceiver = false;
   clearTimeout(retryTimer);
   if (linked || !localStream) return;
+  if (!REMOTE_ID || !String(REMOTE_ID).startsWith('alpha-') || REMOTE_ID === MY_ID) {
+    entry('Blocked invalid call target: ' + (REMOTE_ID || 'unknown'), 'err');
+    _remoteIdConfirmed = false;
+    return;
+  }
   if (call) {
     try { call.off('close', onDrop); call.close(); } catch(e) {}
     call = null;
@@ -6839,6 +6856,10 @@ function dcDecode(raw) {
 
 let _dcWatchdog = null;
 function openDataConn() {
+  if (!REMOTE_ID || !String(REMOTE_ID).startsWith('alpha-') || REMOTE_ID === MY_ID) {
+    entry('Blocked invalid data-channel target: ' + (REMOTE_ID || 'unknown'), 'err');
+    return;
+  }
   if (dataConn || pendingDC) return;
   pendingDC = true;
   entry('Opening data channel to Alpha…', 'sys');
