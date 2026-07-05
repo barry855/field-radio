@@ -1,4 +1,5 @@
-<!-- DEPLOY TIMESTAMP: 2026-07-05 10:52:42 Europe/London (BST, UTC+01:00) | ALPHA v8.96.2-security -->
+
+<!-- DEPLOY TIMESTAMP: 2026-07-05 15:45:29 Europe/London (BST, UTC+01:00) | ALPHA v8.96.4-security -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
@@ -2542,7 +2543,7 @@ window.addEventListener('orientationchange', function() {
 
 <button id="audioUnlockBtn" onclick="unlockRemoteAudio()" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(0,200,120,0.92);color:#000;border:none;border-radius:8px;padding:12px 28px;font-size:15px;font-family:monospace;font-weight:bold;letter-spacing:1px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,0.5);">▶ TAP TO HEAR AUDIO</button>
 <audio id="remoteAudio" autoplay="" playsinline="" webkit-playsinline=""></audio>
-<audio id="answeringMachineIntro" preload="auto" src="answering-machine-intro.mp3?v=8.96.2-security" playsinline></audio>
+<audio id="answeringMachineIntro" preload="auto" src="answering-machine-intro.mp3?v=8.96.4-security" playsinline></audio>
 <div id="fsHint">TAP FOR CONTROLS</div>
 <div id="lightbox"><img id="lightboxImg" src="" alt=""></div>
 
@@ -2727,7 +2728,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.96.2-security';    // tap toggles fullscreen video and controls
+const VERSION = '8.96.4-security';    // reuse Alpha peer after calls; prevent duplicate ID registration
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -6422,6 +6423,16 @@ function startPeer() {
     setTimeout(startPeer, 500);
     return;
   }
+  // A completed or dropped media call does not require a new Peer instance.
+  // Reuse the registered ID, or reconnect its signalling socket, so Alpha
+  // cannot compete with itself and trigger unavailable-id/suffix churn.
+  if (peer && !peer.destroyed) {
+    if (peer.disconnected) {
+      entry('Answering machine: reconnecting existing signalling peer…', 'sys');
+      try { peer.reconnect(); } catch(e) { entry('Peer reconnect failed: ' + e.message, 'sys'); }
+    }
+    return;
+  }
   _peerDestroyPending = false;
   _peerGeneration++;           // invalidate any _pollAndDial loop from the previous peer
   _remoteIdConfirmed = false;  // reset so new peer waits for fresh Firebase confirmation
@@ -6488,7 +6499,7 @@ function startPeer() {
   });
 
   peer.on('connection', dc => {
-    if (dataConn) { dc.close(); return; }
+    if (dataConn || pendingDC) { dc.close(); return; }
     // Collision: Bravo dialled us while we were dialling Bravo (pendingDC=true).
     // Accept Bravo's inbound DC and discard our stale outgoing one — it will
     // never open anyway because Bravo rebuilt its peer before answering us.
@@ -6826,9 +6837,11 @@ function attachDataConn(dc) {
     entry('Chat channel closed', 'sys');
     // Only reopen if the call is still live — re-check inside the timeout
     // so a concurrent onDrop() doesn't cause a ghost reconnect attempt
-    if (linked) {
+    if (linked && !_answeringMachineMode) {
       entry('Reopening data channel…', 'sys');
       setTimeout(() => { if (linked) openDataConn(); }, 500);
+    } else if (linked) {
+      entry('Waiting for Bravo to reopen the data channel…', 'sys');
     }
   });
   dc.on('error', e => {
@@ -6837,8 +6850,12 @@ function attachDataConn(dc) {
     // Only reopen if the call is still live
     if (linked && dataConn === dc) {
       dataConn = null;
-      entry('Reopening data channel after error…', 'sys');
-      setTimeout(() => { if (linked) openDataConn(); }, 500);
+      if (_answeringMachineMode) {
+        entry('Waiting for Bravo to reopen the data channel after error…', 'sys');
+      } else {
+        entry('Reopening data channel after error…', 'sys');
+        setTimeout(() => { if (linked) openDataConn(); }, 500);
+      }
     }
   });
 }
@@ -7031,6 +7048,9 @@ function dcDecode(raw) {
 
 let _dcWatchdog = null;
 function openDataConn() {
+  // Alpha is the receiver. Bravo owns data-channel creation so both peers do
+  // not repeatedly collide while the media call is already connected.
+  if (_answeringMachineMode) return;
   if (dataConn || pendingDC) return;
   pendingDC = true;
   entry('Opening data channel…', 'sys');
@@ -7305,7 +7325,7 @@ function markLinked() {
   })();
   syncControls();
   startQualityPolling();
-  openDataConn();
+  if (!_answeringMachineMode) openDataConn();
   applyMuteToSenders();
   startAudioWatchdog();
 }
@@ -7355,11 +7375,10 @@ function attachCall(c) {
           c._iceRelayTimer = setTimeout(() => {
             if (pc.iceConnectionState === 'checking' && call === c && !c._relayEscalated) {
               c._relayEscalated = true;
-              entry('ICE checking timeout — direct path failed, escalating to TURN relay-only', 'sys');
-              try {
-                pc.setConfiguration({ iceServers: ICE_SERVERS, iceTransportPolicy: 'relay', iceCandidatePoolSize: 4 });
-                pc.restartIce();
-              } catch(e2) { entry('Relay fallback failed: ' + e2.message, 'sys'); }
+              // Chrome forbids changing iceTransportPolicy after negotiation.
+              // Relay candidates are already present from ICE_SERVERS, so keep
+              // the current negotiation alive and allow ICE to select them.
+              entry('ICE checking timeout — TURN candidates already gathered; continuing checks', 'sys');
             }
           }, 8000);
         }
@@ -7367,15 +7386,13 @@ function attachCall(c) {
         clearTimeout(c._iceRelayTimer);
       }
       if (pc.iceConnectionState === 'failed') {
-        if (!c._relayEscalated) {
-          c._relayEscalated = true;
-          entry('DIAG: ICE FAILED — direct path failed, escalating to TURN relay-only', 'err');
-          try {
-            pc.setConfiguration({ iceServers: ICE_SERVERS, iceTransportPolicy: 'relay', iceCandidatePoolSize: 4 });
-            pc.restartIce();
-          } catch(e2) { entry('ICE restart unavailable: ' + e2.message, 'sys'); }
+        if (!c._iceRestartAttempted) {
+          c._iceRestartAttempted = true;
+          entry('DIAG: ICE FAILED — restarting with configured STUN/TURN candidates', 'err');
+          try { pc.restartIce(); }
+          catch(e2) { entry('ICE restart unavailable: ' + e2.message, 'sys'); }
         } else {
-          entry('DIAG: ICE FAILED after relay escalation — dropping', 'err');
+          entry('DIAG: ICE FAILED after restart — dropping', 'err');
         }
       }
       if (pc.iceConnectionState === 'disconnected' && linked && call === c) {
@@ -7776,8 +7793,17 @@ function onDrop() {
     dropTimer = setTimeout(() => {
       if (_vmResetPending || _vmActive || leftPermanently || peerRefreshing) return;
       remotePeerLeft = false;
-      entry('Answering machine: resetting for next caller…', 'sys');
-      startPeer();
+      if (peer && !peer.destroyed) {
+        if (peer.disconnected) {
+          entry('Answering machine: reconnecting for next caller…', 'sys');
+          try { peer.reconnect(); } catch(e) { entry('Peer reconnect failed: ' + e.message, 'sys'); }
+        } else {
+          entry('Answering machine ready for next caller', 'ok');
+        }
+      } else {
+        entry('Answering machine: rebuilding signalling peer…', 'sys');
+        startPeer();
+      }
     }, 1200);
     return;
   }
