@@ -1,5 +1,5 @@
 
-<!-- DEPLOY TIMESTAMP: 2026-07-05 15:51:05 Europe/London (BST, UTC+01:00) | BRAVO v8.96.5-security -->
+<!-- DEPLOY TIMESTAMP: 2026-07-05 16:38:21 Europe/London (BST, UTC+01:00) | BRAVO v8.96.6-security -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — BRAVO -->
@@ -2493,7 +2493,7 @@ window.addEventListener('orientationchange', function() {
 
 <button id="audioUnlockBtn" onclick="unlockRemoteAudio()" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(0,200,120,0.92);color:#000;border:none;border-radius:8px;padding:12px 28px;font-size:15px;font-family:monospace;font-weight:bold;letter-spacing:1px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,0.5);">▶ TAP TO HEAR AUDIO</button>
 <audio id="remoteAudio" autoplay="" playsinline="" webkit-playsinline=""></audio>
-<audio id="answeringMachineIntro" preload="auto" src="answering-machine-intro.mp3?v=8.96.5-security" playsinline></audio>
+<audio id="answeringMachineIntro" preload="auto" src="answering-machine-intro.mp3?v=8.96.6-security" playsinline></audio>
 <div id="fsHint">TAP FOR CONTROLS</div>
 <div id="lightbox"><img id="lightboxImg" src="" alt=""></div>
 
@@ -2678,7 +2678,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.96.5-security';    // strict Alpha/Bravo peer-role validation
+const VERSION = '8.96.6-security';    // suppress greeting echo; restore caller mic for message window
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -3441,8 +3441,9 @@ function _setAnswerLiveAvailable(available) {
 }
 
 let _callerMicLiveLogged = false;
+let _callerGreetingMicSuppressed = false;
 function _ensureCallerMicLiveDuringAnswerWait() {
-  if (audioMuted || !call) return;
+  if (audioMuted || !call || _callerGreetingMicSuppressed) return;
   try {
     if (_micGainCtx && _micGainCtx.state === 'suspended') _micGainCtx.resume().catch(() => {});
     if (_mixMicGain) _mixMicGain.gain.value = 1.0;
@@ -3461,6 +3462,23 @@ function _ensureCallerMicLiveDuringAnswerWait() {
     }
   } catch(e) {
     entry('Caller microphone safeguard: ' + e.message, 'sys');
+  }
+}
+
+function _setCallerGreetingMicSuppressed(suppressed) {
+  _callerGreetingMicSuppressed = !!suppressed;
+  if (!call) return;
+  if (_callerGreetingMicSuppressed) {
+    try {
+      if (_mixMicGain) _mixMicGain.gain.value = 0.0;
+      const pc = call.peerConnection || call._pc;
+      const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
+      if (sender) sender.replaceTrack(getSilentTrack()).catch(() => {});
+      entry('Bravo microphone paused during Alpha greeting to prevent echo', 'sys');
+    } catch(e) { entry('Greeting echo guard: ' + e.message, 'sys'); }
+  } else {
+    _callerMicLiveLogged = false;
+    _ensureCallerMicLiveDuringAnswerWait();
   }
 }
 
@@ -3485,6 +3503,7 @@ function _applyBravoLinkedDisplay(logConnection) {
 
 function requestLiveSession(suppressCamera) {
   if (!_alphaAnsweringAvailable || !dataConn || !dataConn.open) return;
+  _setCallerGreetingMicSuppressed(false);
   _alphaLiveTakeoverRequested = true;
   _setAnswerLiveAvailable(false);
   _stopVmCountdown();
@@ -6555,6 +6574,7 @@ function attachDataConn(dc) {
           if (linked) _applyBravoLinkedDisplay(false);
         } else {
           _alphaLiveTakeoverRequested = true;
+          _setCallerGreetingMicSuppressed(false);
           const wasWaitingForAlpha = _alphaAnsweringAvailable;
           _setAnswerLiveAvailable(false);
           _stopVmCountdown();
@@ -6569,7 +6589,14 @@ function attachDataConn(dc) {
       if (f.__control === 'ring') {
         // Ringing is silent on the answering machine — the tone plays only here,
         // on the caller's end, while Alpha decides whether to answer or go to voicemail.
-        if (f.active) { _ensureCallerMicLiveDuringAnswerWait(); _startRemoteRingTone(); } else { _stopRemoteRingTone(); }
+        if (f.active) {
+          _setCallerGreetingMicSuppressed(false);
+          _ensureCallerMicLiveDuringAnswerWait();
+          _startRemoteRingTone();
+        } else {
+          _stopRemoteRingTone();
+          _setCallerGreetingMicSuppressed(true);
+        }
         return;
       }
       if (f.__control === 'voicemailCountdown') {
@@ -6577,6 +6604,7 @@ function attachDataConn(dc) {
           // Ignore a countdown packet that was queued before GO LIVE.
           if (!_alphaAnsweringAvailable) { _stopVmCountdown(); return; }
           const seconds = Number(f.seconds) || 30;
+          _setCallerGreetingMicSuppressed(false);
           _ensureCallerMicLiveDuringAnswerWait();
           _startVmCountdown(seconds, true);
           entry('Alpha voicemail starts in ' + seconds + ' seconds', 'sys');
@@ -6587,6 +6615,7 @@ function attachDataConn(dc) {
         _stopVmCountdown();
         if (f.active) {
           if (!_alphaAnsweringAvailable) return;
+          _setCallerGreetingMicSuppressed(false);
           setStatus('voicemail');
           _vmNotice('— 📼 ALPHA RECORDING VOICEMAIL —');
           // These tones play only on the caller receiving this control message.
