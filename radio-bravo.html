@@ -1,5 +1,5 @@
 
-<!-- DEPLOY TIMESTAMP: 2026-07-06 20:57:07 Europe/London (BST, UTC+01:00) | BRAVO v8.97.8-security -->
+<!-- DEPLOY TIMESTAMP: 2026-07-06 21:47:29 Europe/London (BST, UTC+01:00) | BRAVO v8.97.9-security -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — BRAVO -->
@@ -2678,7 +2678,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.97.8-security';    // disruptive startup recovery limited to Pi ChromeOS environment
+const VERSION = '8.97.9-security';    // Hang Up releases camera immediately and cancels camera recovery
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -7346,6 +7346,21 @@ function exportSysLog() {
 function leaveSession() {
   saveSessionSnapshot();
   leftPermanently = true;
+  clearTimeout(_startupCameraRecoveryTimer); _startupCameraRecoveryTimer = null;
+  // Privacy: release video immediately.  Audio/data may remain for the brief
+  // leave-message grace period, but the camera must not.
+  if (cameraTrack) { try { cameraTrack.stop(); } catch(e){} cameraTrack = null; }
+  if (localStream) {
+    localStream.getVideoTracks().forEach(t => {
+      try { t.stop(); } catch(e) {}
+      try { localStream.removeTrack(t); } catch(e) {}
+    });
+  }
+  ['localVideo','miniLocalVideo','miniChatVideo','chatUnderlay'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { try { el.pause(); el.srcObject = null; } catch(e) {} }
+  });
+  setVideoButtons(false);
   saveSpeechDraft();
   // Notify remote peer before disconnecting
   try { dcSend({ __control: 'leave' }); } catch(e) {}
@@ -8868,6 +8883,10 @@ async function _setCameraActive(active, reason, preserveVideoOnUi = false) {
       let cam;
       try { cam = await navigator.mediaDevices.getUserMedia({ video, audio: false }); }
       catch(e) { delete video.deviceId; cam = await navigator.mediaDevices.getUserMedia({ video, audio: false }); }
+      if (leftPermanently) {
+        cam.getTracks().forEach(t => { try { t.stop(); } catch(e) {} });
+        return false;
+      }
       replacement = cam.getVideoTracks()[0];
       _forceAspectRatio169(replacement);
     } else {
