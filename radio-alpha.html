@@ -1,5 +1,5 @@
 
-<!-- DEPLOY TIMESTAMP: 2026-07-06 13:33:13 Europe/London (BST, UTC+01:00) | ALPHA v8.96.8-security -->
+<!-- DEPLOY TIMESTAMP: 2026-07-06 13:42:44 Europe/London (BST, UTC+01:00) | ALPHA v8.96.9-security -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
@@ -2543,7 +2543,7 @@ window.addEventListener('orientationchange', function() {
 
 <button id="audioUnlockBtn" onclick="unlockRemoteAudio()" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(0,200,120,0.92);color:#000;border:none;border-radius:8px;padding:12px 28px;font-size:15px;font-family:monospace;font-weight:bold;letter-spacing:1px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,0.5);">▶ TAP TO HEAR AUDIO</button>
 <audio id="remoteAudio" autoplay="" playsinline="" webkit-playsinline=""></audio>
-<audio id="answeringMachineIntro" preload="auto" src="answering-machine-intro.mp3?v=8.96.8-security" playsinline></audio>
+<audio id="answeringMachineIntro" preload="auto" src="answering-machine-intro.mp3?v=8.96.9-security" playsinline></audio>
 <div id="fsHint">TAP FOR CONTROLS</div>
 <div id="lightbox"><img id="lightboxImg" src="" alt=""></div>
 
@@ -2728,7 +2728,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.96.8-security';    // native camera + WebM for offline/Raspberry Pi recording
+const VERSION = '8.96.9-security';    // use original libcamera track; avoid black cloned track
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -8877,9 +8877,15 @@ async function toggleRecordLocal() {
     // MediaRecorder the native camera track plus exactly one mixed audio track.
     mimeType = ['video/webm;codecs=vp8,opus', 'video/webm']
       .find(t => MediaRecorder.isTypeSupported(t)) || mimeType;
-    const nativeVideoTrack = recordingCameraTrack.clone();
+    // Do not clone libcamera tracks: Raspberry Pi Chromium can expose the
+    // clone as live while delivering only black frames to MediaRecorder.
+    const nativeVideoTrack = recordingCameraTrack;
     recStream = new MediaStream([nativeVideoTrack, ...aDest.stream.getAudioTracks()]);
-    stopLoop = () => { try { nativeVideoTrack.stop(); } catch(e) {} };
+    stopLoop = null; // original track belongs to localStream; keep it running
+    const cameraSettings = nativeVideoTrack.getSettings ? nativeVideoTrack.getSettings() : {};
+    entry('Native camera settings: ' + (cameraSettings.width || '?') + 'x' + (cameraSettings.height || '?') +
+      ' @ ' + (cameraSettings.frameRate || '?') + 'fps state=' + nativeVideoTrack.readyState +
+      ' muted=' + nativeVideoTrack.muted, 'sys');
     entry('Offline/Raspberry Pi recording — using native camera track (' + mimeType + ')', 'sys');
   } else {
     const comp = buildCompositeStream(localVideo, miniRemoteVideo, aDest.stream.getAudioTracks());
