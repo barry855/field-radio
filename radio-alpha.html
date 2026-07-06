@@ -1,6 +1,5 @@
 
-
-<!-- DEPLOY TIMESTAMP: 2026-07-06 16:15:59 Europe/London (BST, UTC+01:00) | ALPHA v8.97.4-security -->
+<!-- DEPLOY TIMESTAMP: 2026-07-06 17:26:46 Europe/London (BST, UTC+01:00) | ALPHA v8.97.5-security -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
@@ -2729,7 +2728,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.97.4-security';    // show local camera while the requested remote view is unavailable
+const VERSION = '8.97.5-security';    // stable camera controls and native offline chat recording on Pi
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -3580,11 +3579,7 @@ function syncChatUnderlay() {
     if (el.srcObject !== stream) el.srcObject = stream;
     el.classList.toggle('no-stream', !_streamHasLiveVideo(stream));
   } else {
-    const remoteStream = remoteV ? remoteV.srcObject : null;
-    // While waiting offline there is no remote stream.  Showing that missing
-    // source made the Pi look as though its working local camera was black.
-    const localFallback = localV ? localV.srcObject : null;
-    const stream = _streamHasLiveVideo(remoteStream) ? remoteStream : localFallback;
+    const stream = remoteV ? remoteV.srcObject : null;
     if (el.srcObject !== stream) el.srcObject = stream;
     el.classList.toggle('no-stream', !_streamHasLiveVideo(stream));
   }
@@ -8995,7 +8990,40 @@ async function toggleRecordChat() {
 
   const remoteStream = (remoteAudio && remoteAudio.srcObject) ||
                        (remoteVideo && remoteVideo.srcObject) || null;
-  const mimeType = preferredMime();
+  let mimeType = preferredMime();
+
+  // Pi Chromium records a black canvas even though the native camera pixels
+  // are healthy.  When recording the local view offline, bypass canvas and
+  // feed MediaRecorder the original camera track plus one mixed audio track.
+  if (isLocalMain && !linked) {
+    const cameraTrack = localStream && localStream.getVideoTracks()[0];
+    if (!cameraTrack || cameraTrack.readyState !== 'live' || cameraTrack._fieldRadioStandby) {
+      entry('Native local recording unavailable — camera track is not live', 'err'); return;
+    }
+    mimeType = ['video/webm;codecs=vp8,opus', 'video/webm']
+      .find(t => MediaRecorder.isTypeSupported(t)) || mimeType;
+    const { ctx: aCtx, dest: aDest } = await buildAudioMix(getLocalAudioTracksForRec(), null);
+    const recStream = new MediaStream([cameraTrack, ...aDest.stream.getAudioTracks()]);
+    _chatRec.aCtx = aCtx;
+    _chatRec.chunks = [];
+    _chatRec.active = true;
+    recChatChunks = _chatRec.chunks;
+    const mr = new MediaRecorder(recStream, { mimeType });
+    _chatRec.recorder = mr;
+    recChat = mr;
+    mr.ondataavailable = e => { if (e.data.size > 0) _chatRec.chunks.push(e.data); };
+    mr.onstop = async () => {
+      try { _chatRec.aCtx.close(); } catch(e) {}
+      _chatRec.active = false; _chatRec.busy = false; recChatBusy = false;
+      const chunks = _chatRec.chunks; _chatRec.chunks = [];
+      await saveRec(chunks, mimeType, 'chat-recording');
+      if (btn) { btn.disabled = false; btn.textContent = '➤ RECORD'; btn.classList.remove('recording'); }
+    };
+    mr.start(1000);
+    if (btn) { btn.textContent = '⏹ Stop'; btn.classList.add('recording'); }
+    entry('Chat recording started (native local camera — Pi-safe)…', 'ok');
+    return;
+  }
 
   // Build / reuse persistent canvas
   const W = mainVideo.videoWidth  || 1280;
@@ -9186,7 +9214,7 @@ function _scheduleStartupCameraRecovery() {
       ' muted=' + (track ? track.muted : '?') + ' frame=' + hasFrame +
       ' — performing clean video-only reopen', 'sys');
     for (let attempt = 1; attempt <= 3; attempt++) {
-      await _setCameraActive(false, 'startup camera reset ' + attempt);
+      await _setCameraActive(false, 'startup camera reset ' + attempt, true);
       await new Promise(resolve => setTimeout(resolve, 450));
       const opened = await _setCameraActive(true, 'login camera recovery ' + attempt);
       if (!opened) continue;
@@ -9198,7 +9226,7 @@ function _scheduleStartupCameraRecovery() {
   }, 1800);
 }
 
-async function _setCameraActive(active, reason) {
+async function _setCameraActive(active, reason, preserveVideoOnUi = false) {
   if (!localStream) return false;
   const current = localStream.getVideoTracks()[0] || null;
   const currentPreview = document.getElementById('localVideo');
@@ -9242,7 +9270,10 @@ async function _setCameraActive(active, reason) {
       try { await localVideo.play(); } catch(e) {}
     }
     if (current && current !== replacement && !current._fieldRadioStandby) { try { current.stop(); } catch(e) {} }
-    updateLocalVideoState(); syncMiniVideos(); sendVideoState();
+    if (preserveVideoOnUi) setVideoButtons(true);
+    else updateLocalVideoState();
+    syncMiniVideos();
+    if (!preserveVideoOnUi) sendVideoState();
     if (reason) entry('Camera ' + (active ? 'enabled for ' : 'released after ') + reason, 'sys');
     return true;
   } catch(e) {
