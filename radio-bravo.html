@@ -1,4 +1,5 @@
-<!-- DEPLOY TIMESTAMP: 2026-07-06 15:30:05 Europe/London (BST, UTC+01:00) | BRAVO v8.97.3-security -->
+
+<!-- DEPLOY TIMESTAMP: 2026-07-06 16:15:59 Europe/London (BST, UTC+01:00) | BRAVO v8.97.4-security -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — BRAVO -->
@@ -2677,7 +2678,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.97.3-security';    // pixel-validated Pi camera startup with automatic reopen retries
+const VERSION = '8.97.4-security';    // show local camera while the requested remote view is unavailable
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -3592,10 +3593,15 @@ function syncChatUnderlay() {
     if (el.srcObject !== stream) el.srcObject = stream;
     el.classList.toggle('no-stream', !_streamHasLiveVideo(stream));
   } else {
-    const stream = remoteV ? remoteV.srcObject : null;
+    const remoteStream = remoteV ? remoteV.srcObject : null;
+    // While waiting offline there is no remote stream.  Showing that missing
+    // source made the Pi look as though its working local camera was black.
+    const localFallback = localV ? localV.srcObject : null;
+    const stream = _streamHasLiveVideo(remoteStream) ? remoteStream : localFallback;
     if (el.srcObject !== stream) el.srcObject = stream;
     el.classList.toggle('no-stream', !_streamHasLiveVideo(stream));
   }
+  if (el.srcObject) { try { el.play().catch(() => {}); } catch(e) {} }
 }
 
 function refreshChatScreenOnly() {
