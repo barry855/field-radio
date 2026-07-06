@@ -1,5 +1,5 @@
 
-<!-- DEPLOY TIMESTAMP: 2026-07-06 15:01:09 Europe/London (BST, UTC+01:00) | BRAVO v8.97.1-security -->
+<!-- DEPLOY TIMESTAMP: 2026-07-06 15:14:15 Europe/London (BST, UTC+01:00) | BRAVO v8.97.2-security -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — BRAVO -->
@@ -2678,7 +2678,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.97.1-security';    // clean video-only camera reopen after login for Pi black-frame recovery
+const VERSION = '8.97.2-security';    // Pi camera reopen scheduled from every media initialization path
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -6144,6 +6144,7 @@ async function init() {
     initFlipCamUI();
     initMicInputUI();
     updateLocalVideoState();
+    if (!loginDisableVideoFlag) _scheduleStartupCameraRecovery();
     if (loginDisableVideoFlag) {
       const vt = stream.getVideoTracks()[0];
       if (vt) { vt.enabled = false; }
