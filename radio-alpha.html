@@ -1,5 +1,5 @@
 
-<!-- DEPLOY TIMESTAMP: 2026-07-05 18:33:37 Europe/London (BST, UTC+01:00) | ALPHA v8.96.7-security -->
+<!-- DEPLOY TIMESTAMP: 2026-07-06 13:33:13 Europe/London (BST, UTC+01:00) | ALPHA v8.96.8-security -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
@@ -2543,7 +2543,7 @@ window.addEventListener('orientationchange', function() {
 
 <button id="audioUnlockBtn" onclick="unlockRemoteAudio()" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(0,200,120,0.92);color:#000;border:none;border-radius:8px;padding:12px 28px;font-size:15px;font-family:monospace;font-weight:bold;letter-spacing:1px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,0.5);">▶ TAP TO HEAR AUDIO</button>
 <audio id="remoteAudio" autoplay="" playsinline="" webkit-playsinline=""></audio>
-<audio id="answeringMachineIntro" preload="auto" src="answering-machine-intro.mp3?v=8.96.7-security" playsinline></audio>
+<audio id="answeringMachineIntro" preload="auto" src="answering-machine-intro.mp3?v=8.96.8-security" playsinline></audio>
 <div id="fsHint">TAP FOR CONTROLS</div>
 <div id="lightbox"><img id="lightboxImg" src="" alt=""></div>
 
@@ -2728,7 +2728,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.96.7-security';    // Raspberry Pi native-track local recording
+const VERSION = '8.96.8-security';    // native camera + WebM for offline/Raspberry Pi recording
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -8734,7 +8734,7 @@ async function toggleRecordRemote() {
   const hasRemote = remoteVideo.srcObject && remoteVideo.srcObject.getVideoTracks().length > 0;
   if (!hasRemote) { entry('No remote video to record', 'err'); return; }
 
-  const mimeType = preferredMime();
+  let mimeType = preferredMime();
   let stopLoop = null, recStream, aCtx = null;
   const withMini = !!miniVideoVisible;   // snapshot the flag right now
   const remoteStream = (remoteAudio && remoteAudio.srcObject) || remoteVideo.srcObject;
@@ -8857,7 +8857,7 @@ async function toggleRecordLocal() {
 
   const remoteAudio = document.getElementById('remoteAudio');
   const remoteVideo = document.getElementById('remoteVideo');
-  const mimeType = preferredMime();
+  let mimeType = preferredMime();
   let stopLoop = null, recStream, aCtx = null;
   const withMini = !!miniVideoVisible;   // snapshot the flag right now
 
@@ -8871,13 +8871,16 @@ async function toggleRecordLocal() {
   const localVideo = document.getElementById('localVideo');
   const miniRemoteVideo = withMini ? document.getElementById('miniRemoteVideo') : null;
   const isLinuxArm = /Linux\s+(?:arm|aarch64)/i.test((navigator.userAgent || '') + ' ' + (navigator.platform || ''));
-  if (isLinuxArm) {
+  const useNativeCameraTrack = !linked || isLinuxArm;
+  if (useNativeCameraTrack) {
     // Canvas capture can be black on Raspberry Pi hardware-video paths. Feed
     // MediaRecorder the native camera track plus exactly one mixed audio track.
+    mimeType = ['video/webm;codecs=vp8,opus', 'video/webm']
+      .find(t => MediaRecorder.isTypeSupported(t)) || mimeType;
     const nativeVideoTrack = recordingCameraTrack.clone();
     recStream = new MediaStream([nativeVideoTrack, ...aDest.stream.getAudioTracks()]);
     stopLoop = () => { try { nativeVideoTrack.stop(); } catch(e) {} };
-    entry('Raspberry Pi/Linux ARM recording — using native camera track', 'sys');
+    entry('Offline/Raspberry Pi recording — using native camera track (' + mimeType + ')', 'sys');
   } else {
     const comp = buildCompositeStream(localVideo, miniRemoteVideo, aDest.stream.getAudioTracks());
     recStream = comp.stream;
