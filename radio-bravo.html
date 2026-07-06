@@ -1,5 +1,5 @@
 
-<!-- DEPLOY TIMESTAMP: 2026-07-06 13:42:44 Europe/London (BST, UTC+01:00) | BRAVO v8.96.9-security -->
+<!-- DEPLOY TIMESTAMP: 2026-07-06 13:59:45 Europe/London (BST, UTC+01:00) | BRAVO v8.97.0-security -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — BRAVO -->
@@ -2493,7 +2493,7 @@ window.addEventListener('orientationchange', function() {
 
 <button id="audioUnlockBtn" onclick="unlockRemoteAudio()" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(0,200,120,0.92);color:#000;border:none;border-radius:8px;padding:12px 28px;font-size:15px;font-family:monospace;font-weight:bold;letter-spacing:1px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,0.5);">▶ TAP TO HEAR AUDIO</button>
 <audio id="remoteAudio" autoplay="" playsinline="" webkit-playsinline=""></audio>
-<audio id="answeringMachineIntro" preload="auto" src="answering-machine-intro.mp3?v=8.96.9-security" playsinline></audio>
+<audio id="answeringMachineIntro" preload="auto" src="answering-machine-intro.mp3?v=8.97.0-security" playsinline></audio>
 <div id="fsHint">TAP FOR CONTROLS</div>
 <div id="lightbox"><img id="lightboxImg" src="" alt=""></div>
 
@@ -2678,7 +2678,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.96.9-security';    // use original libcamera track; avoid black cloned track
+const VERSION = '8.97.0-security';    // login-authoritative camera with automatic frame recovery
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -6020,6 +6020,7 @@ async function initMediaOnly() {
     initFlipCamUI();
     initMicInputUI();
     updateLocalVideoState();
+    if (!loginDisableVideoFlag) _scheduleStartupCameraRecovery();
     if (loginDisableVideoFlag) {
       const vt = stream.getVideoTracks()[0];
       if (vt) { vt.enabled = false; }
@@ -6568,7 +6569,8 @@ function attachDataConn(dc) {
           _attended = false;
           _setAnswerLiveAvailable(true);
           _ensureCallerMicLiveDuringAnswerWait();
-          if (!(recLocal && recLocal.state === 'recording')) _setCameraActive(false, 'answering mode');
+          // Keep the camera state chosen at login. Answering mode must not
+          // silently park the local camera or override the Video On control.
           entry('Alpha answering mode detected — leave a message after the cue or click a blank area to go live', 'sys');
           _vmNotice('— 📼 ALPHA ANSWERING — WAIT FOR THE VOICEMAIL CUE —');
           if (linked) _applyBravoLinkedDisplay(false);
@@ -8742,10 +8744,29 @@ function _parkCameraStream(stream) {
   if (!stream.getVideoTracks().includes(standby)) stream.addTrack(standby);
 }
 
+let _startupCameraRecoveryTimer = null;
+function _scheduleStartupCameraRecovery() {
+  clearTimeout(_startupCameraRecoveryTimer);
+  _startupCameraRecoveryTimer = setTimeout(async () => {
+    if (loginDisableVideoFlag || !localStream) return;
+    const track = localStream.getVideoTracks()[0] || null;
+    const preview = document.getElementById('localVideo');
+    const hasFrame = !!(preview && preview.readyState >= 2 && preview.videoWidth > 0 && preview.videoHeight > 0);
+    if (track && track.enabled && !track._fieldRadioStandby && track.readyState !== 'ended' && !track.muted && hasFrame) {
+      setVideoButtons(true);
+      return;
+    }
+    entry('Startup camera supplied no frame — reopening video-only camera', 'sys');
+    await _setCameraActive(true, 'login camera recovery');
+  }, 1800);
+}
+
 async function _setCameraActive(active, reason) {
   if (!localStream) return false;
   const current = localStream.getVideoTracks()[0] || null;
-  if (active && current && !current._fieldRadioStandby && current.readyState !== 'ended') {
+  const currentPreview = document.getElementById('localVideo');
+  const currentHasFrame = !!(currentPreview && currentPreview.readyState >= 2 && currentPreview.videoWidth > 0 && currentPreview.videoHeight > 0);
+  if (active && current && !current._fieldRadioStandby && current.readyState !== 'ended' && !current.muted && currentHasFrame) {
     current.enabled = true; updateLocalVideoState(); sendVideoState(); return true;
   }
   try {
@@ -8820,7 +8841,11 @@ async function _activateOfflineRecordingCamera() {
   }
 }
 
+let _videoToggleBusy = false;
 async function toggleVideo() {
+  if (_videoToggleBusy) return;
+  _videoToggleBusy = true;
+  try {
   if (!localStream) return;
   const track = localStream.getVideoTracks()[0];
   const active = !!(track && track.enabled && !track._fieldRadioStandby);
@@ -8830,6 +8855,9 @@ async function toggleVideo() {
   } else {
     if (!await _setCameraActive(true, 'manual video on')) return;
     try { localStorage.setItem('bravo_disable_video', '0'); document.getElementById('loginDisableVideo').checked = false; } catch(e) {}
+  }
+  } finally {
+    _videoToggleBusy = false;
   }
 }
 
