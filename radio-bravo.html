@@ -1,5 +1,5 @@
 
-<!-- DEPLOY TIMESTAMP: 2026-07-06 20:47:35 Europe/London (BST, UTC+01:00) | BRAVO v8.97.7-security -->
+<!-- DEPLOY TIMESTAMP: 2026-07-06 20:57:07 Europe/London (BST, UTC+01:00) | BRAVO v8.97.8-security -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — BRAVO -->
@@ -2678,7 +2678,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.97.7-security';    // pixel-first camera recovery is consistent on every platform
+const VERSION = '8.97.8-security';    // disruptive startup recovery limited to Pi ChromeOS environment
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -8816,8 +8816,14 @@ function _scheduleStartupCameraRecovery() {
     const track = localStream.getVideoTracks()[0] || null;
     const preview = document.getElementById('localVideo');
     const hasFrame = !!(preview && preview.readyState >= 2 && preview.videoWidth > 0 && preview.videoHeight > 0);
-    // Apply one rule everywhere: retain a camera that is already delivering
-    // visible pixels, and only perform the disruptive reset for a black frame.
+    // Windows/macOS/Linux/mobile cameras must never be stopped automatically:
+    // a slow first frame can look black briefly and a needless reacquire can
+    // fail, leaving Video Off.  The affected Pi image identifies itself as CrOS.
+    if (!/CrOS/i.test(navigator.userAgent || '')) {
+      updateLocalVideoState();
+      entry('Startup camera retained — automatic track reset not required on this platform', 'ok');
+      return;
+    }
     const initialProbe = await _probeLocalCameraPixels(900);
     if (initialProbe.visible) {
       setVideoButtons(true);
