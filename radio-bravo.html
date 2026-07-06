@@ -1,5 +1,5 @@
 
-<!-- DEPLOY TIMESTAMP: 2026-07-06 17:26:46 Europe/London (BST, UTC+01:00) | BRAVO v8.97.5-security -->
+<!-- DEPLOY TIMESTAMP: 2026-07-06 20:47:35 Europe/London (BST, UTC+01:00) | BRAVO v8.97.7-security -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — BRAVO -->
@@ -2678,7 +2678,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.97.5-security';    // stable camera controls and native offline chat recording on Pi
+const VERSION = '8.97.7-security';    // pixel-first camera recovery is consistent on every platform
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -8816,6 +8816,15 @@ function _scheduleStartupCameraRecovery() {
     const track = localStream.getVideoTracks()[0] || null;
     const preview = document.getElementById('localVideo');
     const hasFrame = !!(preview && preview.readyState >= 2 && preview.videoWidth > 0 && preview.videoHeight > 0);
+    // Apply one rule everywhere: retain a camera that is already delivering
+    // visible pixels, and only perform the disruptive reset for a black frame.
+    const initialProbe = await _probeLocalCameraPixels(900);
+    if (initialProbe.visible) {
+      setVideoButtons(true);
+      entry('Startup camera retained without reset: ' + initialProbe.detail, 'ok');
+      return;
+    }
+    entry('Startup camera pixel check failed — recovery required: ' + initialProbe.detail, 'sys');
     // Pi Chromium can report a live, unmuted track and valid video dimensions
     // while every decoded pixel is black.  A manual Video Off/On fixes that by
     // closing the combined A/V capture and opening a fresh video-only capture.
