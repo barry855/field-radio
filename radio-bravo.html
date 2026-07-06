@@ -1,6 +1,5 @@
 
-
-<!-- DEPLOY TIMESTAMP: 2026-07-06 13:59:45 Europe/London (BST, UTC+01:00) | BRAVO v8.97.0-security -->
+<!-- DEPLOY TIMESTAMP: 2026-07-06 15:01:09 Europe/London (BST, UTC+01:00) | BRAVO v8.97.1-security -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — BRAVO -->
@@ -2679,7 +2678,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.97.0-security';    // login-authoritative camera with automatic frame recovery
+const VERSION = '8.97.1-security';    // clean video-only camera reopen after login for Pi black-frame recovery
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -8753,11 +8752,15 @@ function _scheduleStartupCameraRecovery() {
     const track = localStream.getVideoTracks()[0] || null;
     const preview = document.getElementById('localVideo');
     const hasFrame = !!(preview && preview.readyState >= 2 && preview.videoWidth > 0 && preview.videoHeight > 0);
-    if (track && track.enabled && !track._fieldRadioStandby && track.readyState !== 'ended' && !track.muted && hasFrame) {
-      setVideoButtons(true);
-      return;
-    }
-    entry('Startup camera supplied no frame — reopening video-only camera', 'sys');
+    // Pi Chromium can report a live, unmuted track and valid video dimensions
+    // while every decoded pixel is black.  A manual Video Off/On fixes that by
+    // closing the combined A/V capture and opening a fresh video-only capture.
+    // Do the same once after login, even when the metadata looks healthy.
+    entry('Startup camera verification: track=' + (track ? track.readyState : 'missing') +
+      ' muted=' + (track ? track.muted : '?') + ' frame=' + hasFrame +
+      ' — performing clean video-only reopen', 'sys');
+    await _setCameraActive(false, 'startup camera reset');
+    await new Promise(resolve => setTimeout(resolve, 300));
     await _setCameraActive(true, 'login camera recovery');
   }, 1800);
 }
@@ -8796,7 +8799,15 @@ async function _setCameraActive(active, reason) {
     if (current && current !== replacement) localStream.removeTrack(current);
     if (!localStream.getVideoTracks().includes(replacement)) localStream.addTrack(replacement);
     const localVideo = document.getElementById('localVideo');
-    if (localVideo) { localVideo.srcObject = localStream; try { await localVideo.play(); } catch(e) {} }
+    if (localVideo) {
+      // Rebinding the same MediaStream object is a no-op in Pi Chromium.  Clear
+      // it first and use a fresh wrapper so the video element rebuilds playback.
+      try { localVideo.pause(); } catch(e) {}
+      localVideo.srcObject = null;
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      localVideo.srcObject = new MediaStream(localStream.getTracks());
+      try { await localVideo.play(); } catch(e) {}
+    }
     if (current && current !== replacement && !current._fieldRadioStandby) { try { current.stop(); } catch(e) {} }
     updateLocalVideoState(); syncMiniVideos(); sendVideoState();
     if (reason) entry('Camera ' + (active ? 'enabled for ' : 'released after ') + reason, 'sys');
