@@ -1,5 +1,5 @@
 
-<!-- DEPLOY TIMESTAMP: 2026-07-06 15:14:15 Europe/London (BST, UTC+01:00) | ALPHA v8.97.2-security -->
+<!-- DEPLOY TIMESTAMP: 2026-07-06 15:30:05 Europe/London (BST, UTC+01:00) | ALPHA v8.97.3-security -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
@@ -2728,7 +2728,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.97.2-security';    // Pi camera reopen scheduled from every media initialization path
+const VERSION = '8.97.3-security';    // pixel-validated Pi camera startup with automatic reopen retries
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -9136,6 +9136,35 @@ function _parkCameraStream(stream) {
 }
 
 let _startupCameraRecoveryTimer = null;
+async function _probeLocalCameraPixels(timeoutMs = 2200) {
+  const video = document.getElementById('localVideo');
+  if (!video) return { visible: false, detail: 'no preview element' };
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    try { await video.play(); } catch(e) {}
+    await new Promise(resolve => setTimeout(resolve, 180));
+    if (video.readyState < 2 || !video.videoWidth || !video.videoHeight) continue;
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = 32; canvas.height = 18;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      let total = 0, peak = 0;
+      for (let i = 0; i < pixels.length; i += 4) {
+        const light = (pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3;
+        total += light;
+        if (light > peak) peak = light;
+      }
+      const mean = total / (pixels.length / 4);
+      if (peak > 14 || mean > 4) return { visible: true, detail: 'mean=' + mean.toFixed(1) + ' peak=' + peak.toFixed(0) };
+    } catch(e) {
+      return { visible: true, detail: 'pixel probe unavailable: ' + e.message };
+    }
+  }
+  return { visible: false, detail: 'black/no pixels after ' + timeoutMs + 'ms' };
+}
+
 function _scheduleStartupCameraRecovery() {
   clearTimeout(_startupCameraRecoveryTimer);
   _startupCameraRecoveryTimer = setTimeout(async () => {
@@ -9150,9 +9179,16 @@ function _scheduleStartupCameraRecovery() {
     entry('Startup camera verification: track=' + (track ? track.readyState : 'missing') +
       ' muted=' + (track ? track.muted : '?') + ' frame=' + hasFrame +
       ' — performing clean video-only reopen', 'sys');
-    await _setCameraActive(false, 'startup camera reset');
-    await new Promise(resolve => setTimeout(resolve, 300));
-    await _setCameraActive(true, 'login camera recovery');
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      await _setCameraActive(false, 'startup camera reset ' + attempt);
+      await new Promise(resolve => setTimeout(resolve, 450));
+      const opened = await _setCameraActive(true, 'login camera recovery ' + attempt);
+      if (!opened) continue;
+      const probe = await _probeLocalCameraPixels();
+      entry('Startup camera pixel check ' + attempt + ': ' + probe.detail, probe.visible ? 'ok' : 'sys');
+      if (probe.visible) return;
+    }
+    entry('Camera remains black after three automatic reopen attempts', 'err');
   }, 1800);
 }
 
