@@ -1,5 +1,5 @@
 
-<!-- DEPLOY TIMESTAMP: 2026-07-07 Europe/London (BST, UTC+01:00) | BRAVO v8.97.13-offline-minicam -->
+<!-- DEPLOY TIMESTAMP: 2026-07-07 Europe/London (BST, UTC+01:00) | BRAVO v8.97.14-pi-live-native -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — BRAVO -->
@@ -2678,7 +2678,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.97.13-offline-minicam'; // Offline Record captures local minicam and follows its on/off toggle
+const VERSION = '8.97.14-pi-live-native'; // Pi live Record bypasses black canvas capture using the native selected track
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -8668,6 +8668,43 @@ async function toggleRecordChat() {
   const remoteStream = (remoteAudio && remoteAudio.srcObject) ||
                        (remoteVideo && remoteVideo.srcObject) || null;
   let mimeType = preferredMime();
+
+  // Raspberry Pi Chromium's hardware video path can render correctly on
+  // screen while returning only black pixels to canvas.captureStream(). Live
+  // recording therefore uses the selected source track directly on Linux ARM.
+  const isLinuxArmChat = /Linux\s+(?:arm|aarch64)/i.test(
+    (navigator.userAgent || '') + ' ' + (navigator.platform || '')
+  );
+  if (linked && isLinuxArmChat) {
+    const sourceStream = mainVideo && mainVideo.srcObject;
+    const sourceTrack = sourceStream && sourceStream.getVideoTracks().find(track =>
+      track.readyState === 'live' && !track._fieldRadioStandby
+    );
+    if (!sourceTrack) { entry('Pi live recording unavailable — selected video track is not live', 'err'); return; }
+    mimeType = ['video/webm;codecs=vp8,opus', 'video/webm']
+      .find(type => MediaRecorder.isTypeSupported(type)) || mimeType;
+    const audioMix = await buildAudioMix(getLocalAudioTracksForRec(), remoteStream);
+    _chatRec.aCtx = audioMix.ctx;
+    _chatRec.chunks = [];
+    _chatRec.active = true;
+    recChatChunks = _chatRec.chunks;
+    const recStream = new MediaStream([sourceTrack, ...audioMix.dest.stream.getAudioTracks()]);
+    const mr = new MediaRecorder(recStream, { mimeType });
+    _chatRec.recorder = mr;
+    recChat = mr;
+    mr.ondataavailable = event => { if (event.data.size > 0) _chatRec.chunks.push(event.data); };
+    mr.onstop = async () => {
+      try { _chatRec.aCtx.close(); } catch(e) {}
+      _chatRec.active = false; _chatRec.busy = false; recChatBusy = false;
+      const chunks = _chatRec.chunks; _chatRec.chunks = [];
+      await saveRec(chunks, mimeType, 'chat-recording');
+      if (btn) { btn.disabled = false; btn.textContent = '➤ RECORD'; btn.classList.remove('recording'); }
+    };
+    mr.start(1000);
+    if (btn) { btn.textContent = '⏹ Stop'; btn.classList.add('recording'); }
+    entry(`Chat recording started (Pi native ${isLocalMain ? 'local' : 'remote'} main)…`, 'ok');
+    return;
+  }
 
   const W = mainVideo.videoWidth  || availableVideo.videoWidth  || 1280;
   const H = mainVideo.videoHeight || availableVideo.videoHeight || 720;
