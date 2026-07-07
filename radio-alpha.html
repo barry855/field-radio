@@ -1,5 +1,5 @@
 
-<!-- DEPLOY TIMESTAMP: 2026-07-07 Europe/London (BST, UTC+01:00) | ALPHA v8.97.10-dynamic-record -->
+<!-- DEPLOY TIMESTAMP: 2026-07-07 Europe/London (BST, UTC+01:00) | ALPHA v8.97.11-connected-pip -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
@@ -2728,7 +2728,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.97.10-dynamic-record'; // Record can gain local/remote/PiP video and remote audio after starting offline
+const VERSION = '8.97.11-connected-pip'; // Dynamic recording; PiP is recorded only while remote video is live
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -9090,7 +9090,10 @@ async function toggleRecordChat() {
       c.fillStyle = '#000';
       c.fillRect(0, 0, W, H);
     }
-    if (miniChatVisible && miniOff && miniOff.readyState >= 2) {
+    const hasLiveRemoteVideo = !!(rv && rv.srcObject && rv.srcObject.getVideoTracks().some(track =>
+      track.readyState === 'live' && track.enabled && !track._fieldRadioStandby
+    ));
+    if (miniChatVisible && hasLiveRemoteVideo && miniOff && miniOff.readyState >= 2) {
       drawPip(c, miniOff);
     }
     _chatRec.afId = requestAnimationFrame(drawFrame);
