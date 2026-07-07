@@ -1,5 +1,5 @@
 
-<!-- DEPLOY TIMESTAMP: 2026-07-07 Europe/London (BST, UTC+01:00) | BRAVO v8.97.11-connected-pip -->
+<!-- DEPLOY TIMESTAMP: 2026-07-07 Europe/London (BST, UTC+01:00) | BRAVO v8.97.13-offline-minicam -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — BRAVO -->
@@ -2678,7 +2678,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.97.11-connected-pip'; // Dynamic recording; PiP is recorded only while remote video is live
+const VERSION = '8.97.13-offline-minicam'; // Offline Record captures local minicam and follows its on/off toggle
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -3709,8 +3709,22 @@ function toggleMiniVideo() {
 updateMiniVideoVisibility();
 
 let miniChatVisible = false;
-function toggleMiniChat() {
+let _cameraForcedForOfflineMini = false;
+async function toggleMiniChat() {
   miniChatVisible = !miniChatVisible;
+  // Offline remote-main recordings use the local camera as PiP. Windows may
+  // have parked that camera, so wake it before the recorder tries to draw it.
+  if (miniChatVisible && !linked && chatUnderlayMode === 'remote') {
+    const localTrack = localStream && localStream.getVideoTracks()[0];
+    if (!localTrack || localTrack.readyState !== 'live' || localTrack._fieldRadioStandby) {
+      _cameraForcedForOfflineMini = await _setCameraActive(true, 'offline recording minicam');
+    }
+  } else if (!miniChatVisible && _cameraForcedForOfflineMini && !linked &&
+             !(recLocal && recLocal.state === 'recording') &&
+             !(_chatRec.active && chatUnderlayMode === 'local')) {
+    await _setCameraActive(false, 'offline recording minicam');
+    _cameraForcedForOfflineMini = false;
+  }
   _chatRecUpdateMini(); // update live recording PiP if active
   const overlay = document.getElementById('miniChatOverlay');
   if (overlay) overlay.classList.toggle('hidden', !miniChatVisible);
@@ -8637,6 +8651,13 @@ async function toggleRecordChat() {
   const isLocalMain = (chatUnderlayMode === 'local');
   const mainVideo   = isLocalMain ? localVid : remoteVideo;
 
+  if (!linked && !isLocalMain && miniChatVisible) {
+    const localTrack = localStream && localStream.getVideoTracks()[0];
+    if (!localTrack || localTrack.readyState !== 'live' || localTrack._fieldRadioStandby) {
+      _cameraForcedForOfflineMini = await _setCameraActive(true, 'offline recording minicam');
+    }
+  }
+
   const availableVideo = [mainVideo, localVid, remoteVideo].find(v =>
     v && v.srcObject && v.srcObject.getVideoTracks().length
   );
@@ -8706,10 +8727,7 @@ async function toggleRecordChat() {
       c.fillStyle = '#000';
       c.fillRect(0, 0, W, H);
     }
-    const hasLiveRemoteVideo = !!(rv && rv.srcObject && rv.srcObject.getVideoTracks().some(track =>
-      track.readyState === 'live' && track.enabled && !track._fieldRadioStandby
-    ));
-    if (miniChatVisible && hasLiveRemoteVideo && miniOff && miniOff.readyState >= 2) {
+    if (miniChatVisible && miniOff && miniOff.readyState >= 2) {
       drawPip(c, miniOff);
     }
     _chatRec.afId = requestAnimationFrame(drawFrame);
