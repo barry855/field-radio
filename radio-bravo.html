@@ -1,6 +1,5 @@
 
-
-<!-- DEPLOY TIMESTAMP: 2026-07-07 Europe/London (BST, UTC+01:00) | BRAVO v8.97.20-mp3-voicemail -->
+<!-- DEPLOY TIMESTAMP: 2026-07-07 Europe/London (BST, UTC+01:00) | BRAVO v8.97.21-mp3-fix -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — BRAVO -->
@@ -2679,7 +2678,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.97.20-mp3-voicemail'; // Voicemails are stored and exported as space-saving 64 kbps MP3
+const VERSION = '8.97.21-mp3-fix'; // Fixed ffmpeg.wasm load() to omit invalid workerURL, which broke MP3 conversion on every platform
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -8366,12 +8365,18 @@ function loadFFmpeg() {
     const { FFmpeg } = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/+esm');
     const { toBlobURL } = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/+esm');
     const ffmpeg = new FFmpeg();
+    // Single-threaded @ffmpeg/core (no -mt suffix) has no worker file of its
+    // own and needs none — only pass coreURL/wasmURL. Passing a `workerURL`
+    // here flips ffmpeg.wasm into multi-thread mode, which requires
+    // SharedArrayBuffer + COOP/COEP cross-origin-isolation headers. GitHub
+    // Pages can't set those headers, so load() threw on every platform
+    // (not just RPi/Windows — it just happened not to get exercised
+    // elsewhere yet). Omitting workerURL keeps us on the single-thread path,
+    // which works with zero special headers.
     const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd';
-    const workerURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/worker.js';
     await ffmpeg.load({
-      coreURL:   await toBlobURL(`${baseURL}/ffmpeg-core.js`,  'text/javascript'),
-      wasmURL:   await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-      workerURL: await toBlobURL(workerURL,                     'text/javascript'),
+      coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`,  'text/javascript'),
+      wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
     });
     return ffmpeg;
   })();
