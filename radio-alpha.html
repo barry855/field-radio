@@ -1,5 +1,5 @@
 
-<!-- DEPLOY TIMESTAMP: 2026-07-07 Europe/London (BST, UTC+01:00) | ALPHA v8.97.17-instant-voicemail -->
+<!-- DEPLOY TIMESTAMP: 2026-07-07 Europe/London (BST, UTC+01:00) | ALPHA v8.97.18-voicemail-index -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
@@ -2728,7 +2728,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.97.17-instant-voicemail'; // Voicemail recording begins immediately after the MP3 greeting
+const VERSION = '8.97.18-voicemail-index'; // Repair voicemail storage index and persist before answering-machine reset
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -7943,13 +7943,16 @@ let _vmLoaded = false;
 function _vmOpenDb() {
   return new Promise((resolve, reject) => {
     if (!window.indexedDB) { reject(new Error('browser storage unavailable')); return; }
-    const request = indexedDB.open(_VM_DB_NAME, 1);
+    const request = indexedDB.open(_VM_DB_NAME, 2);
     request.onupgradeneeded = () => {
       const db = request.result;
+      let store;
       if (!db.objectStoreNames.contains(_VM_DB_STORE)) {
-        const store = db.createObjectStore(_VM_DB_STORE, { keyPath: 'id' });
-        store.createIndex('station', 'station', { unique: false });
+        store = db.createObjectStore(_VM_DB_STORE, { keyPath: 'id' });
+      } else {
+        store = request.transaction.objectStore(_VM_DB_STORE);
       }
+      if (!store.indexNames.contains('station')) store.createIndex('station', 'station', { unique: false });
     };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error || new Error('voicemail storage failed'));
@@ -8030,6 +8033,7 @@ function _vmBoxAddEntry(ts, blobUrl, filename, blob) {
       item.stored = true;
     }).catch(e => entry('Voicemail browser storage failed: ' + e.message, 'err'));
   }
+  return item;
 }
 
 function _vmRecordMissedCall() {
@@ -8350,7 +8354,7 @@ async function _startVoicemail() {
   _vmRec = new MediaRecorder(recordStream, { mimeType });
   _vmFinalizePromise = new Promise(resolve => { _vmFinalizeResolve = resolve; });
   _vmRec.ondataavailable = e => { if (e.data.size > 0) _vmChunks.push(e.data); };
-  _vmRec.onstop = () => {
+  _vmRec.onstop = async () => {
     _vmActive = false;
     // The caller receives the matching control cue; play it locally as well so
     // both machines confirm that voicemail recording has finished.
@@ -8365,7 +8369,8 @@ async function _startVoicemail() {
       entry('📼 Voicemail saved', 'ok');
       try { dcSend({ __control: 'voicemail', active: false }); } catch(e) {}
       const blobUrl = URL.createObjectURL(blob);
-      _vmBoxAddEntry(Date.now(), blobUrl, filename, blob);
+      const savedItem = _vmBoxAddEntry(Date.now(), blobUrl, filename, blob);
+      if (savedItem.persistPromise) await savedItem.persistPromise;
       // Complete any live-takeover screen clear before adding the player so
       // the newly recorded voicemail bubble remains visible.
       _finishOwnerLiveTakeover();
