@@ -1,5 +1,5 @@
 
-<!-- DEPLOY TIMESTAMP: 2026-07-07 Europe/London (BST, UTC+01:00) | ALPHA v8.97.18-voicemail-index -->
+<!-- DEPLOY TIMESTAMP: 2026-07-07 Europe/London (BST, UTC+01:00) | ALPHA v8.97.19-delete-voicemail-notice -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
@@ -2728,7 +2728,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.97.18-voicemail-index'; // Repair voicemail storage index and persist before answering-machine reset
+const VERSION = '8.97.19-delete-voicemail-notice'; // Picker deletion also removes its voicemail chat notice and history
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -7909,6 +7909,7 @@ function _vmNotice(text, blobUrl, filename) {
   if (!chatEl) return null;
   const d = document.createElement('div');
   d.className = 'bubble vm-notice';
+  if (filename) d.dataset.vmFilename = filename;
   if (blobUrl) {
     d.classList.add('vm-has-recording');
     const span = document.createElement('span');
@@ -8044,6 +8045,21 @@ function _vmRecordMissedCall() {
 async function _vmRemoveEntry(item) {
   const index = _vmEntries.indexOf(item);
   if (index !== -1) _vmEntries.splice(index, 1);
+  const chatEl = document.getElementById('chat');
+  if (chatEl) {
+    chatEl.querySelectorAll('.vm-notice').forEach(notice => {
+      const audio = notice.querySelector('audio');
+      if ((item.filename && notice.dataset.vmFilename === item.filename) ||
+          (audio && item.blobUrl && audio.src === item.blobUrl)) notice.remove();
+    });
+  }
+  try {
+    const key = HISTORY_KEY();
+    const history = JSON.parse(localStorage.getItem(key) || '[]');
+    localStorage.setItem(key, JSON.stringify(history.filter(message =>
+      !(message.vmNotice && item.filename && message.filename === item.filename)
+    )));
+  } catch(e) {}
   try { if (item.blobUrl) URL.revokeObjectURL(item.blobUrl); } catch(e) {}
   _vmBoxRender();
   try {
