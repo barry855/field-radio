@@ -1,5 +1,5 @@
 
-<!-- DEPLOY TIMESTAMP: 2026-07-07 Europe/London (BST, UTC+01:00) | ALPHA v8.97.14-pi-live-native -->
+<!-- DEPLOY TIMESTAMP: 2026-07-07 Europe/London (BST, UTC+01:00) | ALPHA v8.97.15-pi-mode-native -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
@@ -2728,7 +2728,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.97.14-pi-live-native'; // Pi live Record bypasses black canvas capture using the native selected track
+const VERSION = '8.97.15-pi-mode-native'; // Pi Mode explicitly selects native live recording despite generic Linux UAs
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -9042,7 +9042,10 @@ async function toggleRecordChat() {
   // Raspberry Pi Chromium's hardware video path can render correctly on
   // screen while returning only black pixels to canvas.captureStream(). Live
   // recording therefore uses the selected source track directly on Linux ARM.
-  const isLinuxArmChat = /Linux\s+(?:arm|aarch64)/i.test(
+  const piModeRecording = document.documentElement.classList.contains('is-pi') ||
+    document.body.classList.contains('is-pi') ||
+    (() => { try { return localStorage.getItem('alpha_pi_mode') === '1'; } catch(e) { return false; } })();
+  const isLinuxArmChat = piModeRecording || /(?:Linux[^;)]*(?:arm|aarch64)|armv\d+l)/i.test(
     (navigator.userAgent || '') + ' ' + (navigator.platform || '')
   );
   if (linked && isLinuxArmChat) {
@@ -9072,7 +9075,7 @@ async function toggleRecordChat() {
     };
     mr.start(1000);
     if (btn) { btn.textContent = '⏹ Stop'; btn.classList.add('recording'); }
-    entry(`Chat recording started (Pi native ${isLocalMain ? 'local' : 'remote'} main)…`, 'ok');
+    entry(`Chat recording started (Pi native ${isLocalMain ? 'local' : 'remote'} main; track=${sourceTrack.label || 'video'})…`, 'ok');
     return;
   }
 
