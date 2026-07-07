@@ -1,5 +1,5 @@
 
-<!-- DEPLOY TIMESTAMP: 2026-07-07 Europe/London (BST, UTC+01:00) | ALPHA v8.97.21-mp3-fix -->
+<!-- DEPLOY TIMESTAMP: 2026-07-07 Europe/London (BST, UTC+01:00) | ALPHA v8.97.22-lamejs -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
@@ -2728,7 +2728,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.97.21-mp3-fix'; // Fixed ffmpeg.wasm load() to omit invalid workerURL, which broke MP3 conversion on every platform
+const VERSION = '8.97.22-lamejs'; // Voicemail MP3 conversion now uses lamejs (pure JS, no Worker) — ffmpeg.wasm's own Worker was cross-origin-blocked on GitHub Pages
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -8749,20 +8749,75 @@ async function convertToMp4(webmBlob, recordedMimeType, label) {
   return new Blob([data.buffer], { type: 'video/mp4' });
 }
 
+// ── Voicemail → MP3 (client-side, via lamejs — pure JS, no Worker) ────
+// ffmpeg.wasm's FFmpeg class spawns its own Worker pointed at wherever it was
+// imported from (jsdelivr), and browsers refuse to construct a Worker from a
+// cross-origin script URL. Its worker.js also does relative ESM imports
+// (./const.js, ./errors.js) that can't be resolved once blobified, so there's
+// no clean workaround short of self-hosting the entire ffmpeg.wasm file tree
+// on this origin. lamejs is a single self-contained script — no Worker, no
+// relative imports, nothing that can hit that restriction — so we use it
+// here instead. (convertToMp4()/loadFFmpeg() below are untouched — they have
+// the same underlying cross-origin-worker exposure, but that's a separate
+// fix for a separate feature.)
+let _lamejsPromise = null;
+function loadLameJs() {
+  if (_lamejsPromise) return _lamejsPromise;
+  _lamejsPromise = new Promise((resolve, reject) => {
+    if (window.lamejs) { resolve(window.lamejs); return; }
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js';
+    s.onload = () => window.lamejs ? resolve(window.lamejs) : reject(new Error('lamejs script loaded but window.lamejs is missing'));
+    s.onerror = () => reject(new Error('failed to load lamejs from CDN'));
+    document.head.appendChild(s);
+  });
+  _lamejsPromise.catch(() => { _lamejsPromise = null; }); // allow retry on next recording if load failed
+  return _lamejsPromise;
+}
+
+function _floatTo16BitPCM(input) {
+  const out = new Int16Array(input.length);
+  for (let i = 0; i < input.length; i++) {
+    const s = Math.max(-1, Math.min(1, input[i]));
+    out[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+  }
+  return out;
+}
+
 async function convertAudioToMp3(audioBlob, recordedMimeType) {
   if (/audio\/(?:mpeg|mp3)/i.test(recordedMimeType || audioBlob.type)) return audioBlob;
-  const ffmpeg = await loadFFmpeg();
-  const stamp = Date.now();
-  const inputExt = /mp4|m4a/i.test(recordedMimeType || audioBlob.type) ? 'm4a' : 'webm';
-  const inName = `vm_in_${stamp}.${inputExt}`;
-  const outName = `vm_out_${stamp}.mp3`;
-  await ffmpeg.writeFile(inName, new Uint8Array(await audioBlob.arrayBuffer()));
+  const lamejs = await loadLameJs();
   entry('Converting voicemail to space-saving MP3…', 'sys');
-  await ffmpeg.exec(['-i', inName, '-vn', '-ac', '1', '-ar', '44100', '-c:a', 'libmp3lame', '-b:a', '64k', outName]);
-  const data = await ffmpeg.readFile(outName);
-  ffmpeg.deleteFile(inName).catch(() => {});
-  ffmpeg.deleteFile(outName).catch(() => {});
-  return new Blob([data.buffer], { type: 'audio/mpeg' });
+  const arrayBuffer = await audioBlob.arrayBuffer();
+  const decodeCtx = new (window.AudioContext || window.webkitAudioContext)();
+  let audioBuffer;
+  try {
+    audioBuffer = await decodeCtx.decodeAudioData(arrayBuffer);
+  } finally {
+    decodeCtx.close().catch(() => {});
+  }
+  // Downmix to mono (voicemail doesn't need stereo, and it halves the data).
+  let samples;
+  if (audioBuffer.numberOfChannels > 1) {
+    const ch0 = audioBuffer.getChannelData(0);
+    const ch1 = audioBuffer.getChannelData(1);
+    samples = new Float32Array(ch0.length);
+    for (let i = 0; i < ch0.length; i++) samples[i] = (ch0[i] + ch1[i]) / 2;
+  } else {
+    samples = audioBuffer.getChannelData(0);
+  }
+  const int16Samples = _floatTo16BitPCM(samples);
+  const mp3encoder = new lamejs.Mp3Encoder(1, audioBuffer.sampleRate, 64);
+  const blockSize = 1152;
+  const mp3Chunks = [];
+  for (let i = 0; i < int16Samples.length; i += blockSize) {
+    const chunk = int16Samples.subarray(i, i + blockSize);
+    const mp3buf = mp3encoder.encodeBuffer(chunk);
+    if (mp3buf.length > 0) mp3Chunks.push(mp3buf);
+  }
+  const finalBuf = mp3encoder.flush();
+  if (finalBuf.length > 0) mp3Chunks.push(finalBuf);
+  return new Blob(mp3Chunks, { type: 'audio/mpeg' });
 }
 
 function downloadBlob(blob, filename) {
