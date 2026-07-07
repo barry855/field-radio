@@ -1,5 +1,5 @@
 
-<!-- DEPLOY TIMESTAMP: 2026-07-07 Europe/London (BST, UTC+01:00) | BRAVO v8.97.16-pi-startup-safe -->
+<!-- DEPLOY TIMESTAMP: 2026-07-07 Europe/London (BST, UTC+01:00) | BRAVO v8.97.17-instant-voicemail -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — BRAVO -->
@@ -2678,7 +2678,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.97.16-pi-startup-safe'; // Chromium-safe Pi Mode detection with native live recording
+const VERSION = '8.97.17-instant-voicemail'; // Voicemail recording begins immediately after the MP3 greeting
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -7857,22 +7857,15 @@ function _fireLocalRing() {
 function _armVmTimeout() {
   if (!_ringing || _attended) return; // already answered or dropped
   if (_vmActive)  return;         // voicemail already running
-  _startVmCountdown(Math.round(RING_TIMEOUT_MS / 1000), true);
-  try { dcSend({ __control: 'voicemailCountdown', active: true, seconds: Math.round(RING_TIMEOUT_MS / 1000) }); } catch(e) {}
-  // Auto-advance to voicemail if caller doesn't hang up after RING_TIMEOUT_MS
-  _ringTimeoutTimer = setTimeout(() => {
-    if (!_ringing || _attended) return; // already answered or dropped
-    if (_vmActive)  return;         // voicemail already running
-    entry('📼 No answer after ' + (RING_TIMEOUT_MS / 1000) + 's — starting voicemail', 'sys');
-    // Snapshot remote stream now (mirrors what _onCallConnected does)
-    const remoteAudio = document.getElementById('remoteAudio');
-    const remoteVideo = document.getElementById('remoteVideo');
-    _vmCapturedStream = (remoteAudio && remoteAudio.srcObject)
-                     || (remoteVideo && remoteVideo.srcObject)
-                     || null;
-    _stopRing();
-    _startVoicemail();
-  }, RING_TIMEOUT_MS);
+  entry('📼 Greeting finished — starting voicemail immediately', 'sys');
+  // Snapshot remote stream now (mirrors what _onCallConnected does)
+  const remoteAudio = document.getElementById('remoteAudio');
+  const remoteVideo = document.getElementById('remoteVideo');
+  _vmCapturedStream = (remoteAudio && remoteAudio.srcObject)
+                   || (remoteVideo && remoteVideo.srcObject)
+                   || null;
+  _stopRing();
+  _startVoicemail();
 }
 function _stopRing() {
   _ringStartPending = false;
