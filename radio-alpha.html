@@ -1,5 +1,5 @@
 
-<!-- DEPLOY TIMESTAMP: 2026-07-07 Europe/London (BST, UTC+01:00) | ALPHA v8.97.16-pi-startup-safe -->
+<!-- DEPLOY TIMESTAMP: 2026-07-07 Europe/London (BST, UTC+01:00) | ALPHA v8.97.17-instant-voicemail -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
@@ -2728,7 +2728,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.97.16-pi-startup-safe'; // Chromium-safe Pi Mode detection with native live recording
+const VERSION = '8.97.17-instant-voicemail'; // Voicemail recording begins immediately after the MP3 greeting
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -8184,19 +8184,14 @@ function _fireLocalRing() {
 
 function _armVmTimeout() {
   if (!_ringing || _vmActive || _attended || _bravoRequestedLive || _liveTakeoverRequested) return;
-  _startVmCountdown(Math.round(RING_TIMEOUT_MS / 1000), true);
-  try { dcSend({ __control: 'voicemailCountdown', active: true, seconds: Math.round(RING_TIMEOUT_MS / 1000) }); } catch(e) {}
-  _ringTimeoutTimer = setTimeout(() => {
-    if (!_ringing || _vmActive || _attended || _bravoRequestedLive || _liveTakeoverRequested) return;
-    entry('📼 No answer after 30s — starting voicemail', 'sys');
-    const remoteAudio = document.getElementById('remoteAudio');
-    const remoteVideo = document.getElementById('remoteVideo');
-    _vmCapturedStream = (remoteAudio && remoteAudio.srcObject)
-                     || (remoteVideo && remoteVideo.srcObject)
-                     || null;
-    _stopRing();
-    _startVoicemail();
-  }, RING_TIMEOUT_MS);
+  entry('📼 Greeting finished — starting voicemail immediately', 'sys');
+  const remoteAudio = document.getElementById('remoteAudio');
+  const remoteVideo = document.getElementById('remoteVideo');
+  _vmCapturedStream = (remoteAudio && remoteAudio.srcObject)
+                   || (remoteVideo && remoteVideo.srcObject)
+                   || null;
+  _stopRing();
+  _startVoicemail();
 }
 
 function _stopRing() {
