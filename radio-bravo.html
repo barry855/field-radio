@@ -1,5 +1,5 @@
 
-<!-- DEPLOY TIMESTAMP: 2026-07-07 Europe/London (BST, UTC+01:00) | BRAVO v8.97.19-delete-voicemail-notice -->
+<!-- DEPLOY TIMESTAMP: 2026-07-07 Europe/London (BST, UTC+01:00) | BRAVO v8.97.20-mp3-voicemail -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — BRAVO -->
@@ -2678,7 +2678,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.97.19-delete-voicemail-notice'; // Picker deletion also removes its voicemail chat notice and history
+const VERSION = '8.97.20-mp3-voicemail'; // Voicemails are stored and exported as space-saving 64 kbps MP3
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -8049,7 +8049,7 @@ async function _startVoicemail() {
       ...getLocalAudioTracksForRec()
     ]);
   }
-  const mimeType = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm']
+  const mimeType = ['audio/mpeg', 'audio/mp3', 'audio/mp4', 'audio/webm;codecs=opus', 'audio/webm']
     .find(t => MediaRecorder.isTypeSupported(t)) || 'audio/webm';
   _vmChunks = [];
   _vmRec = new MediaRecorder(_vmRecStream, { mimeType });
@@ -8075,9 +8075,19 @@ async function _startVoicemail() {
       }
       return;
     }
-    const blob = new Blob(_vmChunks, { type: mimeType });
+    const recordedBlob = new Blob(_vmChunks, { type: mimeType });
+    let blob = recordedBlob;
+    let savedAsMp3 = /audio\/(?:mpeg|mp3)/i.test(mimeType);
+    if (!savedAsMp3) {
+      try {
+        blob = await convertAudioToMp3(recordedBlob, mimeType);
+        savedAsMp3 = true;
+      } catch(e) {
+        entry('MP3 conversion failed (' + (e.message || e) + ') — keeping original voicemail', 'err');
+      }
+    }
     const ts   = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    const ext  = /mp4/.test(mimeType) ? 'mp4' : 'webm';
+    const ext  = savedAsMp3 ? 'mp3' : (/mp4/.test(mimeType) ? 'mp4' : 'webm');
     const _vmFilename = `bravo-voicemail-${ts}.${ext}`;
     entry('📼 Voicemail saved', 'ok');
     try { dcSend({ __control: 'voicemail', active: false }); } catch(e) {}
@@ -8351,7 +8361,7 @@ let _ffmpegPromise = null;
 function loadFFmpeg() {
   if (_ffmpegPromise) return _ffmpegPromise;
   _ffmpegPromise = (async () => {
-    entry('Loading MP4 converter (first time only, ~30MB)…', 'sys');
+    entry('Loading media converter (first time only, ~30MB)…', 'sys');
     const { FFmpeg } = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/+esm');
     const { toBlobURL } = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/+esm');
     const ffmpeg = new FFmpeg();
@@ -8390,6 +8400,22 @@ async function convertToMp4(webmBlob, recordedMimeType, label) {
   ffmpeg.deleteFile(inName).catch(()=>{});
   ffmpeg.deleteFile(outName).catch(()=>{});
   return new Blob([data.buffer], { type: 'video/mp4' });
+}
+
+async function convertAudioToMp3(audioBlob, recordedMimeType) {
+  if (/audio\/(?:mpeg|mp3)/i.test(recordedMimeType || audioBlob.type)) return audioBlob;
+  const ffmpeg = await loadFFmpeg();
+  const stamp = Date.now();
+  const inputExt = /mp4|m4a/i.test(recordedMimeType || audioBlob.type) ? 'm4a' : 'webm';
+  const inName = `vm_in_${stamp}.${inputExt}`;
+  const outName = `vm_out_${stamp}.mp3`;
+  await ffmpeg.writeFile(inName, new Uint8Array(await audioBlob.arrayBuffer()));
+  entry('Converting voicemail to space-saving MP3…', 'sys');
+  await ffmpeg.exec(['-i', inName, '-vn', '-ac', '1', '-ar', '44100', '-c:a', 'libmp3lame', '-b:a', '64k', outName]);
+  const data = await ffmpeg.readFile(outName);
+  ffmpeg.deleteFile(inName).catch(() => {});
+  ffmpeg.deleteFile(outName).catch(() => {});
+  return new Blob([data.buffer], { type: 'audio/mpeg' });
 }
 
 function downloadBlob(blob, filename) {
