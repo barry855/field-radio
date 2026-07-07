@@ -1,5 +1,5 @@
 
-<!-- DEPLOY TIMESTAMP: 2026-07-06 21:47:29 Europe/London (BST, UTC+01:00) | ALPHA v8.97.9-security -->
+<!-- DEPLOY TIMESTAMP: 2026-07-07 Europe/London (BST, UTC+01:00) | ALPHA v8.97.10-dynamic-record -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
@@ -2728,7 +2728,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.97.9-security';    // Hang Up releases camera immediately and cancels camera recovery
+const VERSION = '8.97.10-dynamic-record'; // Record can gain local/remote/PiP video and remote audio after starting offline
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -8585,21 +8585,29 @@ async function buildAudioMix(...streams) {
   const ctx  = new (window.AudioContext || window.webkitAudioContext)();
   await ctx.resume();                         // ensure context is running
   const dest = ctx.createMediaStreamDestination();
-  streams.forEach((s, i) => {
+  const connectedTracks = new Set();
+  const addStream = (s, gainValue = 1.0) => {
     if (!s) return;
     // Accept either a MediaStream or a raw track array
     const tracks = Array.isArray(s) ? s : (s.getAudioTracks ? s.getAudioTracks() : []);
     if (!tracks.length) return;
-    try {
-      const audioOnly = new MediaStream(tracks);
+    tracks.forEach(track => {
+      if (!track || track.readyState === 'ended' || connectedTracks.has(track.id)) return;
+      try {
+      const audioOnly = new MediaStream([track]);
       const src  = ctx.createMediaStreamSource(audioOnly);
       const gain = ctx.createGain();
-      gain.gain.value = (i === 0) ? 2.0 : 1.0;
+      gain.gain.value = gainValue;
       src.connect(gain);
       gain.connect(dest);
+      connectedTracks.add(track.id);
     } catch(e) { entry('Audio mix warn: ' + e.message, 'sys'); }
+    });
+  };
+  streams.forEach((s, i) => {
+    addStream(s, i === 0 ? 2.0 : 1.0);
   });
-  return { ctx, dest };
+  return { ctx, dest, addStream };
 }
 
 // Composite mainVideo with optional PiP overlayVideo (pass null for no PiP).
@@ -8999,7 +9007,10 @@ async function toggleRecordChat() {
   const isLocalMain = (chatUnderlayMode === 'local');
   const mainVideo   = isLocalMain ? localVid : remoteVideo;
 
-  if (!mainVideo || !mainVideo.srcObject || !mainVideo.srcObject.getVideoTracks().length) {
+  const availableVideo = [mainVideo, localVid, remoteVideo].find(v =>
+    v && v.srcObject && v.srcObject.getVideoTracks().length
+  );
+  if (!availableVideo) {
     entry('No video available to record', 'err'); return;
   }
 
@@ -9007,42 +9018,9 @@ async function toggleRecordChat() {
                        (remoteVideo && remoteVideo.srcObject) || null;
   let mimeType = preferredMime();
 
-  // Pi Chromium records a black canvas even though the native camera pixels
-  // are healthy.  When recording the local view offline, bypass canvas and
-  // feed MediaRecorder the original camera track plus one mixed audio track.
-  if (isLocalMain && !linked) {
-    const cameraTrack = localStream && localStream.getVideoTracks()[0];
-    if (!cameraTrack || cameraTrack.readyState !== 'live' || cameraTrack._fieldRadioStandby) {
-      entry('Native local recording unavailable — camera track is not live', 'err'); return;
-    }
-    mimeType = ['video/webm;codecs=vp8,opus', 'video/webm']
-      .find(t => MediaRecorder.isTypeSupported(t)) || mimeType;
-    const { ctx: aCtx, dest: aDest } = await buildAudioMix(getLocalAudioTracksForRec(), null);
-    const recStream = new MediaStream([cameraTrack, ...aDest.stream.getAudioTracks()]);
-    _chatRec.aCtx = aCtx;
-    _chatRec.chunks = [];
-    _chatRec.active = true;
-    recChatChunks = _chatRec.chunks;
-    const mr = new MediaRecorder(recStream, { mimeType });
-    _chatRec.recorder = mr;
-    recChat = mr;
-    mr.ondataavailable = e => { if (e.data.size > 0) _chatRec.chunks.push(e.data); };
-    mr.onstop = async () => {
-      try { _chatRec.aCtx.close(); } catch(e) {}
-      _chatRec.active = false; _chatRec.busy = false; recChatBusy = false;
-      const chunks = _chatRec.chunks; _chatRec.chunks = [];
-      await saveRec(chunks, mimeType, 'chat-recording');
-      if (btn) { btn.disabled = false; btn.textContent = '➤ RECORD'; btn.classList.remove('recording'); }
-    };
-    mr.start(1000);
-    if (btn) { btn.textContent = '⏹ Stop'; btn.classList.add('recording'); }
-    entry('Chat recording started (native local camera — Pi-safe)…', 'ok');
-    return;
-  }
-
   // Build / reuse persistent canvas
-  const W = mainVideo.videoWidth  || 1280;
-  const H = mainVideo.videoHeight || 720;
+  const W = mainVideo.videoWidth  || availableVideo.videoWidth  || 1280;
+  const H = mainVideo.videoHeight || availableVideo.videoHeight || 720;
   if (!_chatRec.canvas) {
     _chatRec.canvas = document.createElement('canvas');
   }
@@ -9075,6 +9053,7 @@ async function toggleRecordChat() {
   _chatRec.offLocal  = _makeOffscreenVideo(localVid.srcObject);
   const remoteEl     = document.getElementById('remoteVideo');
   _chatRec.offRemote = _makeOffscreenVideo(remoteEl.srcObject || new MediaStream());
+  let addAudioStream = () => {};
 
   function drawPip(c, el) {
     c.save();
@@ -9097,6 +9076,8 @@ async function toggleRecordChat() {
     const rv = document.getElementById('remoteVideo');
     _syncOffscreen(_chatRec.offLocal,  localVid.srcObject);
     _syncOffscreen(_chatRec.offRemote, rv ? rv.srcObject : null);
+    const ra = document.getElementById('remoteAudio');
+    addAudioStream((ra && ra.srcObject) || (rv && rv.srcObject), 1.0);
 
     const isLocal = (chatUnderlayMode === 'local');
     const mainOff = isLocal ? _chatRec.offLocal : _chatRec.offRemote;
@@ -9117,9 +9098,11 @@ async function toggleRecordChat() {
   _chatRec.afId = requestAnimationFrame(drawFrame);
 
   // Build audio mix (always use Web Audio so we can blend both sides)
-  const { ctx: aCtx, dest: aDest } = await buildAudioMix(
+  const audioMix = await buildAudioMix(
     getLocalAudioTracksForRec(), remoteStream
   );
+  const { ctx: aCtx, dest: aDest } = audioMix;
+  addAudioStream = audioMix.addStream;
   _chatRec.aCtx = aCtx;
 
   // Combine canvas video + mixed audio into one stream for the recorder
