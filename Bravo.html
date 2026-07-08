@@ -1,4 +1,5 @@
 
+<!-- DEPLOY TIMESTAMP: 2026-07-07 Europe/London (BST, UTC+01:00) | BRAVO v8.98.0-fs-topbar -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — BRAVO -->
@@ -105,6 +106,8 @@
   .header-action-btn:hover { background: var(--btn-hover); border-color: var(--accent2); }
   .header-action-btn.leave-style { border-color: #fff; color: #fff; background: #000; }
   .header-action-btn.leave-style:hover { background: #222; }
+  .header-action-btn.go-live-style { border-color: #44cc88; color: #44cc88; background: #000; font-weight: 700; }
+  .header-action-btn.go-live-style:hover { background: #113322; }
   .header-right-btns {
     display: flex; align-items: center; gap: 6px; margin-left: auto; flex-shrink: 0;
   }
@@ -1418,7 +1421,7 @@
       background: #fff !important; color: #000 !important;
       border: 1px solid #555 !important;
     }
-    #answerLiveBtn, #ownerLiveBtn, #vmPickerBtn, #vmBox, #vmPickerOverlay { display: none !important; }
+    #vmPickerBtn, #vmBox, #vmPickerOverlay { display: none !important; }
     /* Row 1: TTS Off | Flip Cam | FS OFF | MINI CAM OFF */
     #ttsChatBtn, #flipChatBtn, #fsChatBtn, #miniChatBtn { display: inline-flex !important; }
     /* Row 2: See Remote | RECORD | Video Off | Mike On | Sys Audio Off | Share Off */
@@ -1750,7 +1753,11 @@
   body.app-fullscreen .shell {
     position: fixed; inset: 0; max-width: none; padding: 0; gap: 0; z-index: 1000;
   }
-  body.app-fullscreen header,
+  body.app-fullscreen header {
+    position: relative; z-index: 1010;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
   body.app-fullscreen .tab-bar {
     position: relative; z-index: 1002;
   }
@@ -1775,7 +1782,6 @@
   }
 
   /* ── FULLSCREEN: auto-hide controls after inactivity ─── */
-  body.app-fullscreen.fs-controls-hidden header,
   body.app-fullscreen.fs-controls-hidden .tab-bar,
   body.app-fullscreen.fs-controls-hidden #paneChat .chat-find-bar,
   body.app-fullscreen.fs-controls-hidden #paneChat .chat-btn-bar-row,
@@ -1789,7 +1795,6 @@
     pointer-events: none;
     transition: opacity 0.4s ease;
   }
-  body.app-fullscreen.fs-controls-visible header,
   body.app-fullscreen.fs-controls-visible .tab-bar,
   body.app-fullscreen.fs-controls-visible #paneChat .chat-find-bar,
   body.app-fullscreen.fs-controls-visible #paneChat .chat-btn-bar-row,
@@ -1813,11 +1818,12 @@
     pointer-events: none; white-space: nowrap;
     transition: opacity 0.4s ease;
   }
-  body.app-fullscreen.fs-controls-hidden #fsHint { display: block; }
+  body.app-fullscreen.fs-controls-hidden #fsHint,
+  body.app-fullscreen.fs-controls-visible #fsHint { display: block; }
 
   /* ── LANDSCAPE: full-screen video only (mobile/touch only, ACTIVE CALL ONLY) ─── */
   @media (orientation: landscape) and (pointer: coarse) {
-    body.app-fullscreen header, body.app-fullscreen .tab-bar { display: none !important; }
+    body.app-fullscreen .tab-bar { display: none !important; }
     body.app-fullscreen .shell { padding: 0; gap: 0; }
     body.app-fullscreen .tab-content { padding: 0; gap: 0; border: none; border-radius: 0; background: #000; }
     body.app-fullscreen #paneChat { gap: 0; }
@@ -2118,12 +2124,14 @@ window.addEventListener('orientationchange', function() {
       </div>
       <div class="user-left-notice" id="userLeftNotice">
         <span>User left chat</span>
-        <button class="leave-chat-btn" onclick="leaveSession()">Leave Chat</button>
+        <button class="leave-chat-btn" onclick="leaveSession()">Hang Up</button>
       </div>
     </div>
     <div class="header-right-btns">
+      <button class="header-action-btn go-live-style" id="answerLiveBtn" onclick="requestLiveSession()" title="Skip the voicemail and go live now" style="display:none;">GO LIVE</button>
+      <button class="header-action-btn" id="fsControlsBtn" onclick="toggleFsControlsView()" title="Show/hide on-screen controls" style="display:none;">SHOW CONTROLS</button>
       <button class="header-action-btn" onclick="refreshScreen()" title="Refresh / Reconnect">↺ Refresh</button>
-      <button class="header-action-btn leave-style" id="leaveChatBtn" onclick="leaveSession()" title="Leave session">✕ Leave</button>
+      <button class="header-action-btn leave-style" id="leaveChatBtn" onclick="leaveSession()" title="Hang up session">✕ Hang Up</button>
       <button id="helpTouchBtn" onclick="openHelpPanel()" aria-label="Button guide">?</button>
     </div>
   </header>
@@ -2491,8 +2499,8 @@ window.addEventListener('orientationchange', function() {
 
 <button id="audioUnlockBtn" onclick="unlockRemoteAudio()" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(0,200,120,0.92);color:#000;border:none;border-radius:8px;padding:12px 28px;font-size:15px;font-family:monospace;font-weight:bold;letter-spacing:1px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,0.5);">▶ TAP TO HEAR AUDIO</button>
 <audio id="remoteAudio" autoplay="" playsinline="" webkit-playsinline=""></audio>
-<audio id="answeringMachineIntro" preload="auto" src="answering-machine-intro.mp3" playsinline></audio>
-<div id="fsHint">TAP TO SHOW CONTROLS</div>
+<audio id="answeringMachineIntro" preload="auto" src="answering-machine-intro.mp3?v=8.97.0-security" playsinline></audio>
+<div id="fsHint">TAP FOR CONTROLS</div>
 <div id="lightbox"><img id="lightboxImg" src="" alt=""></div>
 
 <script>
@@ -2676,7 +2684,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.95.2-security';    // definitive fullscreen brightness fix plus security hardening
+const VERSION = '8.98.0-fs-topbar'; // FS default on entry, always-visible top bar, GO LIVE + SHOW CONTROLS/SHOW FULL SCREEN buttons
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -2808,6 +2816,12 @@ function startSession() {
     if (!_micGainCtx || _micGainCtx.state === 'closed') _micGainCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (_micGainCtx.state === 'suspended') _micGainCtx.resume().catch(() => {});
   } catch(e) {}
+  // Unlock the call-media mixer during this user gesture. Creating/resuming it
+  // later from the unattended answering timer can be blocked by Chrome.
+  try {
+    _ensureMixContext();
+    if (_mixCtx.state === 'suspended') _mixCtx.resume().catch(() => {});
+  } catch(e) {}
   const usingPreReg = _preRegistered && _preRegCode === code;
   if (!usingPreReg) {
     // Normal path: assign IDs fresh (pre-registration didn't fire or used a different code)
@@ -2858,6 +2872,11 @@ function startSession() {
   // Start every login with a clean visible chat. Stored sessions remain
   // available through RESTORE and EXPORT.
   document.getElementById('chat').innerHTML = '';
+  // Full screen is the default on entry. This runs inside the CONNECT
+  // button's click handler so the user-gesture context is preserved for the
+  // real Fullscreen API request. The top bar stays visible regardless (see
+  // app-fullscreen CSS) so GO LIVE / SHOW CONTROLS stay reachable.
+  if (!_fsIsActive()) toggleFullScreen();
 }
 
 // ── Pre-fill last used code + checkbox states on load ────────
@@ -3432,8 +3451,51 @@ function _setAnswerLiveAvailable(available) {
   if (button) button.style.display = _alphaAnsweringAvailable ? '' : 'none';
 }
 
+let _callerMicLiveLogged = false;
+let _callerGreetingMicSuppressed = false;
+function _ensureCallerMicLiveDuringAnswerWait() {
+  if (audioMuted || !call || _callerGreetingMicSuppressed) return;
+  try {
+    if (_micGainCtx && _micGainCtx.state === 'suspended') _micGainCtx.resume().catch(() => {});
+    if (_mixMicGain) _mixMicGain.gain.value = 1.0;
+    const pc = call.peerConnection || call._pc;
+    const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
+    const track = (_micProcessedTrack && _micProcessedTrack.readyState !== 'ended' && _micProcessedTrack)
+      || (realAudioTrack && realAudioTrack.readyState !== 'ended' && realAudioTrack)
+      || (_micRawTrack && _micRawTrack.readyState !== 'ended' && _micRawTrack)
+      || (localStream && localStream.getAudioTracks().find(t => t.readyState !== 'ended'));
+    if (!sender || !track) return;
+    track.enabled = true;
+    if (sender.track !== track) sender.replaceTrack(track).catch(e => entry('Caller microphone restore failed: ' + e.message, 'err'));
+    if (!_callerMicLiveLogged) {
+      _callerMicLiveLogged = true;
+      entry('Bravo microphone live while waiting for Alpha to answer', 'ok');
+    }
+  } catch(e) {
+    entry('Caller microphone safeguard: ' + e.message, 'sys');
+  }
+}
+
+function _setCallerGreetingMicSuppressed(suppressed) {
+  _callerGreetingMicSuppressed = !!suppressed;
+  if (!call) return;
+  if (_callerGreetingMicSuppressed) {
+    try {
+      if (_mixMicGain) _mixMicGain.gain.value = 0.0;
+      const pc = call.peerConnection || call._pc;
+      const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
+      if (sender) sender.replaceTrack(getSilentTrack()).catch(() => {});
+      entry('Bravo microphone paused during Alpha greeting to prevent echo', 'sys');
+    } catch(e) { entry('Greeting echo guard: ' + e.message, 'sys'); }
+  } else {
+    _callerMicLiveLogged = false;
+    _ensureCallerMicLiveDuringAnswerWait();
+  }
+}
+
 function _applyBravoLinkedDisplay(logConnection) {
   if (_alphaAnsweringAvailable) {
+    _ensureCallerMicLiveDuringAnswerWait();
     setStatus('remote-answering');
     duplexBar.textContent = '● ALPHA ANSWERING — CLICK A BLANK AREA TO GO LIVE';
     if (logConnection) entry('Linked to Alpha answering machine — click a blank area to go live', 'ok');
@@ -3452,6 +3514,7 @@ function _applyBravoLinkedDisplay(logConnection) {
 
 function requestLiveSession(suppressCamera) {
   if (!_alphaAnsweringAvailable || !dataConn || !dataConn.open) return;
+  _setCallerGreetingMicSuppressed(false);
   _alphaLiveTakeoverRequested = true;
   _setAnswerLiveAvailable(false);
   _stopVmCountdown();
@@ -3470,6 +3533,7 @@ function _isDeliberateLiveClick(event) {
 
 document.addEventListener('click', event => {
   if (!_isDeliberateLiveClick(event)) return;
+  if (document.body.classList.contains('app-fullscreen')) return; // fullscreen taps only toggle controls
   const target = event.target;
   if (target && target.closest && target.closest('button,a,input,select,textarea,audio,[role="button"]')) return;
   if (linked && _alphaAnsweringAvailable) {
@@ -3544,6 +3608,7 @@ function syncChatUnderlay() {
     if (el.srcObject !== stream) el.srcObject = stream;
     el.classList.toggle('no-stream', !_streamHasLiveVideo(stream));
   }
+  if (el.srcObject) { try { el.play().catch(() => {}); } catch(e) {} }
 }
 
 function refreshChatScreenOnly() {
@@ -3655,8 +3720,22 @@ function toggleMiniVideo() {
 updateMiniVideoVisibility();
 
 let miniChatVisible = false;
-function toggleMiniChat() {
+let _cameraForcedForOfflineMini = false;
+async function toggleMiniChat() {
   miniChatVisible = !miniChatVisible;
+  // Offline remote-main recordings use the local camera as PiP. Windows may
+  // have parked that camera, so wake it before the recorder tries to draw it.
+  if (miniChatVisible && !linked && chatUnderlayMode === 'remote') {
+    const localTrack = localStream && localStream.getVideoTracks()[0];
+    if (!localTrack || localTrack.readyState !== 'live' || localTrack._fieldRadioStandby) {
+      _cameraForcedForOfflineMini = await _setCameraActive(true, 'offline recording minicam');
+    }
+  } else if (!miniChatVisible && _cameraForcedForOfflineMini && !linked &&
+             !(recLocal && recLocal.state === 'recording') &&
+             !(_chatRec.active && chatUnderlayMode === 'local')) {
+    await _setCameraActive(false, 'offline recording minicam');
+    _cameraForcedForOfflineMini = false;
+  }
   _chatRecUpdateMini(); // update live recording PiP if active
   const overlay = document.getElementById('miniChatOverlay');
   if (overlay) overlay.classList.toggle('hidden', !miniChatVisible);
@@ -3847,6 +3926,7 @@ function loadHistory() {
       if (!m.vmNotice) return;
       const d = document.createElement('div');
       d.className = 'bubble vm-notice';
+      if (m.filename) d.dataset.vmFilename = m.filename;
       if (m.filename) {
         // Recording bubble — blob is gone but show filename so user knows what was saved
         d.classList.add('vm-has-recording');
@@ -4461,7 +4541,7 @@ setupTooltips();
 function openHelpPanel() {
   const rows = document.getElementById('helpPanelRows');
   if (rows && !rows.dataset.built) {
-    const items = [['Talk/Type in Chat','Open the speech and text input panel'],['TALK','Dictate via speech-to-text'],['SEND','Send typed or dictated text to chat'],['ATTACH','Attach a file to send'],['LOAD','Load a text file into the input box'],['SAVE','Save the input box text to a file'],['COPY','Copy the input box text to clipboard'],['CLEAR','Clear the input box'],['CW','Send input text as Morse code audio'],['TTS','Toggle auto-speak for incoming messages'],['ORIGINAL','Reset speech language to system default'],['↺','Refresh / reconnect'],['✕ Leave','End the session'],['RECORD','Record the current call'],['MINI CAM','Toggle picture-in-picture camera overlay'],['FS','Toggle full screen'],['SYS LOG','Toggle the system diagnostic log'],['💾 SAVE','Save chat history as an HTML file'],['↩ RESTORE','Restore a previous session chat'],['🗑 CLEAR','Clear chat history'],['🔍 FIND','Find text in the chat'],['Video Off','Toggle your camera on/off'],['Mic On/Off','Mute or unmute your microphone'],['Sys Audio','Mix computer audio into transmitted signal'],['Share Off','Share your screen'],['Pi Mode','Compact mode — hides STT controls']];
+    const items = [['Talk/Type in Chat','Open the speech and text input panel'],['TALK','Dictate via speech-to-text'],['SEND','Send typed or dictated text to chat'],['ATTACH','Attach a file to send'],['LOAD','Load a text file into the input box'],['SAVE','Save the input box text to a file'],['COPY','Copy the input box text to clipboard'],['CLEAR','Clear the input box'],['CW','Send input text as Morse code audio'],['TTS','Toggle auto-speak for incoming messages'],['ORIGINAL','Reset speech language to system default'],['↺','Refresh / reconnect'],['✕ Hang Up','End the session'],['RECORD','Record the current call'],['MINI CAM','Toggle picture-in-picture camera overlay'],['FS','Toggle full screen'],['SYS LOG','Toggle the system diagnostic log'],['💾 SAVE','Save chat history as an HTML file'],['↩ RESTORE','Restore a previous session chat'],['🗑 CLEAR','Clear chat history'],['🔍 FIND','Find text in the chat'],['Video Off','Toggle your camera on/off'],['Mic On/Off','Mute or unmute your microphone'],['Sys Audio','Mix computer audio into transmitted signal'],['Share Off','Share your screen'],['Pi Mode','Compact mode — hides STT controls']];
     items.unshift(
       ['EXPORT','Choose and export a previously stored chat session'],
       ['CAMERA','Choose the camera used for video and local recording'],
@@ -5967,6 +6047,7 @@ async function initMediaOnly() {
     initFlipCamUI();
     initMicInputUI();
     updateLocalVideoState();
+    if (!loginDisableVideoFlag) _scheduleStartupCameraRecovery();
     if (loginDisableVideoFlag) {
       const vt = stream.getVideoTracks()[0];
       if (vt) { vt.enabled = false; }
@@ -6090,6 +6171,7 @@ async function init() {
     initFlipCamUI();
     initMicInputUI();
     updateLocalVideoState();
+    if (!loginDisableVideoFlag) _scheduleStartupCameraRecovery();
     if (loginDisableVideoFlag) {
       const vt = stream.getVideoTracks()[0];
       if (vt) { vt.enabled = false; }
@@ -6184,6 +6266,7 @@ let _peerGeneration = 0;  // incremented each startPeer() — cancels stale _pol
 
 // ── Remote ID refresh (reads Alpha's published peerId from Firebase) ──────────
 let _remoteIdConfirmed = false; // true once Firebase has returned a valid peerId for ALPHA
+let _lastRejectedRemoteId = '';
 async function _refreshRemoteId() {
   try {
     const _code = MY_ID ? MY_ID.replace(/^bravo-/, '').replace(/-[0-9a-f]{4}$/, '') : '';
@@ -6192,6 +6275,17 @@ async function _refreshRemoteId() {
     const _env = await _r.json();
     const _d = _env ? await _decryptPresence(_code, _env) : null;
     if (_d && _d.peerId && _d.ts && (Date.now() - _d.ts) < PRESENCE_STALE_MS) {
+      const candidateId = String(_d.peerId);
+      if (!candidateId.startsWith('alpha-') || candidateId === MY_ID) {
+        if (candidateId !== _lastRejectedRemoteId) {
+          _lastRejectedRemoteId = candidateId;
+          entry('Rejected invalid Alpha peer ID: ' + candidateId, 'err');
+        }
+        _remoteIdConfirmed = false;
+        _alphaAnsweringAvailable = false;
+        return;
+      }
+      _lastRejectedRemoteId = '';
       if (_d.peerId !== REMOTE_ID && !linked) {
         const previousRemoteId = REMOTE_ID;
         entry('ALPHA peer ID: ' + _d.peerId, 'sys');
@@ -6244,6 +6338,11 @@ function dial() {
   _answeringCallReceiver = false;
   clearTimeout(retryTimer);
   if (linked || !localStream) return;
+  if (!REMOTE_ID || !String(REMOTE_ID).startsWith('alpha-') || REMOTE_ID === MY_ID) {
+    entry('Blocked invalid call target: ' + (REMOTE_ID || 'unknown'), 'err');
+    _remoteIdConfirmed = false;
+    return;
+  }
   if (call) {
     try { call.off('close', onDrop); call.close(); } catch(e) {}
     call = null;
@@ -6497,12 +6596,15 @@ function attachDataConn(dc) {
           _stopRing();
           _attended = false;
           _setAnswerLiveAvailable(true);
-          if (!(recLocal && recLocal.state === 'recording')) _setCameraActive(false, 'answering mode');
+          _ensureCallerMicLiveDuringAnswerWait();
+          // Keep the camera state chosen at login. Answering mode must not
+          // silently park the local camera or override the Video On control.
           entry('Alpha answering mode detected — leave a message after the cue or click a blank area to go live', 'sys');
           _vmNotice('— 📼 ALPHA ANSWERING — WAIT FOR THE VOICEMAIL CUE —');
           if (linked) _applyBravoLinkedDisplay(false);
         } else {
           _alphaLiveTakeoverRequested = true;
+          _setCallerGreetingMicSuppressed(false);
           const wasWaitingForAlpha = _alphaAnsweringAvailable;
           _setAnswerLiveAvailable(false);
           _stopVmCountdown();
@@ -6517,7 +6619,14 @@ function attachDataConn(dc) {
       if (f.__control === 'ring') {
         // Ringing is silent on the answering machine — the tone plays only here,
         // on the caller's end, while Alpha decides whether to answer or go to voicemail.
-        if (f.active) { _startRemoteRingTone(); } else { _stopRemoteRingTone(); }
+        if (f.active) {
+          _setCallerGreetingMicSuppressed(false);
+          _ensureCallerMicLiveDuringAnswerWait();
+          _startRemoteRingTone();
+        } else {
+          _stopRemoteRingTone();
+          _setCallerGreetingMicSuppressed(true);
+        }
         return;
       }
       if (f.__control === 'voicemailCountdown') {
@@ -6525,6 +6634,8 @@ function attachDataConn(dc) {
           // Ignore a countdown packet that was queued before GO LIVE.
           if (!_alphaAnsweringAvailable) { _stopVmCountdown(); return; }
           const seconds = Number(f.seconds) || 30;
+          _setCallerGreetingMicSuppressed(false);
+          _ensureCallerMicLiveDuringAnswerWait();
           _startVmCountdown(seconds, true);
           entry('Alpha voicemail starts in ' + seconds + ' seconds', 'sys');
         } else _stopVmCountdown();
@@ -6534,6 +6645,7 @@ function attachDataConn(dc) {
         _stopVmCountdown();
         if (f.active) {
           if (!_alphaAnsweringAvailable) return;
+          _setCallerGreetingMicSuppressed(false);
           setStatus('voicemail');
           _vmNotice('— 📼 ALPHA RECORDING VOICEMAIL —');
           // These tones play only on the caller receiving this control message.
@@ -6803,6 +6915,10 @@ function dcDecode(raw) {
 
 let _dcWatchdog = null;
 function openDataConn() {
+  if (!REMOTE_ID || !String(REMOTE_ID).startsWith('alpha-') || REMOTE_ID === MY_ID) {
+    entry('Blocked invalid data-channel target: ' + (REMOTE_ID || 'unknown'), 'err');
+    return;
+  }
   if (dataConn || pendingDC) return;
   pendingDC = true;
   entry('Opening data channel to Alpha…', 'sys');
@@ -7058,11 +7174,10 @@ function attachCall(c) {
           c._iceRelayTimer = setTimeout(() => {
             if (pc.iceConnectionState === 'checking' && call === c && !c._relayEscalated) {
               c._relayEscalated = true;
-              entry('ICE checking timeout — direct path failed, escalating to TURN relay-only', 'sys');
-              try {
-                pc.setConfiguration({ iceServers: ICE_SERVERS, iceTransportPolicy: 'relay', iceCandidatePoolSize: 4 });
-                pc.restartIce();
-              } catch(e2) { entry('Relay fallback failed: ' + e2.message, 'sys'); }
+              // Chrome forbids changing iceTransportPolicy after negotiation.
+              // Relay candidates are already present from ICE_SERVERS, so keep
+              // the current negotiation alive and allow ICE to select them.
+              entry('ICE checking timeout — TURN candidates already gathered; continuing checks', 'sys');
             }
           }, 8000);
         }
@@ -7070,15 +7185,13 @@ function attachCall(c) {
         clearTimeout(c._iceRelayTimer);
       }
       if (pc.iceConnectionState === 'failed') {
-        if (!c._relayEscalated) {
-          c._relayEscalated = true;
-          entry('DIAG: ICE FAILED — direct path failed, escalating to TURN relay-only', 'err');
-          try {
-            pc.setConfiguration({ iceServers: ICE_SERVERS, iceTransportPolicy: 'relay', iceCandidatePoolSize: 4 });
-            pc.restartIce();
-          } catch(e2) { entry('ICE restart unavailable: ' + e2.message, 'sys'); }
+        if (!c._iceRestartAttempted) {
+          c._iceRestartAttempted = true;
+          entry('DIAG: ICE FAILED — restarting with configured STUN/TURN candidates', 'err');
+          try { pc.restartIce(); }
+          catch(e2) { entry('ICE restart unavailable: ' + e2.message, 'sys'); }
         } else {
-          entry('DIAG: ICE FAILED after relay escalation — dropping', 'err');
+          entry('DIAG: ICE FAILED after restart — dropping', 'err');
         }
       }
       if (pc.iceConnectionState === 'disconnected' && linked && call === c) {
@@ -7259,6 +7372,21 @@ function exportSysLog() {
 function leaveSession() {
   saveSessionSnapshot();
   leftPermanently = true;
+  clearTimeout(_startupCameraRecoveryTimer); _startupCameraRecoveryTimer = null;
+  // Privacy: release video immediately.  Audio/data may remain for the brief
+  // leave-message grace period, but the camera must not.
+  if (cameraTrack) { try { cameraTrack.stop(); } catch(e){} cameraTrack = null; }
+  if (localStream) {
+    localStream.getVideoTracks().forEach(t => {
+      try { t.stop(); } catch(e) {}
+      try { localStream.removeTrack(t); } catch(e) {}
+    });
+  }
+  ['localVideo','miniLocalVideo','miniChatVideo','chatUnderlay'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { try { el.pause(); el.srcObject = null; } catch(e) {} }
+  });
+  setVideoButtons(false);
   saveSpeechDraft();
   // Notify remote peer before disconnecting
   try { dcSend({ __control: 'leave' }); } catch(e) {}
@@ -7467,6 +7595,7 @@ function _vmNotice(text, blobUrl, filename) {
   if (!chatEl) return null;
   const d = document.createElement('div');
   d.className = 'bubble vm-notice';
+  if (filename) d.dataset.vmFilename = filename;
   if (blobUrl) {
     d.classList.add('vm-has-recording');
     const span = document.createElement('span');
@@ -7502,13 +7631,16 @@ let _vmLoaded = false;
 function _vmOpenDb() {
   return new Promise((resolve, reject) => {
     if (!window.indexedDB) { reject(new Error('browser storage unavailable')); return; }
-    const request = indexedDB.open(_VM_DB_NAME, 1);
+    const request = indexedDB.open(_VM_DB_NAME, 2);
     request.onupgradeneeded = () => {
       const db = request.result;
+      let store;
       if (!db.objectStoreNames.contains(_VM_DB_STORE)) {
-        const store = db.createObjectStore(_VM_DB_STORE, { keyPath: 'id' });
-        store.createIndex('station', 'station', { unique: false });
+        store = db.createObjectStore(_VM_DB_STORE, { keyPath: 'id' });
+      } else {
+        store = request.transaction.objectStore(_VM_DB_STORE);
       }
+      if (!store.indexNames.contains('station')) store.createIndex('station', 'station', { unique: false });
     };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error || new Error('voicemail storage failed'));
@@ -7589,6 +7721,7 @@ function _vmBoxAddEntry(ts, blobUrl, filename, blob) {
       item.stored = true;
     }).catch(e => entry('Voicemail browser storage failed: ' + e.message, 'err'));
   }
+  return item;
 }
 
 function _vmRecordMissedCall() {
@@ -7599,6 +7732,21 @@ function _vmRecordMissedCall() {
 async function _vmRemoveEntry(item) {
   const index = _vmEntries.indexOf(item);
   if (index !== -1) _vmEntries.splice(index, 1);
+  const chatEl = document.getElementById('chat');
+  if (chatEl) {
+    chatEl.querySelectorAll('.vm-notice').forEach(notice => {
+      const audio = notice.querySelector('audio');
+      if ((item.filename && notice.dataset.vmFilename === item.filename) ||
+          (audio && item.blobUrl && audio.src === item.blobUrl)) notice.remove();
+    });
+  }
+  try {
+    const key = HISTORY_KEY();
+    const history = JSON.parse(localStorage.getItem(key) || '[]');
+    localStorage.setItem(key, JSON.stringify(history.filter(message =>
+      !(message.vmNotice && item.filename && message.filename === item.filename)
+    )));
+  } catch(e) {}
   try { if (item.blobUrl) URL.revokeObjectURL(item.blobUrl); } catch(e) {}
   _vmBoxRender();
   try {
@@ -7722,9 +7870,13 @@ function _fireLocalRing() {
         _armVmTimeout();
       };
       if (intro) {
-        try { intro.currentTime = 0; } catch(e) {}
+        try { intro.load(); intro.currentTime = 0; } catch(e) {}
         intro.onended = startCountdown;
-        intro.onerror = startCountdown;
+        intro.onerror = () => {
+          const code = intro.error ? intro.error.code : 'unknown';
+          entry('Answering intro media error (code ' + code + ', networkState ' + intro.networkState + ')', 'err');
+          startCountdown();
+        };
         attachMediaToCallAudio(intro, false)
           .then(() => intro.play())
           .catch(e => { entry('Answering intro could not play: ' + e.message, 'err'); startCountdown(); });
@@ -7737,22 +7889,15 @@ function _fireLocalRing() {
 function _armVmTimeout() {
   if (!_ringing || _attended) return; // already answered or dropped
   if (_vmActive)  return;         // voicemail already running
-  _startVmCountdown(Math.round(RING_TIMEOUT_MS / 1000), true);
-  try { dcSend({ __control: 'voicemailCountdown', active: true, seconds: Math.round(RING_TIMEOUT_MS / 1000) }); } catch(e) {}
-  // Auto-advance to voicemail if caller doesn't hang up after RING_TIMEOUT_MS
-  _ringTimeoutTimer = setTimeout(() => {
-    if (!_ringing || _attended) return; // already answered or dropped
-    if (_vmActive)  return;         // voicemail already running
-    entry('📼 No answer after ' + (RING_TIMEOUT_MS / 1000) + 's — starting voicemail', 'sys');
-    // Snapshot remote stream now (mirrors what _onCallConnected does)
-    const remoteAudio = document.getElementById('remoteAudio');
-    const remoteVideo = document.getElementById('remoteVideo');
-    _vmCapturedStream = (remoteAudio && remoteAudio.srcObject)
-                     || (remoteVideo && remoteVideo.srcObject)
-                     || null;
-    _stopRing();
-    _startVoicemail();
-  }, RING_TIMEOUT_MS);
+  entry('📼 Greeting finished — starting voicemail immediately', 'sys');
+  // Snapshot remote stream now (mirrors what _onCallConnected does)
+  const remoteAudio = document.getElementById('remoteAudio');
+  const remoteVideo = document.getElementById('remoteVideo');
+  _vmCapturedStream = (remoteAudio && remoteAudio.srcObject)
+                   || (remoteVideo && remoteVideo.srcObject)
+                   || null;
+  _stopRing();
+  _startVoicemail();
 }
 function _stopRing() {
   _ringStartPending = false;
@@ -7915,7 +8060,7 @@ async function _startVoicemail() {
       ...getLocalAudioTracksForRec()
     ]);
   }
-  const mimeType = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm']
+  const mimeType = ['audio/mpeg', 'audio/mp3', 'audio/mp4', 'audio/webm;codecs=opus', 'audio/webm']
     .find(t => MediaRecorder.isTypeSupported(t)) || 'audio/webm';
   _vmChunks = [];
   _vmRec = new MediaRecorder(_vmRecStream, { mimeType });
@@ -7941,14 +8086,25 @@ async function _startVoicemail() {
       }
       return;
     }
-    const blob = new Blob(_vmChunks, { type: mimeType });
+    const recordedBlob = new Blob(_vmChunks, { type: mimeType });
+    let blob = recordedBlob;
+    let savedAsMp3 = /audio\/(?:mpeg|mp3)/i.test(mimeType);
+    if (!savedAsMp3) {
+      try {
+        blob = await convertAudioToMp3(recordedBlob, mimeType);
+        savedAsMp3 = true;
+      } catch(e) {
+        entry('MP3 conversion failed (' + (e.message || e) + ') — keeping original voicemail', 'err');
+      }
+    }
     const ts   = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    const ext  = /mp4/.test(mimeType) ? 'mp4' : 'webm';
+    const ext  = savedAsMp3 ? 'mp3' : (/mp4/.test(mimeType) ? 'mp4' : 'webm');
     const _vmFilename = `bravo-voicemail-${ts}.${ext}`;
     entry('📼 Voicemail saved', 'ok');
     try { dcSend({ __control: 'voicemail', active: false }); } catch(e) {}
     const _vmBlobUrl = URL.createObjectURL(blob);
-    _vmBoxAddEntry(Date.now(), _vmBlobUrl, _vmFilename, blob);
+    const savedItem = _vmBoxAddEntry(Date.now(), _vmBlobUrl, _vmFilename, blob);
+    if (savedItem.persistPromise) await savedItem.persistPromise;
     // Complete any live-takeover screen clear before adding the player so
     // the newly recorded voicemail bubble remains visible.
     _finishOwnerLiveTakeover();
@@ -8143,24 +8299,32 @@ async function buildAudioMix(...streams) {
   const ctx  = new (window.AudioContext || window.webkitAudioContext)();
   await ctx.resume();
   const dest = ctx.createMediaStreamDestination();
-  streams.forEach((s, i) => {
+  const connectedTracks = new Set();
+  const addStream = (s, gainValue = 1.0) => {
     if (!s) return;
     // Accept either a MediaStream or the raw track array returned for local audio.
     const tracks = Array.isArray(s)
       ? s.filter(track => track && track.kind === 'audio' && track.readyState !== 'ended')
       : (s.getAudioTracks ? s.getAudioTracks() : []);
     if (!tracks.length) return;
-    try {
-      const audioOnly = new MediaStream(tracks);
+    tracks.forEach(track => {
+      if (connectedTracks.has(track.id)) return;
+      try {
+      const audioOnly = new MediaStream([track]);
       const src  = ctx.createMediaStreamSource(audioOnly);
       const gain = ctx.createGain();
-      // Boost local mic (stream[0]) — AEC/AGC in Web Audio path suppresses it heavily
-      gain.gain.value = (i === 0) ? 3.0 : 1.0;
+      gain.gain.value = gainValue;
       src.connect(gain);
       gain.connect(dest);
+      connectedTracks.add(track.id);
     } catch(e) { entry('Audio mix warn: ' + e.message, 'sys'); }
+    });
+  };
+  streams.forEach((s, i) => {
+    // Boost local mic (stream[0]) — AEC/AGC in Web Audio path suppresses it heavily
+    addStream(s, i === 0 ? 3.0 : 1.0);
   });
-  return { ctx, dest };
+  return { ctx, dest, addStream };
 }
 
 function buildCompositeStream(mainVideo, overlayVideo, audioTracks) {
@@ -8208,16 +8372,22 @@ let _ffmpegPromise = null;
 function loadFFmpeg() {
   if (_ffmpegPromise) return _ffmpegPromise;
   _ffmpegPromise = (async () => {
-    entry('Loading MP4 converter (first time only, ~30MB)…', 'sys');
+    entry('Loading media converter (first time only, ~30MB)…', 'sys');
     const { FFmpeg } = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/+esm');
     const { toBlobURL } = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/+esm');
     const ffmpeg = new FFmpeg();
+    // Single-threaded @ffmpeg/core (no -mt suffix) has no worker file of its
+    // own and needs none — only pass coreURL/wasmURL. Passing a `workerURL`
+    // here flips ffmpeg.wasm into multi-thread mode, which requires
+    // SharedArrayBuffer + COOP/COEP cross-origin-isolation headers. GitHub
+    // Pages can't set those headers, so load() threw on every platform
+    // (not just RPi/Windows — it just happened not to get exercised
+    // elsewhere yet). Omitting workerURL keeps us on the single-thread path,
+    // which works with zero special headers.
     const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd';
-    const workerURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/worker.js';
     await ffmpeg.load({
-      coreURL:   await toBlobURL(`${baseURL}/ffmpeg-core.js`,  'text/javascript'),
-      wasmURL:   await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-      workerURL: await toBlobURL(workerURL,                     'text/javascript'),
+      coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`,  'text/javascript'),
+      wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
     });
     return ffmpeg;
   })();
@@ -8247,6 +8417,77 @@ async function convertToMp4(webmBlob, recordedMimeType, label) {
   ffmpeg.deleteFile(inName).catch(()=>{});
   ffmpeg.deleteFile(outName).catch(()=>{});
   return new Blob([data.buffer], { type: 'video/mp4' });
+}
+
+// ── Voicemail → MP3 (client-side, via lamejs — pure JS, no Worker) ────
+// ffmpeg.wasm's FFmpeg class spawns its own Worker pointed at wherever it was
+// imported from (jsdelivr), and browsers refuse to construct a Worker from a
+// cross-origin script URL. Its worker.js also does relative ESM imports
+// (./const.js, ./errors.js) that can't be resolved once blobified, so there's
+// no clean workaround short of self-hosting the entire ffmpeg.wasm file tree
+// on this origin. lamejs is a single self-contained script — no Worker, no
+// relative imports, nothing that can hit that restriction — so we use it
+// here instead. (convertToMp4()/loadFFmpeg() below are untouched — they have
+// the same underlying cross-origin-worker exposure, but that's a separate
+// fix for a separate feature.)
+let _lamejsPromise = null;
+function loadLameJs() {
+  if (_lamejsPromise) return _lamejsPromise;
+  _lamejsPromise = new Promise((resolve, reject) => {
+    if (window.lamejs) { resolve(window.lamejs); return; }
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js';
+    s.onload = () => window.lamejs ? resolve(window.lamejs) : reject(new Error('lamejs script loaded but window.lamejs is missing'));
+    s.onerror = () => reject(new Error('failed to load lamejs from CDN'));
+    document.head.appendChild(s);
+  });
+  _lamejsPromise.catch(() => { _lamejsPromise = null; }); // allow retry on next recording if load failed
+  return _lamejsPromise;
+}
+
+function _floatTo16BitPCM(input) {
+  const out = new Int16Array(input.length);
+  for (let i = 0; i < input.length; i++) {
+    const s = Math.max(-1, Math.min(1, input[i]));
+    out[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+  }
+  return out;
+}
+
+async function convertAudioToMp3(audioBlob, recordedMimeType) {
+  if (/audio\/(?:mpeg|mp3)/i.test(recordedMimeType || audioBlob.type)) return audioBlob;
+  const lamejs = await loadLameJs();
+  entry('Converting voicemail to space-saving MP3…', 'sys');
+  const arrayBuffer = await audioBlob.arrayBuffer();
+  const decodeCtx = new (window.AudioContext || window.webkitAudioContext)();
+  let audioBuffer;
+  try {
+    audioBuffer = await decodeCtx.decodeAudioData(arrayBuffer);
+  } finally {
+    decodeCtx.close().catch(() => {});
+  }
+  // Downmix to mono (voicemail doesn't need stereo, and it halves the data).
+  let samples;
+  if (audioBuffer.numberOfChannels > 1) {
+    const ch0 = audioBuffer.getChannelData(0);
+    const ch1 = audioBuffer.getChannelData(1);
+    samples = new Float32Array(ch0.length);
+    for (let i = 0; i < ch0.length; i++) samples[i] = (ch0[i] + ch1[i]) / 2;
+  } else {
+    samples = audioBuffer.getChannelData(0);
+  }
+  const int16Samples = _floatTo16BitPCM(samples);
+  const mp3encoder = new lamejs.Mp3Encoder(1, audioBuffer.sampleRate, 64);
+  const blockSize = 1152;
+  const mp3Chunks = [];
+  for (let i = 0; i < int16Samples.length; i += blockSize) {
+    const chunk = int16Samples.subarray(i, i + blockSize);
+    const mp3buf = mp3encoder.encodeBuffer(chunk);
+    if (mp3buf.length > 0) mp3Chunks.push(mp3buf);
+  }
+  const finalBuf = mp3encoder.flush();
+  if (finalBuf.length > 0) mp3Chunks.push(finalBuf);
+  return new Blob(mp3Chunks, { type: 'audio/mpeg' });
 }
 
 function downloadBlob(blob, filename) {
@@ -8300,7 +8541,7 @@ async function toggleRecordRemote() {
   const hasRemote = remoteVideo.srcObject && remoteVideo.srcObject.getVideoTracks().length > 0;
   if (!hasRemote) { entry('No remote video to record', 'err'); return; }
 
-  const mimeType = preferredMime();
+  let mimeType = preferredMime();
   const remoteStream = (remoteAudio && remoteAudio.srcObject) || remoteVideo.srcObject;
   const recStream = new MediaStream([
     ...remoteVideo.srcObject.getVideoTracks(),
@@ -8379,9 +8620,33 @@ async function toggleRecordLocal() {
     }
   }
 
+  // Validate an actual camera frame even when Chromium reports the track as
+  // enabled. Raspberry Pi Chromium can leave an enabled track feeding a black
+  // or not-yet-started preview.
+  const recordingCameraTrack = localStream.getVideoTracks()[0] || null;
+  const recordingPreview = document.getElementById('localVideo');
+  if (!recordingCameraTrack || !recordingCameraTrack.enabled || recordingCameraTrack._fieldRadioStandby || recordingCameraTrack.readyState === 'ended') {
+    entry('Local recording camera track is not active', 'err');
+    return;
+  }
+  if (recordingPreview) {
+    try { await recordingPreview.play(); } catch(e) {}
+    if (recordingPreview.readyState < 2 || !recordingPreview.videoWidth) {
+      await new Promise(resolve => {
+        const done = () => resolve();
+        recordingPreview.addEventListener('loadeddata', done, { once: true });
+        setTimeout(done, 2500);
+      });
+    }
+    if (recordingPreview.readyState < 2 || !recordingPreview.videoWidth) {
+      entry('Local recording stopped — camera supplied no usable frame', 'err');
+      return;
+    }
+  }
+
   const remoteAudio = document.getElementById('remoteAudio');
   const remoteVideo = document.getElementById('remoteVideo');
-  const mimeType = preferredMime();
+  let mimeType = preferredMime();
   let stopLoop = null, recStream, aCtx = null;
   const withMini = !!miniVideoVisible;
   const remoteStream = (remoteAudio && remoteAudio.srcObject) || (remoteVideo && remoteVideo.srcObject) || null;
@@ -8391,9 +8656,28 @@ async function toggleRecordLocal() {
   aCtx = ctx;
   const localVideo = document.getElementById('localVideo');
   const miniRemoteVideo = withMini ? document.getElementById('miniRemoteVideo') : null;
-  const comp = buildCompositeStream(localVideo, miniRemoteVideo, aDest.stream.getAudioTracks());
-  recStream = comp.stream;
-  stopLoop = comp.stopLoop;
+  const isLinuxArm = /Linux\s+(?:arm|aarch64)/i.test((navigator.userAgent || '') + ' ' + (navigator.platform || ''));
+  const useNativeCameraTrack = !linked || isLinuxArm;
+  if (useNativeCameraTrack) {
+    // Canvas capture can be black on Raspberry Pi hardware-video paths. Feed
+    // MediaRecorder the native camera track plus exactly one mixed audio track.
+    mimeType = ['video/webm;codecs=vp8,opus', 'video/webm']
+      .find(t => MediaRecorder.isTypeSupported(t)) || mimeType;
+    // Do not clone libcamera tracks: Raspberry Pi Chromium can expose the
+    // clone as live while delivering only black frames to MediaRecorder.
+    const nativeVideoTrack = recordingCameraTrack;
+    recStream = new MediaStream([nativeVideoTrack, ...aDest.stream.getAudioTracks()]);
+    stopLoop = null; // original track belongs to localStream; keep it running
+    const cameraSettings = nativeVideoTrack.getSettings ? nativeVideoTrack.getSettings() : {};
+    entry('Native camera settings: ' + (cameraSettings.width || '?') + 'x' + (cameraSettings.height || '?') +
+      ' @ ' + (cameraSettings.frameRate || '?') + 'fps state=' + nativeVideoTrack.readyState +
+      ' muted=' + nativeVideoTrack.muted, 'sys');
+    entry('Offline/Raspberry Pi recording — using native camera track (' + mimeType + ')', 'sys');
+  } else {
+    const comp = buildCompositeStream(localVideo, miniRemoteVideo, aDest.stream.getAudioTracks());
+    recStream = comp.stream;
+    stopLoop = comp.stopLoop;
+  }
 
   const recVideoTracks = recStream.getVideoTracks();
   const recAudioTracks = recStream.getAudioTracks();
@@ -8480,16 +8764,66 @@ async function toggleRecordChat() {
   const isLocalMain = (chatUnderlayMode === 'local');
   const mainVideo   = isLocalMain ? localVid : remoteVideo;
 
-  if (!mainVideo || !mainVideo.srcObject || !mainVideo.srcObject.getVideoTracks().length) {
+  if (!linked && !isLocalMain && miniChatVisible) {
+    const localTrack = localStream && localStream.getVideoTracks()[0];
+    if (!localTrack || localTrack.readyState !== 'live' || localTrack._fieldRadioStandby) {
+      _cameraForcedForOfflineMini = await _setCameraActive(true, 'offline recording minicam');
+    }
+  }
+
+  const availableVideo = [mainVideo, localVid, remoteVideo].find(v =>
+    v && v.srcObject && v.srcObject.getVideoTracks().length
+  );
+  if (!availableVideo) {
     entry('No video available to record', 'err'); return;
   }
 
   const remoteStream = (remoteAudio && remoteAudio.srcObject) ||
                        (remoteVideo && remoteVideo.srcObject) || null;
-  const mimeType = preferredMime();
+  let mimeType = preferredMime();
 
-  const W = mainVideo.videoWidth  || 1280;
-  const H = mainVideo.videoHeight || 720;
+  // Raspberry Pi Chromium's hardware video path can render correctly on
+  // screen while returning only black pixels to canvas.captureStream(). Live
+  // recording therefore uses the selected source track directly on Linux ARM.
+  let piModeRecording = document.documentElement.classList.contains('is-pi') ||
+    document.body.classList.contains('is-pi');
+  try { piModeRecording = piModeRecording || localStorage.getItem('bravo_pi_mode') === '1'; } catch(e) {}
+  const isLinuxArmChat = piModeRecording || /(?:Linux[^;)]*(?:arm|aarch64)|armv\d+l)/i.test(
+    (navigator.userAgent || '') + ' ' + (navigator.platform || '')
+  );
+  if (linked && isLinuxArmChat) {
+    const sourceStream = mainVideo && mainVideo.srcObject;
+    const sourceTrack = sourceStream && sourceStream.getVideoTracks().find(track =>
+      track.readyState === 'live' && !track._fieldRadioStandby
+    );
+    if (!sourceTrack) { entry('Pi live recording unavailable — selected video track is not live', 'err'); return; }
+    mimeType = ['video/webm;codecs=vp8,opus', 'video/webm']
+      .find(type => MediaRecorder.isTypeSupported(type)) || mimeType;
+    const audioMix = await buildAudioMix(getLocalAudioTracksForRec(), remoteStream);
+    _chatRec.aCtx = audioMix.ctx;
+    _chatRec.chunks = [];
+    _chatRec.active = true;
+    recChatChunks = _chatRec.chunks;
+    const recStream = new MediaStream([sourceTrack, ...audioMix.dest.stream.getAudioTracks()]);
+    const mr = new MediaRecorder(recStream, { mimeType });
+    _chatRec.recorder = mr;
+    recChat = mr;
+    mr.ondataavailable = event => { if (event.data.size > 0) _chatRec.chunks.push(event.data); };
+    mr.onstop = async () => {
+      try { _chatRec.aCtx.close(); } catch(e) {}
+      _chatRec.active = false; _chatRec.busy = false; recChatBusy = false;
+      const chunks = _chatRec.chunks; _chatRec.chunks = [];
+      await saveRec(chunks, mimeType, 'chat-recording');
+      if (btn) { btn.disabled = false; btn.textContent = '➤ RECORD'; btn.classList.remove('recording'); }
+    };
+    mr.start(1000);
+    if (btn) { btn.textContent = '⏹ Stop'; btn.classList.add('recording'); }
+    entry(`Chat recording started (Pi native ${isLocalMain ? 'local' : 'remote'} main; track=${sourceTrack.label || 'video'})…`, 'ok');
+    return;
+  }
+
+  const W = mainVideo.videoWidth  || availableVideo.videoWidth  || 1280;
+  const H = mainVideo.videoHeight || availableVideo.videoHeight || 720;
   if (!_chatRec.canvas) _chatRec.canvas = document.createElement('canvas');
   _chatRec.canvas.width  = W;
   _chatRec.canvas.height = H;
@@ -8511,6 +8845,7 @@ async function toggleRecordChat() {
   _chatRec.offLocal  = _makeOffscreenVideo(localVid.srcObject);
   const remoteEl     = document.getElementById('remoteVideo');
   _chatRec.offRemote = _makeOffscreenVideo(remoteEl.srcObject || new MediaStream());
+  let addAudioStream = () => {};
 
   function drawPip(c, el) {
     c.save();
@@ -8532,6 +8867,8 @@ async function toggleRecordChat() {
     const rv = document.getElementById('remoteVideo');
     _syncOffscreen(_chatRec.offLocal,  localVid.srcObject);
     _syncOffscreen(_chatRec.offRemote, rv ? rv.srcObject : null);
+    const ra = document.getElementById('remoteAudio');
+    addAudioStream((ra && ra.srcObject) || (rv && rv.srcObject), 1.0);
 
     const isLocal = (chatUnderlayMode === 'local');
     const mainOff = isLocal ? _chatRec.offLocal : _chatRec.offRemote;
@@ -8550,9 +8887,11 @@ async function toggleRecordChat() {
   }
   _chatRec.afId = requestAnimationFrame(drawFrame);
 
-  const { ctx: aCtx, dest: aDest } = await buildAudioMix(
+  const audioMix = await buildAudioMix(
     getLocalAudioTracksForRec(), remoteStream
   );
+  const { ctx: aCtx, dest: aDest } = audioMix;
+  addAudioStream = audioMix.addStream;
   _chatRec.aCtx = aCtx;
 
   const canvasStream = _chatRec.canvas.captureStream(30);
@@ -8612,10 +8951,84 @@ function _parkCameraStream(stream) {
   if (!stream.getVideoTracks().includes(standby)) stream.addTrack(standby);
 }
 
-async function _setCameraActive(active, reason) {
+let _startupCameraRecoveryTimer = null;
+async function _probeLocalCameraPixels(timeoutMs = 2200) {
+  const video = document.getElementById('localVideo');
+  if (!video) return { visible: false, detail: 'no preview element' };
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    try { await video.play(); } catch(e) {}
+    await new Promise(resolve => setTimeout(resolve, 180));
+    if (video.readyState < 2 || !video.videoWidth || !video.videoHeight) continue;
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = 32; canvas.height = 18;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      let total = 0, peak = 0;
+      for (let i = 0; i < pixels.length; i += 4) {
+        const light = (pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3;
+        total += light;
+        if (light > peak) peak = light;
+      }
+      const mean = total / (pixels.length / 4);
+      if (peak > 14 || mean > 4) return { visible: true, detail: 'mean=' + mean.toFixed(1) + ' peak=' + peak.toFixed(0) };
+    } catch(e) {
+      return { visible: true, detail: 'pixel probe unavailable: ' + e.message };
+    }
+  }
+  return { visible: false, detail: 'black/no pixels after ' + timeoutMs + 'ms' };
+}
+
+function _scheduleStartupCameraRecovery() {
+  clearTimeout(_startupCameraRecoveryTimer);
+  _startupCameraRecoveryTimer = setTimeout(async () => {
+    if (loginDisableVideoFlag || !localStream) return;
+    const track = localStream.getVideoTracks()[0] || null;
+    const preview = document.getElementById('localVideo');
+    const hasFrame = !!(preview && preview.readyState >= 2 && preview.videoWidth > 0 && preview.videoHeight > 0);
+    // Windows/macOS/Linux/mobile cameras must never be stopped automatically:
+    // a slow first frame can look black briefly and a needless reacquire can
+    // fail, leaving Video Off.  The affected Pi image identifies itself as CrOS.
+    if (!/CrOS/i.test(navigator.userAgent || '')) {
+      updateLocalVideoState();
+      entry('Startup camera retained — automatic track reset not required on this platform', 'ok');
+      return;
+    }
+    const initialProbe = await _probeLocalCameraPixels(900);
+    if (initialProbe.visible) {
+      setVideoButtons(true);
+      entry('Startup camera retained without reset: ' + initialProbe.detail, 'ok');
+      return;
+    }
+    entry('Startup camera pixel check failed — recovery required: ' + initialProbe.detail, 'sys');
+    // Pi Chromium can report a live, unmuted track and valid video dimensions
+    // while every decoded pixel is black.  A manual Video Off/On fixes that by
+    // closing the combined A/V capture and opening a fresh video-only capture.
+    // Do the same once after login, even when the metadata looks healthy.
+    entry('Startup camera verification: track=' + (track ? track.readyState : 'missing') +
+      ' muted=' + (track ? track.muted : '?') + ' frame=' + hasFrame +
+      ' — performing clean video-only reopen', 'sys');
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      await _setCameraActive(false, 'startup camera reset ' + attempt, true);
+      await new Promise(resolve => setTimeout(resolve, 450));
+      const opened = await _setCameraActive(true, 'login camera recovery ' + attempt);
+      if (!opened) continue;
+      const probe = await _probeLocalCameraPixels();
+      entry('Startup camera pixel check ' + attempt + ': ' + probe.detail, probe.visible ? 'ok' : 'sys');
+      if (probe.visible) return;
+    }
+    entry('Camera remains black after three automatic reopen attempts', 'err');
+  }, 1800);
+}
+
+async function _setCameraActive(active, reason, preserveVideoOnUi = false) {
   if (!localStream) return false;
   const current = localStream.getVideoTracks()[0] || null;
-  if (active && current && !current._fieldRadioStandby && current.readyState !== 'ended') {
+  const currentPreview = document.getElementById('localVideo');
+  const currentHasFrame = !!(currentPreview && currentPreview.readyState >= 2 && currentPreview.videoWidth > 0 && currentPreview.videoHeight > 0);
+  if (active && current && !current._fieldRadioStandby && current.readyState !== 'ended' && !current.muted && currentHasFrame) {
     current.enabled = true; updateLocalVideoState(); sendVideoState(); return true;
   }
   try {
@@ -8627,6 +9040,10 @@ async function _setCameraActive(active, reason) {
       let cam;
       try { cam = await navigator.mediaDevices.getUserMedia({ video, audio: false }); }
       catch(e) { delete video.deviceId; cam = await navigator.mediaDevices.getUserMedia({ video, audio: false }); }
+      if (leftPermanently) {
+        cam.getTracks().forEach(t => { try { t.stop(); } catch(e) {} });
+        return false;
+      }
       replacement = cam.getVideoTracks()[0];
       _forceAspectRatio169(replacement);
     } else {
@@ -8644,9 +9061,20 @@ async function _setCameraActive(active, reason) {
     if (current && current !== replacement) localStream.removeTrack(current);
     if (!localStream.getVideoTracks().includes(replacement)) localStream.addTrack(replacement);
     const localVideo = document.getElementById('localVideo');
-    if (localVideo) { localVideo.srcObject = localStream; try { await localVideo.play(); } catch(e) {} }
+    if (localVideo) {
+      // Rebinding the same MediaStream object is a no-op in Pi Chromium.  Clear
+      // it first and use a fresh wrapper so the video element rebuilds playback.
+      try { localVideo.pause(); } catch(e) {}
+      localVideo.srcObject = null;
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      localVideo.srcObject = new MediaStream(localStream.getTracks());
+      try { await localVideo.play(); } catch(e) {}
+    }
     if (current && current !== replacement && !current._fieldRadioStandby) { try { current.stop(); } catch(e) {} }
-    updateLocalVideoState(); syncMiniVideos(); sendVideoState();
+    if (preserveVideoOnUi) setVideoButtons(true);
+    else updateLocalVideoState();
+    syncMiniVideos();
+    if (!preserveVideoOnUi) sendVideoState();
     if (reason) entry('Camera ' + (active ? 'enabled for ' : 'released after ') + reason, 'sys');
     return true;
   } catch(e) {
@@ -8690,7 +9118,11 @@ async function _activateOfflineRecordingCamera() {
   }
 }
 
+let _videoToggleBusy = false;
 async function toggleVideo() {
+  if (_videoToggleBusy) return;
+  _videoToggleBusy = true;
+  try {
   if (!localStream) return;
   const track = localStream.getVideoTracks()[0];
   const active = !!(track && track.enabled && !track._fieldRadioStandby);
@@ -8700,6 +9132,9 @@ async function toggleVideo() {
   } else {
     if (!await _setCameraActive(true, 'manual video on')) return;
     try { localStorage.setItem('bravo_disable_video', '0'); document.getElementById('loginDisableVideo').checked = false; } catch(e) {}
+  }
+  } finally {
+    _videoToggleBusy = false;
   }
 }
 
@@ -8827,10 +9262,11 @@ let _sysAudioGain    = null;
 let   sysAudioActive = false;
 
 function _ensureMixContext() {
-  if (_mixCtx) return;
-  _mixCtx  = new (window.AudioContext || window.webkitAudioContext)();
-  _mixDest = _mixCtx.createMediaStreamDestination();
-  if (localStream) {
+  if (!_mixCtx) {
+    _mixCtx  = new (window.AudioContext || window.webkitAudioContext)();
+    _mixDest = _mixCtx.createMediaStreamDestination();
+  }
+  if (localStream && !_mixMicNode) {
     try {
       _mixMicNode = _mixCtx.createMediaStreamSource(new MediaStream(localStream.getAudioTracks()));
       _mixMicGain = _mixCtx.createGain();
@@ -9313,6 +9749,7 @@ async function selectCamera(deviceId) {
 // Fullscreen API is still requested as a bonus when available.
 let _fsHideTimer = null;
 let _fsSpeechWasVisible = false;
+let _fsIgnorePressUntil = 0;
 
 function _fsIsActive() {
   return document.body.classList.contains('app-fullscreen');
@@ -9345,31 +9782,72 @@ function _fsRestoreTextBox() {
   syncUnderlayOpacity();
 }
 
+function _syncFsControlsBtn() {
+  const btn = document.getElementById('fsControlsBtn');
+  if (!btn) return;
+  if (!_fsIsActive()) { btn.style.display = 'none'; return; }
+  btn.style.display = '';
+  btn.textContent = document.body.classList.contains('fs-controls-visible') ? 'SHOW FULL SCREEN' : 'SHOW CONTROLS';
+}
+
+// Top-bar equivalent of tapping a blank area — lets a mouse/keyboard user (or
+// anyone who'd rather press a labelled button than guess where "blank" is)
+// show or hide the rest of the controls without leaving full screen.
+function toggleFsControlsView() {
+  if (!_fsIsActive()) return;
+  if (document.body.classList.contains('fs-controls-visible')) {
+    _fsHideControls();
+  } else {
+    _fsShowControls();
+  }
+}
+
 function _fsShowControls() {
   if (!_fsIsActive()) return;
   document.body.classList.remove('fs-controls-hidden');
   document.body.classList.add('fs-controls-visible');
   clearTimeout(_fsHideTimer);
-  // Hide the entire control and text-entry overlay after 20 seconds idle.
-  _fsHideTimer = setTimeout(_fsHideControls, 20000);
+  const hint = document.getElementById('fsHint');
+  if (hint) hint.textContent = 'TAP TO RETURN TO FULL SCREEN';
+  _syncFsControlsBtn();
 }
 
 function _fsHideControls() {
   if (!_fsIsActive()) return;
+  clearTimeout(_fsHideTimer);
   document.body.classList.remove('fs-controls-visible');
   document.body.classList.add('fs-controls-hidden');
+  const hint = document.getElementById('fsHint');
+  if (hint) hint.textContent = 'TAP FOR CONTROLS';
+  _syncFsControlsBtn();
 }
 
-function _fsOnActivity() {
-  if (_fsIsActive()) _fsShowControls();
+let _fsLastTouchAt = 0;
+function _fsOnPress(event) {
+  if (!_fsIsActive() || Date.now() < _fsIgnorePressUntil) return;
+  if (event.type === 'touchstart') _fsLastTouchAt = Date.now();
+  if (event.type === 'click' && Date.now() - _fsLastTouchAt < 700) return;
+  // Pressing any control (button/link/input/etc.) — in the always-visible
+  // top bar or anywhere else — must never also trigger the blank-area
+  // show/hide toggle. This check used to only apply while controls were
+  // already visible, which was fine when the header itself faded out with
+  // everything else; now that the header stays up permanently, it has to
+  // apply unconditionally so pressing GO LIVE / SHOW CONTROLS / Hang Up etc.
+  // doesn't also flip the fullscreen controls state underneath it.
+  if (event.target && event.target.closest &&
+      event.target.closest('button,a,input,select,textarea,audio,[role="button"]')) return;
+  if (document.body.classList.contains('fs-controls-visible')) {
+    _fsHideControls();
+  } else {
+    _fsShowControls();
+  }
 }
 
-// Tap/click anywhere while in app-fullscreen → reveal controls
-document.addEventListener('touchstart', _fsOnActivity, { passive: true });
-document.addEventListener('click',      _fsOnActivity);
-document.addEventListener('mousemove',  _fsOnActivity, { passive: true });
-document.addEventListener('keydown',    _fsOnActivity);
-document.addEventListener('input',      _fsOnActivity);
+// A tap/click toggles controls immediately.
+// Interactive controls do not toggle the overlay, and touch-generated clicks
+// are suppressed so one tap cannot immediately toggle twice.
+document.addEventListener('touchstart', _fsOnPress, { passive: true });
+document.addEventListener('click',      _fsOnPress);
 
 function toggleFullScreen() {
   const btn = document.getElementById('fsChatBtn');
@@ -9377,6 +9855,7 @@ function toggleFullScreen() {
 
   if (goingFs) {
     _fsSpeechWasVisible = _speechVisible;
+    _fsIgnorePressUntil = Date.now() + 500;
     document.body.classList.add('app-fullscreen');
     _fsEnsureTextBox();
     if (btn) { btn.textContent = 'FS ON'; btn.classList.add('active'); }
@@ -9386,16 +9865,18 @@ function toggleFullScreen() {
       if (el.requestFullscreen)            el.requestFullscreen().catch(()=>{});
       else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
     } catch(e) {}
-    _fsShowControls();
+    _fsHideControls();
   } else {
     document.body.classList.remove('app-fullscreen', 'fs-controls-hidden', 'fs-controls-visible');
     clearTimeout(_fsHideTimer);
+    _fsIgnorePressUntil = 0;
     _fsRestoreTextBox();
     if (btn) { btn.textContent = 'FS OFF'; btn.classList.remove('active'); }
     try {
       if (document.exitFullscreen)            document.exitFullscreen().catch(()=>{});
       else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
     } catch(e) {}
+    _syncFsControlsBtn();
   }
 }
 
@@ -9412,6 +9893,7 @@ function _syncRealFsExit() {
     clearTimeout(_fsHideTimer);
     _fsRestoreTextBox();
     if (btn) { btn.textContent = 'FS OFF'; btn.classList.remove('active'); }
+    _syncFsControlsBtn();
   }
 }
 
