@@ -3458,6 +3458,27 @@ function _setAnswerLiveAvailable(available) {
 
 let _callerMicLiveLogged = false;
 let _callerGreetingMicSuppressed = false;
+
+// _ensureCallerMicLiveDuringAnswerWait() and _setCallerGreetingMicSuppressed()
+// can both fire in quick succession (e.g. a late/duplicate 'ring' or
+// 'answeringMode' control frame arriving right as the user clicks GO LIVE).
+// Each used to call sender.replaceTrack() independently and let the promise
+// resolve whenever it liked. Because neither call awaited the other,
+// the *earlier* replaceTrack(silent) call could resolve *after* the later
+// replaceTrack(realTrack) call, leaving Bravo's outgoing sender silently
+// stuck on the silent track even though our own state/log said "mic live".
+// That is what was cutting Bravo's mic out of Alpha's ears while every local
+// log line still claimed the mic was live. Route every sender.replaceTrack()
+// for the mic through one chained queue so calls always finish in the order
+// they were issued, and the last one issued is always the one that wins.
+let _micTrackOpChain = Promise.resolve();
+function _queueMicReplaceTrack(sender, track, onError) {
+  _micTrackOpChain = _micTrackOpChain
+    .then(() => sender.replaceTrack(track))
+    .catch(e => { if (onError) onError(e); });
+  return _micTrackOpChain;
+}
+
 function _ensureCallerMicLiveDuringAnswerWait() {
   if (audioMuted || !call || _callerGreetingMicSuppressed) return;
   try {
@@ -3471,7 +3492,7 @@ function _ensureCallerMicLiveDuringAnswerWait() {
       || (localStream && localStream.getAudioTracks().find(t => t.readyState !== 'ended'));
     if (!sender || !track) return;
     track.enabled = true;
-    if (sender.track !== track) sender.replaceTrack(track).catch(e => entry('Caller microphone restore failed: ' + e.message, 'err'));
+    if (sender.track !== track) _queueMicReplaceTrack(sender, track, e => entry('Caller microphone restore failed: ' + e.message, 'err'));
     if (!_callerMicLiveLogged) {
       _callerMicLiveLogged = true;
       entry('Bravo microphone live while waiting for Alpha to answer', 'ok');
@@ -3489,7 +3510,7 @@ function _setCallerGreetingMicSuppressed(suppressed) {
       if (_mixMicGain) _mixMicGain.gain.value = 0.0;
       const pc = call.peerConnection || call._pc;
       const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
-      if (sender) sender.replaceTrack(getSilentTrack()).catch(() => {});
+      if (sender) _queueMicReplaceTrack(sender, getSilentTrack());
       entry('Bravo microphone paused during Alpha greeting to prevent echo', 'sys');
     } catch(e) { entry('Greeting echo guard: ' + e.message, 'sys'); }
   } else {
