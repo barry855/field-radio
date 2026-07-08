@@ -1,5 +1,5 @@
 
-<!-- DEPLOY TIMESTAMP: 2026-07-07 Europe/London (BST, UTC+01:00) | BRAVO v8.98.0-fs-topbar -->
+<!-- DEPLOY TIMESTAMP: 2026-07-08 11:37 UTC | BRAVO v8.98.3-header-visibility -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — BRAVO -->
@@ -96,16 +96,20 @@
   }
   .header-action-btn {
     background: transparent;
-    border: 1px solid var(--accent2); color: var(--accent2);
-    font-family: 'Share Tech Mono', monospace; font-size: 12px;
-    border-radius: 4px; padding: 3px 8px;
+    border: 1.5px solid var(--accent2); color: var(--accent2);
+    font-family: 'Share Tech Mono', monospace; font-size: 13px;
+    font-weight: 700; letter-spacing: 0.5px;
+    border-radius: 5px; padding: 6px 12px;
     cursor: pointer; line-height: 1; flex-shrink: 0;
     display: inline-flex; align-items: center; justify-content: center;
     white-space: nowrap;
   }
   .header-action-btn:hover { background: var(--btn-hover); border-color: var(--accent2); }
-  .header-action-btn.leave-style { border-color: #fff; color: #fff; background: #000; }
-  .header-action-btn.leave-style:hover { background: #222; }
+  .header-action-btn.leave-style {
+    border: 2px solid #ff4d4d; color: #fff; background: #cc1f1f;
+    font-weight: 800; box-shadow: 0 0 10px rgba(255,60,60,0.55);
+  }
+  .header-action-btn.leave-style:hover { background: #e02929; box-shadow: 0 0 14px rgba(255,60,60,0.75); }
   .header-action-btn.go-live-style { border-color: #44cc88; color: #44cc88; background: #000; font-weight: 700; }
   .header-action-btn.go-live-style:hover { background: #113322; }
   .header-right-btns {
@@ -2128,6 +2132,7 @@ window.addEventListener('orientationchange', function() {
       </div>
     </div>
     <div class="header-right-btns">
+      <button class="header-action-btn go-live-style" id="ownerLiveBtn" onclick="answerOwnVoicemailLive()" title="Take this call live now" style="display:none;">GO LIVE</button>
       <button class="header-action-btn go-live-style" id="answerLiveBtn" onclick="requestLiveSession()" title="Skip the voicemail and go live now" style="display:none;">GO LIVE</button>
       <button class="header-action-btn" id="fsControlsBtn" onclick="toggleFsControlsView()" title="Show/hide on-screen controls" style="display:none;">SHOW CONTROLS</button>
       <button class="header-action-btn" onclick="refreshScreen()" title="Refresh / Reconnect">↺ Refresh</button>
@@ -2684,7 +2689,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.98.0-fs-topbar'; // FS default on entry, always-visible top bar, GO LIVE + SHOW CONTROLS/SHOW FULL SCREEN buttons
+const VERSION = '8.98.3-header-visibility'; // added missing ownerLiveBtn to top row; top-row buttons bigger/bolder; Hang Up made high-contrast red
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
