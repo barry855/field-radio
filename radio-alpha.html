@@ -1,5 +1,5 @@
 
-<!-- DEPLOY TIMESTAMP: 2026-07-07 Europe/London (BST, UTC+01:00) | ALPHA v8.97.22-lamejs -->
+<!-- DEPLOY TIMESTAMP: 2026-07-07 Europe/London (BST, UTC+01:00) | ALPHA v8.98.0-fs-topbar -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
@@ -106,6 +106,8 @@
   .header-action-btn:hover { background: var(--btn-hover); border-color: var(--accent); }
   .header-action-btn.leave-style { border-color: #fff; color: #fff; background: #000; }
   .header-action-btn.leave-style:hover { background: #222; }
+  .header-action-btn.go-live-style { border-color: #44cc88; color: #44cc88; background: #000; font-weight: 700; }
+  .header-action-btn.go-live-style:hover { background: #113322; }
   .header-right-btns {
     display: flex; align-items: center; gap: 6px; margin-left: auto; flex-shrink: 0;
   }
@@ -1474,7 +1476,7 @@
       background: #fff !important; color: #000 !important;
       border: 1px solid #555 !important;
     }
-    #vmPickerBtn, #ownerLiveBtn, #vmBox, #vmPickerOverlay { display: none !important; }
+    #vmPickerBtn, #vmBox, #vmPickerOverlay { display: none !important; }
     /* Row 1: TTS Off | Flip Cam | FS OFF | MINI CAM OFF */
     #ttsChatBtn, #flipChatBtn, #fsChatBtn, #miniChatBtn { display: inline-flex !important; }
     /* Row 2: See Remote | RECORD | Video Off | Mike On | Sys Audio Off | Share Off */
@@ -1800,7 +1802,11 @@
   body.app-fullscreen .shell {
     position: fixed; inset: 0; max-width: none; padding: 0; gap: 0; z-index: 1000;
   }
-  body.app-fullscreen header,
+  body.app-fullscreen header {
+    position: relative; z-index: 1010;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
   body.app-fullscreen .tab-bar {
     position: relative; z-index: 1002;
   }
@@ -1825,7 +1831,6 @@
   }
 
   /* ── FULLSCREEN: auto-hide controls after inactivity ─── */
-  body.app-fullscreen.fs-controls-hidden header,
   body.app-fullscreen.fs-controls-hidden .tab-bar,
   body.app-fullscreen.fs-controls-hidden #paneChat .chat-find-bar,
   body.app-fullscreen.fs-controls-hidden #paneChat .chat-btn-bar-row,
@@ -1839,7 +1844,6 @@
     pointer-events: none;
     transition: opacity 0.4s ease;
   }
-  body.app-fullscreen.fs-controls-visible header,
   body.app-fullscreen.fs-controls-visible .tab-bar,
   body.app-fullscreen.fs-controls-visible #paneChat .chat-find-bar,
   body.app-fullscreen.fs-controls-visible #paneChat .chat-btn-bar-row,
@@ -1868,7 +1872,7 @@
 
   /* ── LANDSCAPE: full-screen video only (mobile/touch only, ACTIVE CALL ONLY) ─── */
   @media (orientation: landscape) and (pointer: coarse) {
-    body.app-fullscreen header, body.app-fullscreen .tab-bar { display: none !important; }
+    body.app-fullscreen .tab-bar { display: none !important; }
     body.app-fullscreen .shell { padding: 0; gap: 0; }
     body.app-fullscreen .tab-content { padding: 0; gap: 0; border: none; border-radius: 0; background: #000; }
     body.app-fullscreen #paneChat { gap: 0; }
@@ -2172,6 +2176,8 @@ window.addEventListener('orientationchange', function() {
       </div>
     </div>
     <div class="header-right-btns">
+      <button class="header-action-btn go-live-style" id="ownerLiveBtn" onclick="answerOwnVoicemailLive()" title="Take this call live now" style="display:none;">GO LIVE</button>
+      <button class="header-action-btn" id="fsControlsBtn" onclick="toggleFsControlsView()" title="Show/hide on-screen controls" style="display:none;">SHOW CONTROLS</button>
       <button class="header-action-btn" onclick="refreshScreen()" title="Refresh / Reconnect">↺ Refresh</button>
       <button class="header-action-btn leave-style" id="leaveChatBtn" onclick="leaveSession()" title="Hang up session">✕ Hang Up</button>
       <button id="helpTouchBtn" onclick="openHelpPanel()" aria-label="Button guide">?</button>
@@ -2728,7 +2734,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.97.22-lamejs'; // Voicemail MP3 conversion now uses lamejs (pure JS, no Worker) — ffmpeg.wasm's own Worker was cross-origin-blocked on GitHub Pages
+const VERSION = '8.98.0-fs-topbar'; // FS default on entry, always-visible top bar, GO LIVE + SHOW CONTROLS/SHOW FULL SCREEN buttons
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -2928,6 +2934,11 @@ function startSession() {
   // Start every login with a clean visible chat. Stored sessions remain
   // available through RESTORE and EXPORT.
   document.getElementById('chat').innerHTML = '';
+  // Full screen is the default on entry. This runs inside the CONNECT
+  // button's click handler so the user-gesture context is preserved for the
+  // real Fullscreen API request. The top bar stays visible regardless (see
+  // app-fullscreen CSS) so GO LIVE / SHOW CONTROLS stay reachable.
+  if (!_fsIsActive()) toggleFullScreen();
 }
 
 // ── Pre-fill last used code + checkbox states on load ────────
@@ -10279,6 +10290,26 @@ function _fsRestoreTextBox() {
   syncUnderlayOpacity();
 }
 
+function _syncFsControlsBtn() {
+  const btn = document.getElementById('fsControlsBtn');
+  if (!btn) return;
+  if (!_fsIsActive()) { btn.style.display = 'none'; return; }
+  btn.style.display = '';
+  btn.textContent = document.body.classList.contains('fs-controls-visible') ? 'SHOW FULL SCREEN' : 'SHOW CONTROLS';
+}
+
+// Top-bar equivalent of tapping a blank area — lets a mouse/keyboard user (or
+// anyone who'd rather press a labelled button than guess where "blank" is)
+// show or hide the rest of the controls without leaving full screen.
+function toggleFsControlsView() {
+  if (!_fsIsActive()) return;
+  if (document.body.classList.contains('fs-controls-visible')) {
+    _fsHideControls();
+  } else {
+    _fsShowControls();
+  }
+}
+
 function _fsShowControls() {
   if (!_fsIsActive()) return;
   document.body.classList.remove('fs-controls-hidden');
@@ -10286,6 +10317,7 @@ function _fsShowControls() {
   clearTimeout(_fsHideTimer);
   const hint = document.getElementById('fsHint');
   if (hint) hint.textContent = 'TAP TO RETURN TO FULL SCREEN';
+  _syncFsControlsBtn();
 }
 
 function _fsHideControls() {
@@ -10295,6 +10327,7 @@ function _fsHideControls() {
   document.body.classList.add('fs-controls-hidden');
   const hint = document.getElementById('fsHint');
   if (hint) hint.textContent = 'TAP FOR CONTROLS';
+  _syncFsControlsBtn();
 }
 
 let _fsLastTouchAt = 0;
@@ -10302,7 +10335,14 @@ function _fsOnPress(event) {
   if (!_fsIsActive() || Date.now() < _fsIgnorePressUntil) return;
   if (event.type === 'touchstart') _fsLastTouchAt = Date.now();
   if (event.type === 'click' && Date.now() - _fsLastTouchAt < 700) return;
-  if (document.body.classList.contains('fs-controls-visible') && event.target && event.target.closest &&
+  // Pressing any control (button/link/input/etc.) — in the always-visible
+  // top bar or anywhere else — must never also trigger the blank-area
+  // show/hide toggle. This check used to only apply while controls were
+  // already visible, which was fine when the header itself faded out with
+  // everything else; now that the header stays up permanently, it has to
+  // apply unconditionally so pressing GO LIVE / SHOW CONTROLS / Hang Up etc.
+  // doesn't also flip the fullscreen controls state underneath it.
+  if (event.target && event.target.closest &&
       event.target.closest('button,a,input,select,textarea,audio,[role="button"]')) return;
   if (document.body.classList.contains('fs-controls-visible')) {
     _fsHideControls();
@@ -10344,6 +10384,7 @@ function toggleFullScreen() {
       if (document.exitFullscreen)            document.exitFullscreen().catch(()=>{});
       else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
     } catch(e) {}
+    _syncFsControlsBtn();
   }
 }
 
@@ -10360,6 +10401,7 @@ function _syncRealFsExit() {
     clearTimeout(_fsHideTimer);
     _fsRestoreTextBox();
     if (btn) { btn.textContent = 'FS OFF'; btn.classList.remove('active'); }
+    _syncFsControlsBtn();
   }
 }
 
