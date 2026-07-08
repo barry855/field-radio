@@ -1868,7 +1868,7 @@
     transition: opacity 0.4s ease;
   }
   body.app-fullscreen.fs-controls-hidden #fsHint,
-  body.app-fullscreen.fs-controls-visible #fsHint { display: block; }
+  body.app-fullscreen.fs-controls-visible #fsHint { display: none; }
 
   /* ── LANDSCAPE: full-screen video only (mobile/touch only, ACTIVE CALL ONLY) ─── */
   @media (orientation: landscape) and (pointer: coarse) {
@@ -6344,6 +6344,7 @@ let _answeringDeadlineAt = 0;
 let _hardAnswerDeadlineAt = 0;
 let _hardAnswerTimer = null;
 let _hardAnswerWatchdog = null;
+let _amDeferredForIce = false; // true once we've already given an ICE-connected call its one grace window
 
 function _clearHardAnswerDeadline() {
   clearTimeout(_hardAnswerTimer);
@@ -6374,6 +6375,7 @@ function _clearAnsweringModeTimer() {
   _answeringModeTimer = null;
   _answeringModeWatchdog = null;
   _answeringDeadlineAt = 0;
+  _amDeferredForIce = false;
 }
 
 function _checkAnsweringModeDeadline() {
@@ -6407,6 +6409,24 @@ function _enterAnsweringMachineMode() {
   _answeringModeWatchdog = null;
   _answeringDeadlineAt = 0;
   if (linked || leftPermanently || _answeringMachineMode) return;
+  // If the current call's ICE has already connected, a real link is likely
+  // seconds away (its 'track'/'stream' events just haven't fired yet).
+  // Force-closing it here would null `call` while those events are still in
+  // flight, and attachCall()'s stale-call guard would then silently drop
+  // them — leaving Alpha connected-but-deaf. Give it one short grace window
+  // to finish linking before falling back to AM mode.
+  if (call && !_amDeferredForIce) {
+    const _pc = call.peerConnection || call._pc;
+    const _iceState = _pc && _pc.iceConnectionState;
+    if (_iceState === 'connected' || _iceState === 'completed') {
+      _amDeferredForIce = true;
+      entry('AM deadline reached but ICE is ' + _iceState + ' — giving the link 5s to complete', 'sys');
+      _answeringDeadlineAt = Date.now() + 5000;
+      _answeringModeTimer = setTimeout(_checkAnsweringModeDeadline, 5000);
+      if (!_answeringModeWatchdog) _answeringModeWatchdog = setInterval(_checkAnsweringModeDeadline, 5000);
+      return;
+    }
+  }
   _answeringMachineMode = true;
   _peerGeneration++; // stop any active presence-poll-and-dial loop
   clearTimeout(retryTimer);
@@ -8253,6 +8273,12 @@ function _finishOwnerLiveTakeover() {
   syncControls();
   entry('Voicemail saved — live session started', 'ok');
   clearLocalChatDisplayForTakeover();
+  const _raTk = document.getElementById('remoteAudio');
+  entry('DIAG: owner live takeover complete — remoteAudio srcObject=' +
+    (_raTk && _raTk.srcObject ? 'set' : 'null') + ' paused=' + (_raTk ? _raTk.paused : 'n/a') +
+    ' muted=' + (_raTk ? _raTk.muted : 'n/a') + ' volume=' + (_raTk ? _raTk.volume : 'n/a'), 'sys');
+  if (_raTk) _raTk.muted = false;
+  ensureRemoteAudioPlaying();
 }
 
 function answerOwnVoicemailLive() {
@@ -8284,6 +8310,16 @@ document.addEventListener('click', event => {
     duplexBar.className = 'duplex-overlay live';
     syncControls();
     entry('Live session requested - Bravo voicemail cancelled', 'ok');
+    // Force-reassert remoteAudio playback right here, inside a genuine user
+    // gesture — a watchdog-driven play() a few seconds later can be silently
+    // rejected by browser autoplay policy if this is the first real audio
+    // playback attempt of the session.
+    const _raLive = document.getElementById('remoteAudio');
+    entry('DIAG: go-live (cancel Bravo VM) — remoteAudio srcObject=' +
+      (_raLive && _raLive.srcObject ? 'set' : 'null') + ' paused=' + (_raLive ? _raLive.paused : 'n/a') +
+      ' muted=' + (_raLive ? _raLive.muted : 'n/a') + ' volume=' + (_raLive ? _raLive.volume : 'n/a'), 'sys');
+    if (_raLive) _raLive.muted = false;
+    ensureRemoteAudioPlaying();
     return;
   }
   if (linked && _answeringMachineMode && !_attended) _markAttended(event);
@@ -8306,6 +8342,14 @@ function _markAttended(event, suppressCamera) {
   if (_answeringMachineMode && !_ownerTakeoverPending) {
     try { dcSend({ __control: 'answeringMode', active: false, station: 'ALPHA' }); } catch(e) {}
   }
+  // Force-reassert remoteAudio playback right here, inside the user gesture
+  // that triggered attendance — see matching comment above.
+  const _raAtt = document.getElementById('remoteAudio');
+  entry('DIAG: call attended — remoteAudio srcObject=' +
+    (_raAtt && _raAtt.srcObject ? 'set' : 'null') + ' paused=' + (_raAtt ? _raAtt.paused : 'n/a') +
+    ' muted=' + (_raAtt ? _raAtt.muted : 'n/a') + ' volume=' + (_raAtt ? _raAtt.volume : 'n/a'), 'sys');
+  if (_raAtt) _raAtt.muted = false;
+  ensureRemoteAudioPlaying();
   if (_vmActive) {
     entry('Call attended — stopping voicemail recording', 'sys');
     _stopVoicemail();
