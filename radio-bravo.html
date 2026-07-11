@@ -6650,7 +6650,8 @@ function attachDataConn(dc) {
     const f = obj || decodeEmbeddedControl(text);
     if (f) {
       if (f.__control === 'video') { updateRemoteVideoState(f.enabled, f.hasTrack !== false); return; }
-      if (f.__control === 'leave') { handleRemoteLeave(); return; }
+      if (f.__control === 'recordingStatus') { rememberRemoteRecordingStatus(f.recordStatus || f.status || ''); return; }
+      if (f.__control === 'leave') { rememberRemoteRecordingStatus(f.recordStatus || f.status || ''); handleRemoteLeave(); return; }
       // clearChat control intentionally not handled — CLEAR is local-only on each unit.
       if (f.__control === 'deleteMsg') { deleteBubble(f.ts, false); return; }
       if (f.__control === 'liveSession') {
@@ -7460,6 +7461,7 @@ function saveRecordingIfActive(includeLocal = false) {
     const btn2 = document.getElementById('recBtn2');
     if (btn2) { btn2.textContent = '➤ RECORD'; btn2.classList.remove('recording'); }
     recRemoteBusy = true;
+    sendRecordingStatus();
     recRemote.stop();
   }
   if (includeLocal && recLocal && recLocal.state === 'recording') {
@@ -7467,6 +7469,7 @@ function saveRecordingIfActive(includeLocal = false) {
     const btn = document.getElementById('recBtn');
     if (btn) { btn.textContent = '➤ RECORD'; btn.classList.remove('recording'); }
     recLocalBusy = true;
+    sendRecordingStatus();
     recLocal.stop();
   }
   if (recChat && recChat.state === 'recording') {
@@ -7474,6 +7477,7 @@ function saveRecordingIfActive(includeLocal = false) {
     const btnC = document.getElementById('recChatBtn');
     if (btnC) { btnC.textContent = '➤ RECORD'; btnC.classList.remove('recording'); }
     recChatBusy = true;
+    sendRecordingStatus();
     recChat.stop();
   }
 }
@@ -7483,6 +7487,7 @@ function saveRecordingIfActive(includeLocal = false) {
 let leftPermanently = false;
 let remotePeerLeft = false;
 let peerRefreshing  = false;  // true when either side is doing a refresh-reload
+let _remoteLoggedOutRecordingStatus = '';
 
 function exportSysLog() {
   try {
@@ -7501,6 +7506,7 @@ function exportSysLog() {
 function leaveSession() {
   saveSessionSnapshot();
   leftPermanently = true;
+  const recordStatus = getLoggedOutRecordingStatus();
   clearTimeout(_startupCameraRecoveryTimer); _startupCameraRecoveryTimer = null;
   // Privacy: release video immediately.  Audio/data may remain for the brief
   // leave-message grace period, but the camera must not.
@@ -7518,7 +7524,7 @@ function leaveSession() {
   setVideoButtons(false);
   saveSpeechDraft();
   // Notify remote peer before disconnecting
-  try { dcSend({ __control: 'leave' }); } catch(e) {}
+  try { dcSend({ __control: 'leave', recordStatus }); } catch(e) {}
   _doLeave();
 }
 
@@ -7531,15 +7537,19 @@ document.addEventListener('keydown', event => {
   if (!leftPermanently) leaveSession();
 });
 
-function getLoggedOutRecordingStatus() {
+function getLocalRecordingStatus() {
   const parts = [];
   const add = (label, rec, busy) => {
-    if (busy || (rec && rec.state && rec.state !== 'inactive')) {
+    if (busy) {
+      parts.push(label + ': saving');
+    } else if (rec && rec.state === 'recording') {
+      parts.push(label + ': recording');
+    } else if (rec && rec.state && rec.state !== 'inactive') {
       parts.push(label + ': saving');
     }
   };
   if (_vmActive || (_vmRec && _vmRec.state && _vmRec.state !== 'inactive')) {
-    parts.push('Voicemail: saving');
+    parts.push('Voicemail: ' + (_vmActive ? 'recording' : 'saving'));
   }
   add('Remote recording', recRemote, recRemoteBusy);
   add('Local recording', recLocal, recLocalBusy);
@@ -7550,6 +7560,26 @@ function getLoggedOutRecordingStatus() {
     }
   } catch(e) {}
   return parts.length ? ('Recording status: ' + parts.join(' | ')) : 'Recording status: idle';
+}
+
+function rememberRemoteRecordingStatus(status) {
+  if (!status || typeof status !== 'string') return;
+  _remoteLoggedOutRecordingStatus = status;
+}
+
+function sendRecordingStatus() {
+  try { dcSend({ __control: 'recordingStatus', recordStatus: getLocalRecordingStatus() }); } catch(e) {}
+}
+
+function getLoggedOutRecordingStatus() {
+  const local = getLocalRecordingStatus();
+  const remote = _remoteLoggedOutRecordingStatus || '';
+  if (remote && remote !== 'Recording status: idle') {
+    const detail = remote.replace(/^Recording status:\s*/, '');
+    if (local === 'Recording status: idle') return 'Recording status: Remote unit: ' + detail;
+    return local + ' | Remote unit: ' + detail;
+  }
+  return local;
 }
 
 function _doLeave() {
@@ -8677,6 +8707,7 @@ async function toggleRecordRemote() {
 
   if (recRemote && recRemote.state === 'recording') {
     recRemoteBusy = true;
+    sendRecordingStatus();
     recRemote.stop();
     btn.textContent = '⏳ SAVING'; btn.classList.remove('recording'); btn.disabled = true;
     entry('Remote recording stopped — saving…', 'sys');
@@ -8706,9 +8737,11 @@ async function toggleRecordRemote() {
   recRemote.onstop = async () => {
     await saveRec(recRemoteChunks, mimeType, 'remote');
     recRemoteBusy = false;
+    sendRecordingStatus();
     btn.disabled = false; btn.textContent = '➤ RECORD';
   };
   recRemote.start(1000);
+  sendRecordingStatus();
   btn.textContent = '⏹ Stop'; btn.classList.add('recording');
   entry('Remote recording started…', 'ok');
 }
@@ -8719,6 +8752,7 @@ async function toggleRecordLocal() {
 
   if (recLocal && recLocal.state === 'recording') {
     recLocalBusy = true;
+    sendRecordingStatus();
     recLocal.stop();
     btn.textContent = '⏳ SAVING'; btn.classList.remove('recording'); btn.disabled = true;
     entry('Local recording stopped — saving…', 'sys');
@@ -8852,9 +8886,11 @@ async function toggleRecordLocal() {
     if (_cameraForcedForLocalRecording) await _setCameraActive(false, 'local recording');
     _cameraForcedForLocalRecording = false;
     recLocalBusy = false;
+    sendRecordingStatus();
     btn.disabled = false; btn.textContent = '➤ RECORD';
   };
   recLocal.start(1000);
+  sendRecordingStatus();
   btn.textContent = '⏹ Stop'; btn.classList.add('recording');
   entry('Local recording started…', 'ok');
 }
@@ -8902,6 +8938,7 @@ async function toggleRecordChat() {
   if (_chatRec.active && _chatRec.recorder && _chatRec.recorder.state === 'recording') {
     _chatRec.busy = true;
     recChatBusy   = true;
+    sendRecordingStatus();
     _chatRec.recorder.stop();
     if (btn) { btn.textContent = '⏳ SAVING'; btn.classList.remove('recording'); btn.disabled = true; }
     return;
@@ -8963,11 +9000,13 @@ async function toggleRecordChat() {
     mr.onstop = async () => {
       try { _chatRec.aCtx.close(); } catch(e) {}
       _chatRec.active = false; _chatRec.busy = false; recChatBusy = false;
+      sendRecordingStatus();
       const chunks = _chatRec.chunks; _chatRec.chunks = [];
       await saveRec(chunks, mimeType, 'chat-recording');
       if (btn) { btn.disabled = false; btn.textContent = '➤ RECORD'; btn.classList.remove('recording'); }
     };
     mr.start(1000);
+    sendRecordingStatus();
     if (btn) { btn.textContent = '⏹ Stop'; btn.classList.add('recording'); }
     entry(`Chat recording started (Pi native ${isLocalMain ? 'local' : 'remote'} main; track=${sourceTrack.label || 'video'})…`, 'ok');
     return;
@@ -9067,6 +9106,7 @@ async function toggleRecordChat() {
     _chatRec.active   = false;
     _chatRec.busy     = false;
     recChatBusy       = false;
+    sendRecordingStatus();
     const chunks = _chatRec.chunks;
     _chatRec.chunks   = [];
     await saveRec(chunks, mimeType, 'chat-recording');
@@ -9074,6 +9114,7 @@ async function toggleRecordChat() {
   };
 
   mr.start(1000);
+  sendRecordingStatus();
   if (btn) { btn.textContent = '⏹ Stop'; btn.classList.add('recording'); }
   entry(`Chat recording started (${isLocalMain ? 'local' : 'remote'} main${_chatRec.showPip ? ' + PiP' : ''})…`, 'ok');
 }
@@ -10392,7 +10433,7 @@ window.addEventListener('pagehide', (ev) => {
   if (ev.persisted) return; // page is being cached (bfcache), not closing
   saveSpeechDraft();
   if (!leftPermanently && !peerRefreshing) {
-    try { dcSend({ __control: 'leave' }); } catch(e) {}
+    try { dcSend({ __control: 'leave', recordStatus: getLoggedOutRecordingStatus() }); } catch(e) {}
   }
   // Always release camera/mic so the OS indicator clears immediately
   if (localStream) {
