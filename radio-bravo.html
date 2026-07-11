@@ -6620,6 +6620,7 @@ function attachDataConn(dc) {
     const sb = document.getElementById('sendBtn'); if (sb) sb.disabled = false;
     const cw = document.getElementById('cwSendBtn'); if (cw) cw.disabled = false;
     sendVideoState();
+    sendRecordingStatus();
     // Tell Alpha that Bravo is handling this call unattended. This keeps
     // Alpha in WAITING throughout the rings, greeting and VM countdown.
     if (_answeringCallReceiver) {
@@ -7488,6 +7489,7 @@ let leftPermanently = false;
 let remotePeerLeft = false;
 let peerRefreshing  = false;  // true when either side is doing a refresh-reload
 let _remoteLoggedOutRecordingStatus = '';
+let _recordingStatusHeartbeat = null;
 
 function exportSysLog() {
   try {
@@ -7567,8 +7569,28 @@ function rememberRemoteRecordingStatus(status) {
   _remoteLoggedOutRecordingStatus = status;
 }
 
+function _sendRecordingStatusOnce(status) {
+  try { dcSend({ __control: 'recordingStatus', recordStatus: status || getLocalRecordingStatus() }); } catch(e) {}
+}
+
 function sendRecordingStatus() {
-  try { dcSend({ __control: 'recordingStatus', recordStatus: getLocalRecordingStatus() }); } catch(e) {}
+  const status = getLocalRecordingStatus();
+  _sendRecordingStatusOnce(status);
+  if (status !== 'Recording status: idle') {
+    if (!_recordingStatusHeartbeat) {
+      _recordingStatusHeartbeat = setInterval(() => {
+        const current = getLocalRecordingStatus();
+        _sendRecordingStatusOnce(current);
+        if (current === 'Recording status: idle') {
+          clearInterval(_recordingStatusHeartbeat);
+          _recordingStatusHeartbeat = null;
+        }
+      }, 1000);
+    }
+  } else if (_recordingStatusHeartbeat) {
+    clearInterval(_recordingStatusHeartbeat);
+    _recordingStatusHeartbeat = null;
+  }
 }
 
 function getLoggedOutRecordingStatus() {
