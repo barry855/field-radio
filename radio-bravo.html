@@ -22,7 +22,7 @@
   @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono:display=swap&family=Orbitron:wght@400;700;900&display=swap');
 
   :root {
-    --bg:         #6b7280;
+    --bg:         #000000;
     --panel:      #4b5563;
     --border:     #374151;
     --accent:     #00d4ff;
@@ -132,6 +132,15 @@
     font-size: 11px; color: var(--text-dim);
     text-transform: uppercase; letter-spacing: 1px;
   }
+  .route-item {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 10px; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .route-value { color: #777; font-weight: 700; }
+  .route-value.direct { color: var(--accent2); }
+  .route-value.relay { color: #ffcc44; }
+  .route-value.checking { color: var(--warn); }
   .led {
     width: 10px; height: 10px; border-radius: 50%;
     background: #333; box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);
@@ -1885,6 +1894,12 @@
     backdrop-filter: blur(3px);
     -webkit-backdrop-filter: blur(3px);
   }
+  body.app-fullscreen header {
+    display: flex !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    visibility: visible !important;
+  }
   body.app-fullscreen #paneChat #speechPanel.speech-open {
     display: flex !important;
     position: fixed !important;
@@ -1912,6 +1927,35 @@
     opacity: 1;
     pointer-events: auto;
     transform: translateY(0);
+  }
+  body.app-fullscreen #logPanel.syslog-open {
+    display: flex !important;
+    position: fixed !important;
+    top: 74px !important;
+    right: 8px !important;
+    bottom: 104px !important;
+    left: 8px !important;
+    z-index: 1005 !important;
+    max-height: none !important;
+  }
+  body.app-fullscreen #logPanel.syslog-open .log {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  html.is-pi body.app-fullscreen #logPanel.syslog-open {
+    top: 58px !important;
+    bottom: 118px !important;
+  }
+  body.app-fullscreen.syslog-visible #paneChat .chat-find-bar,
+  body.app-fullscreen.syslog-visible #paneChat .chat-btn-bar-row,
+  body.app-fullscreen.syslog-visible #paneChat .gain-row,
+  body.app-fullscreen.syslog-visible #paneChat .zoom-row,
+  body.app-fullscreen.syslog-visible #paneChat #speechPanel,
+  body.app-fullscreen.syslog-visible #paneChat #chatToolsWrap,
+  body.app-fullscreen.syslog-visible #paneChat #translateBar,
+  body.app-fullscreen.syslog-visible #paneChat .chat-panel > .panel-label {
+    display: none !important;
   }
 
   .media-btn,
@@ -2126,6 +2170,9 @@ window.addEventListener('orientationchange', function() {
         </div>
         <span id="qualityLabel" style="color:var(--text-dim);font-size:10px;">--</span>
       </div>
+      <div class="route-item" id="routeDisplay" title="WebRTC path: Direct uses peer-to-peer; Relay uses TURN">
+        <span>ROUTE</span><span class="route-value checking" id="routeLabel">CHECKING</span>
+      </div>
       <div class="user-left-notice" id="userLeftNotice">
         <span>User left chat</span>
         <button class="leave-chat-btn" onclick="leaveSession()">Hang Up</button>
@@ -2212,8 +2259,8 @@ window.addEventListener('orientationchange', function() {
       </div>
       <div class="gain-row">
         <div class="gain-label"><span>MIKE</span><span>GAIN</span></div>
-        <input type="range" id="micGainSlider" min="0" max="3" step="0.05" value="1.35" oninput="applyMicGain(this.value)">
-        <span class="gain-val" id="micGainVal">1.35×</span>
+        <input type="range" id="micGainSlider" min="0" max="3" step="0.05" value="3" oninput="applyMicGain(this.value)">
+        <span class="gain-val" id="micGainVal">3.00×</span>
       </div>
       <div class="gain-row">
         <div class="gain-label"><span>SPKR</span><span>VOL</span></div>
@@ -2264,8 +2311,8 @@ window.addEventListener('orientationchange', function() {
       <div class="gain-row" style="flex-shrink:0;">
         <div class="gain-label"><span>MIKE</span><span>GAIN</span></div>
         <select id="micInputSelect" class="flip-cam-select mic-input-select" title="Microphone input" onchange="switchMicrophone(this.value)"><option value="">MIC: DEFAULT</option></select>
-        <input type="range" id="micGainSliderChat" min="0" max="3" step="0.05" value="1.35" oninput="applyMicGain(this.value)" style="flex:1; min-width:0;">
-        <span class="gain-val" id="micGainValChat">1.35×</span>
+        <input type="range" id="micGainSliderChat" min="0" max="3" step="0.05" value="3" oninput="applyMicGain(this.value)" style="flex:1; min-width:0;">
+        <span class="gain-val" id="micGainValChat">3.00×</span>
         <button class="speech-top-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input" style="flex-shrink:0; white-space:nowrap;">Talk/Type in Chat</button>
       </div>
       <div class="gain-row" style="flex-shrink:0;">
@@ -2492,10 +2539,14 @@ window.addEventListener('orientationchange', function() {
       </div>
       <div class="log-panel collapsed" id="logPanel">
         <div class="panel-label" onclick="toggleLogPanel()">SYS LOG<span class="log-toggle-arrow" id="logToggleArrow">▾</span>
-          <button class="log-action-btn" onclick="event.stopPropagation();saveLog()" title="Save log to file">SAVE</button>
+          <button class="log-action-btn" onclick="event.stopPropagation();saveLog()" title="Save log as HTML">SAVE</button>
+          <button class="log-action-btn" onclick="event.stopPropagation();saveLogText()" title="Save log as plain text">TXT</button>
           <button class="log-action-btn" id="logCopyBtn" onclick="event.stopPropagation();copyLog()" title="Copy log to clipboard">COPY</button>
+          <button class="log-action-btn" onclick="event.stopPropagation();snapshotDiagnostics()" title="Add connection diagnostics to log">DIAG</button>
           <button class="log-action-btn" onclick="event.stopPropagation();clearLog()" title="Clear log">CLEAR</button>
-          <button class="log-action-btn" id="logStopBtn" onclick="event.stopPropagation();toggleLogStop()" title="Pause/resume log">STOP</button>
+          <button class="log-action-btn" id="logAutoBtn" onclick="event.stopPropagation();toggleLogAutoScroll()" title="Toggle log auto-scroll">AUTO</button>
+          <button class="log-action-btn" id="logStopBtn" onclick="event.stopPropagation();toggleLogStop()" title="Pause/resume log">PAUSE</button>
+          <button class="log-action-btn" id="logExitBtn" onclick="event.stopPropagation();exitSysLogView()" title="Exit SYS LOG">EXIT</button>
         </div>
         <div class="log" id="log"><span class="log-entry sys">16:00:39  PREFILL: code=null vid=false aud=false</span></div>
       </div>
@@ -2699,19 +2750,20 @@ const ICE_SERVERS = [
   { urls: 'stun:stun2.l.google.com:19302' },
   { urls: 'stun:stun3.l.google.com:19302' },
   { urls: 'stun:stun.cloudflare.com:3478' },
-  { urls: 'stun:openrelay.metered.ca:80' },
-  { urls: 'turn:openrelay.metered.ca:80',              username: 'openrelayproject', credential: 'openrelayproject' },
-  { urls: 'turn:openrelay.metered.ca:443',             username: 'openrelayproject', credential: 'openrelayproject' },
-  { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
-  { urls: 'turns:openrelay.metered.ca:443',            username: 'openrelayproject', credential: 'openrelayproject' },
-  { urls: 'turns:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+  // Metered.ca disabled while the monthly limit is reached. Restore after reset if needed.
+  // { urls: 'stun:openrelay.metered.ca:80' },
+  // { urls: 'turn:openrelay.metered.ca:80',              username: 'openrelayproject', credential: 'openrelayproject' },
+  // { urls: 'turn:openrelay.metered.ca:443',             username: 'openrelayproject', credential: 'openrelayproject' },
+  // { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+  // { urls: 'turns:openrelay.metered.ca:443',            username: 'openrelayproject', credential: 'openrelayproject' },
+  // { urls: 'turns:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
   // Personal Metered.ca TURN credentials — independent fallback in case the
   // shared Open Relay demo credentials above are rate-limited or rejected.
-  { urls: 'stun:stun.relay.metered.ca:80' },
-  { urls: 'turn:global.relay.metered.ca:80',                username: '554e937371f5aaea2f60db1f', credential: 'iz048pNn3xMiESzK' },
-  { urls: 'turn:global.relay.metered.ca:80?transport=tcp',  username: '554e937371f5aaea2f60db1f', credential: 'iz048pNn3xMiESzK' },
-  { urls: 'turn:global.relay.metered.ca:443',               username: '554e937371f5aaea2f60db1f', credential: 'iz048pNn3xMiESzK' },
-  { urls: 'turns:global.relay.metered.ca:443?transport=tcp', username: '554e937371f5aaea2f60db1f', credential: 'iz048pNn3xMiESzK' }
+  // { urls: 'stun:stun.relay.metered.ca:80' },
+  // { urls: 'turn:global.relay.metered.ca:80',                username: '554e937371f5aaea2f60db1f', credential: 'iz048pNn3xMiESzK' },
+  // { urls: 'turn:global.relay.metered.ca:80?transport=tcp',  username: '554e937371f5aaea2f60db1f', credential: 'iz048pNn3xMiESzK' },
+  // { urls: 'turn:global.relay.metered.ca:443',               username: '554e937371f5aaea2f60db1f', credential: 'iz048pNn3xMiESzK' },
+  // { urls: 'turns:global.relay.metered.ca:443?transport=tcp', username: '554e937371f5aaea2f60db1f', credential: 'iz048pNn3xMiESzK' }
 ];
 
 let MY_ID, REMOTE_ID;
@@ -2853,8 +2905,8 @@ function startSession() {
     const b = document.getElementById(id);
     if (b) { b.textContent = 'Mike On'; b.classList.remove('active-on','disabled-state'); }
   });
-  // Reset video button UI to On (applyStreamFlags will re-apply if needed)
-  setVideoButtons(true);
+  // Receiver setup is audio-only; the camera is opened when the call goes live.
+  setVideoButtons(false);
   loginDisableVideoFlag = disVidChecked;
   loginDisableAudioFlag = disAudChecked;
   entry('LOGIN: disableVideo=' + disVidChecked + ' disableAudio=' + disAudChecked + ' v' + VERSION, 'sys');
@@ -3183,11 +3235,11 @@ function prefillLogin() {
     // overlap PeerJS startup with media acquisition and could freeze the page.
     // Prefill mic gain slider from saved value
     const _rawGain = localStorage.getItem('bravo_mic_gain');
-    let savedGain = _rawGain !== null ? parseFloat(_rawGain) : 1.35;
-    if (savedGain === 1 && localStorage.getItem('bravo_gain_135_migrated') !== '1') {
-      savedGain = 1.35;
-      localStorage.setItem('bravo_mic_gain', '1.35');
-      localStorage.setItem('bravo_gain_135_migrated', '1');
+    let savedGain = _rawGain !== null ? parseFloat(_rawGain) : 3;
+    if (isFinite(savedGain) && savedGain < 3 && localStorage.getItem('bravo_gain_300_migrated') !== '1') {
+      savedGain = 3;
+      localStorage.setItem('bravo_mic_gain', '3');
+      localStorage.setItem('bravo_gain_300_migrated', '1');
     }
     const gSlider = document.getElementById('micGainSlider');
     const gLabel  = document.getElementById('micGainVal');
@@ -3358,6 +3410,7 @@ document.getElementById('sessionCode').addEventListener('keydown', e => {
 });
 
 let _logStopped = false;
+let _logAutoScroll = true;
 function entry(msg, cls='sys') {
   if (_logStopped) return;
   const ts = new Date().toTimeString().slice(0,8);
@@ -3365,7 +3418,7 @@ function entry(msg, cls='sys') {
   d.className = 'log-entry ' + cls;
   d.textContent = `${ts}  ${msg}`;
   logEl.appendChild(d);
-  logEl.scrollTop = logEl.scrollHeight;
+  if (_logAutoScroll) logEl.scrollTop = logEl.scrollHeight;
 
 }
 
@@ -3458,6 +3511,27 @@ function _setAnswerLiveAvailable(available) {
 
 let _callerMicLiveLogged = false;
 let _callerGreetingMicSuppressed = false;
+
+// _ensureCallerMicLiveDuringAnswerWait() and _setCallerGreetingMicSuppressed()
+// can both fire in quick succession (e.g. a late/duplicate 'ring' or
+// 'answeringMode' control frame arriving right as the user clicks GO LIVE).
+// Each used to call sender.replaceTrack() independently and let the promise
+// resolve whenever it liked. Because neither call awaited the other,
+// the *earlier* replaceTrack(silent) call could resolve *after* the later
+// replaceTrack(realTrack) call, leaving Bravo's outgoing sender silently
+// stuck on the silent track even though our own state/log said "mic live".
+// That is what was cutting Bravo's mic out of Alpha's ears while every local
+// log line still claimed the mic was live. Route every sender.replaceTrack()
+// for the mic through one chained queue so calls always finish in the order
+// they were issued, and the last one issued is always the one that wins.
+let _micTrackOpChain = Promise.resolve();
+function _queueMicReplaceTrack(sender, track, onError) {
+  _micTrackOpChain = _micTrackOpChain
+    .then(() => sender.replaceTrack(track))
+    .catch(e => { if (onError) onError(e); });
+  return _micTrackOpChain;
+}
+
 function _ensureCallerMicLiveDuringAnswerWait() {
   if (audioMuted || !call || _callerGreetingMicSuppressed) return;
   try {
@@ -3471,7 +3545,7 @@ function _ensureCallerMicLiveDuringAnswerWait() {
       || (localStream && localStream.getAudioTracks().find(t => t.readyState !== 'ended'));
     if (!sender || !track) return;
     track.enabled = true;
-    if (sender.track !== track) sender.replaceTrack(track).catch(e => entry('Caller microphone restore failed: ' + e.message, 'err'));
+    if (sender.track !== track) _queueMicReplaceTrack(sender, track, e => entry('Caller microphone restore failed: ' + e.message, 'err'));
     if (!_callerMicLiveLogged) {
       _callerMicLiveLogged = true;
       entry('Bravo microphone live while waiting for Alpha to answer', 'ok');
@@ -3489,7 +3563,7 @@ function _setCallerGreetingMicSuppressed(suppressed) {
       if (_mixMicGain) _mixMicGain.gain.value = 0.0;
       const pc = call.peerConnection || call._pc;
       const sender = pc && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
-      if (sender) sender.replaceTrack(getSilentTrack()).catch(() => {});
+      if (sender) _queueMicReplaceTrack(sender, getSilentTrack());
       entry('Bravo microphone paused during Alpha greeting to prevent echo', 'sys');
     } catch(e) { entry('Greeting echo guard: ' + e.message, 'sys'); }
   } else {
@@ -4965,6 +5039,7 @@ function toggleSysLogView() {
       const l = logPanel.querySelector('#log');
       if (l) setTimeout(() => { l.scrollTop = l.scrollHeight; }, 50);
     }
+    document.body.classList.add('syslog-visible');
     if (btn) { btn.classList.add('active'); }
     setChatBtnsDisabled(true);
   } else {
@@ -4972,10 +5047,15 @@ function toggleSysLogView() {
       logPanel.classList.remove('syslog-open');
       logPanel.classList.add('collapsed');
     }
+    document.body.classList.remove('syslog-visible');
     if (btn) { btn.classList.remove('active'); }
     setChatBtnsDisabled(false);
   }
   syncUnderlayOpacity();
+}
+
+function exitSysLogView() {
+  if (_syslogVisible) toggleSysLogView();
 }
 
 // ── Speech panel toggle + Web Speech API ────────────────────────────────────
@@ -4997,6 +5077,7 @@ function toggleSpeechPanel() {
       _syslogVisible = false;
       const lp = document.getElementById('logPanel');
       if (lp) { lp.classList.remove('syslog-open'); lp.classList.add('collapsed'); }
+      document.body.classList.remove('syslog-visible');
       const lb = document.getElementById('syslogToggleBtn');
       if (lb) { lb.classList.remove('active'); }
     }
@@ -6043,16 +6124,16 @@ async function initMediaOnly() {
 
   function applyAndDial(stream) {
     localStream = stream;
-    if (loginDisableVideoFlag) _parkCameraStream(stream);
+    _parkCameraStream(stream);
     _forceAspectRatio169(stream.getVideoTracks()[0]);
     setupMicGainNode(stream);
     attachAndStartLocalPreview(stream);
-    entry('Media ready - camera follows login preference', 'ok');
+    setVideoButtons(false);
+    entry('Media ready - camera held off while waiting/answering', 'ok');
     syncMiniVideos();
     initFlipCamUI();
     initMicInputUI();
     updateLocalVideoState();
-    if (!loginDisableVideoFlag) _scheduleStartupCameraRecovery();
     if (loginDisableVideoFlag) {
       const vt = stream.getVideoTracks()[0];
       if (vt) { vt.enabled = false; }
@@ -6073,7 +6154,7 @@ async function initMediaOnly() {
 
   navigator.mediaDevices.getUserMedia({
     audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
-    video: loginDisableVideoFlag ? false : videoConstraint
+    video: false
   })
   .then(applyAndDial)
   .catch(e => {
@@ -6083,7 +6164,7 @@ async function initMediaOnly() {
       delete fallbackConstraint.deviceId;
       navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
-        video: loginDisableVideoFlag ? false : fallbackConstraint
+        video: false
       }).then(applyAndDial).catch(e2 => {
         entry('Media error (' + e2.name + ') — falling back to audio-only', 'sys');
         navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false } })
@@ -6167,16 +6248,16 @@ async function init() {
 
   function applyStreamFlags(stream) {
     localStream = stream;
-    if (loginDisableVideoFlag) _parkCameraStream(stream);
+    _parkCameraStream(stream);
     _forceAspectRatio169(stream.getVideoTracks()[0]);
     setupMicGainNode(stream);
     attachAndStartLocalPreview(stream);
-    entry('Media ready - camera follows login preference', 'ok');
+    setVideoButtons(false);
+    entry('Media ready - camera held off while waiting/answering', 'ok');
     syncMiniVideos();
     initFlipCamUI();
     initMicInputUI();
     updateLocalVideoState();
-    if (!loginDisableVideoFlag) _scheduleStartupCameraRecovery();
     if (loginDisableVideoFlag) {
       const vt = stream.getVideoTracks()[0];
       if (vt) { vt.enabled = false; }
@@ -6236,7 +6317,7 @@ async function init() {
 
   navigator.mediaDevices.getUserMedia({
     audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
-    video: loginDisableVideoFlag ? false : videoConstraint
+    video: false
   })
   .then(applyStreamFlags)
   .catch(e => {
@@ -6246,7 +6327,7 @@ async function init() {
       delete fallbackConstraint.deviceId;
       navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
-        video: loginDisableVideoFlag ? false : fallbackConstraint
+        video: false
       }).then(applyStreamFlags).catch(handleMediaError);
       return;
     }
@@ -6602,8 +6683,9 @@ function attachDataConn(dc) {
           _attended = false;
           _setAnswerLiveAvailable(true);
           _ensureCallerMicLiveDuringAnswerWait();
-          // Keep the camera state chosen at login. Answering mode must not
-          // silently park the local camera or override the Video On control.
+          // Answering/leave-message mode is audio-only. Keep the camera hardware
+          // off until both units move into a live session.
+          if (localStream) { _parkCameraStream(localStream); updateLocalVideoState(); sendVideoState(); }
           entry('Alpha answering mode detected — leave a message after the cue or click a blank area to go live', 'sys');
           _vmNotice('— 📼 ALPHA ANSWERING — WAIT FOR THE VOICEMAIL CUE —');
           if (linked) _applyBravoLinkedDisplay(false);
@@ -6616,7 +6698,7 @@ function attachDataConn(dc) {
           _stopRemoteRingTone();
           if (wasWaitingForAlpha) clearLocalChatDisplayForTakeover();
           if (wasWaitingForAlpha) playLiveCueOnce();
-          if (linked && !loginDisableVideoFlag) _setCameraActive(true, 'live session');
+          if (linked && !loginDisableVideoFlag) _setCameraActive(true, 'live session').then(ok => { if (ok) _scheduleStartupCameraRecovery(); });
           if (linked) _applyBravoLinkedDisplay(false);
         }
         return;
@@ -6969,6 +7051,45 @@ function getCallStream() {
 
 // ── Connection quality polling ────────────────────────────────
 let qualityInterval = null;
+let _lastRouteLabel = '';
+
+function updateRouteLabel(label, detail) {
+  const el = document.getElementById('routeLabel');
+  if (!el) return;
+  el.textContent = label || '--';
+  el.className = 'route-value ' + (label === 'Relay' ? 'relay' : label === 'Direct' ? 'direct' : 'checking');
+  if (detail) el.title = detail;
+}
+
+function _candidateFromPair(stats, pair) {
+  const local = pair && (stats.get(pair.localCandidateId) || stats.get(pair.localCandidateId || ''));
+  const remote = pair && (stats.get(pair.remoteCandidateId) || stats.get(pair.remoteCandidateId || ''));
+  const localType = (local && (local.candidateType || local.type)) || pair.localCandidateType || '';
+  const remoteType = (remote && (remote.candidateType || remote.type)) || pair.remoteCandidateType || '';
+  return { localType, remoteType };
+}
+
+function updateConnectionRoute(stats) {
+  let selectedPair = null;
+  stats.forEach(r => {
+    if (r.type === 'transport' && r.selectedCandidatePairId) selectedPair = stats.get(r.selectedCandidatePairId) || selectedPair;
+  });
+  if (!selectedPair) {
+    stats.forEach(r => {
+      if (r.type === 'candidate-pair' && (r.selected || (r.state === 'succeeded' && r.nominated))) selectedPair = r;
+    });
+  }
+  if (!selectedPair) { updateRouteLabel(linked ? 'Checking' : '--'); return; }
+  const route = _candidateFromPair(stats, selectedPair);
+  const isRelay = route.localType === 'relay' || route.remoteType === 'relay';
+  const label = isRelay ? 'Relay' : 'Direct';
+  const detail = 'local=' + (route.localType || '?') + ' remote=' + (route.remoteType || '?');
+  updateRouteLabel(label, detail);
+  if (_lastRouteLabel !== label + detail) {
+    _lastRouteLabel = label + detail;
+    entry('ICE route: ' + label + ' (' + detail + ')', 'sys');
+  }
+}
 
 function startQualityPolling() {
   stopQualityPolling();
@@ -6988,6 +7109,7 @@ function startQualityPolling() {
           if (r.packetsSent != null) sent = r.packetsSent;
         }
       });
+      updateConnectionRoute(stats);
       const lossPct = sent > 0 ? (lost / sent) * 100 : 0;
       updateQuality(rtt, lossPct);
     } catch(e) {}
@@ -6996,6 +7118,8 @@ function startQualityPolling() {
 
 function stopQualityPolling() {
   if (qualityInterval) { clearInterval(qualityInterval); qualityInterval = null; }
+  _lastRouteLabel = '';
+  updateRouteLabel('--');
   updateQuality(null, null);
 }
 
@@ -7119,7 +7243,7 @@ function markLinked() {
   linked = true;
   // Allow the answering-mode control packet to arrive before deciding this is live.
   setTimeout(() => {
-    if (linked && !_alphaAnsweringAvailable && !loginDisableVideoFlag) _setCameraActive(true, 'live session');
+    if (linked && !_alphaAnsweringAvailable && !loginDisableVideoFlag) _setCameraActive(true, 'live session').then(ok => { if (ok) _scheduleStartupCameraRecovery(); });
   }, 350);
   // Keep the receiver ringing after WebRTC connects so the promised five
   // beeps complete. The voicemail timer is armed by the ring sequence itself.
@@ -7395,8 +7519,7 @@ function leaveSession() {
   saveSpeechDraft();
   // Notify remote peer before disconnecting
   try { dcSend({ __control: 'leave' }); } catch(e) {}
-  // Longer delay over HTTPS/relayed WebRTC — DC message must transmit before peer tears down
-  setTimeout(_doLeave, 1500);
+  _doLeave();
 }
 
 document.addEventListener('keydown', event => {
@@ -7408,7 +7531,29 @@ document.addEventListener('keydown', event => {
   if (!leftPermanently) leaveSession();
 });
 
+function getLoggedOutRecordingStatus() {
+  const parts = [];
+  const add = (label, rec, busy) => {
+    if (busy || (rec && rec.state && rec.state !== 'inactive')) {
+      parts.push(label + ': saving');
+    }
+  };
+  if (_vmActive || (_vmRec && _vmRec.state && _vmRec.state !== 'inactive')) {
+    parts.push('Voicemail: saving');
+  }
+  add('Remote recording', recRemote, recRemoteBusy);
+  add('Local recording', recLocal, recLocalBusy);
+  add('Chat recording', recChat, recChatBusy);
+  try {
+    if (_chatRec && (_chatRec.active || _chatRec.busy) && !parts.some(p => p.indexOf('Chat recording:') === 0)) {
+      parts.push('Chat recording: saving');
+    }
+  } catch(e) {}
+  return parts.length ? ('Recording status: ' + parts.join(' | ')) : 'Recording status: idle';
+}
+
 function _doLeave() {
+  const recordStatus = getLoggedOutRecordingStatus();
   saveRecordingIfActive(true);
   clearTimeout(_raPlayTimer); _raPlayTimer = null;  // cancel any pending audio play attempt
   ttsStopAll();
@@ -7447,6 +7592,7 @@ function _doLeave() {
   document.title = 'BRAVO — Field Radio';
   document.body.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;height:100vh;background:#0a1520;color:#f1f5f9;font-family:monospace;text-align:center;padding:20px;">'
     + '<div style="font-size:22px;letter-spacing:2px;font-weight:bold;">SESSION ENDED</div>'
+    + '<div style="font-size:14px;color:#ffcc44;letter-spacing:1px;">' + recordStatus + '</div>'
     + '<div style="font-size:15px;color:#94a3b8;letter-spacing:1px;">You may now close this tab.</div>'
     + '</div>';
 }
@@ -7979,7 +8125,7 @@ function _markAttended(event, suppressCamera) {
     clearLocalChatDisplayForTakeover();
     try { dcSend({ __control: 'liveSession', active: true, station: 'BRAVO' }); } catch(e) {}
   }
-  if (!suppressCamera && !loginDisableVideoFlag && !_alphaAnsweringAvailable) _setCameraActive(true, 'live session');
+  if (!suppressCamera && !loginDisableVideoFlag && !_alphaAnsweringAvailable) _setCameraActive(true, 'live session').then(ok => { if (ok) _scheduleStartupCameraRecovery(); });
   _stopRing(); // answering live cancels any remaining rings and the VM timer
   clearTimeout(_vmTimer); _vmTimer = null;
   _setOwnerLiveAvailable(false);
@@ -8084,9 +8230,9 @@ async function _startVoicemail() {
       if (_vmResetPending) {
         _vmResetPending = false;
         _vmResetIsLeave = false;
-        entry('Answering machine: resetting for next caller…', 'sys');
         clearTimeout(dropTimer);
         remotePeerLeft = false;
+        entry('Answering machine: resetting for next caller…', 'sys');
         if (!leftPermanently) startPeer();
       }
       return;
@@ -8119,9 +8265,9 @@ async function _startVoicemail() {
     if (_vmResetPending) {
       _vmResetPending = false;
       _vmResetIsLeave = false;
-      entry('Answering machine: resetting for next caller…', 'sys');
       clearTimeout(dropTimer);
       remotePeerLeft = false;
+      entry('Answering machine: resetting for next caller…', 'sys');
       if (!leftPermanently) startPeer();
     }
   };
@@ -9767,6 +9913,7 @@ function _fsEnsureTextBox() {
     _syslogVisible = false;
     const logPanel = document.getElementById('logPanel');
     if (logPanel) { logPanel.classList.remove('syslog-open'); logPanel.classList.add('collapsed'); }
+    document.body.classList.remove('syslog-visible');
     const logBtn = document.getElementById('syslogToggleBtn');
     if (logBtn) logBtn.classList.remove('active');
   }
@@ -10078,7 +10225,16 @@ function setupMicGainNode(stream) {
     _micLimiterNode.attack.value = 0.003;
     _micLimiterNode.release.value = 0.15;
     _micGainDest = _micGainCtx.createMediaStreamDestination();
-    const savedGain = (() => { const r = localStorage.getItem('bravo_mic_gain'); return r !== null ? parseFloat(r) : 1.35; })();
+    const savedGain = (() => {
+      const r = localStorage.getItem('bravo_mic_gain');
+      let g = r !== null ? parseFloat(r) : 3;
+      if (isFinite(g) && g < 3 && localStorage.getItem('bravo_gain_300_migrated') !== '1') {
+        g = 3;
+        localStorage.setItem('bravo_mic_gain', '3');
+        localStorage.setItem('bravo_gain_300_migrated', '1');
+      }
+      return g;
+    })();
     _micGainNode.gain.value = isFinite(savedGain) ? savedGain : 1;
     src.connect(_micGainNode);
     _micGainNode.connect(_micLimiterNode);
@@ -10277,6 +10433,34 @@ function copyLog() {
   });
 }
 
+function saveLogText() {
+  const ts = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+  const lines = Array.from(document.querySelectorAll('#log .log-entry'))
+    .map(el => el.textContent).join('\n');
+  const blob = new Blob([lines], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'syslog-' + ts + '.txt';
+  a.click();
+}
+
+function snapshotDiagnostics() {
+  const pc = call && (call.peerConnection || call._pc);
+  const audioSender = pc && pc.getSenders ? pc.getSenders().find(s => s.track && s.track.kind === 'audio') : null;
+  const videoSender = pc && pc.getSenders ? pc.getSenders().find(s => s.track && s.track.kind === 'video') : null;
+  const dataChannel = typeof dc !== 'undefined' ? dc : dataConn;
+  const lines = [
+    'DIAG VERSION=' + VERSION,
+    'DIAG linked=' + linked + ' audioMuted=' + audioMuted + ' videoOff=' + (document.getElementById('videoBtn') ? document.getElementById('videoBtn').textContent : 'n/a') + ' duplex=' + (document.getElementById('duplexBar') ? document.getElementById('duplexBar').textContent : 'n/a'),
+    'DIAG peer=' + (peer ? (peer.open ? 'open' : peer.destroyed ? 'destroyed' : 'created') : 'none') + ' call=' + (call ? 'yes' : 'none') + ' dc=' + (dataChannel ? dataChannel.open : 'none'),
+    'DIAG localTracks=' + (localStream ? localStream.getTracks().map(t => t.kind + ':' + t.readyState + ':' + (t.enabled ? 'on' : 'off')).join(',') : 'none'),
+    'DIAG senders audio=' + (audioSender && audioSender.track ? audioSender.track.readyState + ':' + audioSender.track.enabled : 'none') + ' video=' + (videoSender && videoSender.track ? videoSender.track.readyState + ':' + videoSender.track.enabled : 'none'),
+    'DIAG micGain=' + ((document.getElementById('micGainSliderChat') || document.getElementById('micGainSlider') || {}).value || 'n/a') + ' remoteVol=' + ((document.getElementById('remoteGainSliderChat') || document.getElementById('remoteGainSlider') || {}).value || 'n/a'),
+    'DIAG location=' + location.protocol + ' ua=' + navigator.userAgent
+  ];
+  lines.forEach(line => entry(line, 'sys'));
+}
+
 function clearLog() {
   const log = document.getElementById('log');
   if (log) log.innerHTML = '';
@@ -10285,7 +10469,14 @@ function clearLog() {
 function toggleLogStop() {
   _logStopped = !_logStopped;
   const btn = document.getElementById('logStopBtn');
-  if (btn) { btn.textContent = _logStopped ? 'RUN' : 'STOP'; btn.classList.toggle('stopped', _logStopped); }
+  if (btn) { btn.textContent = _logStopped ? 'START' : 'PAUSE'; btn.classList.toggle('stopped', _logStopped); }
+}
+
+function toggleLogAutoScroll() {
+  _logAutoScroll = !_logAutoScroll;
+  const btn = document.getElementById('logAutoBtn');
+  if (btn) { btn.textContent = _logAutoScroll ? 'AUTO' : 'HOLD'; btn.classList.toggle('stopped', !_logAutoScroll); }
+  if (_logAutoScroll && logEl) logEl.scrollTop = logEl.scrollHeight;
 }
 
 // ── TTS (Text-to-Speech) for incoming messages ───────────────
