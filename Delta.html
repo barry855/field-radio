@@ -1,4 +1,6 @@
 
+
+
 <!DOCTYPE html>
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
@@ -6,8 +8,6 @@
 <title>DELTA — Field Radio Chat</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📡</text></svg>">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;900&display=swap');
-
   :root {
     --bg:         #6b7280;
     --panel:      #4b5563;
@@ -161,6 +161,74 @@
   button.accent { border-color: var(--accent); color: var(--accent); }
   button.danger { border-color: var(--danger); color: var(--danger); }
   button.toggle-on { background: var(--btn-active); border-color: var(--accent2); color: var(--accent2); }
+  .file-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: inherit;
+    font-size: 12px;
+    background: var(--btn-bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .file-button:hover { background: var(--btn-hover); }
+  .visually-hidden-file {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .practice-file-status {
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    min-height: 14px;
+  }
+  .practice-text-store { display: none; }
+  .practice-text-screen {
+    margin-top: 8px;
+    background: #20262e;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px;
+    font-size: 16px;
+    line-height: 1.55;
+    color: var(--text);
+    min-height: 110px;
+    max-height: 260px;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    outline: none;
+  }
+  .practice-text-screen:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px rgba(0,212,255,0.35);
+  }
+  .practice-char {
+    position: relative;
+    border-radius: 3px;
+    padding: 0 1px;
+  }
+  .practice-char.current {
+    background: var(--accent);
+    color: #071018;
+  }
+  .practice-char.current::after {
+    content: "";
+    position: absolute;
+    left: 1px;
+    right: 1px;
+    bottom: -2px;
+    height: 2px;
+    background: var(--accent2);
+    box-shadow: 0 0 6px var(--accent2);
+  }
 
   select {
     font-family: inherit; font-size: 12px;
@@ -232,6 +300,11 @@
     background: var(--btn-active); border-color: var(--accent2); color: var(--accent2);
     font-size: 14px; padding: 10px; letter-spacing: 2px;
   }
+  .session-practice {
+    background: var(--btn-bg);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
   .pled { width:8px; height:8px; border-radius:50%; display:inline-block; background:#333; }
   .pled.p-reachable { background: var(--accent2); box-shadow:0 0 6px var(--accent2); }
   .pled.p-offline   { background: var(--danger); }
@@ -273,7 +346,24 @@
   .quiz-feedback.correct { color: var(--accent2); }
   .quiz-feedback.wrong { color: var(--danger); }
 </style>
-<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js"></script>
+<script>
+let _peerJsLoadPromise = null;
+function loadPeerJs() {
+  if (typeof Peer !== 'undefined') return Promise.resolve();
+  if (_peerJsLoadPromise) return _peerJsLoadPromise;
+  _peerJsLoadPromise = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js';
+    s.onload = resolve;
+    s.onerror = () => {
+      _peerJsLoadPromise = null;
+      reject(new Error('PeerJS failed to load'));
+    };
+    document.head.appendChild(s);
+  });
+  return _peerJsLoadPromise;
+}
+</script>
 </head>
 <body>
 
@@ -286,7 +376,9 @@
       <span class="pled" id="loginPresenceLed"></span>
       <span class="ptxt" id="loginPresenceTxt">ENTER CODE</span>
     </div>
-    <button class="session-go" onclick="startSession()">CONNECT</button>
+    <button class="session-go" onclick="startSession()">INTERNET CONNECT</button>
+    <button class="session-go session-practice" onclick="startLanSession()">LAN CONNECT</button>
+    <button class="session-go session-practice" onclick="startPracticeOffline()">MORSE PRACTICE OFFLINE</button>
   </div>
 </div>
 
@@ -373,15 +465,20 @@
 
   <div class="panel">
     <span class="panel-label">Listen — Text to Morse</span>
-    <div class="row" style="margin-top:4px">
-      <textarea id="practiceListenText" placeholder="Type text to hear as Morse…" style="flex:1">CQ CQ DE TEST</textarea>
+    <div class="toolbar" style="margin-top:4px">
+      <label class="file-button" for="practiceTextFile">Load Text</label>
+      <input class="visually-hidden-file" type="file" id="practiceTextFile" accept=".txt,text/plain" onchange="practiceLoadTextFile(event)">
+      <button onclick="practiceDownloadTextFile()">Save Text</button>
+      <button onclick="practiceDownloadMorseFile()">Save Morse</button>
     </div>
+    <textarea id="practiceListenText" class="practice-text-store">CQ CQ DE TEST</textarea>
+    <div class="practice-file-status" id="practiceFileStatus"></div>
     <div class="toolbar" style="margin-top:8px">
       <button class="accent" onclick="practicePlayListen()">▶ Play</button>
       <button onclick="practiceRandomGroup()">⚄ Random Group</button>
       <button onclick="stopAllAudio()">■ Stop</button>
     </div>
-    <div id="practiceMorseOut" style="margin-top:8px;background:#20262e;border:1px solid var(--border);border-radius:6px;padding:10px;font-size:16px;letter-spacing:3px;color:var(--accent2);min-height:30px;word-break:break-all;"></div>
+    <div id="practiceTextScreen" class="practice-text-screen" contenteditable="true" role="textbox" aria-multiline="true" spellcheck="false" oninput="practiceSyncTextFromScreen(); savePracticeDraft()" onpaste="practicePlainTextPaste(event)"></div>
   </div>
 
   <div class="panel">
@@ -427,6 +524,7 @@ if (!_lsOk) {
 // ── Config ────────────────────────────────────────────────────────────────
 const ME       = 'delta';
 const THEM     = 'gamma';
+const SHOULD_DIAL = ME === 'gamma';
 const FB_URL   = 'https://alpha-bravo-chat-default-rtdb.firebaseio.com';
 const PRESENCE_STALE_MS = 15000;
 
@@ -450,6 +548,9 @@ let presencePollTimer = null, presenceWriteTimer = null, remoteIdPollTimer = nul
 let retryTimer = null;
 let _unavailIdRetries = 0;
 let speakerOn = true;
+let practiceOffline = false;
+let connectionMode = 'offline';
+let lanSocket = null;
 
 const logEl    = document.getElementById('log');
 const chatEl   = document.getElementById('chat');
@@ -481,6 +582,7 @@ function setStatus(state) {
   led.className = 'led';
   switch(state) {
     case 'online':   led.classList.add('on-cyan');  txt.textContent = 'ONLINE — DIALLING'; break;
+    case 'lan':      led.classList.add('on-cyan');  txt.textContent = 'LAN READY'; break;
     case 'linked':   led.classList.add('on-green'); txt.textContent = 'LINKED'; break;
     case 'offline':  txt.textContent = 'OFFLINE'; break;
     case 'error':    led.classList.add('on-red');   txt.textContent = 'ERROR'; break;
@@ -514,24 +616,29 @@ function loginPresenceSetState(state, text) {
 }
 
 async function presenceWrite(myKey) {
+  if (!MY_ID) return false;
   try {
     await fetch(FB_URL + '/presence/' + myKey + '.json', {
       method: 'PUT',
       body: JSON.stringify({ ts: Date.now(), peerId: MY_ID })
     });
+    return true;
   } catch(e) {}
+  return false;
 }
 
 async function presencePoll(partnerKey, myKey) {
   try {
     const res = await fetch(FB_URL + '/presence/' + partnerKey + '.json');
     const data = await res.json();
-    if (data && data.ts && (Date.now() - data.ts) < PRESENCE_STALE_MS) {
-      if (data.peerId && data.peerId !== REMOTE_ID) {
+    if (data && data.ts && (Date.now() - data.ts) < PRESENCE_STALE_MS && data.peerId) {
+      if (data.peerId !== REMOTE_ID) {
         entry('GAMMA peer ID: ' + data.peerId, 'sys');
         REMOTE_ID = data.peerId;
       }
       loginPresenceSetState('reachable', 'GAMMA REACHABLE');
+    } else if (data && data.ts && (Date.now() - data.ts) < PRESENCE_STALE_MS) {
+      loginPresenceSetState('searching', 'GAMMA NOT CONNECTED');
     } else {
       loginPresenceSetState('offline', 'GAMMA OFFLINE');
     }
@@ -565,11 +672,15 @@ async function _refreshRemoteId() {
     const partnerKey = THEM + '-' + code;
     const r = await fetch(FB_URL + '/presence/' + partnerKey + '.json');
     const d = await r.json();
-    if (d && d.peerId && d.peerId !== REMOTE_ID) {
-      entry('GAMMA peer ID: ' + d.peerId, 'sys');
-      REMOTE_ID = d.peerId;
+    if (d && d.ts && (Date.now() - d.ts) < PRESENCE_STALE_MS && d.peerId) {
+      if (d.peerId !== REMOTE_ID) {
+        entry('GAMMA peer ID: ' + d.peerId, 'sys');
+        REMOTE_ID = d.peerId;
+      }
+      return true;
     }
   } catch(e) {}
+  return false;
 }
 
 function _setupRemoteIdPoll() {
@@ -578,8 +689,140 @@ function _setupRemoteIdPoll() {
   remoteIdPollTimer = setInterval(_refreshRemoteId, 5000);
 }
 
+function startPracticeOffline() {
+  practiceOffline = true;
+  connectionMode = 'practice';
+  closeLanSocket();
+  stopPresencePolling();
+  clearTimeout(retryTimer);
+  if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
+  if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e){} }
+  peer = null;
+  linked = false;
+  pendingDC = false;
+  document.getElementById('sendBtn').disabled = true;
+  document.getElementById('morseSendBtn').disabled = true;
+  document.getElementById('sessionOverlay').style.display = 'none';
+  document.getElementById('unitIdDisplay').style.display = 'none';
+  setStatus('offline');
+  switchMainTab('practice');
+  entry('Morse practice ready offline', 'ok');
+  setTimeout(() => document.getElementById('practiceTextScreen')?.focus(), 0);
+}
+
+function getLanSignalUrl() {
+  const params = new URLSearchParams(location.search);
+  const fromQuery = params.get('lan');
+  if (fromQuery) return fromQuery;
+  if (location.protocol === 'http:' || location.protocol === 'https:') {
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    return proto + '//' + location.host + '/lan';
+  }
+  return 'ws://localhost:8787/lan';
+}
+
+function closeLanSocket() {
+  if (!lanSocket) return;
+  const ws = lanSocket;
+  lanSocket = null;
+  try { ws.onclose = null; ws.close(); } catch(e) {}
+}
+
+function setSendEnabled(enabled) {
+  document.getElementById('sendBtn').disabled = !enabled;
+  document.getElementById('morseSendBtn').disabled = !enabled;
+}
+
+function setLanLinked() {
+  pendingDC = false;
+  linked = true;
+  setStatus('linked');
+  setSendEnabled(true);
+}
+
+function startLanSession() {
+  practiceOffline = false;
+  connectionMode = 'lan';
+  stopPresencePolling();
+  clearTimeout(retryTimer);
+  if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e){} }
+  peer = null;
+  closeLanSocket();
+  if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
+
+  const code = document.getElementById('sessionCode').value.trim().toUpperCase().replace(/\s+/g,'');
+  if (!code) { document.getElementById('sessionCode').focus(); return; }
+  MY_ID = ME + '-' + code;
+  REMOTE_ID = THEM + '-' + code;
+  try { localStorage.setItem('delta_last_code', code); } catch(e) {}
+
+  document.getElementById('sessionOverlay').style.display = 'none';
+  document.getElementById('unitIdDisplay').style.display = 'flex';
+  document.getElementById('unitIdValue').textContent = code;
+  setStatus('lan');
+  setSendEnabled(false);
+  entry('LAN session started - code ' + code, 'sys');
+
+  const url = getLanSignalUrl();
+  const ws = new WebSocket(url);
+  lanSocket = ws;
+  pendingDC = true;
+  dataConn = {
+    _lanSocket: ws,
+    get open() { return lanSocket === ws && ws.readyState === WebSocket.OPEN && linked; },
+    send(wire) { ws.send(JSON.stringify({ type: 'data', code, from: ME, to: THEM, data: wire })); },
+    close() { ws.close(); }
+  };
+
+  ws.onopen = () => {
+    entry('LAN signalling connected: ' + url, 'ok');
+    ws.send(JSON.stringify({ type: 'join', code, station: ME }));
+  };
+  ws.onmessage = event => {
+    let msg;
+    try { msg = JSON.parse(event.data); } catch(e) { return; }
+    if (msg.type === 'ready') {
+      if (Array.isArray(msg.peers) && msg.peers.includes(THEM)) {
+        entry('LAN peer found: GAMMA', 'ok');
+        setLanLinked();
+      } else {
+      entry('Waiting for GAMMA on LAN', 'sys');
+      setStatus('lan');
+      }
+      return;
+    }
+    if (msg.type === 'peer-joined' && msg.station === THEM) {
+      entry('GAMMA joined LAN session', 'ok');
+      setLanLinked();
+      return;
+    }
+    if (msg.type === 'peer-left' && msg.station === THEM) {
+      handleRemoteLeave();
+      return;
+    }
+    if (msg.type === 'data') handleIncomingData(msg.data);
+    if (msg.type === 'error') entry('LAN error: ' + msg.message, 'err');
+  };
+  ws.onerror = () => {
+    entry('LAN signalling error - start lan-radio-server on this network', 'err');
+    setStatus('error');
+  };
+  ws.onclose = () => {
+    if (lanSocket === ws) lanSocket = null;
+    if (dataConn && dataConn._lanSocket === ws) dataConn = null;
+    linked = false;
+    pendingDC = false;
+    setSendEnabled(false);
+    if (connectionMode === 'lan') setStatus('offline');
+    entry('LAN signalling closed', 'sys');
+  };
+}
+
 // ── Session start ────────────────────────────────────────────────────────
 function startSession() {
+  practiceOffline = false;
+  connectionMode = 'online';
+  closeLanSocket();
   stopPresencePolling();
   const code = document.getElementById('sessionCode').value.trim().toUpperCase().replace(/\s+/g,'');
   if (!code) { document.getElementById('sessionCode').focus(); return; }
@@ -602,9 +845,15 @@ function startSession() {
 
 // ── PeerJS connection ────────────────────────────────────────────────────
 function startPeer() {
+  if (connectionMode !== 'online') return;
   if (typeof Peer === 'undefined') {
-    entry('PeerJS not ready yet — retrying in 500ms…', 'sys');
-    setTimeout(startPeer, 500);
+    entry('Loading PeerJS for online connect…', 'sys');
+    loadPeerJs()
+      .then(() => setTimeout(startPeer, 0))
+      .catch(e => {
+        entry((e.message || 'PeerJS unavailable') + ' — connect needs network; Morse Practice still works offline', 'err');
+        setStatus('error');
+      });
     return;
   }
   if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e){} }
@@ -623,18 +872,23 @@ function startPeer() {
   peer.on('open', () => {
     _unavailIdRetries = 0;
     entry('Radio online as ' + MY_ID, 'ok');
+    const openCode = MY_ID.replace(new RegExp('^' + ME + '-'), '').replace(/-[0-9a-f]{4}$/, '');
+    presenceWrite(ME + '-' + openCode);
     setStatus('online');
+    if (!SHOULD_DIAL) {
+      entry('Waiting for Gamma to dial this station', 'sys');
+      return;
+    }
     let pollCount = 0;
     const pollMax = 20;
     function pollAndDial() {
-      _refreshRemoteId().then(() => {
+      _refreshRemoteId().then(foundFreshPeer => {
         pollCount++;
-        const hasSuffix = REMOTE_ID && /-[0-9a-f]{4}$/.test(REMOTE_ID);
-        if (hasSuffix || pollCount >= pollMax) {
-          if (!hasSuffix) entry('GAMMA peerId not found after 30s — dialling base ID', 'sys');
+        if (foundFreshPeer || pollCount >= pollMax) {
+          if (!foundFreshPeer) entry('GAMMA presence not fresh after 30s — trying base ID', 'sys');
           dial();
         } else {
-          entry('Waiting for GAMMA peerId... (' + pollCount + ')', 'sys');
+          entry('Waiting for GAMMA to come online... (' + pollCount + ')', 'sys');
           setTimeout(pollAndDial, 1500);
         }
       });
@@ -692,6 +946,7 @@ function startPeer() {
 }
 
 function dial() {
+  if (connectionMode !== 'online') return;
   clearTimeout(retryTimer);
   if (linked || pendingDC) return;
   const peerReady = peer && !peer.destroyed && peer.open;
@@ -716,22 +971,7 @@ function dial() {
   }, 30000);
 }
 
-function attachDataConn(dc) {
-  pendingDC = true;
-  function onDcOpen() {
-    if (dataConn === dc) return;
-    clearTimeout(retryTimer);
-    pendingDC = false;
-    dataConn = dc;
-    linked = true;
-    entry('Chat channel open', 'ok');
-    setStatus('linked');
-    document.getElementById('sendBtn').disabled = false;
-    document.getElementById('morseSendBtn').disabled = false;
-  }
-  dc.on('open', onDcOpen);
-  if (dc.open) setTimeout(onDcOpen, 0);
-  dc.on('data', msg => {
+function handleIncomingData(msg) {
     const decoded = dcDecode(msg);
     if (!decoded) return;
     if (decoded.obj) {
@@ -747,17 +987,32 @@ function attachDataConn(dc) {
     } else {
       addBubble(decoded.text, false);
     }
-  });
+}
+
+function attachDataConn(dc) {
+  pendingDC = true;
+  function onDcOpen() {
+    if (dataConn === dc) return;
+    clearTimeout(retryTimer);
+    pendingDC = false;
+    dataConn = dc;
+    linked = true;
+    entry('Chat channel open', 'ok');
+    setStatus('linked');
+    setSendEnabled(true);
+  }
+  dc.on('open', onDcOpen);
+  if (dc.open) setTimeout(onDcOpen, 0);
+  dc.on('data', handleIncomingData);
   dc.on('close', () => {
     if (dataConn !== dc) return;
     pendingDC = false;
     dataConn = null;
     linked = false;
-    document.getElementById('sendBtn').disabled = true;
-    document.getElementById('morseSendBtn').disabled = true;
+    setSendEnabled(false);
     entry('Chat channel closed', 'sys');
     setStatus('online');
-    setTimeout(() => { if (!linked) dial(); }, 1000);
+    if (SHOULD_DIAL) setTimeout(() => { if (!linked) dial(); }, 1000);
   });
   dc.on('error', e => {
     pendingDC = false;
@@ -766,7 +1021,7 @@ function attachDataConn(dc) {
       dataConn = null;
       linked = false;
       entry('Reopening data channel after error…', 'sys');
-      setTimeout(dial, 1000);
+      if (SHOULD_DIAL) setTimeout(dial, 1000);
     }
   });
 }
@@ -832,9 +1087,18 @@ function getAudioCtx() {
 }
 
 let _activeOscillators = [];
+let _practiceCursorTimers = [];
+
+function clearPracticeCursorTimers() {
+  _practiceCursorTimers.forEach(id => clearTimeout(id));
+  _practiceCursorTimers = [];
+}
+
 function stopAllAudio() {
   _activeOscillators.forEach(o => { try { o.stop(); } catch(e) {} });
   _activeOscillators = [];
+  clearPracticeCursorTimers();
+  practiceFinishPlaybackScreen();
 }
 
 // Plays morse code as audio tone. unit = duration of one dot, in ms.
@@ -846,18 +1110,21 @@ function playMorse(text, wpm) {
 
 // Plays morse code regardless of the chat Speaker toggle — used by the
 // offline Morse Practice tab, which has its own audio controls.
-function playMorseRaw(text, wpm, freq) {
+function playMorseRaw(text, wpm, freq, hooks={}) {
   const ctx = getAudioCtx();
   const unit = 1200 / wpm; // ms per dot, standard PARIS formula
   let t = ctx.currentTime + 0.05;
 
-  text.toUpperCase().split('').forEach(ch => {
-    if (ch === ' ') {
+  text.toUpperCase().split('').forEach((ch, index) => {
+    const charStart = t;
+    if (/\s/.test(ch)) {
+      if (hooks.onCharStart) hooks.onCharStart(index, charStart, ctx);
       t += (unit * 7) / 1000; // word gap
       return;
     }
     const code = MORSE_MAP[ch];
     if (!code) return;
+    if (hooks.onCharStart) hooks.onCharStart(index, charStart, ctx);
     code.split('').forEach(sym => {
       const dur = (sym === '.' ? unit : unit * 3) / 1000;
       const osc = ctx.createOscillator();
@@ -877,6 +1144,7 @@ function playMorseRaw(text, wpm, freq) {
     });
     t += (unit * 2) / 1000; // inter-character gap (total 3 with above)
   });
+  if (hooks.onEnd) hooks.onEnd(t, ctx);
   return (t - ctx.currentTime) * 1000; // total duration in ms
 }
 
@@ -917,25 +1185,25 @@ function refreshScreen() {
 
 function handleRemoteLeave() {
   entry('Remote left the session', 'sys');
-  setStatus('offline');
   linked = false;
-  document.getElementById('sendBtn').disabled = true;
-  document.getElementById('morseSendBtn').disabled = true;
+  setSendEnabled(false);
+  setStatus(connectionMode === 'lan' ? 'lan' : 'offline');
 }
 
 function leaveSession() {
+  practiceOffline = false;
   if (dataConn && dataConn.open) {
     try { dcSend({ __control: 'leave' }); } catch(e) {}
   }
   stopPresencePolling();
+  closeLanSocket();
   clearTimeout(retryTimer);
   if (dataConn) { try { dataConn.close(); } catch(e){} dataConn = null; }
   if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e){} }
   peer = null;
   linked = false;
   pendingDC = false;
-  document.getElementById('sendBtn').disabled = true;
-  document.getElementById('morseSendBtn').disabled = true;
+  setSendEnabled(false);
   setStatus('offline');
   document.getElementById('unitIdDisplay').style.display = 'none';
   document.getElementById('sessionOverlay').style.display = 'flex';
@@ -962,19 +1230,157 @@ function savePracticeSettings() {
   } catch(e) {}
 }
 
+let practiceTextFilename = 'listening-practice.txt';
+
+function practiceSetFileStatus(text) {
+  const el = document.getElementById('practiceFileStatus');
+  if (el) el.textContent = text || '';
+}
+
+function savePracticeDraft() {
+  try {
+    localStorage.setItem('delta_practice_text', document.getElementById('practiceListenText').value);
+    localStorage.setItem('delta_practice_filename', practiceTextFilename);
+  } catch(e) {}
+}
+
+function practiceSyncTextFromScreen() {
+  const screen = document.getElementById('practiceTextScreen');
+  const box = document.getElementById('practiceListenText');
+  if (!screen || !box || screen.contentEditable !== 'true') return;
+  box.value = screen.textContent || '';
+  practiceSetFileStatus(practiceTextFilename + ' · ' + box.value.length + ' chars');
+}
+
+function practicePlainTextPaste(event) {
+  event.preventDefault();
+  const text = (event.clipboardData || window.clipboardData).getData('text/plain');
+  document.execCommand('insertText', false, text);
+}
+
 function textToMorseString(text) {
   return text.toUpperCase().split('').map(ch => {
-    if (ch === ' ') return '/';
+    if (/\s/.test(ch)) return '/';
     return MORSE_MAP[ch] || '';
   }).filter(Boolean).join(' ');
 }
 
+function practiceUpdateTextScreen(currentIndex=-1, playback=false) {
+  const box = document.getElementById('practiceListenText');
+  const out = document.getElementById('practiceTextScreen');
+  if (!box || !out) return '';
+  out.textContent = '';
+  if (playback || currentIndex >= 0) {
+    out.contentEditable = 'false';
+    const frag = document.createDocumentFragment();
+    Array.from(box.value).forEach((ch, index) => {
+      const span = document.createElement('span');
+      span.className = 'practice-char';
+      span.dataset.index = String(index);
+      if (index === currentIndex) span.classList.add('current');
+      span.textContent = ch;
+      frag.appendChild(span);
+    });
+    out.appendChild(frag);
+  } else {
+    out.contentEditable = 'true';
+    out.textContent = box.value;
+  }
+  const morse = textToMorseString(box.value);
+  practiceSetFileStatus(practiceTextFilename + ' · ' + box.value.length + ' chars');
+  return morse;
+}
+
+function practiceBeginPlaybackScreen() {
+  practiceSyncTextFromScreen();
+  practiceUpdateTextScreen(-1, true);
+}
+
+function practiceFinishPlaybackScreen() {
+  practiceSetCursor(-1);
+  practiceUpdateTextScreen();
+}
+
+function practiceSetCursor(index) {
+  const screen = document.getElementById('practiceTextScreen');
+  if (!screen) return;
+  screen.querySelectorAll('.practice-char.current').forEach(el => el.classList.remove('current'));
+  if (index < 0) return;
+  const next = screen.querySelector('.practice-char[data-index="' + index + '"]');
+  if (!next) return;
+  next.classList.add('current');
+  next.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+}
+
+function practiceScheduleCursor(index, when, ctx) {
+  const delay = Math.max(0, (when - ctx.currentTime) * 1000);
+  _practiceCursorTimers.push(setTimeout(() => practiceSetCursor(index), delay));
+}
+
+function practiceScheduleCursorEnd(when, ctx) {
+  const delay = Math.max(0, (when - ctx.currentTime) * 1000);
+  _practiceCursorTimers.push(setTimeout(practiceFinishPlaybackScreen, delay));
+}
+
+function practiceLoadTextFile(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    practiceTextFilename = file.name || 'listening-practice.txt';
+    document.getElementById('practiceListenText').value = String(reader.result || '');
+    practiceUpdateTextScreen();
+    savePracticeDraft();
+    entry('Loaded practice text file: ' + practiceTextFilename, 'ok');
+  };
+  reader.onerror = () => entry('Could not load practice text file', 'err');
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function practiceSafeFilename(name, fallback) {
+  const cleaned = String(name || '').replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, '-').replace(/^-+|-+$/g, '');
+  return cleaned || fallback;
+}
+
+function practiceDownloadBlob(text, filename, type) {
+  const blob = new Blob([text], { type: type || 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+function practiceDownloadTextFile() {
+  practiceSyncTextFromScreen();
+  const text = document.getElementById('practiceListenText').value;
+  const filename = practiceSafeFilename(practiceTextFilename, 'listening-practice.txt');
+  practiceDownloadBlob(text, filename.toLowerCase().endsWith('.txt') ? filename : filename + '.txt');
+  entry('Saved edited practice text', 'ok');
+}
+
+function practiceDownloadMorseFile() {
+  practiceSyncTextFromScreen();
+  const morse = textToMorseString(document.getElementById('practiceListenText').value);
+  const base = practiceSafeFilename(practiceTextFilename.replace(/\.[^.]*$/, ''), 'listening-practice');
+  practiceDownloadBlob(morse + '\n', base + '-morse.txt');
+  entry('Saved practice Morse output', 'ok');
+}
+
 function practicePlayListen() {
-  const text = document.getElementById('practiceListenText').value.trim();
-  if (!text) return;
+  practiceSyncTextFromScreen();
+  const text = document.getElementById('practiceListenText').value;
+  if (!text.trim()) return;
   stopAllAudio();
-  document.getElementById('practiceMorseOut').textContent = textToMorseString(text);
-  playMorseRaw(text, practiceGetWpm(), practiceGetTone());
+  practiceBeginPlaybackScreen();
+  playMorseRaw(text, practiceGetWpm(), practiceGetTone(), {
+    onCharStart: practiceScheduleCursor,
+    onEnd: practiceScheduleCursorEnd
+  });
 }
 
 const PRACTICE_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
@@ -982,6 +1388,9 @@ function practiceRandomGroup() {
   let s = '';
   for (let i = 0; i < 5; i++) s += PRACTICE_LETTERS[Math.floor(Math.random() * 26)];
   document.getElementById('practiceListenText').value = s;
+  practiceTextFilename = 'random-group.txt';
+  practiceUpdateTextScreen();
+  savePracticeDraft();
   practicePlayListen();
 }
 
@@ -1044,11 +1453,12 @@ document.getElementById('practiceQuizInput')?.addEventListener('keydown', e => {
 
 (function init() {
   setStatus('offline');
+  const practiceHash = location.hash.toLowerCase() === '#practice';
   try {
     const lastCode = localStorage.getItem('delta_last_code');
     if (lastCode) {
       document.getElementById('sessionCode').value = lastCode;
-      startPresencePolling(lastCode);
+      if (!practiceHash) startPresencePolling(lastCode);
     }
     const savedSpeed = localStorage.getItem('delta_morse_wpm');
     if (savedSpeed) document.getElementById('morseSpeed').value = savedSpeed;
@@ -1063,15 +1473,22 @@ document.getElementById('practiceQuizInput')?.addEventListener('keydown', e => {
     if (pWpm) document.getElementById('practiceWpm').value = pWpm;
     const pTone = localStorage.getItem('delta_practice_tone');
     if (pTone) document.getElementById('practiceTone').value = pTone;
+    const pFile = localStorage.getItem('delta_practice_filename');
+    if (pFile) practiceTextFilename = pFile;
+    const pText = localStorage.getItem('delta_practice_text');
+    if (pText !== null) document.getElementById('practiceListenText').value = pText;
   } catch(e) {}
+  practiceUpdateTextScreen();
 
   document.getElementById('sessionCode').addEventListener('input', e => {
+    if (practiceOffline) { loginPresenceSetState('', 'ENTER CODE'); return; }
     const code = e.target.value.trim().toUpperCase().replace(/\s+/g,'');
     startPresencePolling(code);
   });
   document.getElementById('sessionCode').addEventListener('keydown', e => {
     if (e.key === 'Enter') startSession();
   });
+  if (practiceHash) startPracticeOffline();
 })();
 </script>
 </body>
