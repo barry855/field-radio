@@ -4,13 +4,13 @@
 <!DOCTYPE html>
 <!--
   Field Radio Delta
-  Version v1.3 / 2026-09-03B: Practice Play audio starts reliably for loaded text; compact Practice screen keeps Quiz visible.
+  Version v1.4 / 2026-09-03C: Practice Play reads the visible text screen and schedules audio immediately.
 -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 <meta name="google" content="notranslate">
-<meta name="field-radio-version" content="v1.3">
-<meta name="field-radio-revision" content="2026-09-03B Practice Play audio starts reliably for loaded text; compact Practice screen keeps Quiz visible.">
+<meta name="field-radio-version" content="v1.4">
+<meta name="field-radio-revision" content="2026-09-03C Practice Play reads the visible text screen and schedules audio immediately.">
 <title>DELTA — Field Radio Chat</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📡</text></svg>">
 <style>
@@ -419,7 +419,7 @@ function loadPeerJs() {
 <div class="session-overlay" id="sessionOverlay">
   <div class="session-box">
     <span class="session-title" style="color:#00ff9f;text-shadow:0 0 20px rgba(0,255,159,0.5);">DELTA</span>
-    <div class="revision-note">v1.3</div>
+    <div class="revision-note">v1.4</div>
     <label>Channel Code</label>
     <input type="text" id="sessionCode" maxlength="8" placeholder="ENTER CODE" autocomplete="off">
     <div class="presence-row">
@@ -1182,22 +1182,23 @@ function playMorseRaw(text, wpm, freq, hooks={}) {
   }
   const token = ++_audioPlayToken;
 
-  const startPlayback = () => {
-    if (token !== _audioPlayToken) return 0;
-    return scheduleMorseAudio(ctx, playbackText, wpm, freq, hooks);
-  };
-
   if (ctx.state === 'suspended') {
-    ctx.resume().then(startPlayback).catch(e => {
+    try {
+      const resumed = ctx.resume();
+      if (resumed && typeof resumed.catch === 'function') {
+        resumed.catch(e => entry('Audio start failed: ' + (e.message || e), 'err'));
+      }
+    } catch(e) {
       entry('Audio start failed: ' + (e.message || e), 'err');
-    });
-    return 0;
+      return 0;
+    }
   }
 
-  return startPlayback();
+  return scheduleMorseAudio(ctx, playbackText, wpm, freq, hooks, token);
 }
 
-function scheduleMorseAudio(ctx, text, wpm, freq, hooks={}) {
+function scheduleMorseAudio(ctx, text, wpm, freq, hooks={}, token=0) {
+  if (token && token !== _audioPlayToken) return 0;
   const unit = 1200 / wpm; // ms per dot, standard PARIS formula
   let t = ctx.currentTime + 0.05;
 
@@ -1363,6 +1364,18 @@ function practiceCommitTextScreen() {
   }
 }
 
+function practiceGetCurrentText() {
+  const screen = document.getElementById('practiceTextScreen');
+  const box = document.getElementById('practiceListenText');
+  const screenText = screen ? practiceReadTextScreen() : '';
+  const boxText = box ? box.value : '';
+  const picked = textToMorseString(normalizeMorsePlaybackText(screenText)) ? screenText : boxText;
+  if (box) box.value = picked;
+  practiceTextScreenDirty = false;
+  practiceSetFileStatus(practiceTextFilename + ' · ' + picked.length + ' chars');
+  return picked;
+}
+
 function practicePlainTextPaste(event) {
   event.preventDefault();
   const text = (event.clipboardData || window.clipboardData).getData('text/plain');
@@ -1496,9 +1509,10 @@ function practiceDownloadMorseFile() {
 
 function practicePlayListen() {
   practiceCommitTextScreen();
-  const text = document.getElementById('practiceListenText').value;
+  const text = practiceGetCurrentText();
   const playbackText = normalizeMorsePlaybackText(text);
-  if (!textToMorseString(playbackText)) {
+  const morseText = textToMorseString(playbackText);
+  if (!morseText) {
     entry('Practice text has no playable Morse characters', 'err');
     return;
   }
@@ -1511,11 +1525,13 @@ function practicePlayListen() {
   }
   stopAllAudio();
   practiceBeginPlaybackScreen(playbackText);
-  playMorseRaw(playbackText, wpm, tone, {
+  const duration = playMorseRaw(playbackText, wpm, tone, {
     onCharStart: practiceScheduleCursor,
     onEnd: practiceScheduleCursorEnd
   });
-  entry((sent ? 'Sent and playing' : 'Playing') + ' practice text @ ' + wpm + ' WPM', sent ? 'sys' : 'ok');
+  const playableCount = playbackText.replace(/\s+/g, '').length;
+  practiceSetFileStatus(practiceTextFilename + ' · playing ' + playableCount + ' chars @ ' + wpm + ' WPM');
+  entry((sent ? 'Sent and playing' : 'Playing') + ' practice text @ ' + wpm + ' WPM (' + playableCount + ' chars, ' + Math.round(duration || 0) + ' ms)', sent ? 'sys' : 'ok');
 }
 
 const PRACTICE_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
