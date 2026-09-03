@@ -2,9 +2,14 @@
 
 
 <!DOCTYPE html>
+<!--
+  Field Radio Delta
+  Latest revision 2026-09-03: Practice Play sends loaded text over LAN/Internet; compact Practice screen keeps Quiz visible.
+-->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 <meta name="google" content="notranslate">
+<meta name="field-radio-revision" content="2026-09-03 Practice Play sends loaded text over LAN/Internet; compact Practice screen keeps Quiz visible.">
 <title>DELTA — Field Radio Chat</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📡</text></svg>">
 <style>
@@ -191,16 +196,17 @@
   }
   .practice-text-store { display: none; }
   .practice-text-screen {
-    margin-top: 8px;
+    margin-top: 6px;
     background: #20262e;
     border: 1px solid var(--border);
     border-radius: 6px;
-    padding: 10px;
-    font-size: 16px;
-    line-height: 1.55;
+    padding: 8px;
+    font-size: 14px;
+    line-height: 1.35;
     color: var(--text);
-    min-height: 110px;
-    max-height: 260px;
+    height: clamp(54px, 13dvh, 92px);
+    min-height: 54px;
+    max-height: 92px;
     overflow: auto;
     white-space: pre-wrap;
     word-break: break-word;
@@ -289,6 +295,17 @@
     font-family: 'Orbitron', sans-serif; font-size: 22px; font-weight: 900;
     letter-spacing: 4px;
   }
+  .revision-note {
+    color: var(--text-dim);
+    font-size: 10px;
+    letter-spacing: 1px;
+    line-height: 1.35;
+    margin-top: -6px;
+  }
+  .revision-note b {
+    color: var(--accent);
+    font-weight: 700;
+  }
   .session-box label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; text-align: left; }
   .session-box input {
     background: #2b3440; color: var(--text);
@@ -342,6 +359,40 @@
   }
   .main-tab.active { display: flex; }
   #mainTabChat.active { overflow: hidden; }
+  #mainTabPractice.active {
+    gap: 7px;
+    overflow: hidden;
+  }
+  #mainTabPractice .panel {
+    padding: 10px 12px;
+  }
+  #mainTabPractice .row {
+    gap: 6px;
+  }
+  #mainTabPractice .toolbar {
+    gap: 6px;
+  }
+  #mainTabPractice button,
+  #mainTabPractice .file-button {
+    font-size: 11px;
+    padding: 6px 8px;
+  }
+  #mainTabPractice select {
+    font-size: 11px;
+    padding: 5px 7px;
+  }
+  #practiceQuizPrompt {
+    margin-top: 2px !important;
+    font-size: 24px !important;
+    padding: 4px 0 !important;
+  }
+  #practiceQuizFeedback {
+    min-height: 14px !important;
+    margin-top: 2px !important;
+  }
+  #mainTabPractice .quiz-stats {
+    margin-top: 5px !important;
+  }
 
   .quiz-feedback.correct { color: var(--accent2); }
   .quiz-feedback.wrong { color: var(--danger); }
@@ -370,6 +421,7 @@ function loadPeerJs() {
 <div class="session-overlay" id="sessionOverlay">
   <div class="session-box">
     <span class="session-title" style="color:#00ff9f;text-shadow:0 0 20px rgba(0,255,159,0.5);">DELTA</span>
+    <div class="revision-note"><b>REV 2026-09-03</b> Practice Play sends loaded text over LAN/Internet; Quiz stays visible.</div>
     <label>Channel Code</label>
     <input type="text" id="sessionCode" maxlength="8" placeholder="ENTER CODE" autocomplete="off">
     <div class="presence-row">
@@ -478,7 +530,7 @@ function loadPeerJs() {
       <button onclick="practiceRandomGroup()">⚄ Random Group</button>
       <button onclick="stopAllAudio()">■ Stop</button>
     </div>
-    <div id="practiceTextScreen" class="practice-text-screen" contenteditable="true" role="textbox" aria-multiline="true" spellcheck="false" oninput="practiceSyncTextFromScreen(); savePracticeDraft()" onpaste="practicePlainTextPaste(event)"></div>
+    <div id="practiceTextScreen" class="practice-text-screen" contenteditable="true" role="textbox" aria-multiline="true" spellcheck="false" oninput="practiceTextScreenEdited()" onpaste="practicePlainTextPaste(event)"></div>
   </div>
 
   <div class="panel">
@@ -979,8 +1031,10 @@ function handleIncomingData(msg) {
       if (f.__control === 'leave') { handleRemoteLeave(); return; }
       if (f.__control === 'refresh') { entry('Remote refreshed — reloading…', 'sys'); setTimeout(() => window.location.reload(), 400); return; }
       if (f.__morse === true) {
-        addBubble(f.text + '  (sent as Morse, ' + f.wpm + ' WPM)', false);
-        playMorse(f.text, f.wpm);
+        const incomingWpm = parseInt(f.wpm, 10) || 20;
+        const incomingTone = parseInt(f.tone, 10) || 600;
+        addBubble(f.text + '  (sent as Morse, ' + incomingWpm + ' WPM)', false);
+        if (speakerOn) playMorseRaw(f.text, incomingWpm, incomingTone);
         return;
       }
       addBubble(JSON.stringify(f), false);
@@ -1231,6 +1285,7 @@ function savePracticeSettings() {
 }
 
 let practiceTextFilename = 'listening-practice.txt';
+let practiceTextScreenDirty = false;
 
 function practiceSetFileStatus(text) {
   const el = document.getElementById('practiceFileStatus');
@@ -1244,18 +1299,39 @@ function savePracticeDraft() {
   } catch(e) {}
 }
 
+function practiceReadTextScreen() {
+  const screen = document.getElementById('practiceTextScreen');
+  if (!screen) return '';
+  const raw = (typeof screen.innerText === 'string') ? screen.innerText : (screen.textContent || '');
+  return raw.replace(/\r\n/g, '\n').replace(/\u00a0/g, ' ');
+}
+
 function practiceSyncTextFromScreen() {
   const screen = document.getElementById('practiceTextScreen');
   const box = document.getElementById('practiceListenText');
-  if (!screen || !box || screen.contentEditable !== 'true') return;
-  box.value = screen.textContent || '';
+  if (!screen || !box || !screen.isContentEditable) return;
+  box.value = practiceReadTextScreen();
   practiceSetFileStatus(practiceTextFilename + ' · ' + box.value.length + ' chars');
+}
+
+function practiceTextScreenEdited() {
+  practiceTextScreenDirty = true;
+  practiceSyncTextFromScreen();
+  savePracticeDraft();
+}
+
+function practiceCommitTextScreen() {
+  if (practiceTextScreenDirty) {
+    practiceSyncTextFromScreen();
+    savePracticeDraft();
+  }
 }
 
 function practicePlainTextPaste(event) {
   event.preventDefault();
   const text = (event.clipboardData || window.clipboardData).getData('text/plain');
   document.execCommand('insertText', false, text);
+  practiceTextScreenEdited();
 }
 
 function textToMorseString(text) {
@@ -1286,13 +1362,13 @@ function practiceUpdateTextScreen(currentIndex=-1, playback=false) {
     out.contentEditable = 'true';
     out.textContent = box.value;
   }
+  practiceTextScreenDirty = false;
   const morse = textToMorseString(box.value);
   practiceSetFileStatus(practiceTextFilename + ' · ' + box.value.length + ' chars');
   return morse;
 }
 
 function practiceBeginPlaybackScreen() {
-  practiceSyncTextFromScreen();
   practiceUpdateTextScreen(-1, true);
 }
 
@@ -1372,15 +1448,23 @@ function practiceDownloadMorseFile() {
 }
 
 function practicePlayListen() {
-  practiceSyncTextFromScreen();
+  practiceCommitTextScreen();
   const text = document.getElementById('practiceListenText').value;
   if (!text.trim()) return;
+  const wpm = practiceGetWpm();
+  const tone = practiceGetTone();
+  let sent = false;
+  if (linked && dataConn && dataConn.open) {
+    sent = dcSend({ __morse: true, text: text, wpm: wpm, tone: tone });
+    if (sent) addBubble(text + '  (sent as practice Morse, ' + wpm + ' WPM)', true);
+  }
   stopAllAudio();
   practiceBeginPlaybackScreen();
-  playMorseRaw(text, practiceGetWpm(), practiceGetTone(), {
+  playMorseRaw(text, wpm, tone, {
     onCharStart: practiceScheduleCursor,
     onEnd: practiceScheduleCursorEnd
   });
+  entry((sent ? 'Sent and playing' : 'Playing') + ' practice text @ ' + wpm + ' WPM', sent ? 'sys' : 'ok');
 }
 
 const PRACTICE_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
