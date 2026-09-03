@@ -4,12 +4,13 @@
 <!DOCTYPE html>
 <!--
   Field Radio Gamma
-  Latest revision 2026-09-03: Practice Play sends loaded text over LAN/Internet; compact Practice screen keeps Quiz visible.
+  Version v1.3 / 2026-09-03B: Practice Play audio starts reliably for loaded text; compact Practice screen keeps Quiz visible.
 -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 <meta name="google" content="notranslate">
-<meta name="field-radio-revision" content="2026-09-03 Practice Play sends loaded text over LAN/Internet; compact Practice screen keeps Quiz visible.">
+<meta name="field-radio-version" content="v1.3">
+<meta name="field-radio-revision" content="2026-09-03B Practice Play audio starts reliably for loaded text; compact Practice screen keeps Quiz visible.">
 <title>GAMMA — Field Radio Chat</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📡</text></svg>">
 <style>
@@ -296,15 +297,12 @@
     letter-spacing: 4px;
   }
   .revision-note {
-    color: var(--text-dim);
+    color: var(--accent);
     font-size: 10px;
-    letter-spacing: 1px;
+    letter-spacing: 2px;
     line-height: 1.35;
     margin-top: -6px;
-  }
-  .revision-note b {
-    color: var(--accent);
-    font-weight: 700;
+    text-transform: uppercase;
   }
   .session-box label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; text-align: left; }
   .session-box input {
@@ -421,7 +419,7 @@ function loadPeerJs() {
 <div class="session-overlay" id="sessionOverlay">
   <div class="session-box">
     <span class="session-title" style="color:#00ff9f;text-shadow:0 0 20px rgba(0,255,159,0.5);">GAMMA</span>
-    <div class="revision-note"><b>REV 2026-09-03</b> Practice Play sends loaded text over LAN/Internet; Quiz stays visible.</div>
+    <div class="revision-note">v1.3</div>
     <label>Channel Code</label>
     <input type="text" id="sessionCode" maxlength="8" placeholder="ENTER CODE" autocomplete="off">
     <div class="presence-row">
@@ -1135,13 +1133,15 @@ function saveMorseSpeed() {
 
 let _audioCtx = null;
 function getAudioCtx() {
-  if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  if (_audioCtx.state === 'suspended') _audioCtx.resume();
+  const AudioCtor = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtor) throw new Error('Web Audio is not supported in this browser');
+  if (!_audioCtx || _audioCtx.state === 'closed') _audioCtx = new AudioCtor();
   return _audioCtx;
 }
 
 let _activeOscillators = [];
 let _practiceCursorTimers = [];
+let _audioPlayToken = 0;
 
 function clearPracticeCursorTimers() {
   _practiceCursorTimers.forEach(id => clearTimeout(id));
@@ -1149,6 +1149,7 @@ function clearPracticeCursorTimers() {
 }
 
 function stopAllAudio() {
+  _audioPlayToken++;
   _activeOscillators.forEach(o => { try { o.stop(); } catch(e) {} });
   _activeOscillators = [];
   clearPracticeCursorTimers();
@@ -1165,7 +1166,38 @@ function playMorse(text, wpm) {
 // Plays morse code regardless of the chat Speaker toggle — used by the
 // offline Morse Practice tab, which has its own audio controls.
 function playMorseRaw(text, wpm, freq, hooks={}) {
-  const ctx = getAudioCtx();
+  const playbackText = normalizeMorsePlaybackText(text);
+  const morse = textToMorseString(playbackText);
+  if (!morse) {
+    entry('No playable Morse characters found in the text', 'err');
+    return 0;
+  }
+
+  let ctx;
+  try {
+    ctx = getAudioCtx();
+  } catch(e) {
+    entry('Audio failed: ' + (e.message || e), 'err');
+    return 0;
+  }
+  const token = ++_audioPlayToken;
+
+  const startPlayback = () => {
+    if (token !== _audioPlayToken) return 0;
+    return scheduleMorseAudio(ctx, playbackText, wpm, freq, hooks);
+  };
+
+  if (ctx.state === 'suspended') {
+    ctx.resume().then(startPlayback).catch(e => {
+      entry('Audio start failed: ' + (e.message || e), 'err');
+    });
+    return 0;
+  }
+
+  return startPlayback();
+}
+
+function scheduleMorseAudio(ctx, text, wpm, freq, hooks={}) {
   const unit = 1200 / wpm; // ms per dot, standard PARIS formula
   let t = ctx.currentTime + 0.05;
 
@@ -1194,6 +1226,10 @@ function playMorseRaw(text, wpm, freq, hooks={}) {
       osc.start(t);
       osc.stop(t + dur);
       _activeOscillators.push(osc);
+      osc.onended = () => {
+        const idx = _activeOscillators.indexOf(osc);
+        if (idx >= 0) _activeOscillators.splice(idx, 1);
+      };
       t += dur + (unit / 1000); // intra-character gap
     });
     t += (unit * 2) / 1000; // inter-character gap (total 3 with above)
@@ -1341,15 +1377,26 @@ function textToMorseString(text) {
   }).filter(Boolean).join(' ');
 }
 
-function practiceUpdateTextScreen(currentIndex=-1, playback=false) {
+function normalizeMorsePlaybackText(text) {
+  return String(text || '')
+    .replace(/^\uFEFF/, '')
+    .replace(/[\u2018\u2019\u201B]/g, "'")
+    .replace(/[\u201C\u201D\u201F]/g, '"')
+    .replace(/[\u2010\u2011\u2012\u2013\u2014\u2212]/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function practiceUpdateTextScreen(currentIndex=-1, playback=false, displayText=null) {
   const box = document.getElementById('practiceListenText');
   const out = document.getElementById('practiceTextScreen');
   if (!box || !out) return '';
+  const screenText = displayText === null ? box.value : String(displayText);
   out.textContent = '';
   if (playback || currentIndex >= 0) {
     out.contentEditable = 'false';
     const frag = document.createDocumentFragment();
-    Array.from(box.value).forEach((ch, index) => {
+    Array.from(screenText).forEach((ch, index) => {
       const span = document.createElement('span');
       span.className = 'practice-char';
       span.dataset.index = String(index);
@@ -1363,13 +1410,13 @@ function practiceUpdateTextScreen(currentIndex=-1, playback=false) {
     out.textContent = box.value;
   }
   practiceTextScreenDirty = false;
-  const morse = textToMorseString(box.value);
+  const morse = textToMorseString(screenText);
   practiceSetFileStatus(practiceTextFilename + ' · ' + box.value.length + ' chars');
   return morse;
 }
 
-function practiceBeginPlaybackScreen() {
-  practiceUpdateTextScreen(-1, true);
+function practiceBeginPlaybackScreen(playbackText) {
+  practiceUpdateTextScreen(-1, true, playbackText);
 }
 
 function practiceFinishPlaybackScreen() {
@@ -1441,7 +1488,7 @@ function practiceDownloadTextFile() {
 
 function practiceDownloadMorseFile() {
   practiceSyncTextFromScreen();
-  const morse = textToMorseString(document.getElementById('practiceListenText').value);
+  const morse = textToMorseString(normalizeMorsePlaybackText(document.getElementById('practiceListenText').value));
   const base = practiceSafeFilename(practiceTextFilename.replace(/\.[^.]*$/, ''), 'listening-practice');
   practiceDownloadBlob(morse + '\n', base + '-morse.txt');
   entry('Saved practice Morse output', 'ok');
@@ -1450,7 +1497,11 @@ function practiceDownloadMorseFile() {
 function practicePlayListen() {
   practiceCommitTextScreen();
   const text = document.getElementById('practiceListenText').value;
-  if (!text.trim()) return;
+  const playbackText = normalizeMorsePlaybackText(text);
+  if (!textToMorseString(playbackText)) {
+    entry('Practice text has no playable Morse characters', 'err');
+    return;
+  }
   const wpm = practiceGetWpm();
   const tone = practiceGetTone();
   let sent = false;
@@ -1459,8 +1510,8 @@ function practicePlayListen() {
     if (sent) addBubble(text + '  (sent as practice Morse, ' + wpm + ' WPM)', true);
   }
   stopAllAudio();
-  practiceBeginPlaybackScreen();
-  playMorseRaw(text, wpm, tone, {
+  practiceBeginPlaybackScreen(playbackText);
+  playMorseRaw(playbackText, wpm, tone, {
     onCharStart: practiceScheduleCursor,
     onEnd: practiceScheduleCursorEnd
   });
