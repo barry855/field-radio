@@ -4,13 +4,13 @@
 <!DOCTYPE html>
 <!--
   Field Radio Gamma
-  Version v1.9 / 2026-09-06E: Debug Log has Start, Stop, Pause, Copy, and Save controls.
+  Version v2.0 / 2026-09-06F: Dialer immediately redials fresh peer IDs and receiver Morse audio is logged.
 -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 <meta name="google" content="notranslate">
-<meta name="field-radio-version" content="v1.9">
-<meta name="field-radio-revision" content="2026-09-06E Debug Log has Start, Stop, Pause, Copy, and Save controls.">
+<meta name="field-radio-version" content="v2.0">
+<meta name="field-radio-revision" content="2026-09-06F Dialer immediately redials fresh peer IDs and receiver Morse audio is logged.">
 <title>GAMMA — Field Radio Chat</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📡</text></svg>">
 <style>
@@ -447,7 +447,7 @@ function loadPeerJs() {
 <div class="session-overlay" id="sessionOverlay">
   <div class="session-box">
     <span class="session-title" style="color:#00ff9f;text-shadow:0 0 20px rgba(0,255,159,0.5);">GAMMA</span>
-    <div class="revision-note">v1.9</div>
+    <div class="revision-note">v2.0</div>
     <label>Channel Code</label>
     <input type="text" id="sessionCode" maxlength="8" placeholder="ENTER CODE" autocomplete="off">
     <div class="presence-row">
@@ -631,7 +631,7 @@ const ICE_SERVERS = [
 let peer, dataConn, linked = false, pendingDC = false;
 let MY_ID = '', REMOTE_ID = '';
 let presencePollTimer = null, presenceWriteTimer = null, remoteIdPollTimer = null;
-let retryTimer = null;
+let retryTimer = null, immediateDialTimer = null;
 let _unavailIdRetries = 0;
 let speakerOn = true;
 let practiceOffline = false;
@@ -768,10 +768,12 @@ async function _refreshRemoteId() {
     const r = await fetch(FB_URL + '/presence/' + partnerKey + '.json');
     const d = await r.json();
     if (d && d.ts && (Date.now() - d.ts) < PRESENCE_STALE_MS && d.peerId) {
+      const changed = d.peerId !== REMOTE_ID;
       if (d.peerId !== REMOTE_ID) {
         entry('DELTA peer ID: ' + d.peerId, 'sys');
         REMOTE_ID = d.peerId;
       }
+      if (changed) requestImmediateDial('Fresh DELTA peer ID found');
       return true;
     }
   } catch(e) {}
@@ -782,6 +784,21 @@ function _setupRemoteIdPoll() {
   _refreshRemoteId();
   if (remoteIdPollTimer) clearInterval(remoteIdPollTimer);
   remoteIdPollTimer = setInterval(_refreshRemoteId, 5000);
+}
+
+function requestImmediateDial(reason) {
+  if (!SHOULD_DIAL || connectionMode !== 'online' || linked) return;
+  const peerReady = peer && !peer.destroyed && peer.open;
+  if (!peerReady) return;
+  clearTimeout(retryTimer);
+  if (dataConn) { try { dataConn.close(); } catch(e) {} dataConn = null; }
+  pendingDC = false;
+  if (immediateDialTimer) clearTimeout(immediateDialTimer);
+  entry(reason + ' - dialling now', 'sys');
+  immediateDialTimer = setTimeout(() => {
+    immediateDialTimer = null;
+    dial();
+  }, 0);
 }
 
 function startPracticeOffline() {
@@ -1081,7 +1098,9 @@ function handleIncomingData(msg) {
         const incomingTone = parseInt(f.tone, 10) || 600;
         addBubble(f.text + '  (sent as Morse, ' + incomingWpm + ' WPM)', false);
         if (speakerOn) {
-          playMorseRaw(f.text, incomingWpm, incomingTone);
+          const duration = playMorseRaw(f.text, incomingWpm, incomingTone);
+          const chars = normalizeMorsePlaybackText(f.text).replace(/\s+/g, '').length;
+          entry('Playing received Morse @ ' + incomingWpm + ' WPM (' + chars + ' chars, ' + Math.round(duration || 0) + ' ms)', 'ok');
         } else {
           entry('Morse received but Speaker is OFF', 'err');
         }
