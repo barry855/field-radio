@@ -4,13 +4,13 @@
 <!DOCTYPE html>
 <!--
   Field Radio Gamma
-  Version v1.4 / 2026-09-03C: Practice Play reads the visible text screen and schedules audio immediately.
+  Version v1.5 / 2026-09-06A: LAN Connect is hidden on the login screen; LAN functionality remains available in code.
 -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 <meta name="google" content="notranslate">
-<meta name="field-radio-version" content="v1.4">
-<meta name="field-radio-revision" content="2026-09-03C Practice Play reads the visible text screen and schedules audio immediately.">
+<meta name="field-radio-version" content="v1.5">
+<meta name="field-radio-revision" content="2026-09-06A LAN Connect is hidden on the login screen; LAN functionality remains available in code.">
 <title>GAMMA — Field Radio Chat</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📡</text></svg>">
 <style>
@@ -320,6 +320,9 @@
     border-color: var(--accent);
     color: var(--accent);
   }
+  .login-lan-connect {
+    display: none;
+  }
   .pled { width:8px; height:8px; border-radius:50%; display:inline-block; background:#333; }
   .pled.p-reachable { background: var(--accent2); box-shadow:0 0 6px var(--accent2); }
   .pled.p-offline   { background: var(--danger); }
@@ -419,7 +422,7 @@ function loadPeerJs() {
 <div class="session-overlay" id="sessionOverlay">
   <div class="session-box">
     <span class="session-title" style="color:#00ff9f;text-shadow:0 0 20px rgba(0,255,159,0.5);">GAMMA</span>
-    <div class="revision-note">v1.4</div>
+    <div class="revision-note">v1.5</div>
     <label>Channel Code</label>
     <input type="text" id="sessionCode" maxlength="8" placeholder="ENTER CODE" autocomplete="off">
     <div class="presence-row">
@@ -427,7 +430,7 @@ function loadPeerJs() {
       <span class="ptxt" id="loginPresenceTxt">ENTER CODE</span>
     </div>
     <button class="session-go" onclick="startSession()">INTERNET CONNECT</button>
-    <button class="session-go session-practice" onclick="startLanSession()">LAN CONNECT</button>
+    <button class="session-go session-practice login-lan-connect" onclick="startLanSession()" aria-hidden="true" tabindex="-1">LAN CONNECT</button>
     <button class="session-go session-practice" onclick="startPracticeOffline()">MORSE PRACTICE OFFLINE</button>
   </div>
 </div>
