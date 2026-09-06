@@ -4,13 +4,13 @@
 <!DOCTYPE html>
 <!--
   Field Radio Delta
-  Version v1.6 / 2026-09-06B: Linked Morse transmissions play audio only on the receiving page.
+  Version v1.8 / 2026-09-06D: Login overlay is fully opaque so the main screen does not show through.
 -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 <meta name="google" content="notranslate">
-<meta name="field-radio-version" content="v1.6">
-<meta name="field-radio-revision" content="2026-09-06B Linked Morse transmissions play audio only on the receiving page.">
+<meta name="field-radio-version" content="v1.8">
+<meta name="field-radio-revision" content="2026-09-06D Login overlay is fully opaque so the main screen does not show through.">
 <title>DELTA — Field Radio Chat</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📡</text></svg>">
 <style>
@@ -279,7 +279,7 @@
   /* ── Session overlay ─────────────────────────────────────── */
   .session-overlay {
     position: fixed; inset: 0; z-index: 2000;
-    background: rgba(0,0,0,0.75);
+    background: var(--bg);
     display: flex; align-items: center; justify-content: center;
   }
   .session-box {
@@ -422,7 +422,7 @@ function loadPeerJs() {
 <div class="session-overlay" id="sessionOverlay">
   <div class="session-box">
     <span class="session-title" style="color:#00ff9f;text-shadow:0 0 20px rgba(0,255,159,0.5);">DELTA</span>
-    <div class="revision-note">v1.6</div>
+    <div class="revision-note">v1.8</div>
     <label>Channel Code</label>
     <input type="text" id="sessionCode" maxlength="8" placeholder="ENTER CODE" autocomplete="off">
     <div class="presence-row">
@@ -743,6 +743,7 @@ function _setupRemoteIdPoll() {
 }
 
 function startPracticeOffline() {
+  armReceiverAudio();
   practiceOffline = true;
   connectionMode = 'practice';
   closeLanSocket();
@@ -794,6 +795,7 @@ function setLanLinked() {
 }
 
 function startLanSession() {
+  enableReceiverAudio();
   practiceOffline = false;
   connectionMode = 'lan';
   stopPresencePolling();
@@ -873,6 +875,7 @@ function startLanSession() {
 
 // ── Session start ────────────────────────────────────────────────────────
 function startSession() {
+  enableReceiverAudio();
   practiceOffline = false;
   connectionMode = 'online';
   closeLanSocket();
@@ -1035,7 +1038,11 @@ function handleIncomingData(msg) {
         const incomingWpm = parseInt(f.wpm, 10) || 20;
         const incomingTone = parseInt(f.tone, 10) || 600;
         addBubble(f.text + '  (sent as Morse, ' + incomingWpm + ' WPM)', false);
-        if (speakerOn) playMorseRaw(f.text, incomingWpm, incomingTone);
+        if (speakerOn) {
+          playMorseRaw(f.text, incomingWpm, incomingTone);
+        } else {
+          entry('Morse received but Speaker is OFF', 'err');
+        }
         return;
       }
       addBubble(JSON.stringify(f), false);
@@ -1145,6 +1152,57 @@ function getAudioCtx() {
 let _activeOscillators = [];
 let _practiceCursorTimers = [];
 let _audioPlayToken = 0;
+let _receiverAudioArmed = false;
+
+function armReceiverAudio() {
+  let ctx;
+  try {
+    ctx = getAudioCtx();
+  } catch(e) {
+    entry('Audio arm failed: ' + (e.message || e), 'err');
+    return false;
+  }
+
+  try {
+    const resume = ctx.state === 'suspended' ? ctx.resume() : null;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const t = ctx.currentTime;
+    osc.type = 'sine';
+    osc.frequency.value = 600;
+    gain.gain.setValueAtTime(0, t);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + 0.01);
+    _activeOscillators.push(osc);
+    osc.onended = () => {
+      const idx = _activeOscillators.indexOf(osc);
+      if (idx >= 0) _activeOscillators.splice(idx, 1);
+    };
+    const markArmed = () => { _receiverAudioArmed = ctx.state === 'running'; };
+    if (resume && typeof resume.then === 'function') {
+      resume.then(markArmed).catch(e => entry('Audio unlock failed: ' + (e.message || e), 'err'));
+    } else {
+      markArmed();
+    }
+    return true;
+  } catch(e) {
+    entry('Audio unlock failed: ' + (e.message || e), 'err');
+    return false;
+  }
+}
+
+function enableReceiverAudio() {
+  speakerOn = true;
+  const btn = document.getElementById('speakerBtn');
+  if (btn) {
+    btn.textContent = '🔊 Speaker On';
+    btn.classList.add('toggle-on');
+  }
+  try { localStorage.setItem('delta_speaker', '1'); } catch(e) {}
+  return armReceiverAudio();
+}
 
 function clearPracticeCursorTimers() {
   _practiceCursorTimers.forEach(id => clearTimeout(id));
@@ -1197,6 +1255,9 @@ function playMorseRaw(text, wpm, freq, hooks={}) {
     }
   }
 
+  if (!_receiverAudioArmed && ctx.state === 'suspended') {
+    entry('Audio is waiting for a click on this receiver page', 'err');
+  }
   return scheduleMorseAudio(ctx, playbackText, wpm, freq, hooks, token);
 }
 
@@ -1243,6 +1304,7 @@ function scheduleMorseAudio(ctx, text, wpm, freq, hooks={}, token=0) {
 }
 
 function sendMorse() {
+  armReceiverAudio();
   const text = chatInput.value.trim();
   if (!text) return;
   const wpm = parseInt(document.getElementById('morseSpeed').value, 10) || 20;
@@ -1258,6 +1320,7 @@ function toggleSpeaker() {
   speakerOn = !speakerOn;
   const btn = document.getElementById('speakerBtn');
   if (speakerOn) {
+    enableReceiverAudio();
     btn.textContent = '🔊 Speaker On';
     btn.classList.add('toggle-on');
   } else {
@@ -1557,6 +1620,7 @@ function practiceRandomGroup() {
 let _pqCorrect = 0, _pqWrong = 0, _pqStreak = 0, _pqCurrentChar = '', _pqActive = false;
 
 function practiceStartQuiz() {
+  armReceiverAudio();
   _pqCurrentChar = PRACTICE_LETTERS[Math.floor(Math.random() * 26)];
   _pqActive = true;
   document.getElementById('practiceQuizInput').value = '';
@@ -1570,6 +1634,7 @@ function practiceStartQuiz() {
 
 function practiceReplayQuiz() {
   if (!_pqActive) return;
+  armReceiverAudio();
   stopAllAudio();
   playMorseRaw(_pqCurrentChar, practiceGetWpm(), practiceGetTone());
 }
@@ -1609,6 +1674,11 @@ document.getElementById('practiceQuizInput')?.addEventListener('keydown', e => {
   if (e.key === 'Enter') { e.preventDefault(); practiceSubmitQuiz(); }
 });
 
+if (document.addEventListener) {
+  ['pointerdown', 'keydown', 'touchstart'].forEach(type => {
+    document.addEventListener(type, armReceiverAudio, { once: true, passive: true });
+  });
+}
 
 (function init() {
   setStatus('offline');
