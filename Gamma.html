@@ -4,13 +4,13 @@
 <!DOCTYPE html>
 <!--
   Field Radio Gamma
-  Version v1.8 / 2026-09-06D: Login overlay is fully opaque so the main screen does not show through.
+  Version v1.9 / 2026-09-06E: Debug Log has Start, Stop, Pause, Copy, and Save controls.
 -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 <meta name="google" content="notranslate">
-<meta name="field-radio-version" content="v1.8">
-<meta name="field-radio-revision" content="2026-09-06D Login overlay is fully opaque so the main screen does not show through.">
+<meta name="field-radio-version" content="v1.9">
+<meta name="field-radio-revision" content="2026-09-06E Debug Log has Start, Stop, Pause, Copy, and Save controls.">
 <title>GAMMA — Field Radio Chat</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📡</text></svg>">
 <style>
@@ -271,6 +271,31 @@
   }
   .log-toggle .chev { transition: transform 0.15s; font-size: 10px; }
   .log-toggle.expanded .chev { transform: rotate(180deg); }
+  .debug-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+  .debug-controls button {
+    flex: 1;
+    min-width: 52px;
+    padding: 6px 7px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .debug-state {
+    color: var(--accent2);
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    min-width: 64px;
+    text-align: center;
+  }
+  .debug-state.paused { color: var(--warn); }
+  .debug-state.stopped { color: var(--danger); }
   #log .ok   { color: var(--accent2); }
   #log .err  { color: var(--danger); }
   #log .info { color: var(--accent); }
@@ -422,7 +447,7 @@ function loadPeerJs() {
 <div class="session-overlay" id="sessionOverlay">
   <div class="session-box">
     <span class="session-title" style="color:#00ff9f;text-shadow:0 0 20px rgba(0,255,159,0.5);">GAMMA</span>
-    <div class="revision-note">v1.8</div>
+    <div class="revision-note">v1.9</div>
     <label>Channel Code</label>
     <input type="text" id="sessionCode" maxlength="8" placeholder="ENTER CODE" autocomplete="off">
     <div class="presence-row">
@@ -484,6 +509,14 @@ function loadPeerJs() {
     <div class="log-toggle" id="logToggle" onclick="toggleLog()">
       <span>Debug Log</span>
       <span class="chev">▾</span>
+    </div>
+    <div class="debug-controls" aria-label="Debug log controls">
+      <button onclick="debugLogStart()">Start</button>
+      <button onclick="debugLogPause()">Pause</button>
+      <button onclick="debugLogStop()">Stop</button>
+      <button onclick="debugLogCopy()">Copy</button>
+      <button onclick="debugLogSave()">Save</button>
+      <span class="debug-state" id="debugLogState">Running</span>
     </div>
     <div id="log" class="collapsed"></div>
   </div>
@@ -610,13 +643,22 @@ const chatEl   = document.getElementById('chat');
 const chatInput = document.getElementById('chatInput');
 
 // ── Debug log ────────────────────────────────────────────────────────────
-function entry(msg, cls='sys') {
+let debugLogActive = true;
+let debugLogPaused = false;
+
+function debugAppend(msg, cls='sys') {
+  if (!logEl) return;
   const div = document.createElement('div');
   div.className = cls;
   const t = new Date().toLocaleTimeString();
   div.textContent = '[' + t + '] ' + msg;
   logEl.appendChild(div);
   logEl.scrollTop = logEl.scrollHeight;
+}
+
+function entry(msg, cls='sys') {
+  if (!debugLogActive || debugLogPaused) return;
+  debugAppend(msg, cls);
 }
 
 function toggleLog() {
@@ -1191,6 +1233,101 @@ function armReceiverAudio() {
     entry('Audio unlock failed: ' + (e.message || e), 'err');
     return false;
   }
+}
+
+function debugSetState(text, cls='') {
+  const state = document.getElementById('debugLogState');
+  if (!state) return;
+  state.textContent = text;
+  state.className = 'debug-state' + (cls ? ' ' + cls : '');
+}
+
+function debugShowLog() {
+  const log = document.getElementById('log');
+  const toggle = document.getElementById('logToggle');
+  if (!log || !toggle) return;
+  log.classList.remove('collapsed');
+  toggle.classList.add('expanded');
+  log.scrollTop = log.scrollHeight;
+}
+
+function debugLogStart() {
+  debugLogActive = true;
+  debugLogPaused = false;
+  debugSetState('Running');
+  debugAppend('Debug logging started', 'ok');
+  debugShowLog();
+}
+
+function debugLogPause() {
+  debugLogActive = true;
+  debugLogPaused = false;
+  debugAppend('Debug logging paused', 'sys');
+  debugLogPaused = true;
+  debugSetState('Paused', 'paused');
+  debugShowLog();
+}
+
+function debugLogStop() {
+  debugAppend('Debug logging stopped', 'sys');
+  debugLogActive = false;
+  debugLogPaused = false;
+  debugSetState('Stopped', 'stopped');
+  debugShowLog();
+}
+
+function debugLogText() {
+  if (!logEl) return '';
+  return Array.from(logEl.children).map(el => el.textContent || '').filter(Boolean).join('\n');
+}
+
+function debugLogCopyFallback(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.position = 'fixed';
+  ta.style.left = '-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch(e) {}
+  document.body.removeChild(ta);
+  if (!ok) throw new Error('Copy command failed');
+}
+
+function debugLogCopy() {
+  const text = debugLogText();
+  if (!text) { debugSetState('Empty', 'paused'); return; }
+  const done = () => debugSetState('Copied');
+  const fail = () => {
+    try {
+      debugLogCopyFallback(text);
+      done();
+    } catch(e) {
+      debugSetState('Copy failed', 'stopped');
+    }
+  };
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(done).catch(fail);
+  } else {
+    fail();
+  }
+}
+
+function debugLogSave() {
+  const text = debugLogText();
+  if (!text) { debugSetState('Empty', 'paused'); return; }
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const blob = new Blob([text + '\n'], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = ME + '-debug-log-' + stamp + '.txt';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  debugSetState('Saved');
 }
 
 function enableReceiverAudio() {
