@@ -4,13 +4,13 @@
 <!DOCTYPE html>
 <!--
   Field Radio Delta
-  Version v1.5 / 2026-09-06A: LAN Connect is hidden on the login screen; LAN functionality remains available in code.
+  Version v1.6 / 2026-09-06B: Linked Morse transmissions play audio only on the receiving page.
 -->
 <html lang="en" translate="no"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 <meta name="google" content="notranslate">
-<meta name="field-radio-version" content="v1.5">
-<meta name="field-radio-revision" content="2026-09-06A LAN Connect is hidden on the login screen; LAN functionality remains available in code.">
+<meta name="field-radio-version" content="v1.6">
+<meta name="field-radio-revision" content="2026-09-06B Linked Morse transmissions play audio only on the receiving page.">
 <title>DELTA — Field Radio Chat</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📡</text></svg>">
 <style>
@@ -422,7 +422,7 @@ function loadPeerJs() {
 <div class="session-overlay" id="sessionOverlay">
   <div class="session-box">
     <span class="session-title" style="color:#00ff9f;text-shadow:0 0 20px rgba(0,255,159,0.5);">DELTA</span>
-    <div class="revision-note">v1.5</div>
+    <div class="revision-note">v1.6</div>
     <label>Channel Code</label>
     <input type="text" id="sessionCode" maxlength="8" placeholder="ENTER CODE" autocomplete="off">
     <div class="presence-row">
@@ -1248,9 +1248,8 @@ function sendMorse() {
   const wpm = parseInt(document.getElementById('morseSpeed').value, 10) || 20;
   if (dcSend({ __morse: true, text: text, wpm: wpm })) {
     addBubble(text + '  (sent as Morse, ' + wpm + ' WPM)', true);
-    playMorse(text, wpm); // local sidetone
     chatInput.value = '';
-    entry('Sent as Morse @ ' + wpm + ' WPM: ' + text, 'sys');
+    entry('Sent as Morse @ ' + wpm + ' WPM; receiver audio only: ' + text, 'sys');
   }
 }
 
@@ -1527,14 +1526,20 @@ function practicePlayListen() {
     if (sent) addBubble(text + '  (sent as practice Morse, ' + wpm + ' WPM)', true);
   }
   stopAllAudio();
+  const playableCount = playbackText.replace(/\s+/g, '').length;
+  if (sent) {
+    practiceUpdateTextScreen();
+    practiceSetFileStatus(practiceTextFilename + ' · sent ' + playableCount + ' chars @ ' + wpm + ' WPM; receiver audio only');
+    entry('Sent practice Morse @ ' + wpm + ' WPM; receiver audio only (' + playableCount + ' chars)', 'sys');
+    return;
+  }
   practiceBeginPlaybackScreen(playbackText);
   const duration = playMorseRaw(playbackText, wpm, tone, {
     onCharStart: practiceScheduleCursor,
     onEnd: practiceScheduleCursorEnd
   });
-  const playableCount = playbackText.replace(/\s+/g, '').length;
   practiceSetFileStatus(practiceTextFilename + ' · playing ' + playableCount + ' chars @ ' + wpm + ' WPM');
-  entry((sent ? 'Sent and playing' : 'Playing') + ' practice text @ ' + wpm + ' WPM (' + playableCount + ' chars, ' + Math.round(duration || 0) + ' ms)', sent ? 'sys' : 'ok');
+  entry('Playing practice text @ ' + wpm + ' WPM (' + playableCount + ' chars, ' + Math.round(duration || 0) + ' ms)', 'ok');
 }
 
 const PRACTICE_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
