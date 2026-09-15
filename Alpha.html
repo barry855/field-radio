@@ -1,5 +1,6 @@
 
-<!-- DEPLOY TIMESTAMP: 2026-07-07 Europe/London (BST, UTC+01:00) | ALPHA v8.98.0-fs-topbar -->
+
+<!-- DEPLOY TIMESTAMP: 2026-09-15 12:39 UTC | ALPHA V.101 -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
@@ -22,7 +23,7 @@
   @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono:display=swap&family=Orbitron:wght@400;700;900&display=swap');
 
   :root {
-    --bg:         #6b7280;
+    --bg:         #000000;
     --panel:      #4b5563;
     --border:     #374151;
     --accent:     #00d4ff;
@@ -89,27 +90,36 @@
   header {
     justify-content: space-between;
     display: flex; align-items: center; gap: 16px;
+    flex-wrap: wrap;
     background: var(--panel); border: 1px solid var(--border);
     border-radius: 8px; border-top: 2px solid var(--accent);
     padding: 10px 14px;
     flex-shrink: 0;
+    max-width: 100%;
+    box-sizing: border-box;
   }
   .header-action-btn {
     background: transparent;
-    border: 1px solid var(--accent); color: var(--accent);
-    font-family: 'Share Tech Mono', monospace; font-size: 12px;
-    border-radius: 4px; padding: 3px 8px;
+    border: 1.5px solid var(--accent); color: var(--accent);
+    font-family: 'Share Tech Mono', monospace; font-size: 13px;
+    font-weight: 700; letter-spacing: 0.5px;
+    border-radius: 5px; padding: 6px 12px;
     cursor: pointer; line-height: 1; flex-shrink: 0;
     display: inline-flex; align-items: center; justify-content: center;
     white-space: nowrap;
   }
   .header-action-btn:hover { background: var(--btn-hover); border-color: var(--accent); }
-  .header-action-btn.leave-style { border-color: #fff; color: #fff; background: #000; }
-  .header-action-btn.leave-style:hover { background: #222; }
+  .header-action-btn.leave-style {
+    border: 2px solid #ff4d4d; color: #fff; background: #cc1f1f;
+    font-weight: 800; box-shadow: 0 0 10px rgba(255,60,60,0.55);
+  }
+  .header-action-btn.leave-style:hover { background: #e02929; box-shadow: 0 0 14px rgba(255,60,60,0.75); }
   .header-action-btn.go-live-style { border-color: #44cc88; color: #44cc88; background: #000; font-weight: 700; }
   .header-action-btn.go-live-style:hover { background: #113322; }
   .header-right-btns {
-    display: flex; align-items: center; gap: 6px; margin-left: auto; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: flex-end; gap: 6px;
+    margin-left: auto; flex: 1 1 auto; min-width: min(100%, 220px);
+    flex-wrap: wrap;
   }
   .logo {
     font-family: 'Orbitron', sans-serif; font-size: 20px; font-weight: 900;
@@ -128,6 +138,15 @@
     font-size: 11px; color: var(--text-dim);
     text-transform: uppercase; letter-spacing: 1px;
   }
+  .route-item {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 10px; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .route-value { color: #777; font-weight: 700; }
+  .route-value.direct { color: var(--accent2); }
+  .route-value.relay { color: #ffcc44; }
+  .route-value.checking { color: var(--warn); }
   .led {
     width: 10px; height: 10px; border-radius: 50%;
     background: #333; box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);
@@ -141,6 +160,54 @@
   .led.on-blue   { background: #4499ff;       box-shadow: 0 0 8px #4499ff; animation: blink 0.5s step-end infinite; }  /* connecting */
 
   @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.35} }
+
+  @media (max-width: 720px), (pointer: coarse) {
+    body:not(.app-fullscreen) header {
+      gap: 6px 10px;
+      padding: max(6px, env(safe-area-inset-top)) 8px 6px;
+      align-items: flex-start;
+    }
+    body:not(.app-fullscreen) .logo {
+      font-size: 16px;
+      letter-spacing: 2px;
+      line-height: 1.2;
+    }
+    body:not(.app-fullscreen) .statusbar {
+      flex: 1 1 170px;
+      gap: 5px 8px;
+      min-width: 0;
+    }
+    body:not(.app-fullscreen) .status-item,
+    body:not(.app-fullscreen) .route-item {
+      font-size: 9px;
+      letter-spacing: 0.5px;
+    }
+    body:not(.app-fullscreen) .header-right-btns {
+      flex: 1 0 100%;
+      justify-content: flex-end;
+      gap: 4px;
+      margin-left: 0;
+    }
+    body:not(.app-fullscreen) .header-action-btn {
+      min-height: 28px;
+      padding: 5px 8px;
+      font-size: 11px;
+      letter-spacing: 0;
+    }
+    body:not(.app-fullscreen) #helpTouchBtn {
+      width: 28px;
+      height: 28px;
+      min-width: 28px;
+    }
+  }
+
+  @media (max-width: 380px) {
+    body:not(.app-fullscreen) .header-action-btn {
+      padding-left: 6px;
+      padding-right: 6px;
+      font-size: 10px;
+    }
+  }
 
   .chat-panel {
     flex: 1;
@@ -790,22 +857,23 @@
     background: rgba(75,85,99,0.55); border: 1px solid var(--border);
     border-radius: 8px; padding: 10px 14px;
     position: absolute; top: 0; bottom: 0; left: 0; right: 0;
-    z-index: 200; display: none; flex-direction: column;
+    z-index: 1500; display: none; flex-direction: column;
     transition: padding 0.2s;
   }
   .log-panel.syslog-open { display: flex; }
   .log-panel.collapsed { padding-bottom: 10px; min-height: 44px; }
   .log-panel.collapsed .log { display: none; }
   .log-panel .panel-label {
-    position: static; background: none; padding: 0;
+    position: sticky; top: 0; z-index: 5;
+    background: rgba(75,85,99,0.96); padding: 2px 0 6px;
     cursor: pointer; user-select: none;
-    display: flex; align-items: center; gap: 6px;
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
     touch-action: manipulation; -webkit-tap-highlight-color: transparent;
     min-height: 28px; width: 100%;
   }
   .log-toggle-arrow {
     font-size: 10px; color: var(--text-dim);
-    margin-left: auto; transition: transform 0.2s;
+    margin-left: 0; transition: transform 0.2s;
     display: inline-block; line-height: 1;
   }
   .log-panel.collapsed .log-toggle-arrow { transform: rotate(-90deg); }
@@ -817,6 +885,8 @@
     transition: background 0.15s, border-color 0.15s, color 0.15s;
     flex-shrink: 0;
   }
+  .log-panel.syslog-open .log-action-btn { display: inline-flex; align-items: center; justify-content: center; }
+  .log-panel.syslog-open .panel-label { flex: 0 0 auto; }
   .log-action-btn:hover { background: var(--btn-hover); border-color: var(--accent); color: var(--accent); }
   .log-action-btn.stopped { background: #000; border-color: #000; color: #fff; }
   .log {
@@ -1038,6 +1108,16 @@
     color: var(--accent); letter-spacing: 4px; margin-bottom: 16px; display: block;
     text-shadow: 0 0 20px rgba(0,212,255,0.5);
   }
+  .session-version {
+    display: inline-block;
+    margin-left: 8px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    text-shadow: none;
+    vertical-align: middle;
+  }
   .session-box label {
     display: block; font-size: 10px; color: var(--text-dim);
     letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px;
@@ -1162,6 +1242,11 @@
   .video-wrap video {
     width: 100%; height: 100%; object-fit: contain; display: block;
   }
+  .video-wrap.waiting video,
+  .video-wrap.video-off video,
+  .video-wrap.no-video video {
+    visibility: hidden;
+  }
   .video-label {
     position: absolute; bottom: 6px; left: 8px;
     font-family: 'Orbitron', sans-serif; font-size: 10px;
@@ -1188,7 +1273,7 @@
     display: flex; align-items: center; justify-content: center;
     font-family: 'Orbitron', sans-serif; font-size: 10px;
     letter-spacing: 3px; color: var(--text-dim);
-    background: rgba(0,0,0,0.85);
+    background: #000;
   }
   .video-wrap.video-off::after {
     content: 'WAITING FOR CONNECTION';
@@ -1196,7 +1281,7 @@
     display: flex; align-items: center; justify-content: center;
     font-family: 'Orbitron', sans-serif; font-size: 10px;
     letter-spacing: 3px; color: var(--warn);
-    background: rgba(0,0,0,0.72);
+    background: #000;
   }
   .video-wrap.no-video::after {
     content: 'WAITING FOR CONNECTION';
@@ -1204,7 +1289,7 @@
     display: flex; align-items: center; justify-content: center;
     font-family: 'Orbitron', sans-serif; font-size: 10px;
     letter-spacing: 3px; color: var(--warn);
-    background: rgba(0,0,0,0.72);
+    background: #000;
   }
   .video-wrap.stale::after {
     content: 'PLEASE REFRESH';
@@ -1806,6 +1891,16 @@
     position: relative; z-index: 1010;
     opacity: 1 !important;
     pointer-events: auto !important;
+    flex-wrap: wrap;
+    max-width: 100vw;
+    overflow: hidden;
+  }
+  body.app-fullscreen .header-right-btns {
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    margin-left: auto;
+    min-width: 0;
+    overflow: hidden;
   }
   body.app-fullscreen .tab-bar {
     position: relative; z-index: 1002;
@@ -1868,7 +1963,63 @@
     transition: opacity 0.4s ease;
   }
   body.app-fullscreen.fs-controls-hidden #fsHint,
-  body.app-fullscreen.fs-controls-visible #fsHint { display: block; }
+  body.app-fullscreen.fs-controls-visible #fsHint { display: none; }
+
+  body.app-fullscreen.fs-controls-hidden .header-right-btns .header-action-btn:not(#fsControlsBtn):not(.go-live-style),
+  body.app-fullscreen.fs-controls-hidden #helpTouchBtn {
+    display: none !important;
+  }
+  body.app-fullscreen.fs-controls-hidden .header-right-btns {
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+  }
+  body.app-fullscreen.fs-controls-hidden .header-action-btn.go-live-style {
+    display: inline-flex !important;
+    max-width: calc(50vw - 10px);
+    overflow: hidden;
+    text-overflow: clip;
+  }
+  body.app-fullscreen.fs-controls-hidden #fsControlsBtn {
+    display: inline-flex !important;
+    margin-left: auto;
+    max-width: calc(100vw - 16px);
+    overflow: hidden;
+  }
+
+  @media (orientation: portrait) and (pointer: coarse) {
+    body.app-fullscreen header {
+      gap: 4px 6px;
+      padding: max(6px, env(safe-area-inset-top)) 8px 6px;
+      align-items: flex-start;
+    }
+    body.app-fullscreen .logo {
+      font-size: 15px;
+      letter-spacing: 1.5px;
+      min-width: 0;
+    }
+    body.app-fullscreen .statusbar {
+      flex: 1 1 140px;
+      min-width: 0;
+      gap: 4px 6px;
+    }
+    body.app-fullscreen .status-item,
+    body.app-fullscreen .route-item {
+      font-size: 8px;
+      letter-spacing: 0.4px;
+    }
+    body.app-fullscreen .header-right-btns {
+      flex: 1 0 100%;
+      justify-content: flex-end;
+      gap: 4px;
+      margin-left: 0;
+    }
+    body.app-fullscreen .header-action-btn {
+      min-height: 28px;
+      padding: 5px 7px;
+      font-size: 10px;
+      letter-spacing: 0;
+    }
+  }
 
   /* ── LANDSCAPE: full-screen video only (mobile/touch only, ACTIVE CALL ONLY) ─── */
   @media (orientation: landscape) and (pointer: coarse) {
@@ -1930,6 +2081,12 @@
     backdrop-filter: blur(3px);
     -webkit-backdrop-filter: blur(3px);
   }
+  body.app-fullscreen header {
+    display: flex !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    visibility: visible !important;
+  }
   body.app-fullscreen #paneChat #speechPanel.speech-open {
     display: flex !important;
     position: fixed !important;
@@ -1957,6 +2114,42 @@
     opacity: 1;
     pointer-events: auto;
     transform: translateY(0);
+  }
+  body.app-fullscreen #logPanel.syslog-open {
+    display: flex !important;
+    position: fixed !important;
+    top: 74px !important;
+    right: 8px !important;
+    bottom: 8px !important;
+    left: 8px !important;
+    z-index: 1005 !important;
+    max-height: none !important;
+    overflow: hidden !important;
+  }
+  body.app-fullscreen #logPanel.syslog-open .panel-label {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+  body.app-fullscreen #logPanel.syslog-open .log {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  html.is-pi body.app-fullscreen #logPanel.syslog-open {
+    top: 58px !important;
+    bottom: 8px !important;
+  }
+  body.app-fullscreen.syslog-visible #paneChat .chat-find-bar,
+  body.app-fullscreen.syslog-visible #paneChat .chat-btn-bar-row,
+  body.app-fullscreen.syslog-visible #paneChat .gain-row,
+  body.app-fullscreen.syslog-visible #paneChat .zoom-row,
+  body.app-fullscreen.syslog-visible #paneChat #speechPanel,
+  body.app-fullscreen.syslog-visible #paneChat #chatToolsWrap,
+  body.app-fullscreen.syslog-visible #paneChat #translateBar,
+  body.app-fullscreen.syslog-visible #paneChat .chat-panel > .panel-label {
+    display: none !important;
   }
 
   .media-btn,
@@ -2124,7 +2317,7 @@ window.addEventListener('orientationchange', function() {
 
 <div class="session-overlay" id="sessionOverlay">
   <div class="session-box">
-    <span class="session-title" style="color:#00ff9f;text-shadow:0 0 20px rgba(0,255,159,0.5);">ALPHA</span>
+    <span class="session-title" style="color:#00ff9f;text-shadow:0 0 20px rgba(0,255,159,0.5);">ALPHA <span class="session-version" data-login-version></span></span>
     <label>Shared Code:</label>
     <input type="text" id="sessionCode" maxlength="8" placeholder="ENTER CODE" autocomplete="off">
     <div class="code-strength" id="codeStrengthHint"></div>
@@ -2169,6 +2362,9 @@ window.addEventListener('orientationchange', function() {
           <span id="qbar3"></span>
         </div>
         <span id="qualityLabel" style="color:var(--text-dim);font-size:10px;">--</span>
+      </div>
+      <div class="route-item" id="routeDisplay" title="WebRTC path: Direct uses peer-to-peer; Relay uses TURN">
+        <span>ROUTE</span><span class="route-value checking" id="routeLabel">--</span>
       </div>
       <div class="user-left-notice" id="userLeftNotice">
         <span>User left chat</span>
@@ -2256,8 +2452,8 @@ window.addEventListener('orientationchange', function() {
       </div>
       <div class="gain-row">
         <div class="gain-label"><span>MIKE</span><span>GAIN</span></div>
-        <input type="range" id="micGainSlider" min="0" max="3" step="0.05" value="1.35" oninput="applyMicGain(this.value)">
-        <span class="gain-val" id="micGainVal">1.35×</span>
+        <input type="range" id="micGainSlider" min="0" max="3" step="0.05" value="3" oninput="applyMicGain(this.value)">
+        <span class="gain-val" id="micGainVal">3.00×</span>
       </div>
       <div class="gain-row">
         <div class="gain-label"><span>SPKR</span><span>VOL</span></div>
@@ -2308,8 +2504,8 @@ window.addEventListener('orientationchange', function() {
       <div class="gain-row" style="flex-shrink:0;">
         <div class="gain-label"><span>MIKE</span><span>GAIN</span></div>
         <select id="micInputSelect" class="flip-cam-select mic-input-select" title="Microphone input" onchange="switchMicrophone(this.value)"><option value="">MIC: DEFAULT</option></select>
-        <input type="range" id="micGainSliderChat" min="0" max="3" step="0.05" value="1.35" oninput="applyMicGain(this.value)" style="flex:1; min-width:0;">
-        <span class="gain-val" id="micGainValChat">1.35×</span>
+        <input type="range" id="micGainSliderChat" min="0" max="3" step="0.05" value="3" oninput="applyMicGain(this.value)" style="flex:1; min-width:0;">
+        <span class="gain-val" id="micGainValChat">3.00×</span>
         <button class="speech-top-btn" id="speechToggleBtn" onclick="toggleSpeechPanel()" title="Toggle Speech Input" style="flex-shrink:0; white-space:nowrap;">Talk/Type in Chat</button>
       </div>
       <div class="gain-row" style="flex-shrink:0;">
@@ -2536,10 +2732,14 @@ window.addEventListener('orientationchange', function() {
       </div>
       <div class="log-panel collapsed" id="logPanel">
         <div class="panel-label" onclick="toggleLogPanel()">SYS LOG<span class="log-toggle-arrow" id="logToggleArrow">▾</span>
-          <button class="log-action-btn" onclick="event.stopPropagation();saveLog()" title="Save log to file">SAVE</button>
+          <button class="log-action-btn" onclick="event.stopPropagation();saveLog()" title="Save log as HTML">SAVE</button>
+          <button class="log-action-btn" onclick="event.stopPropagation();saveLogText()" title="Save log as plain text">TXT</button>
           <button class="log-action-btn" id="logCopyBtn" onclick="event.stopPropagation();copyLog()" title="Copy log to clipboard">COPY</button>
+          <button class="log-action-btn" onclick="event.stopPropagation();snapshotDiagnostics()" title="Add connection diagnostics to log">DIAG</button>
           <button class="log-action-btn" onclick="event.stopPropagation();clearLog()" title="Clear log">CLEAR</button>
-          <button class="log-action-btn" id="logStopBtn" onclick="event.stopPropagation();toggleLogStop()" title="Pause/resume log">STOP</button>
+          <button class="log-action-btn" id="logAutoBtn" onclick="event.stopPropagation();toggleLogAutoScroll()" title="Toggle log auto-scroll">AUTO</button>
+          <button class="log-action-btn" id="logStopBtn" onclick="event.stopPropagation();toggleLogStop()" title="Pause/resume log">PAUSE</button>
+          <button class="log-action-btn" id="logExitBtn" onclick="event.stopPropagation();exitSysLogView()" title="Exit SYS LOG">EXIT</button>
         </div>
         <div class="log" id="log"><span class="log-entry sys">15:59:51  PREFILL: code=123 vid=false aud=false</span></div>
       </div>
@@ -2734,7 +2934,22 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.98.0-fs-topbar'; // FS default on entry, always-visible top bar, GO LIVE + SHOW CONTROLS/SHOW FULL SCREEN buttons
+const VERSION = '101'; // login screen shows generated version beside station label
+
+function _loginVersionLabel() {
+  const match = String(VERSION).match(/^(\d+(?:\.\d+){0,2})/);
+  return 'V.' + (match ? match[1] : VERSION);
+}
+
+(function applyLoginVersionLabel() {
+  const apply = () => {
+    document.querySelectorAll('[data-login-version]').forEach(el => {
+      el.textContent = _loginVersionLabel();
+    });
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', apply, { once: true });
+  else apply();
+})();
 
 // ICE servers — STUN (no auth) + TURN relay (essential for mobile/carrier-NAT).
 // turns: (TLS/443) entries are critical for Android on mobile networks that block plain UDP.
@@ -2744,19 +2959,20 @@ const ICE_SERVERS = [
   { urls: 'stun:stun2.l.google.com:19302' },
   { urls: 'stun:stun3.l.google.com:19302' },
   { urls: 'stun:stun.cloudflare.com:3478' },
-  { urls: 'stun:openrelay.metered.ca:80' },
-  { urls: 'turn:openrelay.metered.ca:80',              username: 'openrelayproject', credential: 'openrelayproject' },
-  { urls: 'turn:openrelay.metered.ca:443',             username: 'openrelayproject', credential: 'openrelayproject' },
-  { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
-  { urls: 'turns:openrelay.metered.ca:443',            username: 'openrelayproject', credential: 'openrelayproject' },
-  { urls: 'turns:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+  // Metered.ca disabled while the monthly limit is reached. Restore after reset if needed.
+  // { urls: 'stun:openrelay.metered.ca:80' },
+  // { urls: 'turn:openrelay.metered.ca:80',              username: 'openrelayproject', credential: 'openrelayproject' },
+  // { urls: 'turn:openrelay.metered.ca:443',             username: 'openrelayproject', credential: 'openrelayproject' },
+  // { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+  // { urls: 'turns:openrelay.metered.ca:443',            username: 'openrelayproject', credential: 'openrelayproject' },
+  // { urls: 'turns:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
   // Personal Metered.ca TURN credentials — independent fallback in case the
   // shared Open Relay demo credentials above are rate-limited or rejected.
-  { urls: 'stun:stun.relay.metered.ca:80' },
-  { urls: 'turn:global.relay.metered.ca:80',                username: '554e937371f5aaea2f60db1f', credential: 'iz048pNn3xMiESzK' },
-  { urls: 'turn:global.relay.metered.ca:80?transport=tcp',  username: '554e937371f5aaea2f60db1f', credential: 'iz048pNn3xMiESzK' },
-  { urls: 'turn:global.relay.metered.ca:443',               username: '554e937371f5aaea2f60db1f', credential: 'iz048pNn3xMiESzK' },
-  { urls: 'turns:global.relay.metered.ca:443?transport=tcp', username: '554e937371f5aaea2f60db1f', credential: 'iz048pNn3xMiESzK' }
+  // { urls: 'stun:stun.relay.metered.ca:80' },
+  // { urls: 'turn:global.relay.metered.ca:80',                username: '554e937371f5aaea2f60db1f', credential: 'iz048pNn3xMiESzK' },
+  // { urls: 'turn:global.relay.metered.ca:80?transport=tcp',  username: '554e937371f5aaea2f60db1f', credential: 'iz048pNn3xMiESzK' },
+  // { urls: 'turn:global.relay.metered.ca:443',               username: '554e937371f5aaea2f60db1f', credential: 'iz048pNn3xMiESzK' },
+  // { urls: 'turns:global.relay.metered.ca:443?transport=tcp', username: '554e937371f5aaea2f60db1f', credential: 'iz048pNn3xMiESzK' }
 ];
 
 let MY_ID, REMOTE_ID;
@@ -2769,9 +2985,12 @@ let silentTrack = null;
 
 let peer, call, dataConn, localStream, linked = false, retryTimer;
 let _dialWatchdogTimer = null; // separate from short retry timers; prevents orphaned 90s callbacks
+let _callProbeTimer = null;    // short visible CALLING window before falling back to WAITING
+const CALL_PROBE_MS = 6000;
 const _failedRemoteIds = Object.create(null);
 let _iceReady = false;   // ICE connected but stream not yet confirmed — not truly LIVE yet
 let _streamArrived = false; // at least one remote track/stream has arrived
+let _remoteHelloOk = false; // data-channel station identity received for this call
 let _noMediaMode = false;   // true when we're running without real mic/camera
 let _preRegistered = false;   // true once preRegister() has opened the peer
 let _preRegCode    = '';      // the code that was pre-registered
@@ -2876,9 +3095,9 @@ function startSession() {
     MY_ID     = 'alpha-' + code;
     REMOTE_ID = 'bravo-' + code;
   }
-  // Alpha owns the answering-machine role from login onward. It advertises
-  // that role immediately and never places the initial media or data call.
-  _answeringMachineMode = true;
+  // Alpha starts as the caller. If Bravo stays offline, the answering-machine
+  // timer below promotes Alpha into answering mode and republishes presence.
+  _answeringMachineMode = false;
   _preRegistered = false; _preRegCode = ''; // consumed
   // Keep writing our heartbeat for the whole session so Firebase shows us as online
   const myKey = 'alpha-' + code;
@@ -2902,8 +3121,8 @@ function startSession() {
     const b = document.getElementById(id);
     if (b) { b.textContent = 'Mike On'; b.classList.remove('active-on','disabled-state'); }
   });
-  // Reset video button UI to On (applyStreamFlags will re-apply if needed)
-  setVideoButtons(true);
+  // Answering-machine setup is audio-only; the camera is opened when the call goes live.
+  setVideoButtons(false);
   loginDisableVideoFlag = disVidChecked;
   loginDisableAudioFlag = disAudChecked;
   // Always log the checkbox state so we can see it in the activity log
@@ -2915,16 +3134,20 @@ function startSession() {
   leftPermanently = false;
   remotePeerLeft = false;
   _clearAnsweringModeTimer();
-  _answeringMachineMode = true;
+  _answeringMachineMode = false;
   _attended = false;
   _bravoRequestedLive = false;
   _bravoAnsweringAvailable = false;
   _liveTakeoverRequested = false;
   document.getElementById('qualityDisplay').style.display = 'flex';
-  setStatus('answering');
   duplexBar.textContent = 'ANSWERING MACHINE — WAITING FOR BRAVO';
   duplexBar.className = 'duplex-overlay';
   entry('Alpha receiver ready — waiting for Bravo to call', 'ok');
+  setStatus('calling');
+  duplexBar.textContent = 'CALLING BRAVO';
+  duplexBar.className = 'duplex-overlay waiting';
+  entry('Alpha caller ready - looking for Bravo', 'ok');
+  _armAnsweringModeTimer();
   if (usingPreReg) {
     entry('Using pre-registered peer — acquiring media only', 'sys');
     initMediaOnly();
@@ -3002,12 +3225,23 @@ async function presenceWrite(myKey) {
     const env  = await _encryptPresence(code, {
       ts: Date.now(),
       peerId: MY_ID,
-      answering: _answeringMachineMode === true
+      role: 'alpha',
+      answering: _answeringMachineMode === true || _waitingAfterRemoteLeave === true
     });
     await fetch(FB_URL + '/presence/' + myKey + '.json', {
       method: 'PUT',
       body: JSON.stringify(env)
     });
+  } catch(e) {}
+}
+
+function presenceClear(myKey) {
+  try {
+    if (!myKey) return;
+    fetch(FB_URL + '/presence/' + myKey + '.json', {
+      method: 'DELETE',
+      keepalive: true
+    }).catch(() => {});
   } catch(e) {}
 }
 
@@ -3249,17 +3483,23 @@ function prefillLogin() {
     document.getElementById('loginDisableVideo').checked = disVid;
     document.getElementById('loginDisableAudio').checked = disAud;
     document.getElementById('loginPiMode').checked = localStorage.getItem('alpha_pi_mode') === '1';
-    if (last) document.getElementById('sessionCode').value = last;
+    if (last) {
+      document.getElementById('sessionCode').value = last;
+      setTimeout(() => {
+        const btn = document.querySelector('.session-go');
+        if (btn) btn.focus();
+      }, 0);
+    }
     setTimeout(() => entry('PREFILL: code=' + last + ' vid=' + disVid + ' aud=' + disAud, 'sys'), 500);
     // Connection work starts only after login. Pre-registering here used to
     // overlap PeerJS startup with media acquisition and could freeze the page.
     // Prefill mic gain slider from saved value
     const _rawGain = localStorage.getItem('alpha_mic_gain');
-    let savedGain = _rawGain !== null ? parseFloat(_rawGain) : 1.35;
-    if (savedGain === 1 && localStorage.getItem('alpha_gain_135_migrated') !== '1') {
-      savedGain = 1.35;
-      localStorage.setItem('alpha_mic_gain', '1.35');
-      localStorage.setItem('alpha_gain_135_migrated', '1');
+    let savedGain = _rawGain !== null ? parseFloat(_rawGain) : 3;
+    if (isFinite(savedGain) && savedGain < 3 && localStorage.getItem('alpha_gain_300_migrated') !== '1') {
+      savedGain = 3;
+      localStorage.setItem('alpha_mic_gain', '3');
+      localStorage.setItem('alpha_gain_300_migrated', '1');
     }
     const gSlider = document.getElementById('micGainSlider');
     const gLabel  = document.getElementById('micGainVal');
@@ -3437,6 +3677,7 @@ document.getElementById('sessionCode').addEventListener('keydown', e => {
 });
 
 let _logStopped = false;
+let _logAutoScroll = true;
 function entry(msg, cls='sys') {
   if (_logStopped) return;
   const ts = new Date().toTimeString().slice(0,8);
@@ -3444,7 +3685,7 @@ function entry(msg, cls='sys') {
   d.className = 'log-entry ' + cls;
   d.textContent = `${ts}  ${msg}`;
   logEl.appendChild(d);
-  logEl.scrollTop = logEl.scrollHeight;
+  if (_logAutoScroll) logEl.scrollTop = logEl.scrollHeight;
 
 }
 
@@ -3483,6 +3724,7 @@ function scrollToBottom(force) {
 function setStatus(state) {
   entry('STATUS: ' + state, 'sys');
   linkLed.className = 'led';
+  if (state !== 'linked' && state !== 'voicemail') updateRouteLabel('--', 'Not connected');
   if (state === 'answering')      { linkLed.classList.add('on-cyan');   statusEl.textContent = 'ANSWERING';     document.title = 'ANSWERING - ALPHA - Field Radio v6'; }
   else if (state === 'calling')   { linkLed.classList.add('on-yellow'); statusEl.textContent = 'CALLING...';    document.title = 'CALLING... - ALPHA - Field Radio v6'; }
   else if (state === 'connecting'){ linkLed.classList.add('on-blue');   statusEl.textContent = 'CONNECTING...'; document.title = 'CONNECTING... - ALPHA - Field Radio v6'; }
@@ -3520,6 +3762,15 @@ function _stopVmCountdown() {
   _vmCountdownTicker = null;
   _vmCountdownEndsAt = 0;
   _vmCountdownNoticeEl = null;
+}
+
+function _playVoicemailPromptLocally() {
+  const intro = document.getElementById('answeringMachineIntro');
+  if (!intro) return;
+  try { intro.load(); intro.currentTime = 0; } catch(e) {}
+  const p = intro.play();
+  if (p && p.catch) p.catch(e => entry('Voicemail prompt could not play locally: ' + e.message, 'sys'));
+  _vmNotice('VOICEMAIL PROMPT PLAYING - RECORDING WILL START AFTER THE CUE');
 }
 
 let activeTab = 'chat';
@@ -3563,7 +3814,7 @@ function syncMiniVideos() {
     miniRemote.srcObject = remoteVideo.srcObject;
   }
   if (miniLocalOverlay) miniLocalOverlay.classList.toggle('no-video', !localStream);
-  if (miniRemoteOverlay) miniRemoteOverlay.classList.toggle('no-video', !(remoteVideo && remoteVideo.srcObject));
+  if (miniRemoteOverlay) miniRemoteOverlay.classList.toggle('no-video', !(remoteVideo && remoteVideo.srcObject && _remoteVideoAllowedByControl));
   // sync mini chat overlay
   syncChatMiniOverlay();
   syncChatUnderlay();
@@ -3577,6 +3828,8 @@ try { localStorage.setItem('alpha_underlay_mode', 'remote'); } catch(e) {}
 
 function _streamHasLiveVideo(stream) {
   if (!stream) return false;
+  const remoteV = document.getElementById('remoteVideo');
+  if (remoteV && stream === remoteV.srcObject && !_remoteVideoAllowedByControl) return false;
   return stream.getVideoTracks().some(t => t.readyState === 'live');
 }
 
@@ -4978,6 +5231,7 @@ function toggleSysLogView() {
       const l = logPanel.querySelector('#log');
       if (l) setTimeout(() => { l.scrollTop = l.scrollHeight; }, 50);
     }
+    document.body.classList.add('syslog-visible');
     if (btn) { btn.classList.add('active'); }
     setChatBtnsDisabled(true);
   } else {
@@ -4985,10 +5239,15 @@ function toggleSysLogView() {
       logPanel.classList.remove('syslog-open');
       logPanel.classList.add('collapsed');
     }
+    document.body.classList.remove('syslog-visible');
     if (btn) { btn.classList.remove('active'); }
     setChatBtnsDisabled(false);
   }
   syncUnderlayOpacity();
+}
+
+function exitSysLogView() {
+  if (_syslogVisible) toggleSysLogView();
 }
 
 // ── Speech panel toggle + Web Speech API ────────────────────────────────────
@@ -5010,6 +5269,7 @@ function toggleSpeechPanel() {
       _syslogVisible = false;
       const lp = document.getElementById('logPanel');
       if (lp) { lp.classList.remove('syslog-open'); lp.classList.add('collapsed'); }
+      document.body.classList.remove('syslog-visible');
       const lb = document.getElementById('syslogToggleBtn');
       if (lb) { lb.classList.remove('active'); }
     }
@@ -6065,16 +6325,16 @@ async function initMediaOnly() {
 
   function applyAndDial(stream) {
     localStream = stream;
-    if (loginDisableVideoFlag) _parkCameraStream(stream);
+    _parkCameraStream(stream);
     _forceAspectRatio169(stream.getVideoTracks()[0]);
     setupMicGainNode(stream);
     attachAndStartLocalPreview(stream);
-    entry('Media ready - camera follows login preference', 'ok');
+    setVideoButtons(false);
+    entry('Media ready - camera held off during answering machine', 'ok');
     syncMiniVideos();
     initFlipCamUI();
     initMicInputUI();
     updateLocalVideoState();
-    if (!loginDisableVideoFlag) _scheduleStartupCameraRecovery();
     if (loginDisableVideoFlag) {
       const vt = stream.getVideoTracks()[0];
       if (vt) { vt.enabled = false; }
@@ -6096,7 +6356,7 @@ async function initMediaOnly() {
 
   navigator.mediaDevices.getUserMedia({
     audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
-    video: loginDisableVideoFlag ? false : videoConstraint
+    video: false
   })
   .then(applyAndDial)
   .catch(e => {
@@ -6106,7 +6366,7 @@ async function initMediaOnly() {
       delete fallbackConstraint.deviceId;
       navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
-        video: loginDisableVideoFlag ? false : fallbackConstraint
+        video: false
       }).then(applyAndDial).catch(e2 => {
         entry('Media error (' + e2.name + ') — falling back to audio-only', 'sys');
         navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false } })
@@ -6190,16 +6450,16 @@ async function init() {
 
   function applyStreamFlags(stream) {
     localStream = stream;
-    if (loginDisableVideoFlag) _parkCameraStream(stream);
+    _parkCameraStream(stream);
     _forceAspectRatio169(stream.getVideoTracks()[0]);
     setupMicGainNode(stream);
     attachAndStartLocalPreview(stream);
-    entry('Media ready - camera follows login preference', 'ok');
+    setVideoButtons(false);
+    entry('Media ready - camera held off during answering machine', 'ok');
     syncMiniVideos();
     initFlipCamUI();
     initMicInputUI();
     updateLocalVideoState();
-    if (!loginDisableVideoFlag) _scheduleStartupCameraRecovery();
     if (loginDisableVideoFlag) {
       const vt = stream.getVideoTracks()[0];
       if (vt) { vt.enabled = false; }
@@ -6260,7 +6520,7 @@ async function init() {
 
   navigator.mediaDevices.getUserMedia({
     audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
-    video: loginDisableVideoFlag ? false : videoConstraint
+    video: false
   })
   .then(applyStreamFlags)
   .catch(e => {
@@ -6270,7 +6530,7 @@ async function init() {
       delete fallbackConstraint.deviceId;
       navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
-        video: loginDisableVideoFlag ? false : fallbackConstraint
+        video: false
       }).then(applyStreamFlags).catch(handleMediaError);
       return;
     }
@@ -6293,6 +6553,9 @@ async function init() {
 // Must be module-level so startPeer's peer.on('open') closure can reference it.
 let _remoteIdConfirmed = false; // true once Firebase has returned a valid peerId for BRAVO
 let _bravoPresenceFreshUntil = 0;
+function _isConfirmedBravoPeerId(peerId) {
+  return !!(peerId && _remoteIdConfirmed && REMOTE_ID === peerId && Date.now() < _bravoPresenceFreshUntil);
+}
 async function _refreshRemoteId() {
   try {
     const _code = MY_ID ? MY_ID.replace(/^alpha-/, '').replace(/-[0-9a-f]{4}$/, '') : '';
@@ -6301,7 +6564,7 @@ async function _refreshRemoteId() {
     const _r = await fetch(FB_URL + '/presence/' + _bravoPollKey + '.json?cb=' + Date.now(), { cache: 'no-store' });
     const _env = await _r.json();
     const _d = _env ? await _decryptPresence(_code, _env) : null;
-    if (_d && _d.peerId && _d.ts && (Date.now() - _d.ts) < PRESENCE_STALE_MS) {
+    if (_d && _d.peerId && _d.role === 'bravo' && _d.ts && (Date.now() - _d.ts) < PRESENCE_STALE_MS) {
       _bravoPresenceFreshUntil = Date.now() + PRESENCE_STALE_MS;
       if (_d.peerId !== REMOTE_ID && !linked) {
         const previousRemoteId = REMOTE_ID;
@@ -6316,13 +6579,20 @@ async function _refreshRemoteId() {
           if (dataConn) { try { dataConn.close(); } catch(e) {} dataConn = null; }
           pendingDC = false;
           clearTimeout(_dialWatchdogTimer); _dialWatchdogTimer = null;
+          clearTimeout(_callProbeTimer); _callProbeTimer = null;
           clearTimeout(retryTimer);
           retryTimer = setTimeout(() => { if (!linked && !_answeringMachineMode) dial(); }, 150);
         }
       }
       _remoteIdConfirmed = true;
+      if (_waitingAfterRemoteLeave && !linked && !call && localStream) {
+        entry('Bravo peer refreshed while Alpha is waiting - staying receiver', 'sys');
+        const presenceCodeNow = MY_ID ? MY_ID.replace(/^alpha-/, '').replace(/-[0-9a-f]{4}$/, '') : '';
+        if (presenceCodeNow) presenceWrite('alpha-' + presenceCodeNow);
+      }
     } else {
       _remoteIdConfirmed = false;
+      _bravoPresenceFreshUntil = 0;
     }
   } catch(e) {}
 }
@@ -6331,6 +6601,19 @@ function _setupRemoteIdPoll(bravoPollKey) {
   _refreshRemoteId();
   if (window._remoteIdPollTimer) clearInterval(window._remoteIdPollTimer);
   window._remoteIdPollTimer = setInterval(_refreshRemoteId, 5000);
+}
+
+function _showWaitingForBravo(reason) {
+  clearTimeout(_callProbeTimer); _callProbeTimer = null;
+  if (!linked && !leftPermanently) _waitingAfterRemoteLeave = true;
+  setStatus('reachable');
+  duplexBar.textContent = 'WAITING FOR BRAVO';
+  duplexBar.className = 'duplex-overlay waiting';
+  updateRouteLabel('--', 'Not connected');
+  syncControls();
+  if (reason) entry(reason, 'sys');
+  const presenceCodeNow = MY_ID ? MY_ID.replace(/^alpha-/, '').replace(/-[0-9a-f]{4}$/, '') : '';
+  if (presenceCodeNow) presenceWrite('alpha-' + presenceCodeNow);
 }
 
 let _unavailIdRetries = 0;
@@ -6344,6 +6627,7 @@ let _answeringDeadlineAt = 0;
 let _hardAnswerDeadlineAt = 0;
 let _hardAnswerTimer = null;
 let _hardAnswerWatchdog = null;
+let _amDeferredForIce = false; // true once we've already given an ICE-connected call its one grace window
 
 function _clearHardAnswerDeadline() {
   clearTimeout(_hardAnswerTimer);
@@ -6374,6 +6658,7 @@ function _clearAnsweringModeTimer() {
   _answeringModeTimer = null;
   _answeringModeWatchdog = null;
   _answeringDeadlineAt = 0;
+  _amDeferredForIce = false;
 }
 
 function _checkAnsweringModeDeadline() {
@@ -6399,7 +6684,7 @@ function _armAnsweringModeTimer() {
   _checkAnsweringModeDeadline();
 }
 
-function _enterAnsweringMachineMode() {
+function _enterAnsweringMachineMode(force = false) {
   _clearHardAnswerDeadline();
   clearTimeout(_answeringModeTimer);
   clearInterval(_answeringModeWatchdog);
@@ -6407,6 +6692,32 @@ function _enterAnsweringMachineMode() {
   _answeringModeWatchdog = null;
   _answeringDeadlineAt = 0;
   if (linked || leftPermanently || _answeringMachineMode) return;
+  if (!force && (_remoteIdConfirmed || Date.now() < _bravoPresenceFreshUntil)) {
+    entry('AM deadline reached but BRAVO is present - continuing to call', 'sys');
+    _answeringDeadlineAt = Date.now() + 15000;
+    _answeringModeTimer = setTimeout(_checkAnsweringModeDeadline, 15000);
+    if (!_answeringModeWatchdog) _answeringModeWatchdog = setInterval(_checkAnsweringModeDeadline, 5000);
+    if (!call && localStream) _refreshRemoteId().then(dial);
+    return;
+  }
+  // If the current call's ICE has already connected, a real link is likely
+  // seconds away (its 'track'/'stream' events just haven't fired yet).
+  // Force-closing it here would null `call` while those events are still in
+  // flight, and attachCall()'s stale-call guard would then silently drop
+  // them — leaving Alpha connected-but-deaf. Give it one short grace window
+  // to finish linking before falling back to AM mode.
+  if (!force && call && !_amDeferredForIce) {
+    const _pc = call.peerConnection || call._pc;
+    const _iceState = _pc && _pc.iceConnectionState;
+    if (_iceState === 'connected' || _iceState === 'completed') {
+      _amDeferredForIce = true;
+      entry('AM deadline reached but ICE is ' + _iceState + ' — giving the link 5s to complete', 'sys');
+      _answeringDeadlineAt = Date.now() + 5000;
+      _answeringModeTimer = setTimeout(_checkAnsweringModeDeadline, 5000);
+      if (!_answeringModeWatchdog) _answeringModeWatchdog = setInterval(_checkAnsweringModeDeadline, 5000);
+      return;
+    }
+  }
   _answeringMachineMode = true;
   _peerGeneration++; // stop any active presence-poll-and-dial loop
   clearTimeout(retryTimer);
@@ -6421,12 +6732,15 @@ function _enterAnsweringMachineMode() {
   linked = false;
   _iceReady = false;
   _streamArrived = false;
-  setStatus('answering');
-  duplexBar.textContent = 'ANSWERING MACHINE';
-  duplexBar.className = 'duplex-overlay';
+  stopQualityPolling();
+  setStatus('reachable');
+  duplexBar.textContent = 'WAITING FOR BRAVO';
+  duplexBar.className = 'duplex-overlay waiting';
   syncControls();
   entry('TEST: no BRAVO after 30 seconds — answering machine ready', 'ok');
   _vmNotice('— 📼 ANSWERING MACHINE READY —');
+  entry('Alpha waiting for Bravo to call', 'ok');
+  _vmNotice('WAITING FOR BRAVO');
   // Publish the role handoff immediately so a late BRAVO knows it must place
   // the call to ALPHA's answering machine instead of waiting indefinitely.
   const presenceCodeNow = MY_ID ? MY_ID.replace(/^alpha-/, '').replace(/-[0-9a-f]{4}$/, '') : '';
@@ -6464,6 +6778,7 @@ function startPeer() {
   _peerDestroyPending = false;
   _peerGeneration++;           // invalidate any _pollAndDial loop from the previous peer
   _remoteIdConfirmed = false;  // reset so new peer waits for fresh Firebase confirmation
+  clearRemoteRecordingStatus();
   // Destroy any existing peer before creating a new one.
   // Without this the old peer's event handlers (especially 'disconnected' → peer.reconnect())
   // keep firing against the replaced reference, causing a permanent reconnect loop.
@@ -6474,6 +6789,7 @@ function startPeer() {
   pendingDC = false;
   linked = false;
   _iceReady = false; _streamArrived = false;
+  _remoteHelloOk = false;
 
   peer = new Peer(MY_ID, {
     host: '0.peerjs.com', port: 443, path: '/', secure: true, pingInterval: 5000,
@@ -6488,18 +6804,17 @@ function startPeer() {
     entry('Radio online', 'ok');
     _armAnsweringModeTimer();
     if (_answeringMachineMode) {
-      setStatus('answering');
-      duplexBar.textContent = 'ANSWERING MACHINE';
-      duplexBar.className = 'duplex-overlay';
+      setStatus('reachable');
+      duplexBar.textContent = 'WAITING FOR BRAVO';
+      duplexBar.className = 'duplex-overlay waiting';
       syncControls();
       return;
     }
     setStatus(_waitingAfterRemoteLeave ? 'reachable' : 'calling');
-    if (_waitingAfterRemoteLeave) {
-      duplexBar.textContent = 'WAITING';
-      duplexBar.className = 'duplex-overlay';
-      syncControls();
-    }
+    duplexBar.textContent = _waitingAfterRemoteLeave ? 'WAITING FOR BRAVO' : 'CALLING BRAVO';
+    duplexBar.className = 'duplex-overlay waiting';
+    syncControls();
+    if (!_waitingAfterRemoteLeave) entry('Checking for active BRAVO before dialing', 'sys');
     // Poll Firebase until BRAVO's suffixed peer ID appears, then dial.
     // _thisGen captures the generation at the time this peer was created; if
     // startPeer() runs again (unavailable-id restart) _peerGeneration changes
@@ -6508,14 +6823,21 @@ function startPeer() {
     // registered as 'bravo-CODE-xxxx' returns peer-unavailable immediately.
     const _thisGen = _peerGeneration;
     let _dialPollCount = 0;
+    let _shownWaitingForBravo = false;
     function _pollAndDial() {
       if (_peerGeneration !== _thisGen || linked || _answeringMachineMode) return; // stale, linked or now waiting
       _refreshRemoteId().then(() => {
         if (_peerGeneration !== _thisGen || linked || _answeringMachineMode) return;
         _dialPollCount++;
-        if (_remoteIdConfirmed) {
+        if (_remoteIdConfirmed && !_waitingAfterRemoteLeave) {
           dial();
         } else {
+          if (!_shownWaitingForBravo && _dialPollCount >= 12) {
+            _shownWaitingForBravo = true;
+            entry('BRAVO not active yet - Alpha switching to receiver/answering mode', 'sys');
+            _enterAnsweringMachineMode();
+            return;
+          }
           if (_dialPollCount % 20 === 0) {
             entry('Waiting for BRAVO peerId... (' + _dialPollCount + ')', 'sys');
           }
@@ -6540,6 +6862,7 @@ function startPeer() {
     if (pendingDC) {
       entry('DC collision — accepting inbound DC from Bravo (discarding outgoing)', 'sys');
       pendingDC = false;
+      _showWaitingForBravo('');
     } else {
       entry('Inbound data channel from Bravo', 'sys');
     }
@@ -6553,9 +6876,36 @@ function startPeer() {
       try { incoming.close(); } catch(e) {}
       return;
     }
-    _waitingAfterRemoteLeave = false;
-    entry('Inbound call from Bravo', 'info');
-    answerCall(incoming);
+    const acceptInbound = () => {
+      if (_waitingAfterRemoteLeave && !_answeringMachineMode) {
+        _answeringMachineMode = true;
+        _clearAnsweringModeTimer();
+        _clearHardAnswerDeadline();
+        entry('Alpha waiting state - answering Bravo as receiver', 'sys');
+      }
+      _waitingAfterRemoteLeave = false;
+      entry('Inbound call from confirmed Bravo', 'info');
+      incoming._presenceConfirmed = true;
+      answerCall(incoming);
+    };
+    if (_answeringMachineMode || _waitingAfterRemoteLeave) {
+      entry('Alpha waiting/answering - accepting inbound Bravo call', 'sys');
+      acceptInbound();
+      return;
+    }
+    if (_isConfirmedBravoPeerId(remoteId)) {
+      acceptInbound();
+      return;
+    }
+    entry('Inbound Bravo call waiting for fresh presence confirmation: ' + remoteId, 'sys');
+    _refreshRemoteId().then(() => {
+      if (_isConfirmedBravoPeerId(remoteId)) {
+        acceptInbound();
+      } else {
+        entry('Blocked unconfirmed Bravo call: ' + remoteId, 'err');
+        try { incoming.close(); } catch(e) {}
+      }
+    });
   });
 
   peer.on('disconnected', () => {
@@ -6574,6 +6924,7 @@ function startPeer() {
       _failedRemoteIds[failedId] = Date.now() + 20000;
       _remoteIdConfirmed = false;
       clearTimeout(_dialWatchdogTimer); _dialWatchdogTimer = null;
+      clearTimeout(_callProbeTimer); _callProbeTimer = null;
       clearTimeout(retryTimer);
       entry('Bravo ID unavailable (' + failedId + ') — checking for a fresh receiver ID', 'sys');
       // Close the dead outgoing call so its 'close' event doesn't trigger a
@@ -6621,8 +6972,10 @@ function startPeer() {
   });
 }
 
-function getCallStream() {
-  const tracks = [...localStream.getVideoTracks()];
+function getCallStream(options) {
+  const useStandbyVideo = options && options.video === 'standby';
+  const includeVideo = useStandbyVideo || !options || options.video !== false;
+  const tracks = useStandbyVideo ? [_getStandbyVideoTrack()] : (includeVideo ? [...localStream.getVideoTracks()] : []);
   entry('STREAM: audioMuted=' + audioMuted + ' audioTracks=' + localStream.getAudioTracks().length, 'sys');
   if (audioMuted) {
     tracks.push(getSilentTrack());
@@ -6638,12 +6991,19 @@ function getCallStream() {
     if (liveAudioTrack) tracks.push(liveAudioTrack);
     entry('STREAM: using ' + (liveAudioTrack === rawTrack ? 'raw fallback' : 'processed') + ' audio track', 'sys');
   }
+  entry('STREAM: video ' + (useStandbyVideo ? 'standby for live takeover' : (includeVideo ? 'included' : 'omitted for answering/voicemail')), 'sys');
   return new MediaStream(tracks);
 }
 
 function dial() {
   clearTimeout(retryTimer);
-  if (linked || !localStream || _answeringMachineMode) return;
+  if (linked || !localStream || _answeringMachineMode || _waitingAfterRemoteLeave) return;
+  if (!_isConfirmedBravoPeerId(REMOTE_ID)) {
+    entry('Blocked call until fresh Bravo presence is confirmed', 'sys');
+    _remoteIdConfirmed = false;
+    retryTimer = setTimeout(() => _refreshRemoteId().then(() => { if (_isConfirmedBravoPeerId(REMOTE_ID)) dial(); }), 1000);
+    return;
+  }
   const failedUntil = _failedRemoteIds[REMOTE_ID] || 0;
   if (failedUntil > Date.now()) {
     retryTimer = setTimeout(() => _refreshRemoteId().then(dial), 1000);
@@ -6672,12 +7032,50 @@ function dial() {
 
   entry('Calling Bravo…', 'info');
   _waitingAfterRemoteLeave = false;
+  stopQualityPolling();
+  updateRouteLabel('Checking', 'Waiting for Bravo media connection');
   setStatus('calling');
-  const _cs = getCallStream();
+  duplexBar.textContent = 'CALLING BRAVO';
+  duplexBar.className = 'duplex-overlay waiting';
+  syncControls();
+  if (localStream) {
+    _parkCameraStream(localStream);
+    updateLocalVideoState();
+    sendVideoState();
+  }
+  const _cs = getCallStream({ video: 'standby' });
   entry('DIAG: calling with ' + _cs.getTracks().length + ' tracks (audio=' + _cs.getAudioTracks().length + ' video=' + _cs.getVideoTracks().length + ')', 'sys');
   const c = peer.call(REMOTE_ID, _cs);
   attachCall(c);
   openDataConn();
+  const attemptedId = REMOTE_ID;
+  clearTimeout(_callProbeTimer);
+  _callProbeTimer = setTimeout(() => {
+    _callProbeTimer = null;
+    if (linked || _answeringMachineMode || call !== c) return;
+    entry('BRAVO did not answer the short call probe - Alpha waiting', 'sys');
+    const noHelloGhost = _streamArrived && !_remoteHelloOk;
+    if (attemptedId) _failedRemoteIds[attemptedId] = Date.now() + (noHelloGhost ? 120000 : 20000);
+    _remoteIdConfirmed = false;
+    _bravoPresenceFreshUntil = 0;
+    clearTimeout(_dialWatchdogTimer); _dialWatchdogTimer = null;
+    if (call) { try { call.off('close'); call.off('error'); call.close(); } catch(e) {} call = null; }
+    if (dataConn) { try { dataConn.close(); } catch(e) {} dataConn = null; }
+    pendingDC = false;
+    _iceReady = false;
+    _streamArrived = false;
+    _remoteHelloOk = false;
+    if (noHelloGhost) {
+      entry('Bravo media arrived without station hello - treating Bravo as offline/ghost', 'sys');
+      _enterAnsweringMachineMode(true);
+      return;
+    }
+    _showWaitingForBravo('');
+    clearTimeout(retryTimer);
+    retryTimer = setTimeout(() => {
+      if (!linked && !_answeringMachineMode) _refreshRemoteId().then(() => { if (_remoteIdConfirmed) dial(); });
+    }, 5000);
+  }, CALL_PROBE_MS);
   // Watchdog: if no stream arrives within 90s, close and redial. This has its
   // own handle so short peer-unavailable retries cannot orphan old watchdogs.
   clearTimeout(_dialWatchdogTimer);
@@ -6701,10 +7099,18 @@ function attachDataConn(dc) {
     pendingDC = false;
     dataConn = dc;
     entry('Chat channel open', 'ok');
-    if (!linked) setStatus('reachable');
+    if (!linked && !_answeringMachineMode) {
+      // The data channel alone is not a live call; keep the short probe timer
+      // in charge so stale/half-open attempts still fall back to WAITING.
+      updateRouteLabel('Checking', 'Data channel open; waiting for media');
+      syncControls();
+    }
     const sb = document.getElementById('sendBtn'); if (sb) sb.disabled = false;
     const cw = document.getElementById('cwSendBtn'); if (cw) cw.disabled = false;
+    sendStationHello();
     sendVideoState();
+    sendRecordingStatus();
+    startRecordingStatusSync();
     // Tell Bravo whether this connected call is being handled unattended.
     // Include the current attendance state in case the data channel opened
     // after Alpha had already interacted with the call.
@@ -6735,8 +7141,10 @@ function attachDataConn(dc) {
     const { text, obj } = decoded;
     const f = obj || decodeEmbeddedControl(text);
     if (f) {
-      if (f.__control === 'video') { updateRemoteVideoState(f.enabled, f.hasTrack !== false); return; }
-      if (f.__control === 'leave') { handleRemoteLeave(); return; }
+      if (f.__control === 'hello') { acceptStationHello(f, 'BRAVO'); return; }
+      if (f.__control === 'video') { _applyRemoteVideoControl(f.enabled, f.hasTrack !== false); return; }
+      if (f.__control === 'recordingStatus') { rememberRemoteRecordingStatus(f.recordStatus || f.status || ''); return; }
+      if (f.__control === 'leave') { rememberRemoteRecordingStatus(f.recordStatus || f.status || ''); handleRemoteLeave(); return; }
       // clearChat control intentionally not handled — CLEAR is local-only on each unit.
       if (f.__control === 'deleteMsg') { deleteBubble(f.ts, false); return; }
       if (f.__control === 'liveSession') {
@@ -6748,7 +7156,18 @@ function attachDataConn(dc) {
         _stopRing();
         clearLocalChatDisplayForTakeover();
         playLiveCueOnce();
-        if (_answeringMachineMode) _markAttended();
+        if (_answeringMachineMode && _vmActive) {
+          _ownerTakeoverPending = true;
+          _attended = true;
+          _liveTakeoverRequested = true;
+          _setAnsweringMicSuppressed(false);
+          _setOwnerLiveAvailable(false);
+          entry('Remote GO LIVE - stopping voicemail recording', 'sys');
+          _stopVoicemail();
+        } else if (_answeringMachineMode) {
+          _markAttended();
+        }
+        if (linked && !loginDisableVideoFlag) _setCameraActive(true, 'live session').then(ok => { if (ok) _scheduleStartupCameraRecovery(); });
         if (linked) {
           setStatus('linked');
           duplexBar.textContent = _noMediaMode ? '● LIVE (data only)' : '● LIVE';
@@ -6761,6 +7180,8 @@ function attachDataConn(dc) {
       if (f.__control === 'answeringMode' && f.station === 'BRAVO') {
         if (f.active) {
           _bravoAnsweringAvailable = true;
+          updateRemoteVideoState(false, false);
+          if (localStream) { _parkCameraStream(localStream); updateLocalVideoState(); sendVideoState(); }
           setStatus('reachable');
           duplexBar.textContent = 'WAITING FOR BRAVO - TELEPHONE RINGING';
           duplexBar.className = 'duplex-overlay waiting';
@@ -6775,11 +7196,17 @@ function attachDataConn(dc) {
         // on the caller's end, while Bravo decides whether to answer or go to voicemail.
         if (f.active) {
           _bravoAnsweringAvailable = true;
+          updateRemoteVideoState(false, false);
+          if (localStream) { _parkCameraStream(localStream); updateLocalVideoState(); sendVideoState(); }
           setStatus('reachable');
           duplexBar.textContent = 'WAITING FOR BRAVO - TELEPHONE RINGING';
           duplexBar.className = 'duplex-overlay waiting';
           _startRemoteRingTone();
         } else { _stopRemoteRingTone(); }
+        return;
+      }
+      if (f.__control === 'voicemailGreeting') {
+        if (f.active) _playVoicemailPromptLocally();
         return;
       }
       if (f.__control === 'voicemailCountdown') {
@@ -6791,6 +7218,8 @@ function attachDataConn(dc) {
             return;
           }
           _bravoAnsweringAvailable = true;
+          updateRemoteVideoState(false, false);
+          if (localStream) { _parkCameraStream(localStream); updateLocalVideoState(); sendVideoState(); }
           const seconds = Number(f.seconds) || 30;
           _startVmCountdown(seconds, true);
           entry('Bravo voicemail starts in ' + seconds + ' seconds', 'sys');
@@ -6800,27 +7229,33 @@ function attachDataConn(dc) {
       if (f.__control === 'voicemail') {
         _stopVmCountdown();
         if (f.active) {
+          rememberRemoteRecordingStatus('Recording status: Voicemail: recording');
           if (_bravoRequestedLive || _attended) {
             _bravoAnsweringAvailable = false;
             return;
           }
           _bravoAnsweringAvailable = true;
+          updateRemoteVideoState(false, false);
+          if (localStream) { _parkCameraStream(localStream); updateLocalVideoState(); sendVideoState(); }
           setStatus('voicemail');
           _vmNotice('— 📼 BRAVO RECORDING VOICEMAIL —');
           // These tones play only on the caller receiving this control message.
           _stopRemoteRingTone();
           playTone('vm_start');
         } else {
+          rememberRemoteRecordingStatus('Recording status: Voicemail recorded');
           if (_bravoRequestedLive || !_bravoAnsweringAvailable) {
             _bravoAnsweringAvailable = false;
             setStatus('linked');
+            if (!_bravoRequestedLive) _showWaitingForBravo('Bravo voicemail recorded - Alpha waiting');
             return;
           }
           _bravoAnsweringAvailable = false;
-          setStatus('linked');
+          setStatus('reachable');
           _vmNotice('— 📼 VOICEMAIL SAVED —');
           playTone('vm_end');
           setTimeout(() => playTone('vm_end'), 450);
+          _showWaitingForBravo('Bravo voicemail recorded - Alpha waiting');
         }
         return;
       }
@@ -6871,6 +7306,7 @@ function attachDataConn(dc) {
     if (dataConn !== dc) return; // stale handler — a newer DC already took over
     pendingDC = false;
     dataConn = null;
+    stopRecordingStatusSync();
     const sb = document.getElementById('sendBtn'); if (sb) sb.disabled = true;
     const cw = document.getElementById('cwSendBtn'); if (cw) cw.disabled = true;
     _cwSetOn(false);
@@ -6890,6 +7326,7 @@ function attachDataConn(dc) {
     // Only reopen if the call is still live
     if (linked && dataConn === dc) {
       dataConn = null;
+      stopRecordingStatusSync();
       if (_answeringMachineMode) {
         entry('Waiting for Bravo to reopen the data channel after error…', 'sys');
       } else {
@@ -7014,6 +7451,25 @@ function dcSend(payload) {
   dataConn.send(wire);
 }
 
+function sendStationHello() {
+  dcSend({ __control: 'hello', station: 'ALPHA', peerId: MY_ID, version: VERSION });
+}
+
+function acceptStationHello(frame, expectedStation) {
+  const remoteId = call && call.peer ? String(call.peer) : '';
+  const peerId = frame && frame.peerId ? String(frame.peerId) : '';
+  if (!frame || frame.station !== expectedStation || (remoteId && peerId && peerId !== remoteId)) {
+    entry('Blocked station hello mismatch from ' + ((frame && frame.station) || 'unknown') + ' / ' + (peerId || 'no-peer'), 'err');
+    if (call) { try { call.close(); } catch(e) {} }
+    if (dataConn) { try { dataConn.close(); } catch(e) {} }
+    return false;
+  }
+  _remoteHelloOk = true;
+  entry('Station hello confirmed: ' + expectedStation + (peerId ? ' [' + peerId + ']' : ''), 'sys');
+  if (!linked && _iceReady && (_streamArrived || _noMediaMode)) markLinked();
+  return true;
+}
+
 // dcDecode — inverse of dcSend; returns { text } or { obj } or null
 function decodeEmbeddedControl(value) {
   if (typeof value !== 'string') return null;
@@ -7115,6 +7571,7 @@ function openDataConn() {
 function answerCall(c) {
   clearTimeout(retryTimer);
   clearTimeout(_dialWatchdogTimer); _dialWatchdogTimer = null;
+  clearTimeout(_callProbeTimer); _callProbeTimer = null;
   if (_answeringMachineMode) {
     _peerGeneration++; // cancel outbound work left from the calling phase
     if (call && call !== c) {
@@ -7124,8 +7581,14 @@ function answerCall(c) {
     _iceReady = false;
     _streamArrived = false;
     entry('Answering BRAVO in answering-machine mode', 'sys');
+    if (localStream) {
+      _parkCameraStream(localStream);
+      updateLocalVideoState();
+      sendVideoState();
+      entry('Camera hardware released before answering Bravo', 'sys');
+    }
   }
-  c.answer(getCallStream());
+  c.answer(getCallStream({ video: _answeringMachineMode ? 'standby' : true }));
   attachCall(c);
 }
 
@@ -7133,11 +7596,62 @@ function answerCall(c) {
 let qualityInterval = null;
 const _qualHistory = [];   // rolling 20-sample RTT history for sparkline
 const _QUAL_MAX_SAMPLES = 20;
+let _lastRouteLabel = '';
+
+function updateRouteLabel(label, detail) {
+  const el = document.getElementById('routeLabel');
+  if (!el) return;
+  const wantsRoute = label === 'Direct' || label === 'Relay';
+  if (wantsRoute && (!linked || !_streamArrived || !call)) {
+    label = '--';
+    detail = 'Waiting for media connection';
+  }
+  el.textContent = label || '--';
+  el.className = 'route-value ' + (label === 'Relay' ? 'relay' : label === 'Direct' ? 'direct' : 'checking');
+  if (detail) el.title = detail;
+}
+
+function _candidateFromPair(stats, pair) {
+  const local = pair && (stats.get(pair.localCandidateId) || stats.get(pair.localCandidateId || ''));
+  const remote = pair && (stats.get(pair.remoteCandidateId) || stats.get(pair.remoteCandidateId || ''));
+  const localType = (local && (local.candidateType || local.type)) || pair.localCandidateType || '';
+  const remoteType = (remote && (remote.candidateType || remote.type)) || pair.remoteCandidateType || '';
+  return { localType, remoteType };
+}
+
+function updateConnectionRoute(stats) {
+  if (!linked || !_streamArrived) {
+    updateRouteLabel(linked ? 'Checking' : '--', 'Waiting for media connection');
+    return;
+  }
+  let selectedPair = null;
+  stats.forEach(r => {
+    if (r.type === 'transport' && r.selectedCandidatePairId) selectedPair = stats.get(r.selectedCandidatePairId) || selectedPair;
+  });
+  if (!selectedPair) {
+    stats.forEach(r => {
+      if (r.type === 'candidate-pair' && (r.selected || (r.state === 'succeeded' && r.nominated))) selectedPair = r;
+    });
+  }
+  if (!selectedPair) { updateRouteLabel(linked ? 'Checking' : '--'); return; }
+  const route = _candidateFromPair(stats, selectedPair);
+  const isRelay = route.localType === 'relay' || route.remoteType === 'relay';
+  const label = isRelay ? 'Relay' : 'Direct';
+  const detail = 'local=' + (route.localType || '?') + ' remote=' + (route.remoteType || '?');
+  updateRouteLabel(label, detail);
+  if (_lastRouteLabel !== label + detail) {
+    _lastRouteLabel = label + detail;
+    entry('ICE route: ' + label + ' (' + detail + ')', 'sys');
+  }
+}
 
 function startQualityPolling() {
   stopQualityPolling();
   qualityInterval = setInterval(async () => {
-    if (!call) return;
+    if (!call || !linked || !_streamArrived) {
+      updateRouteLabel(linked ? 'Checking' : '--', 'Waiting for media connection');
+      return;
+    }
     const pc = call.peerConnection || call._pc;
     if (!pc) return;
     try {
@@ -7152,6 +7666,7 @@ function startQualityPolling() {
           if (r.packetsSent != null) sent = r.packetsSent;
         }
       });
+      updateConnectionRoute(stats);
       const lossPct = sent > 0 ? (lost / sent) * 100 : 0;
       if (rtt !== null) {
         _qualHistory.push(rtt);
@@ -7165,6 +7680,8 @@ function startQualityPolling() {
 function stopQualityPolling() {
   if (qualityInterval) { clearInterval(qualityInterval); qualityInterval = null; }
   _qualHistory.length = 0;
+  _lastRouteLabel = '';
+  updateRouteLabel('--');
   updateQuality(null, null);
 }
 
@@ -7278,12 +7795,51 @@ function updateLocalVideoState() {
 function updateRemoteVideoState(enabled, hasTrack = true) {
   const wrap = document.getElementById('remoteWrap');
   if (!wrap) return;
+  if (!(hasTrack && enabled)) _remoteVideoAllowedByControl = false;
   // Clear stale — if we're receiving video state signals the connection is alive
   wrap.classList.remove('stale', 'waiting');
   // No track or disabled = VIDEO OFF (peer intentionally turned camera off)
-  wrap.classList.toggle('no-video', false);
+  wrap.classList.toggle('no-video', !hasTrack);
   wrap.classList.toggle('video-off', !hasTrack || enabled === false);
   if (hasTrack && enabled) wrap.classList.remove('video-off');
+  try { syncMiniVideos(); } catch(e) {}
+}
+
+let _remoteVideoAllowedByControl = false;
+
+function _shouldHideRemoteVideoForAnswering() {
+  return !!(_bravoAnsweringAvailable || (_answeringMachineMode && !_attended) || _vmActive);
+}
+
+function _applyRemoteStreamVideoState(stream) {
+  const hasVideo = !!(stream && stream.getVideoTracks && stream.getVideoTracks().length > 0);
+  if (hasVideo && (_shouldHideRemoteVideoForAnswering() || !_remoteVideoAllowedByControl)) {
+    updateRemoteVideoState(false, false);
+    return;
+  }
+  updateRemoteVideoState(true, hasVideo);
+}
+
+function _handleRemoteVideoTrackMuted() {
+  updateRemoteVideoState(false, _shouldHideRemoteVideoForAnswering() ? false : true);
+}
+
+function _handleRemoteVideoTrackUnmuted() {
+  if (_shouldHideRemoteVideoForAnswering() || !_remoteVideoAllowedByControl) {
+    updateRemoteVideoState(false, false);
+    return;
+  }
+  updateRemoteVideoState(true, true);
+}
+
+function _applyRemoteVideoControl(enabled, hasTrack = true) {
+  if (_shouldHideRemoteVideoForAnswering()) {
+    _remoteVideoAllowedByControl = false;
+    updateRemoteVideoState(false, false);
+    return;
+  }
+  _remoteVideoAllowedByControl = !!(enabled && hasTrack);
+  updateRemoteVideoState(enabled, hasTrack);
 }
 
 function sendVideoState() {
@@ -7300,8 +7856,16 @@ function sendVideoState() {
 
 function markLinked() {
   if (linked) return;
+  if (!_remoteHelloOk) {
+    entry('Media connected - waiting for Bravo station hello', 'sys');
+    return;
+  }
   linked = true;
-  if (!_answeringMachineMode && !loginDisableVideoFlag) _setCameraActive(true, 'live session');
+  setTimeout(() => {
+    if (linked && !_answeringMachineMode && !_bravoAnsweringAvailable && !loginDisableVideoFlag) {
+      _setCameraActive(true, 'live session').then(ok => { if (ok) _scheduleStartupCameraRecovery(); });
+    }
+  }, 1500);
   _clearAnsweringModeTimer();
   if (_answeringMachineMode) {
     // Keep the receiver ringing after WebRTC connects so all five beeps can
@@ -7311,6 +7875,7 @@ function markLinked() {
   restoreSpeechDraft();
   clearTimeout(retryTimer);  // cancel any pending short redial
   clearTimeout(_dialWatchdogTimer); _dialWatchdogTimer = null;
+  clearTimeout(_callProbeTimer); _callProbeTimer = null;
   clearTimeout(dropTimer);   // cancel onDrop grace-period before reconnect screen shows
   // If the reconnect countdown is already running, cancel it and hide the overlay
   clearInterval(_reconnectCountdownTimer);
@@ -7372,6 +7937,8 @@ function markLinked() {
 
 function attachCall(c) {
   call = c;
+  _remoteHelloOk = !!c._presenceConfirmed;
+  if (_remoteHelloOk) entry('Station gate satisfied by confirmed inbound Bravo call', 'sys');
 
   // Safety net: PeerJS emits 'stream' but on some Android/WebRTC versions it
   // never fires when the remote stream has no video tracks or when addStream
@@ -7531,7 +8098,7 @@ function attachCall(c) {
       if (_cu) { _cu.srcObject = stream; _cu.classList.remove('no-stream'); }
       syncMiniVideos();
       document.getElementById('remoteWrap').classList.remove('waiting', 'stale');
-      updateRemoteVideoState(true, stream.getVideoTracks().length > 0);
+      _applyRemoteStreamVideoState(stream);
       _streamArrived = true;
       if (_iceReady && !linked) markLinked();
       scheduleRemoteAudioPlay();
@@ -7558,10 +8125,10 @@ function attachCall(c) {
       const el = document.getElementById(id);
       if (el) el.classList.remove('stale');
     });
-    updateRemoteVideoState(true, stream.getVideoTracks().length > 0);
+    _applyRemoteStreamVideoState(stream);
     stream.getVideoTracks().forEach(track => {
-      track.addEventListener('mute', () => updateRemoteVideoState(false, true));
-      track.addEventListener('unmute', () => updateRemoteVideoState(true, true));
+      track.addEventListener('mute', _handleRemoteVideoTrackMuted);
+      track.addEventListener('unmute', _handleRemoteVideoTrackUnmuted);
       track.addEventListener('ended', () => updateRemoteVideoState(false, false));
     });
     scheduleRemoteAudioPlay();  // always call — not just on first link
@@ -7605,6 +8172,7 @@ function saveRecordingIfActive(includeLocal = false) {
     const btn2 = document.getElementById('recBtn2');
     if (btn2) { btn2.textContent = '➤ RECORD'; btn2.classList.remove('recording'); }
     recRemoteBusy = true;
+    sendRecordingStatus();
     recRemote.stop();
   }
   if (includeLocal && recLocal && recLocal.state === 'recording') {
@@ -7612,6 +8180,7 @@ function saveRecordingIfActive(includeLocal = false) {
     const btn = document.getElementById('recBtn');
     if (btn) { btn.textContent = '➤ RECORD'; btn.classList.remove('recording'); }
     recLocalBusy = true;
+    sendRecordingStatus();
     recLocal.stop();
   }
   if (recChat && recChat.state === 'recording') {
@@ -7619,6 +8188,7 @@ function saveRecordingIfActive(includeLocal = false) {
     const btnC = document.getElementById('recChatBtn');
     if (btnC) { btnC.textContent = '➤ RECORD'; btnC.classList.remove('recording'); }
     recChatBusy = true;
+    sendRecordingStatus();
     recChat.stop();
   }
 }
@@ -7629,6 +8199,11 @@ let leftPermanently = false;
 let remotePeerLeft = false;
 let peerRefreshing  = false;  // true when either side is doing a refresh-reload
 let _waitingAfterRemoteLeave = false;
+let _remoteLoggedOutRecordingStatus = '';
+let _remoteLoggedOutRecordingStatusAt = 0;
+let _remoteVoicemailRecorded = false;
+let _recordingStatusHeartbeat = null;
+let _recordingStatusSyncTimer = null;
 
 function exportSysLog() {
   try {
@@ -7639,6 +8214,7 @@ function exportSysLog() {
     a.href = URL.createObjectURL(blob);
     a.download = 'TempLog.txt';
     document.body.appendChild(a);
+    _markDownloadInProgress();
     a.click();
     setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
   } catch(e) { console.warn('Log export failed:', e); }
@@ -7647,6 +8223,7 @@ function exportSysLog() {
 function leaveSession() {
   saveSessionSnapshot();
   leftPermanently = true;
+  const recordStatus = getLoggedOutRecordingStatus();
   clearTimeout(_startupCameraRecoveryTimer); _startupCameraRecoveryTimer = null;
   // Privacy: release video immediately.  Audio/data may remain for the brief
   // leave-message grace period, but the camera must not.
@@ -7664,9 +8241,8 @@ function leaveSession() {
   setVideoButtons(false);
   saveSpeechDraft();
   // Notify remote peer before disconnecting
-  try { dcSend({ __control: 'leave' }); } catch(e) {}
-  // Longer delay over HTTPS/relayed WebRTC — DC message must transmit before peer tears down
-  setTimeout(_doLeave, 1500);
+  try { dcSend({ __control: 'leave', recordStatus }); } catch(e) {}
+  _doLeave();
 }
 
 document.addEventListener('keydown', event => {
@@ -7678,7 +8254,131 @@ document.addEventListener('keydown', event => {
   if (!leftPermanently) leaveSession();
 });
 
+function getLocalRecordingStatus() {
+  const parts = [];
+  const add = (label, rec, busy) => {
+    if (busy) {
+      parts.push(label + ': saving');
+    } else if (rec && rec.state === 'recording') {
+      parts.push(label + ': recording');
+    } else if (rec && rec.state && rec.state !== 'inactive') {
+      parts.push(label + ': saving');
+    }
+  };
+  if (_vmActive || (_vmRec && _vmRec.state && _vmRec.state !== 'inactive')) {
+    parts.push('Voicemail: ' + (_vmActive ? 'recording' : 'saving'));
+  }
+  add('Remote recording', recRemote, recRemoteBusy);
+  add('Local recording', recLocal, recLocalBusy);
+  add('Chat recording', recChat, recChatBusy);
+  try {
+    if (_chatRec && (_chatRec.active || _chatRec.busy) && !parts.some(p => p.indexOf('Chat recording:') === 0)) {
+      parts.push('Chat recording: saving');
+    }
+  } catch(e) {}
+  return parts.length ? ('Recording status: ' + parts.join(' | ')) : 'Recording status: idle';
+}
+
+function rememberRemoteRecordingStatus(status) {
+  if (!status || typeof status !== 'string') return;
+  status = formatLoggedOutRecordingText(status);
+  if (status === 'Recording status: idle' && _remoteVoicemailRecorded) return;
+  if (/Voicemail recorded/i.test(status)) {
+    _remoteVoicemailRecorded = true;
+    try { sessionStorage.setItem('fieldRadioRemoteVoicemailRecorded', '1'); } catch(e) {}
+  }
+  _remoteLoggedOutRecordingStatus = status;
+  _remoteLoggedOutRecordingStatusAt = Date.now();
+  try {
+    sessionStorage.setItem('fieldRadioRemoteRecordingStatus', status);
+    sessionStorage.setItem('fieldRadioRemoteRecordingStatusAt', String(_remoteLoggedOutRecordingStatusAt));
+  } catch(e) {}
+}
+
+function clearRemoteRecordingStatus() {
+  _remoteLoggedOutRecordingStatus = '';
+  _remoteLoggedOutRecordingStatusAt = 0;
+  _remoteVoicemailRecorded = false;
+  try {
+    sessionStorage.removeItem('fieldRadioRemoteRecordingStatus');
+    sessionStorage.removeItem('fieldRadioRemoteRecordingStatusAt');
+    sessionStorage.removeItem('fieldRadioRemoteVoicemailRecorded');
+  } catch(e) {}
+}
+
+function _sendRecordingStatusOnce(status) {
+  const recordStatus = status || getLocalRecordingStatus();
+  try { dcSend({ __control: 'recordingStatus', recordStatus, active: recordStatus !== 'Recording status: idle', at: Date.now() }); } catch(e) {}
+}
+
+function startRecordingStatusSync() {
+  stopRecordingStatusSync();
+  _sendRecordingStatusOnce(getLocalRecordingStatus());
+  _recordingStatusSyncTimer = setInterval(() => {
+    _sendRecordingStatusOnce(getLocalRecordingStatus());
+  }, 1000);
+}
+
+function stopRecordingStatusSync() {
+  if (_recordingStatusSyncTimer) {
+    clearInterval(_recordingStatusSyncTimer);
+    _recordingStatusSyncTimer = null;
+  }
+}
+
+function sendRecordingStatus() {
+  const status = getLocalRecordingStatus();
+  _sendRecordingStatusOnce(status);
+  if (status !== 'Recording status: idle') {
+    if (!_recordingStatusHeartbeat) {
+      _recordingStatusHeartbeat = setInterval(() => {
+        const current = getLocalRecordingStatus();
+        _sendRecordingStatusOnce(current);
+        if (current === 'Recording status: idle') {
+          clearInterval(_recordingStatusHeartbeat);
+          _recordingStatusHeartbeat = null;
+        }
+      }, 1000);
+    }
+  } else if (_recordingStatusHeartbeat) {
+    clearInterval(_recordingStatusHeartbeat);
+    _recordingStatusHeartbeat = null;
+  }
+}
+
+function getLoggedOutRecordingStatus() {
+  const local = getLocalRecordingStatus();
+  const localDisplay = formatLoggedOutRecordingText(local);
+  let remote = _remoteLoggedOutRecordingStatus || '';
+  let remoteAt = _remoteLoggedOutRecordingStatusAt || 0;
+  if (!remote) {
+    try {
+      remote = sessionStorage.getItem('fieldRadioRemoteRecordingStatus') || '';
+      remoteAt = Number(sessionStorage.getItem('fieldRadioRemoteRecordingStatusAt') || '0') || 0;
+    } catch(e) {}
+  }
+  try {
+    if (sessionStorage.getItem('fieldRadioRemoteVoicemailRecorded') === '1') _remoteVoicemailRecorded = true;
+  } catch(e) {}
+  if (_remoteVoicemailRecorded) {
+    if (local === 'Recording status: idle') return 'Recording status: Remote unit: Voicemail recorded';
+    return localDisplay + ' | Remote unit: Voicemail recorded';
+  }
+  if (remote && remote !== 'Recording status: idle') {
+    const detail = formatLoggedOutRecordingText(remote).replace(/^Recording status:\s*/, '');
+    if (local === 'Recording status: idle') return 'Recording status: Remote unit: ' + detail;
+    return localDisplay + ' | Remote unit: ' + detail;
+  }
+  return localDisplay;
+}
+
+function formatLoggedOutRecordingText(status) {
+  return String(status || 'Recording status: idle')
+    .replace(/\bVoicemail:\s*(?:recording|saving)\b/gi, 'Voicemail recorded');
+}
+
 function _doLeave() {
+  const recordStatus = getLoggedOutRecordingStatus();
   _clearAnsweringModeTimer();
   _clearHardAnswerDeadline();
   _stopRing();
@@ -7722,6 +8422,7 @@ function _doLeave() {
   document.title = 'ALPHA — Field Radio';
   document.body.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;height:100vh;background:#0a1520;color:#f1f5f9;font-family:monospace;text-align:center;padding:20px;">'
     + '<div style="font-size:22px;letter-spacing:2px;font-weight:bold;">SESSION ENDED</div>'
+    + '<div style="font-size:14px;color:#ffcc44;letter-spacing:1px;">' + recordStatus + '</div>'
     + '<div style="font-size:15px;color:#94a3b8;letter-spacing:1px;">You may now close this tab.</div>'
     + '</div>';
 }
@@ -7766,10 +8467,34 @@ function handleRemoteLeave() {
       _stopVoicemail();
       return;
     }
+    saveRecordingIfActive();
+    linked = false;
+    _iceReady = false;
+    _streamArrived = false;
+    clearTimeout(retryTimer);
+    clearTimeout(_dialWatchdogTimer); _dialWatchdogTimer = null;
+    clearTimeout(_callProbeTimer); _callProbeTimer = null;
+    clearTimeout(_dcWatchdog);
+    if (call) {
+      try { call.off('close'); call.off('error'); call.close(); } catch(e) {}
+      call = null;
+    }
+    if (dataConn) { try { dataConn.close(); } catch(e) {} dataConn = null; }
+    pendingDC = false;
+    setStatus('reachable');
+    duplexBar.textContent = 'WAITING FOR BRAVO';
+    duplexBar.className = 'duplex-overlay waiting';
+    if (rw) { rw.classList.remove('stale', 'video-off', 'no-video'); rw.classList.add('waiting'); }
+    syncControls();
+    entry('Alpha answering machine remains listening for Bravo', 'ok');
     clearTimeout(dropTimer);
     dropTimer = setTimeout(() => {
       remotePeerLeft = false;
-      if (!leftPermanently) startPeer();
+      if (!leftPermanently) {
+        const presenceCodeNow = MY_ID ? MY_ID.replace(/^alpha-/, '').replace(/-[0-9a-f]{4}$/, '') : '';
+        if (presenceCodeNow) presenceWrite('alpha-' + presenceCodeNow);
+        startPeer();
+      }
     }, 800);
     return;
   }
@@ -7781,6 +8506,7 @@ function handleRemoteLeave() {
   _streamArrived = false;
   clearTimeout(retryTimer);
   clearTimeout(_dialWatchdogTimer); _dialWatchdogTimer = null;
+  clearTimeout(_callProbeTimer); _callProbeTimer = null;
   clearTimeout(_dcWatchdog);
   if (call) {
     try { call.off('close'); call.off('error'); call.close(); } catch(e) {}
@@ -7795,6 +8521,8 @@ function handleRemoteLeave() {
   syncControls();
   _waitingAfterRemoteLeave = true;
   entry('Alpha ready and waiting for Bravo to return', 'ok');
+  const presenceCodeNow = MY_ID ? MY_ID.replace(/^alpha-/, '').replace(/-[0-9a-f]{4}$/, '') : '';
+  if (presenceCodeNow) presenceWrite('alpha-' + presenceCodeNow);
   clearTimeout(dropTimer);
   dropTimer = setTimeout(() => {
     remotePeerLeft = false;
@@ -7808,6 +8536,7 @@ function onDrop() {
   saveSpeechDraft();
   clearTimeout(retryTimer);
   clearTimeout(_dialWatchdogTimer); _dialWatchdogTimer = null;
+  clearTimeout(_callProbeTimer); _callProbeTimer = null;
   clearTimeout(_raPlayTimer); _raPlayTimer = null;  // cancel any pending audio play attempt
   if (call && call._iceDropTimer) { clearTimeout(call._iceDropTimer); call._iceDropTimer = null; }
   saveRecordingIfActive();
@@ -7862,7 +8591,10 @@ function onDrop() {
     }, 1200);
     return;
   }
-  setStatus('calling');
+  setStatus('reachable');
+  duplexBar.textContent = 'WAITING FOR BRAVO';
+  duplexBar.className = 'duplex-overlay waiting';
+  syncControls();
   if (leftPermanently) return; // permanent leave handled by leaveSession()
   if (remotePeerLeft) return;  // remote sent leave signal — stay on leave screen
   if (peerRefreshing)  return;  // a refresh-reload is in progress — do not show login
@@ -7915,6 +8647,11 @@ let _ringTimeoutTimer = null;
 let _ringing = false;
 let _vmCallStart = 0;
 
+function _formatVmClock(seconds) {
+  seconds = Math.max(0, Math.floor(Number(seconds) || 0));
+  return Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0');
+}
+
 function _vmNotice(text, blobUrl, filename) {
   const chatEl = document.getElementById('chat');
   if (!chatEl) return null;
@@ -7927,9 +8664,16 @@ function _vmNotice(text, blobUrl, filename) {
     span.textContent = text + ' ';
     const audio = document.createElement('audio');
     audio.controls = true;
+    audio.preload = 'metadata';
     audio.src = blobUrl;
     audio.style.cssText = 'display:block;margin-top:6px;width:100%;max-width:320px;';
-    d.append(span, audio);
+    const duration = document.createElement('span');
+    duration.textContent = '0:00-0:--';
+    duration.style.cssText = 'display:block;margin-top:3px;color:#ffcc44;font-size:11px;letter-spacing:1px;';
+    audio.addEventListener('loadedmetadata', () => {
+      if (isFinite(audio.duration) && audio.duration > 0) duration.textContent = '0:00-' + _formatVmClock(audio.duration);
+    });
+    d.append(span, audio, duration);
   } else {
     d.textContent = text;
   }
@@ -8194,10 +8938,16 @@ function _fireLocalRing() {
         if (countdownStarted) return;
         countdownStarted = true;
         if (!linked || !_ringing || _attended || _bravoRequestedLive || _liveTakeoverRequested) return;
-        _armVmTimeout();
+        try { dcSend({ __control: 'voicemailGreeting', active: false }); } catch(e) {}
+        try { dcSend({ __control: 'voicemailCountdown', active: true, seconds: 2 }); } catch(e) {}
+        setTimeout(() => {
+          if (!linked || !_ringing || _attended || _bravoRequestedLive || _liveTakeoverRequested) return;
+          _armVmTimeout();
+        }, 2000);
       };
       if (intro) {
         try { intro.load(); intro.currentTime = 0; } catch(e) {}
+        try { dcSend({ __control: 'voicemailGreeting', active: true }); } catch(e) {}
         intro.onended = startCountdown;
         intro.onerror = () => {
           const code = intro.error ? intro.error.code : 'unknown';
@@ -8253,14 +9003,33 @@ function _finishOwnerLiveTakeover() {
   syncControls();
   entry('Voicemail saved — live session started', 'ok');
   clearLocalChatDisplayForTakeover();
+  const _raTk = document.getElementById('remoteAudio');
+  entry('DIAG: owner live takeover complete — remoteAudio srcObject=' +
+    (_raTk && _raTk.srcObject ? 'set' : 'null') + ' paused=' + (_raTk ? _raTk.paused : 'n/a') +
+    ' muted=' + (_raTk ? _raTk.muted : 'n/a') + ' volume=' + (_raTk ? _raTk.volume : 'n/a'), 'sys');
+  if (_raTk) _raTk.muted = false;
+  ensureRemoteAudioPlaying();
 }
 
 function answerOwnVoicemailLive() {
   if (!linked) return;
   const wasRecording = _vmActive;
   _ownerTakeoverPending = true;
+  if (wasRecording) {
+    _attended = true;
+    _liveTakeoverRequested = true;
+    _setAnsweringMicSuppressed(false);
+    playLiveCueOnce();
+    clearLocalChatDisplayForTakeover();
+    _stopRing();
+    clearTimeout(_vmTimer); _vmTimer = null;
+    _setOwnerLiveAvailable(false);
+    entry('GO LIVE pressed - stopping voicemail recording', 'sys');
+    _stopVoicemail();
+    return;
+  }
   _markAttended();
-  if (!wasRecording) _finishOwnerLiveTakeover();
+  _finishOwnerLiveTakeover();
 }
 
 function _isDeliberateLiveClick(event) {
@@ -8268,12 +9037,22 @@ function _isDeliberateLiveClick(event) {
     event.button === 0 && event.detail > 0);
 }
 
+function _touchShouldIgnoreAnsweringState() {
+  return linked && (_bravoAnsweringAvailable || (_answeringMachineMode && !_attended && (_ringing || _vmActive)));
+}
+
 document.addEventListener('click', event => {
   if (!_isDeliberateLiveClick(event)) return;
-  if (document.body.classList.contains('app-fullscreen')) return; // fullscreen taps only toggle controls
   const target = event.target;
   if (target && target.closest && target.closest('button,a,input,select,textarea,audio,[role="button"]')) return;
+  if (_touchShouldIgnoreAnsweringState()) {
+    entry('Screen touched during voicemail/answering state - ignored', 'sys');
+    return;
+  }
+  if (document.body.classList.contains('app-fullscreen')) return; // fullscreen taps only toggle controls
   if (linked && _bravoAnsweringAvailable) {
+    entry('Caller live request ignored - receiver controls live switching', 'sys');
+    return;
     _bravoAnsweringAvailable = false;
     _bravoRequestedLive = true;
     clearLocalChatDisplayForTakeover();
@@ -8284,6 +9063,16 @@ document.addEventListener('click', event => {
     duplexBar.className = 'duplex-overlay live';
     syncControls();
     entry('Live session requested - Bravo voicemail cancelled', 'ok');
+    // Force-reassert remoteAudio playback right here, inside a genuine user
+    // gesture — a watchdog-driven play() a few seconds later can be silently
+    // rejected by browser autoplay policy if this is the first real audio
+    // playback attempt of the session.
+    const _raLive = document.getElementById('remoteAudio');
+    entry('DIAG: go-live (cancel Bravo VM) — remoteAudio srcObject=' +
+      (_raLive && _raLive.srcObject ? 'set' : 'null') + ' paused=' + (_raLive ? _raLive.paused : 'n/a') +
+      ' muted=' + (_raLive ? _raLive.muted : 'n/a') + ' volume=' + (_raLive ? _raLive.volume : 'n/a'), 'sys');
+    if (_raLive) _raLive.muted = false;
+    ensureRemoteAudioPlaying();
     return;
   }
   if (linked && _answeringMachineMode && !_attended) _markAttended(event);
@@ -8298,7 +9087,7 @@ function _markAttended(event, suppressCamera) {
   _setAnsweringMicSuppressed(false);
   playLiveCueOnce();
   if (_answeringMachineMode && (_ringing || _vmActive)) clearLocalChatDisplayForTakeover();
-  if (!suppressCamera && !loginDisableVideoFlag) _setCameraActive(true, 'live session');
+  if (!suppressCamera && !loginDisableVideoFlag) _setCameraActive(true, 'live session').then(ok => { if (ok) _scheduleStartupCameraRecovery(); });
   _stopRing(); // answering live cancels any remaining rings and the VM timer
   clearTimeout(_vmTimer); _vmTimer = null;
   _setOwnerLiveAvailable(false);
@@ -8306,6 +9095,14 @@ function _markAttended(event, suppressCamera) {
   if (_answeringMachineMode && !_ownerTakeoverPending) {
     try { dcSend({ __control: 'answeringMode', active: false, station: 'ALPHA' }); } catch(e) {}
   }
+  // Force-reassert remoteAudio playback right here, inside the user gesture
+  // that triggered attendance — see matching comment above.
+  const _raAtt = document.getElementById('remoteAudio');
+  entry('DIAG: call attended — remoteAudio srcObject=' +
+    (_raAtt && _raAtt.srcObject ? 'set' : 'null') + ' paused=' + (_raAtt ? _raAtt.paused : 'n/a') +
+    ' muted=' + (_raAtt ? _raAtt.muted : 'n/a') + ' volume=' + (_raAtt ? _raAtt.volume : 'n/a'), 'sys');
+  if (_raAtt) _raAtt.muted = false;
+  ensureRemoteAudioPlaying();
   if (_vmActive) {
     entry('Call attended — stopping voicemail recording', 'sys');
     _stopVoicemail();
@@ -8322,6 +9119,7 @@ function _markAttended(event, suppressCamera) {
 
 async function _startVoicemail() {
   if (_vmActive || !_answeringMachineMode || _attended || _bravoRequestedLive || _liveTakeoverRequested) return;
+  if (localStream) await _setCameraActive(false, 'voicemail recording', true);
   _setOwnerLiveAvailable(true);
   // Play the caller's live incoming audio locally while it is recorded.
   const monitorAudio = document.getElementById('remoteAudio');
@@ -8872,6 +9670,7 @@ async function toggleRecordRemote() {
 
   if (recRemote && recRemote.state === 'recording') {
     recRemoteBusy = true;
+    sendRecordingStatus();
     recRemote.stop();
     btn.textContent = '⏳ SAVING'; btn.classList.remove('recording'); btn.disabled = true;
     return;
@@ -8917,9 +9716,11 @@ async function toggleRecordRemote() {
     if (aCtx) aCtx.close();
     await saveRec(recRemoteChunks, mimeType, 'remote');
     recRemoteBusy = false;
+    sendRecordingStatus();
     btn.disabled = false; btn.textContent = '➤ RECORD';
   };
   recRemote.start(1000);
+  sendRecordingStatus();
   btn.textContent = '⏹ Stop'; btn.classList.add('recording');
   entry(`Remote recording started${withMini ? ' (with local mini overlay)' : ''}…`, 'ok');
 }
@@ -8931,6 +9732,7 @@ async function toggleRecordLocal() {
 
   if (recLocal && recLocal.state === 'recording') {
     recLocalBusy = true;
+    sendRecordingStatus();
     recLocal.stop();
     btn.textContent = '⏳ SAVING'; btn.classList.remove('recording'); btn.disabled = true;
     entry('Local recording stopped — saving…', 'sys');
@@ -8943,22 +9745,23 @@ async function toggleRecordLocal() {
   // this segment into the same merged file.
   if ((recRemote && recRemote.state === 'recording') || _combSession) _combStart();
 
-  if (!localStream || !localStream.getVideoTracks().length) {
-    entry('No local video to record', 'err'); return;
-  }
-  const localCameraTrack = localStream.getVideoTracks()[0];
-  _cameraForcedForLocalRecording = !localCameraTrack.enabled || !!localCameraTrack._fieldRadioStandby;
+  let localCameraTrack = localStream && localStream.getVideoTracks()[0] || null;
+  _cameraForcedForLocalRecording = !linked || !localCameraTrack || !localCameraTrack.enabled || !!localCameraTrack._fieldRadioStandby || localCameraTrack.readyState === 'ended';
   if (_cameraForcedForLocalRecording) {
     let cameraReady = linked
       ? await _setCameraActive(true, 'local recording')
       : await _activateOfflineRecordingCamera();
-    let activeCameraTrack = localStream.getVideoTracks()[0] || null;
+    let activeCameraTrack = localStream && localStream.getVideoTracks()[0] || null;
     if (!cameraReady || !activeCameraTrack || activeCameraTrack._fieldRadioStandby || activeCameraTrack.readyState === 'ended') {
       entry('Primary camera path unavailable - trying local-only camera', 'sys');
       cameraReady = await _activateOfflineRecordingCamera();
-      activeCameraTrack = localStream.getVideoTracks()[0] || null;
+      activeCameraTrack = localStream && localStream.getVideoTracks()[0] || null;
     }
-    if (!cameraReady || !activeCameraTrack || activeCameraTrack._fieldRadioStandby) return;
+    if (!cameraReady || !activeCameraTrack || activeCameraTrack._fieldRadioStandby) {
+      _cameraForcedForLocalRecording = false;
+      entry('No local video to record', 'err');
+      return;
+    }
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     const preview = document.getElementById('localVideo');
     if (preview && preview.readyState < 2) {
@@ -9069,9 +9872,11 @@ async function toggleRecordLocal() {
     if (_cameraForcedForLocalRecording) await _setCameraActive(false, 'local recording');
     _cameraForcedForLocalRecording = false;
     recLocalBusy = false;
+    sendRecordingStatus();
     btn.disabled = false; btn.textContent = '➤ RECORD';
   };
   recLocal.start(1000);
+  sendRecordingStatus();
   btn.textContent = '⏹ Stop'; btn.classList.add('recording');
   entry(`Local recording started${withMini ? ' (with remote mini overlay)' : ''}…`, 'ok');
 }
@@ -9122,6 +9927,7 @@ async function toggleRecordChat() {
   if (_chatRec.active && _chatRec.recorder && _chatRec.recorder.state === 'recording') {
     _chatRec.busy = true;
     recChatBusy   = true;
+    sendRecordingStatus();
     _chatRec.recorder.stop();
     if (btn) { btn.textContent = '⏳ SAVING'; btn.classList.remove('recording'); btn.disabled = true; }
     return;
@@ -9183,11 +9989,13 @@ async function toggleRecordChat() {
     mr.onstop = async () => {
       try { _chatRec.aCtx.close(); } catch(e) {}
       _chatRec.active = false; _chatRec.busy = false; recChatBusy = false;
+      sendRecordingStatus();
       const chunks = _chatRec.chunks; _chatRec.chunks = [];
       await saveRec(chunks, mimeType, 'chat-recording');
       if (btn) { btn.disabled = false; btn.textContent = '➤ RECORD'; btn.classList.remove('recording'); }
     };
     mr.start(1000);
+    sendRecordingStatus();
     if (btn) { btn.textContent = '⏹ Stop'; btn.classList.add('recording'); }
     entry(`Chat recording started (Pi native ${isLocalMain ? 'local' : 'remote'} main; track=${sourceTrack.label || 'video'})…`, 'ok');
     return;
@@ -9304,6 +10112,7 @@ async function toggleRecordChat() {
     _chatRec.active   = false;
     _chatRec.busy     = false;
     recChatBusy       = false;
+    sendRecordingStatus();
     const chunks  = _chatRec.chunks;
     _chatRec.chunks   = [];
     await saveRec(chunks, mimeType, 'chat-recording');
@@ -9311,6 +10120,7 @@ async function toggleRecordChat() {
   };
 
   mr.start(1000);
+  sendRecordingStatus();
   if (btn) { btn.textContent = '⏹ Stop'; btn.classList.add('recording'); }
   entry(`Chat recording started (${isLocalMain ? 'local' : 'remote'} main${_chatRec.showPip ? ' + PiP' : ''})…`, 'ok');
 }
@@ -9340,6 +10150,13 @@ function _parkCameraStream(stream) {
     try { track.stop(); } catch(e) {}
   });
   if (!stream.getVideoTracks().includes(standby)) stream.addTrack(standby);
+  const localVideo = document.getElementById('localVideo');
+  if (localVideo) {
+    try { localVideo.pause(); } catch(e) {}
+    localVideo.srcObject = null;
+    localVideo.srcObject = new MediaStream(stream.getTracks());
+    try { localVideo.play(); } catch(e) {}
+  }
 }
 
 let _startupCameraRecoveryTimer = null;
@@ -9448,6 +10265,9 @@ async function _setCameraActive(active, reason, preserveVideoOnUi = false) {
         if (linked) throw e;
         entry('Camera ready locally; stale disconnected video sender ignored', 'sys');
       }
+    } else if (active && pc && pc.addTrack && replacement) {
+      try { pc.addTrack(replacement, new MediaStream([replacement])); entry('Camera video sender added for live session', 'sys'); }
+      catch(e) { entry('Camera addTrack warn: ' + e.message, 'sys'); }
     }
     if (current && current !== replacement) localStream.removeTrack(current);
     if (!localStream.getVideoTracks().includes(replacement)) localStream.addTrack(replacement);
@@ -9476,7 +10296,8 @@ async function _setCameraActive(active, reason, preserveVideoOnUi = false) {
 }
 
 async function _activateOfflineRecordingCamera() {
-  if (!localStream || !navigator.mediaDevices) return false;
+  if (!navigator.mediaDevices) return false;
+  if (!localStream) localStream = new MediaStream();
   try {
     const current = localStream.getVideoTracks()[0] || null;
     if (current && !current._fieldRadioStandby) {
@@ -10270,6 +11091,7 @@ function _fsEnsureTextBox() {
     _syslogVisible = false;
     const logPanel = document.getElementById('logPanel');
     if (logPanel) { logPanel.classList.remove('syslog-open'); logPanel.classList.add('collapsed'); }
+    document.body.classList.remove('syslog-visible');
     const logBtn = document.getElementById('syslogToggleBtn');
     if (logBtn) logBtn.classList.remove('active');
   }
@@ -10344,6 +11166,11 @@ function _fsOnPress(event) {
   // doesn't also flip the fullscreen controls state underneath it.
   if (event.target && event.target.closest &&
       event.target.closest('button,a,input,select,textarea,audio,[role="button"]')) return;
+  if (_touchShouldIgnoreAnsweringState()) {
+    if (event.cancelable) event.preventDefault();
+    entry('Screen touched during voicemail/answering state - ignored', 'sys');
+    return;
+  }
   if (document.body.classList.contains('fs-controls-visible')) {
     _fsHideControls();
   } else {
@@ -10354,7 +11181,7 @@ function _fsOnPress(event) {
 // A tap/click toggles controls immediately.
 // Interactive controls do not toggle the overlay, and touch-generated clicks
 // are suppressed so one tap cannot immediately toggle twice.
-document.addEventListener('touchstart', _fsOnPress, { passive: true });
+document.addEventListener('touchstart', _fsOnPress, { passive: false });
 document.addEventListener('click',      _fsOnPress);
 
 function toggleFullScreen() {
@@ -10589,7 +11416,16 @@ function setupMicGainNode(stream) {
     _micLimiterNode.attack.value = 0.003;
     _micLimiterNode.release.value = 0.15;
     _micGainDest = _micGainCtx.createMediaStreamDestination();
-    const savedGain = (() => { const r = localStorage.getItem('alpha_mic_gain'); return r !== null ? parseFloat(r) : 1.35; })();
+    const savedGain = (() => {
+      const r = localStorage.getItem('alpha_mic_gain');
+      let g = r !== null ? parseFloat(r) : 3;
+      if (isFinite(g) && g < 3 && localStorage.getItem('alpha_gain_300_migrated') !== '1') {
+        g = 3;
+        localStorage.setItem('alpha_mic_gain', '3');
+        localStorage.setItem('alpha_gain_300_migrated', '1');
+      }
+      return g;
+    })();
     _micGainNode.gain.value = isFinite(savedGain) ? savedGain : 1;
     src.connect(_micGainNode);
     _micGainNode.connect(_micLimiterNode);
@@ -10716,12 +11552,20 @@ document.addEventListener('visibilitychange', () => {
 // looks like a crash (both sides drop the call for no reason).
 // 'pagehide' with persisted=false is a much more reliable signal of an actual
 // unload; beforeunload alone is too noisy on Android.
+let _downloadInProgressUntil = 0;
+function _markDownloadInProgress() {
+  _downloadInProgressUntil = Date.now() + 4000;
+}
+
 window.addEventListener('pagehide', (ev) => {
   if (ev.persisted) return; // page is being cached (bfcache), not closing
+  if (Date.now() < _downloadInProgressUntil) return;
   saveSpeechDraft();
   if (!leftPermanently && !peerRefreshing) {
-    try { dcSend({ __control: 'leave' }); } catch(e) {}
+    try { dcSend({ __control: 'leave', recordStatus: getLoggedOutRecordingStatus() }); } catch(e) {}
   }
+  const code = presenceCode || (MY_ID ? MY_ID.replace(/^alpha-/, '').replace(/-[0-9a-f]{4}$/, '') : '');
+  if (code) presenceClear('alpha-' + code);
   // Always release camera/mic so the OS indicator clears immediately
   if (localStream) {
     localStream.getTracks().forEach(t => { try { t.stop(); } catch(e){} });
@@ -10749,6 +11593,7 @@ function saveLog() {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = 'syslog-' + ts + '.html';
+  _markDownloadInProgress();
   a.click();
 }
 
@@ -10761,6 +11606,35 @@ function copyLog() {
   });
 }
 
+function saveLogText() {
+  const ts = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+  const lines = Array.from(document.querySelectorAll('#log .log-entry'))
+    .map(el => el.textContent).join('\n');
+  const blob = new Blob([lines], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'syslog-' + ts + '.txt';
+  _markDownloadInProgress();
+  a.click();
+}
+
+function snapshotDiagnostics() {
+  const pc = call && (call.peerConnection || call._pc);
+  const audioSender = pc && pc.getSenders ? pc.getSenders().find(s => s.track && s.track.kind === 'audio') : null;
+  const videoSender = pc && pc.getSenders ? pc.getSenders().find(s => s.track && s.track.kind === 'video') : null;
+  const dataChannel = typeof dc !== 'undefined' ? dc : dataConn;
+  const lines = [
+    'DIAG VERSION=' + VERSION,
+    'DIAG linked=' + linked + ' audioMuted=' + audioMuted + ' videoOff=' + (document.getElementById('videoBtn') ? document.getElementById('videoBtn').textContent : 'n/a') + ' duplex=' + (document.getElementById('duplexBar') ? document.getElementById('duplexBar').textContent : 'n/a'),
+    'DIAG peer=' + (peer ? (peer.open ? 'open' : peer.destroyed ? 'destroyed' : 'created') : 'none') + ' call=' + (call ? 'yes' : 'none') + ' dc=' + (dataChannel ? dataChannel.open : 'none'),
+    'DIAG localTracks=' + (localStream ? localStream.getTracks().map(t => t.kind + ':' + t.readyState + ':' + (t.enabled ? 'on' : 'off')).join(',') : 'none'),
+    'DIAG senders audio=' + (audioSender && audioSender.track ? audioSender.track.readyState + ':' + audioSender.track.enabled : 'none') + ' video=' + (videoSender && videoSender.track ? videoSender.track.readyState + ':' + videoSender.track.enabled : 'none'),
+    'DIAG micGain=' + ((document.getElementById('micGainSliderChat') || document.getElementById('micGainSlider') || {}).value || 'n/a') + ' remoteVol=' + ((document.getElementById('remoteGainSliderChat') || document.getElementById('remoteGainSlider') || {}).value || 'n/a'),
+    'DIAG location=' + location.protocol + ' ua=' + navigator.userAgent
+  ];
+  lines.forEach(line => entry(line, 'sys'));
+}
+
 function clearLog() {
   const log = document.getElementById('log');
   if (log) log.innerHTML = '';
@@ -10769,7 +11643,14 @@ function clearLog() {
 function toggleLogStop() {
   _logStopped = !_logStopped;
   const btn = document.getElementById('logStopBtn');
-  if (btn) { btn.textContent = _logStopped ? 'RUN' : 'STOP'; btn.classList.toggle('stopped', _logStopped); }
+  if (btn) { btn.textContent = _logStopped ? 'START' : 'PAUSE'; btn.classList.toggle('stopped', _logStopped); }
+}
+
+function toggleLogAutoScroll() {
+  _logAutoScroll = !_logAutoScroll;
+  const btn = document.getElementById('logAutoBtn');
+  if (btn) { btn.textContent = _logAutoScroll ? 'AUTO' : 'HOLD'; btn.classList.toggle('stopped', !_logAutoScroll); }
+  if (_logAutoScroll && logEl) logEl.scrollTop = logEl.scrollHeight;
 }
 
 // ── TTS (Text-to-Speech) for incoming messages ───────────────
