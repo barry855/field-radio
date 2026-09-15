@@ -1,7 +1,7 @@
 
 
 
-<!-- DEPLOY TIMESTAMP: 2026-09-15 12:39 UTC | BRAVO V.101 -->
+<!-- DEPLOY TIMESTAMP: 2026-09-16 00:00 UTC | BRAVO V.102 -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — BRAVO -->
@@ -2826,7 +2826,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '101'; // login screen shows generated version beside station label
+const VERSION = '102'; // login screen shows generated version beside station label
 
 function _loginVersionLabel() {
   const match = String(VERSION).match(/^(\d+(?:\.\d+){0,2})/);
@@ -3015,7 +3015,7 @@ function startSession() {
   setVideoButtons(false);
   loginDisableVideoFlag = disVidChecked;
   loginDisableAudioFlag = disAudChecked;
-  entry('LOGIN: disableVideo=' + disVidChecked + ' disableAudio=' + disAudChecked + ' v' + VERSION, 'sys');
+  entry('LOGIN: disableVideo=' + disVidChecked + ' disableAudio=' + disAudChecked + ' ' + _loginVersionLabel(), 'sys');
   clearInterval(loginTimeoutInterval);
   document.getElementById('sessionOverlay').style.display = 'none';
   showLoginBox();
@@ -11129,7 +11129,7 @@ function snapshotDiagnostics() {
   const videoSender = pc && pc.getSenders ? pc.getSenders().find(s => s.track && s.track.kind === 'video') : null;
   const dataChannel = typeof dc !== 'undefined' ? dc : dataConn;
   const lines = [
-    'DIAG VERSION=' + VERSION,
+    'DIAG VERSION=' + _loginVersionLabel(),
     'DIAG linked=' + linked + ' audioMuted=' + audioMuted + ' videoOff=' + (document.getElementById('videoBtn') ? document.getElementById('videoBtn').textContent : 'n/a') + ' duplex=' + (document.getElementById('duplexBar') ? document.getElementById('duplexBar').textContent : 'n/a'),
     'DIAG peer=' + (peer ? (peer.open ? 'open' : peer.destroyed ? 'destroyed' : 'created') : 'none') + ' call=' + (call ? 'yes' : 'none') + ' dc=' + (dataChannel ? dataChannel.open : 'none'),
     'DIAG localTracks=' + (localStream ? localStream.getTracks().map(t => t.kind + ':' + t.readyState + ':' + (t.enabled ? 'on' : 'off')).join(',') : 'none'),
