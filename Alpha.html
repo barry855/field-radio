@@ -1,6 +1,6 @@
 
 
-<!-- DEPLOY TIMESTAMP: 2026-09-16 00:00 UTC | ALPHA V.102 -->
+<!-- DEPLOY TIMESTAMP: 2026-09-16 01:18 UTC | ALPHA V.105 -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
@@ -1965,7 +1965,7 @@
   body.app-fullscreen.fs-controls-hidden #fsHint,
   body.app-fullscreen.fs-controls-visible #fsHint { display: none; }
 
-  body.app-fullscreen.fs-controls-hidden .header-right-btns .header-action-btn:not(#fsControlsBtn):not(.go-live-style),
+  body.app-fullscreen.fs-controls-hidden .header-right-btns .header-action-btn:not(#fsControlsBtn):not(.go-live-style):not(#leaveChatBtn),
   body.app-fullscreen.fs-controls-hidden #helpTouchBtn {
     display: none !important;
   }
@@ -1974,14 +1974,18 @@
     justify-content: flex-end;
   }
   body.app-fullscreen.fs-controls-hidden .header-action-btn.go-live-style {
-    display: inline-flex !important;
     max-width: calc(50vw - 10px);
     overflow: hidden;
     text-overflow: clip;
   }
+  body.app-fullscreen.fs-controls-hidden #leaveChatBtn {
+    display: inline-flex !important;
+    margin-left: 4px;
+    max-width: calc(50vw - 10px);
+  }
   body.app-fullscreen.fs-controls-hidden #fsControlsBtn {
     display: inline-flex !important;
-    margin-left: auto;
+    margin-left: 4px;
     max-width: calc(100vw - 16px);
     overflow: hidden;
   }
@@ -2012,12 +2016,38 @@
       justify-content: flex-end;
       gap: 4px;
       margin-left: 0;
+      overflow: visible;
     }
     body.app-fullscreen .header-action-btn {
       min-height: 28px;
       padding: 5px 7px;
       font-size: 10px;
       letter-spacing: 0;
+    }
+    body.app-fullscreen.fs-controls-visible .header-right-btns {
+      flex-wrap: nowrap;
+      justify-content: stretch;
+      width: 100%;
+    }
+    body.app-fullscreen.fs-controls-visible #fsControlsBtn {
+      flex: 1 1 96px;
+      min-width: 0;
+    }
+    body.app-fullscreen.fs-controls-visible #headerRefreshBtn {
+      flex: 0 1 80px;
+      min-width: 66px;
+      overflow: hidden;
+    }
+    body.app-fullscreen.fs-controls-visible #leaveChatBtn {
+      flex: 1 1 92px;
+      min-width: 82px;
+      display: inline-flex !important;
+    }
+    body.app-fullscreen.fs-controls-visible #helpTouchBtn {
+      flex: 0 0 28px;
+      width: 28px;
+      height: 28px;
+      min-width: 28px;
     }
   }
 
@@ -2374,7 +2404,7 @@ window.addEventListener('orientationchange', function() {
     <div class="header-right-btns">
       <button class="header-action-btn go-live-style" id="ownerLiveBtn" onclick="answerOwnVoicemailLive()" title="Take this call live now" style="display:none;">GO LIVE</button>
       <button class="header-action-btn" id="fsControlsBtn" onclick="toggleFsControlsView()" title="Show/hide on-screen controls" style="display:none;">SHOW CONTROLS</button>
-      <button class="header-action-btn" onclick="refreshScreen()" title="Refresh / Reconnect">↺ Refresh</button>
+      <button class="header-action-btn" id="headerRefreshBtn" onclick="refreshScreen()" title="Refresh / Reconnect">↺ Refresh</button>
       <button class="header-action-btn leave-style" id="leaveChatBtn" onclick="leaveSession()" title="Hang up session">✕ Hang Up</button>
       <button id="helpTouchBtn" onclick="openHelpPanel()" aria-label="Button guide">?</button>
     </div>
@@ -2934,7 +2964,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '102'; // login screen shows generated version beside station label
+const VERSION = '105'; // login screen shows generated version beside station label
 
 function _loginVersionLabel() {
   const match = String(VERSION).match(/^(\d+(?:\.\d+){0,2})/);
@@ -11117,7 +11147,7 @@ function _syncFsControlsBtn() {
   if (!btn) return;
   if (!_fsIsActive()) { btn.style.display = 'none'; return; }
   btn.style.display = '';
-  btn.textContent = document.body.classList.contains('fs-controls-visible') ? 'SHOW FULL SCREEN' : 'SHOW CONTROLS';
+  btn.textContent = document.body.classList.contains('fs-controls-visible') ? 'FULL SCREEN' : 'SHOW CONTROLS';
 }
 
 // Top-bar equivalent of tapping a blank area — lets a mouse/keyboard user (or
