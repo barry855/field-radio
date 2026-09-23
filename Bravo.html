@@ -1,7 +1,6 @@
 
 
-
-<!-- DEPLOY TIMESTAMP: 2026-09-16 01:28 UTC | BRAVO V.106 -->
+<!-- DEPLOY TIMESTAMP: 2026-09-21 00:00 UTC | BRAVO V.107 -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — BRAVO -->
@@ -2916,7 +2915,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '106'; // login screen shows generated version beside station label
+const VERSION = '107'; // login screen shows generated version beside station label
 
 function _loginVersionLabel() {
   const match = String(VERSION).match(/^(\d+(?:\.\d+){0,2})/);
@@ -8911,11 +8910,10 @@ async function _startVoicemail() {
     entry('Voicemail: no remote audio track — cannot record', 'err');
     return;
   }
-  // Audio-only voicemail: mix remote + local through Web Audio for a unified
-  // clock — raw track combination causes timestamp fragmentation on ChromeOS.
+  // Audio-only voicemail: record the caller's remote track only.
+  // Do not mix the local microphone; on Android speakerphone it can capture
+  // the monitored caller audio a moment later and create an echo in the MP3.
   const remoteTracksStream = new MediaStream(audioTracks.map(t => t.clone()));
-  const localTracksForMix  = getLocalAudioTracksForRec();
-  const localStream_vm     = localTracksForMix.length ? new MediaStream(localTracksForMix) : null;
   let _vmACtx = null;
   let _vmRecStream;
   try {
@@ -8923,12 +8921,12 @@ async function _startVoicemail() {
       const ctx  = new (window.AudioContext || window.webkitAudioContext)();
       await ctx.resume();
       const dest = ctx.createMediaStreamDestination();
-      [remoteTracksStream, localStream_vm].forEach((s, i) => {
+      [remoteTracksStream].forEach(s => {
         if (!s) return;
         try {
           const src  = ctx.createMediaStreamSource(s);
           const gain = ctx.createGain();
-          gain.gain.value = (i === 1) ? 2.0 : 1.0;  // boost local mic
+          gain.gain.value = 1.0;
           src.connect(gain); gain.connect(dest);
         } catch(e) { entry('VM mix warn: ' + e.message, 'sys'); }
       });
@@ -8938,10 +8936,7 @@ async function _startVoicemail() {
     _vmRecStream = mix.dest.stream;
   } catch(e) {
     entry('VM audio mix failed, using raw tracks: ' + e.message, 'sys');
-    _vmRecStream = new MediaStream([
-      ...audioTracks.map(t => t.clone()),
-      ...getLocalAudioTracksForRec()
-    ]);
+    _vmRecStream = new MediaStream(audioTracks.map(t => t.clone()));
   }
   const mimeType = ['audio/mpeg', 'audio/mp3', 'audio/mp4', 'audio/webm;codecs=opus', 'audio/webm']
     .find(t => MediaRecorder.isTypeSupported(t)) || 'audio/webm';
