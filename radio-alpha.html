@@ -1,5 +1,5 @@
 
-<!-- DEPLOY TIMESTAMP: 2026-09-21 00:00 UTC | ALPHA V.107 -->
+<!-- DEPLOY TIMESTAMP: 2026-10-04 00:00 UTC | ALPHA V.108 -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — ALPHA -->
@@ -2963,7 +2963,7 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '107'; // login screen shows generated version beside station label
+const VERSION = '108'; // login screen shows generated version beside station label
 
 function _loginVersionLabel() {
   const match = String(VERSION).match(/^(\d+(?:\.\d+){0,2})/);
@@ -3646,6 +3646,18 @@ function startLoginTimeout() {
     }
   }, 1000);
 }
+let _refreshResumeRole = null;
+var _refreshRoleLockUntil = 0;
+function _currentRefreshRole() {
+  return (_answeringMachineMode || _waitingAfterRemoteLeave) ? 'answerer' : 'caller';
+}
+function _markRefreshReload() {
+  try {
+    sessionStorage.setItem('fieldRadioRefreshing', '1');
+    sessionStorage.setItem('fieldRadioRefreshRole', _currentRefreshRole());
+  } catch(e) {}
+}
+
 // If this page load is the result of a refresh, bypass login screen entirely
 // and auto-reconnect. sessionStorage survives reload; clear it immediately.
 let _loginTimeoutStarted = false;
@@ -3653,6 +3665,9 @@ let _loginTimeoutStarted = false;
   try {
     if (sessionStorage.getItem('fieldRadioRefreshing') === '1') {
       sessionStorage.removeItem('fieldRadioRefreshing');
+      _refreshResumeRole = sessionStorage.getItem('fieldRadioRefreshRole') || null;
+      sessionStorage.removeItem('fieldRadioRefreshRole');
+      if (_refreshResumeRole === 'caller') _refreshRoleLockUntil = Date.now() + 120000;
       _loginTimeoutStarted = true;
       // Hide login overlay — don't show it at all during a refresh reload
       const overlay = document.getElementById('sessionOverlay');
@@ -6721,6 +6736,14 @@ function _enterAnsweringMachineMode(force = false) {
   _answeringModeWatchdog = null;
   _answeringDeadlineAt = 0;
   if (linked || leftPermanently || _answeringMachineMode) return;
+  if (!force && _refreshResumeRole === 'caller' && Date.now() < _refreshRoleLockUntil) {
+    entry('Refresh role lock: staying caller; not entering answering mode yet', 'sys');
+    _answeringDeadlineAt = Date.now() + 15000;
+    _answeringModeTimer = setTimeout(_checkAnsweringModeDeadline, 15000);
+    if (!_answeringModeWatchdog) _answeringModeWatchdog = setInterval(_checkAnsweringModeDeadline, 5000);
+    if (!call && localStream) _refreshRemoteId().then(dial);
+    return;
+  }
   if (!force && (_remoteIdConfirmed || Date.now() < _bravoPresenceFreshUntil)) {
     entry('AM deadline reached but BRAVO is present - continuing to call', 'sys');
     _answeringDeadlineAt = Date.now() + 15000;
@@ -6831,6 +6854,11 @@ function startPeer() {
   peer.on('open', () => {
     _unavailIdRetries = 0; // ID claimed — reset backoff
     entry('Radio online', 'ok');
+    if (_refreshResumeRole === 'answerer') {
+      entry('Refresh role lock: restoring Alpha as answerer', 'sys');
+      _refreshResumeRole = null;
+      _enterAnsweringMachineMode(true);
+    }
     _armAnsweringModeTimer();
     if (_answeringMachineMode) {
       setStatus('reachable');
@@ -7288,7 +7316,7 @@ function attachDataConn(dc) {
         }
         return;
       }
-      if (f.__control === 'refresh') { entry('Remote refreshed — reloading…', 'sys'); peerRefreshing = true; try { sessionStorage.setItem('fieldRadioRefreshing', '1'); } catch(e) {} setTimeout(() => window.location.reload(), 400); return; }
+      if (f.__control === 'refresh') { entry('Remote refreshed — reloading…', 'sys'); peerRefreshing = true; _markRefreshReload(); setTimeout(() => window.location.reload(), 400); return; }
       if (f.__morse === true) { addBubble(f.text, false, null, true, null, null, true); playMorseAudio(f.text, f.wpm || 20); return; }
       if (f.__file === true) {
         if (isSafeReceivedFile(f.name, f.type, f.data)) addMediaBubble(f.name, f.type, f.data, false);
@@ -10869,7 +10897,7 @@ function refreshScreen() {
   try { dcSend({ __control: 'refresh' }); } catch(e) {}
   peerRefreshing = true;  // suppress onDrop login redirect
   // Flag survives the reload so the fresh page auto-reconnects silently
-  try { sessionStorage.setItem('fieldRadioRefreshing', '1'); } catch(e) {}
+  _markRefreshReload();
   // Do NOT show login overlay — keep current UI visible until reload fires
   // Local side waits 500 ms; remote starts its 400 ms timer on message receipt.
   // With ~100 ms one-way latency both reloads fire at roughly the same instant.
