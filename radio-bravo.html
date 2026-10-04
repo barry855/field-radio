@@ -1,5 +1,6 @@
 
-<!-- DEPLOY TIMESTAMP: 2026-07-13 21:55 UTC | BRAVO v8.99.34-login-version-label -->
+
+<!-- DEPLOY TIMESTAMP: 2026-09-21 00:00 UTC | BRAVO V.107 -->
 <!-- redeploy -->
 <!DOCTYPE html>
 <!-- Field Radio v6 — BRAVO -->
@@ -1841,12 +1842,16 @@
     position: relative; z-index: 1010;
     opacity: 1 !important;
     pointer-events: auto !important;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
+    max-width: 100vw;
+    overflow: hidden;
   }
   body.app-fullscreen .header-right-btns {
-    flex: 0 0 auto;
-    flex-wrap: nowrap;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
     margin-left: auto;
+    min-width: 0;
+    overflow: hidden;
   }
   body.app-fullscreen .tab-bar {
     position: relative; z-index: 1002;
@@ -1910,6 +1915,92 @@
   }
   body.app-fullscreen.fs-controls-hidden #fsHint,
   body.app-fullscreen.fs-controls-visible #fsHint { display: none; }
+
+  body.app-fullscreen.fs-controls-hidden .header-right-btns .header-action-btn:not(#fsControlsBtn):not(.go-live-style):not(#leaveChatBtn),
+  body.app-fullscreen.fs-controls-hidden #helpTouchBtn {
+    display: none !important;
+  }
+  body.app-fullscreen.fs-controls-hidden .header-right-btns {
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+  }
+  body.app-fullscreen.fs-controls-hidden .header-action-btn.go-live-style {
+    max-width: calc(50vw - 10px);
+    overflow: hidden;
+    text-overflow: clip;
+  }
+  body.app-fullscreen.fs-controls-hidden #leaveChatBtn {
+    display: inline-flex !important;
+    margin-left: 4px;
+    max-width: calc(50vw - 10px);
+  }
+  body.app-fullscreen.fs-controls-hidden #fsControlsBtn {
+    display: inline-flex !important;
+    margin-left: 4px;
+    max-width: calc(100vw - 16px);
+    overflow: hidden;
+  }
+
+  @media (orientation: portrait) and (pointer: coarse) {
+    body.app-fullscreen header {
+      gap: 4px 6px;
+      padding: max(6px, env(safe-area-inset-top)) 8px 6px;
+      align-items: flex-start;
+    }
+    body.app-fullscreen .logo {
+      font-size: 15px;
+      letter-spacing: 1.5px;
+      min-width: 0;
+    }
+    body.app-fullscreen .statusbar {
+      flex: 1 1 140px;
+      min-width: 0;
+      gap: 4px 6px;
+    }
+    body.app-fullscreen .status-item,
+    body.app-fullscreen .route-item {
+      font-size: 8px;
+      letter-spacing: 0.4px;
+    }
+    body.app-fullscreen .header-right-btns {
+      flex: 1 0 100%;
+      justify-content: flex-end;
+      gap: 4px;
+      margin-left: 0;
+      overflow: visible;
+    }
+    body.app-fullscreen .header-action-btn {
+      min-height: 28px;
+      padding: 5px 7px;
+      font-size: 10px;
+      letter-spacing: 0;
+    }
+    body.app-fullscreen.fs-controls-visible .header-right-btns {
+      flex-wrap: nowrap;
+      justify-content: stretch;
+      width: 100%;
+    }
+    body.app-fullscreen.fs-controls-visible #fsControlsBtn {
+      flex: 1 1 96px;
+      min-width: 0;
+    }
+    body.app-fullscreen.fs-controls-visible #headerRefreshBtn {
+      flex: 0 1 80px;
+      min-width: 66px;
+      overflow: hidden;
+    }
+    body.app-fullscreen.fs-controls-visible #leaveChatBtn {
+      flex: 1 1 92px;
+      min-width: 82px;
+      display: inline-flex !important;
+    }
+    body.app-fullscreen.fs-controls-visible #helpTouchBtn {
+      flex: 0 0 28px;
+      width: 28px;
+      height: 28px;
+      min-width: 28px;
+    }
+  }
 
   /* ── LANDSCAPE: full-screen video only (mobile/touch only, ACTIVE CALL ONLY) ─── */
   @media (orientation: landscape) and (pointer: coarse) {
@@ -2263,10 +2354,10 @@ window.addEventListener('orientationchange', function() {
       </div>
     </div>
     <div class="header-right-btns">
-      <button class="header-action-btn go-live-style" id="ownerLiveBtn" onclick="answerOwnVoicemailLive()" title="Take this call live now" style="display:none;">GO LIVE</button>
+      <button class="header-action-btn go-live-style caller-live-disabled" id="ownerLiveBtn" onclick="answerOwnVoicemailLive()" title="Caller cannot take a call live" style="display:none;" hidden aria-hidden="true">GO LIVE</button>
       <button class="header-action-btn go-live-style" id="answerLiveBtn" onclick="requestLiveSession()" title="Receiver controls live switching" style="display:none;">GO LIVE</button>
       <button class="header-action-btn" id="fsControlsBtn" onclick="toggleFsControlsView()" title="Show/hide on-screen controls" style="display:none;">SHOW CONTROLS</button>
-      <button class="header-action-btn" onclick="refreshScreen()" title="Refresh / Reconnect">↺ Refresh</button>
+      <button class="header-action-btn" id="headerRefreshBtn" onclick="refreshScreen()" title="Refresh / Reconnect">↺ Refresh</button>
       <button class="header-action-btn leave-style" id="leaveChatBtn" onclick="leaveSession()" title="Hang up session">✕ Hang Up</button>
       <button id="helpTouchBtn" onclick="openHelpPanel()" aria-label="Button guide">?</button>
     </div>
@@ -2824,11 +2915,11 @@ document.addEventListener('click', function() {
   }
 }, true);
 
-const VERSION = '8.99.34-login-version-label'; // login screen shows generated version beside station label
+const VERSION = '107'; // login screen shows generated version beside station label
 
 function _loginVersionLabel() {
   const match = String(VERSION).match(/^(\d+(?:\.\d+){0,2})/);
-  return 'V' + (match ? match[1] : VERSION);
+  return 'V.' + (match ? match[1] : VERSION);
 }
 
 (function applyLoginVersionLabel() {
@@ -3013,7 +3104,7 @@ function startSession() {
   setVideoButtons(false);
   loginDisableVideoFlag = disVidChecked;
   loginDisableAudioFlag = disAudChecked;
-  entry('LOGIN: disableVideo=' + disVidChecked + ' disableAudio=' + disAudChecked + ' v' + VERSION, 'sys');
+  entry('LOGIN: disableVideo=' + disVidChecked + ' disableAudio=' + disAudChecked + ' ' + _loginVersionLabel(), 'sys');
   clearInterval(loginTimeoutInterval);
   document.getElementById('sessionOverlay').style.display = 'none';
   showLoginBox();
@@ -8705,7 +8796,11 @@ function _playRingTone() {
 
 function _setOwnerLiveAvailable(available) {
   const button = document.getElementById('ownerLiveBtn');
-  if (button) button.style.display = available ? '' : 'none';
+  if (button) {
+    button.style.display = 'none';
+    button.hidden = true;
+    button.setAttribute('aria-hidden', 'true');
+  }
 }
 
 function _finishOwnerLiveTakeover() {
@@ -8815,11 +8910,10 @@ async function _startVoicemail() {
     entry('Voicemail: no remote audio track — cannot record', 'err');
     return;
   }
-  // Audio-only voicemail: mix remote + local through Web Audio for a unified
-  // clock — raw track combination causes timestamp fragmentation on ChromeOS.
+  // Audio-only voicemail: record the caller's remote track only.
+  // Do not mix the local microphone; on Android speakerphone it can capture
+  // the monitored caller audio a moment later and create an echo in the MP3.
   const remoteTracksStream = new MediaStream(audioTracks.map(t => t.clone()));
-  const localTracksForMix  = getLocalAudioTracksForRec();
-  const localStream_vm     = localTracksForMix.length ? new MediaStream(localTracksForMix) : null;
   let _vmACtx = null;
   let _vmRecStream;
   try {
@@ -8827,12 +8921,12 @@ async function _startVoicemail() {
       const ctx  = new (window.AudioContext || window.webkitAudioContext)();
       await ctx.resume();
       const dest = ctx.createMediaStreamDestination();
-      [remoteTracksStream, localStream_vm].forEach((s, i) => {
+      [remoteTracksStream].forEach(s => {
         if (!s) return;
         try {
           const src  = ctx.createMediaStreamSource(s);
           const gain = ctx.createGain();
-          gain.gain.value = (i === 1) ? 2.0 : 1.0;  // boost local mic
+          gain.gain.value = 1.0;
           src.connect(gain); gain.connect(dest);
         } catch(e) { entry('VM mix warn: ' + e.message, 'sys'); }
       });
@@ -8842,10 +8936,7 @@ async function _startVoicemail() {
     _vmRecStream = mix.dest.stream;
   } catch(e) {
     entry('VM audio mix failed, using raw tracks: ' + e.message, 'sys');
-    _vmRecStream = new MediaStream([
-      ...audioTracks.map(t => t.clone()),
-      ...getLocalAudioTracksForRec()
-    ]);
+    _vmRecStream = new MediaStream(audioTracks.map(t => t.clone()));
   }
   const mimeType = ['audio/mpeg', 'audio/mp3', 'audio/mp4', 'audio/webm;codecs=opus', 'audio/webm']
     .find(t => MediaRecorder.isTypeSupported(t)) || 'audio/webm';
@@ -10601,7 +10692,7 @@ function _syncFsControlsBtn() {
   if (!btn) return;
   if (!_fsIsActive()) { btn.style.display = 'none'; return; }
   btn.style.display = '';
-  btn.textContent = document.body.classList.contains('fs-controls-visible') ? 'SHOW FULL SCREEN' : 'SHOW CONTROLS';
+  btn.textContent = document.body.classList.contains('fs-controls-visible') ? 'FULL SCREEN' : 'SHOW CONTROLS';
 }
 
 // Top-bar equivalent of tapping a blank area — lets a mouse/keyboard user (or
@@ -11127,7 +11218,7 @@ function snapshotDiagnostics() {
   const videoSender = pc && pc.getSenders ? pc.getSenders().find(s => s.track && s.track.kind === 'video') : null;
   const dataChannel = typeof dc !== 'undefined' ? dc : dataConn;
   const lines = [
-    'DIAG VERSION=' + VERSION,
+    'DIAG VERSION=' + _loginVersionLabel(),
     'DIAG linked=' + linked + ' audioMuted=' + audioMuted + ' videoOff=' + (document.getElementById('videoBtn') ? document.getElementById('videoBtn').textContent : 'n/a') + ' duplex=' + (document.getElementById('duplexBar') ? document.getElementById('duplexBar').textContent : 'n/a'),
     'DIAG peer=' + (peer ? (peer.open ? 'open' : peer.destroyed ? 'destroyed' : 'created') : 'none') + ' call=' + (call ? 'yes' : 'none') + ' dc=' + (dataChannel ? dataChannel.open : 'none'),
     'DIAG localTracks=' + (localStream ? localStream.getTracks().map(t => t.kind + ':' + t.readyState + ':' + (t.enabled ? 'on' : 'off')).join(',') : 'none'),
